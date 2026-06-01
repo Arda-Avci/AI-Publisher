@@ -1,0 +1,17 @@
+node_modules
+database.sqlite
+videolar/*.mp4
+videolar/*.wav
+videolar/*.srt
+videolar/*.txt
+uploads/*
+auth_youtube.json
+auth_tiktok.json
+auth_x.json
+auth_meta.json
+.env
+.env.local
+.gemini
+.idea
+.vscode
+dist
