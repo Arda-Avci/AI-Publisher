@@ -10,26 +10,25 @@ import scipy.io.wavfile as wavfile
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 app = Flask(__name__)
 
-print("🚀 Modeller GPU'ya yükleniyor (VRAM/Sıralı CPU Offload Aktif)...")
+print("🚀 Modeller GPU'ya yükleniyor (Dengeli Ağırlık Dağıtımı Aktif)...")
 
-# 1. Video Motoru (Image-to-Video) - VRAM Optimizasyonları (offload ve slicing)
+# 1. Video Motoru (Image-to-Video) - device_map="balanced" ile yükleme anında bellek dağıtımı sağlanır
 video_pipe = CogVideoXImageToVideoPipeline.from_pretrained(
     "THUDM/CogVideoX-2b", 
     torch_dtype=torch.float16,
-    low_cpu_mem_usage=True
+    low_cpu_mem_usage=True,
+    device_map="balanced"
 )
-# Doğrudan .to("cuda") yerine katman bazlı offload ve attention slicing etkinleştiriliyor
-video_pipe.enable_sequential_cpu_offload()
 video_pipe.vae.enable_tiling()
 video_pipe.enable_attention_slicing()
 
-# 2. Ses Efekti Motoru - VRAM Optimizasyonu
+# 2. Ses Efekti Motoru - Dengeli bellek dağıtımı
 sfx_pipe = AudioLDM2Pipeline.from_pretrained(
     "cvssp/audioldm2", 
     torch_dtype=torch.float16,
-    low_cpu_mem_usage=True
+    low_cpu_mem_usage=True,
+    device_map="balanced"
 )
-sfx_pipe.enable_sequential_cpu_offload()
 sfx_pipe.enable_attention_slicing()
 
 # 3. Seslendirme (TTS) Motoru - Lazy loading ile sadece talep anında belleğe yüklenir
