@@ -6,43 +6,63 @@ from flask import Flask, request, jsonify, send_file
 from diffusers import CogVideoXImageToVideoPipeline, AudioLDM2Pipeline
 from diffusers.utils import load_image, export_to_video
 import scipy.io.wavfile as wavfile
+import gc
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 app = Flask(__name__)
 
-print("🚀 Modeller GPU'ya yükleniyor (Dengeli Ağırlık Dağıtımı Aktif)...")
+print("🚀 Flask sunucusu Lazy Loading (Sıralı Bellek Yönetimi) ile hazırlandı.")
 
-# 1. Video Motoru (Image-to-Video) - device_map="balanced" ile yükleme anında bellek dağıtımı sağlanır
-video_pipe = CogVideoXImageToVideoPipeline.from_pretrained(
-    "THUDM/CogVideoX-2b", 
-    torch_dtype=torch.float16,
-    low_cpu_mem_usage=True,
-    device_map="balanced"
-)
-video_pipe.vae.enable_tiling()
-video_pipe.enable_attention_slicing()
+# --- LAZY LOADING MOTORLARI ---
 
-# 2. Ses Efekti Motoru - Dengeli bellek dağıtımı
-sfx_pipe = AudioLDM2Pipeline.from_pretrained(
-    "cvssp/audioldm2", 
-    torch_dtype=torch.float16,
-    low_cpu_mem_usage=True,
-    device_map="balanced"
-)
-sfx_pipe.enable_attention_slicing()
+def generate_video_lazy(prompt, init_image):
+    print("🎬 Video motoru belleğe yükleniyor...")
+    video_pipe = CogVideoXImageToVideoPipeline.from_pretrained(
+        "THUDM/CogVideoX-2b", 
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True
+    ).to("cuda")
+    video_pipe.vae.enable_tiling()
+    video_pipe.enable_attention_slicing()
+    
+    print("🎬 Video üretimi başlatıldı...")
+    frames = video_pipe(prompt=prompt, image=init_image, num_frames=49, num_inference_steps=30).frames
+    
+    # Belleği anında temizle
+    del video_pipe
+    gc.collect()
+    torch.cuda.empty_cache()
+    
+    return frames
 
-# 3. Seslendirme (TTS) Motoru - Lazy loading ile sadece talep anında belleğe yüklenir
+def generate_sfx_lazy(prompt):
+    print("🔊 Ses efekti motoru belleğe yükleniyor...")
+    sfx_pipe = AudioLDM2Pipeline.from_pretrained(
+        "cvssp/audioldm2", 
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True
+    ).to("cuda")
+    
+    print("🔊 Ses efekti üretiliyor...")
+    audio = sfx_pipe(prompt, audio_length_in_s=6.0, num_inference_steps=20).audios
+    
+    # Belleği anında temizle
+    del sfx_pipe
+    gc.collect()
+    torch.cuda.empty_cache()
+    
+    return audio
+
 tts_model = None
-
 def get_tts():
     global tts_model
     if tts_model is None:
         from TTS.api import TTS
-        print("🎙️ XTTS modeli ilk kez yükleniyor...")
+        print("🎙️ XTTS modeli belleğe yükleniyor...")
         tts_model = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", gpu=True)
     return tts_model
 
-# Dudak/Çene hareketlerini ses genliğine göre esneten animasyon filtresi
+# Dudak/Çene hareketlerini esneten animasyon filtresi
 def apply_lipsync(video_path, audio_path, output_path):
     cap = cv2.VideoCapture(video_path)
     sample_rate, audio_data = wavfile.read(audio_path)
@@ -65,7 +85,7 @@ def apply_lipsync(video_path, audio_path, output_path):
         chunk = audio_amplitude[int(frame_idx*(sample_rate/fps)):int((frame_idx+1)*(sample_rate/fps))]
         volume = np.mean(chunk) if len(chunk) > 0 else 0
         
-        if volume > 500: # Karakter konuşuyorsa çene-ağız bölgesini esnet
+        if volume > 500:
             h, w, _ = frame.shape
             mouth_zone = frame[int(h*0.65):int(h*0.85), int(w*0.4):int(w*0.6)]
             scale = 1.0 + (volume / 25000.0)
@@ -95,7 +115,7 @@ def generate_media():
     
     final_prompt = f"{character_features}, {video_prompt}" if character_features else video_prompt
     
-    # Sahneler arası tutarlılık (Autoregressive Chaining)
+    # Sahneler arası tutarlılık
     if scene_number > 1 and os.path.exists(LAST_VIDEO_PATH):
         cap = cv2.VideoCapture(LAST_VIDEO_PATH)
         cap.set(cv2.CAP_PROP_POS_FRAMES, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1)
@@ -107,9 +127,9 @@ def generate_media():
     else:
         init_image = load_image(user_image_path) if user_image_path and os.path.exists(user_image_path) else load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/cogvideox_sample.png")
 
-    # 1. Video Üret (6 saniyelik 8 FPS için 49 frame)
+    # 1. Video Üret (Lazy)
     raw_video_path = "/content/raw_video.mp4"
-    video_frames = video_pipe(prompt=final_prompt, image=init_image, num_frames=49, num_inference_steps=35).frames
+    video_frames = generate_video_lazy(final_prompt, init_image)
     export_to_video(video_frames, raw_video_path, fps=8)
     
     # 2. Seslendirme (TTS)
@@ -124,10 +144,10 @@ def generate_media():
     # 3. Dudak Senkronu
     apply_lipsync(raw_video_path, audio_path, LAST_VIDEO_PATH)
 
-    # 4. Ses Efekti (SFX)
+    # 4. Ses Efekti (SFX Lazy)
     sfx_path = "/content/sfx.wav"
     if sfx_prompt:
-        audio_sfx = sfx_pipe(sfx_prompt, audio_length_in_s=6.0, num_inference_steps=25).audios
+        audio_sfx = generate_sfx_lazy(sfx_prompt)
         wavfile.write(sfx_path, 16000, audio_sfx)
     else:
         wavfile.write(sfx_path, 16000, torch.zeros(16000 * 6).numpy().astype(np.int16))
