@@ -169,7 +169,7 @@ def download_sfx():
 
 if __name__ == '__main__':
     # 1. Ngrok Auth ve Tünel Bağlantısı
-    NGROK_TOKEN = "BURAYA_NGROK_TOKEN_GELECEK"
+    NGROK_TOKEN = "3EYJuaphUgm2YMvhGpiyRR8OZa6_3cKw59pY6yKS4jxgohw76"
     if NGROK_TOKEN and NGROK_TOKEN != "BURAYA_NGROK_TOKEN_GELECEK":
         ngrok.set_auth_token(NGROK_TOKEN)
         public_url = ngrok.connect(5000)
