@@ -141,20 +141,21 @@ def generate_media():
         cap.set(cv2.CAP_PROP_POS_FRAMES, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1)
         ret, frame = cap.read()
         if ret: 
-            cv2.imwrite("/content/last_frame.jpg", frame)
+            # Sahne geçişlerindeki kareleri de tam 720x496 formatında yeniden yazdırıyoruz
+            frame_resized = cv2.resize(frame, (720, 496))
+            cv2.imwrite("/content/last_frame.jpg", frame_resized)
         cap.release()
         init_image = load_image("/content/last_frame.jpg")
     else:
-        # PIL Image kullanarak doğrudan tam 720x480 formatında boş/siyah görsel oluşturuyoruz
+        # PIL Image kullanarak doğrudan tam 720x496 formatında boş/siyah görsel oluşturuyoruz
         if user_image_path and os.path.exists(user_image_path):
             init_image = load_image(user_image_path)
-            # Eğer kullanıcı görseli farklı çözünürlükteyse tam 720x480'a yeniden boyutlandırıyoruz
-            init_image = init_image.resize((720, 480))
+            init_image = init_image.resize((720, 496))
         else:
             print("ℹ️ Başlangıç görseli bulunamadı. Boş referans şablonu oluşturuluyor...")
-            blank_pil = Image.new("RGB", (720, 480), (0, 0, 0))
-            blank_pil.save("/content/blank_init_v3.jpg")
-            init_image = load_image("/content/blank_init_v3.jpg")
+            blank_pil = Image.new("RGB", (720, 496), (0, 0, 0))
+            blank_pil.save("/content/blank_init_v4.jpg")
+            init_image = load_image("/content/blank_init_v4.jpg")
 
     # 1. Video Üret (Lazy)
     raw_video_path = "/content/raw_video.mp4"
