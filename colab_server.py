@@ -145,14 +145,16 @@ def generate_media():
         cap.release()
         init_image = load_image("/content/last_frame.jpg")
     else:
-        # Önbelleği aşmak için dosya ismini blank_init_v2.jpg yapıyor ve 720x480 en-boy oranına sabitliyoruz
+        # PIL Image kullanarak doğrudan tam 720x480 formatında boş/siyah görsel oluşturuyoruz
         if user_image_path and os.path.exists(user_image_path):
             init_image = load_image(user_image_path)
+            # Eğer kullanıcı görseli farklı çözünürlükteyse tam 720x480'a yeniden boyutlandırıyoruz
+            init_image = init_image.resize((720, 480))
         else:
             print("ℹ️ Başlangıç görseli bulunamadı. Boş referans şablonu oluşturuluyor...")
-            blank_img = np.zeros((480, 720, 3), dtype=np.uint8)
-            cv2.imwrite("/content/blank_init_v2.jpg", blank_img)
-            init_image = load_image("/content/blank_init_v2.jpg")
+            blank_pil = Image.new("RGB", (720, 480), (0, 0, 0))
+            blank_pil.save("/content/blank_init_v3.jpg")
+            init_image = load_image("/content/blank_init_v3.jpg")
 
     # 1. Video Üret (Lazy)
     raw_video_path = "/content/raw_video.mp4"
