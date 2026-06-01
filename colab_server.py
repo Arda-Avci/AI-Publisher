@@ -9,6 +9,8 @@ import scipy.io.wavfile as wavfile
 import gc
 from pyngrok import ngrok
 
+# CUDA Bellek fragmantasyonunu önleyen kritik ayar
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 app = Flask(__name__)
 
@@ -17,6 +19,10 @@ print("🚀 Flask sunucusu Lazy Loading (Sıralı Bellek Yönetimi) ile hazırla
 # --- LAZY LOADING MOTORLARI ---
 
 def generate_video_lazy(prompt, init_image):
+    # Yükleme öncesi GPU önbelleğini tamamen temizle
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     print("🎬 Video motoru belleğe yükleniyor...")
     video_pipe = CogVideoXImageToVideoPipeline.from_pretrained(
         "THUDM/CogVideoX-2b", 
@@ -30,7 +36,7 @@ def generate_video_lazy(prompt, init_image):
     print("🎬 Video üretimi başlatıldı...")
     frames = video_pipe(prompt=prompt, image=init_image, num_frames=49, num_inference_steps=30).frames
     
-    # Belleği anında temizle
+    # Belleği temizle
     del video_pipe
     gc.collect()
     torch.cuda.empty_cache()
@@ -38,6 +44,10 @@ def generate_video_lazy(prompt, init_image):
     return frames
 
 def generate_sfx_lazy(prompt):
+    # Yükleme öncesi GPU önbelleğini temizle
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     print("🔊 Ses efekti motoru belleğe yükleniyor...")
     sfx_pipe = AudioLDM2Pipeline.from_pretrained(
         "cvssp/audioldm2", 
