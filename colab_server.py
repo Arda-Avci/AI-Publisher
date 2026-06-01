@@ -22,7 +22,8 @@ def generate_video_lazy(prompt, init_image):
         "THUDM/CogVideoX-2b", 
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True
-    ).to("cuda")
+    )
+    video_pipe.enable_model_cpu_offload()
     video_pipe.vae.enable_tiling()
     video_pipe.enable_attention_slicing()
     
@@ -42,7 +43,8 @@ def generate_sfx_lazy(prompt):
         "cvssp/audioldm2", 
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True
-    ).to("cuda")
+    )
+    sfx_pipe.enable_model_cpu_offload()
     
     print("🔊 Ses efekti üretiliyor...")
     audio = sfx_pipe(prompt, audio_length_in_s=6.0, num_inference_steps=20).audios
