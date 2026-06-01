@@ -179,4 +179,4 @@ if __name__ == '__main__':
         print("\n⚠️ NGROK_TOKEN girilmedi! Tünel oluşturulmadan sadece localhost üzerinden başlatılıyor.\n")
 
     # 2. Flask Başlat
-    app.run(port=5000)
+    app.run(port=5000, debug=True, use_reloader=False)
