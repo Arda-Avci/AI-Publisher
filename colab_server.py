@@ -7,6 +7,7 @@ from diffusers import CogVideoXImageToVideoPipeline, AudioLDM2Pipeline
 from diffusers.utils import load_image, export_to_video
 import scipy.io.wavfile as wavfile
 import gc
+from pyngrok import ngrok
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 app = Flask(__name__)
@@ -167,5 +168,15 @@ def download_sfx():
     return send_file("/content/sfx.wav", mimetype='audio/wav')
 
 if __name__ == '__main__':
-    print("Sunucu kuruldu, alt hücreden Ngrok başlatabilirsiniz.")
+    # 1. Ngrok Auth ve Tünel Bağlantısı
+    NGROK_TOKEN = "BURAYA_NGROK_TOKEN_GELECEK"
+    if NGROK_TOKEN and NGROK_TOKEN != "BURAYA_NGROK_TOKEN_GELECEK":
+        ngrok.set_auth_token(NGROK_TOKEN)
+        public_url = ngrok.connect(5000)
+        print("\n🔗 NODE.JS PROJENİZE YAPIŞTIRACAĞINIZ URL:\n", public_url.public_url)
+        print("\n--------------------------------------------------\n")
+    else:
+        print("\n⚠️ NGROK_TOKEN girilmedi! Tünel oluşturulmadan sadece localhost üzerinden başlatılıyor.\n")
+
+    # 2. Flask Başlat
     app.run(port=5000)
