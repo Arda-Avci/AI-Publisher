@@ -41,7 +41,15 @@ def generate_video_lazy(prompt, init_image):
     video_pipe.enable_attention_slicing()
     
     print("🎬 Video üretimi başlatıldı...")
-    frames = video_pipe(prompt=prompt, image=init_image, num_frames=49, num_inference_steps=30).frames
+    # Modelin tam uyumlu formatta çalışabilmesi için çözünürlüğü zorla 720x480 parametrik yapıyoruz
+    frames = video_pipe(
+        prompt=prompt, 
+        image=init_image, 
+        num_frames=49, 
+        num_inference_steps=30,
+        width=720,
+        height=480
+    ).frames
     
     # Belleği temizle
     del video_pipe
@@ -141,21 +149,21 @@ def generate_media():
         cap.set(cv2.CAP_PROP_POS_FRAMES, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1)
         ret, frame = cap.read()
         if ret: 
-            # Sahne geçişlerindeki kareleri de tam 720x496 formatında yeniden yazdırıyoruz
-            frame_resized = cv2.resize(frame, (720, 496))
+            frame_resized = cv2.resize(frame, (720, 480))
             cv2.imwrite("/content/last_frame.jpg", frame_resized)
         cap.release()
         init_image = load_image("/content/last_frame.jpg")
     else:
-        # PIL Image kullanarak doğrudan tam 720x496 formatında boş/siyah görsel oluşturuyoruz
+        # Önbelleği tamamen aşmak için her seferinde benzersiz timestamp'li dosya adı üretiyoruz
         if user_image_path and os.path.exists(user_image_path):
             init_image = load_image(user_image_path)
-            init_image = init_image.resize((720, 496))
+            init_image = init_image.resize((720, 480))
         else:
             print("ℹ️ Başlangıç görseli bulunamadı. Boş referans şablonu oluşturuluyor...")
-            blank_pil = Image.new("RGB", (720, 496), (0, 0, 0))
-            blank_pil.save("/content/blank_init_v4.jpg")
-            init_image = load_image("/content/blank_init_v4.jpg")
+            blank_name = f"/content/blank_{int(time.time())}.jpg"
+            blank_pil = Image.new("RGB", (720, 480), (0, 0, 0))
+            blank_pil.save(blank_name)
+            init_image = load_image(blank_name)
 
     # 1. Video Üret (Lazy)
     raw_video_path = "/content/raw_video.mp4"
