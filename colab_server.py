@@ -145,12 +145,12 @@ def generate_media():
         cap.release()
         init_image = load_image("/content/last_frame.jpg")
     else:
-        # Eğer kullanıcı görsel yüklemediyse, internetten çekmek yerine otonom siyah/varsayılan görsel üretiyoruz (Boyut: 720x480)
+        # Eğer kullanıcı görsel yüklemediyse, kare (720x720) standart boş şablon oluşturuyoruz
         if user_image_path and os.path.exists(user_image_path):
             init_image = load_image(user_image_path)
         else:
             print("ℹ️ Başlangıç görseli bulunamadı. Boş referans şablonu oluşturuluyor...")
-            blank_img = np.zeros((480, 720, 3), dtype=np.uint8)
+            blank_img = np.zeros((720, 720, 3), dtype=np.uint8)
             cv2.imwrite("/content/blank_init.jpg", blank_img)
             init_image = load_image("/content/blank_init.jpg")
 
