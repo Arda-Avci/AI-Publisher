@@ -7,27 +7,30 @@ from diffusers import CogVideoXImageToVideoPipeline, AudioLDM2Pipeline
 from diffusers.utils import load_image, export_to_video
 import scipy.io.wavfile as wavfile
 
-# Belleğe anlık yığılmayı önlemek için HF transferi kapatıyoruz
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 app = Flask(__name__)
 
-print("🚀 Modeller GPU'ya yükleniyor (Sıralı/Lazy Optimizasyonlu)...")
+print("🚀 Modeller GPU'ya yükleniyor (VRAM/Sıralı CPU Offload Aktif)...")
 
-# 1. Video Motoru (Image-to-Video) - 2B Optimizasyonlu Sürüm
+# 1. Video Motoru (Image-to-Video) - VRAM Optimizasyonları (offload ve slicing)
 video_pipe = CogVideoXImageToVideoPipeline.from_pretrained(
     "THUDM/CogVideoX-2b", 
     torch_dtype=torch.float16,
     low_cpu_mem_usage=True
-).to("cuda")
-video_pipe.enable_model_cpu_offload()
+)
+# Doğrudan .to("cuda") yerine katman bazlı offload ve attention slicing etkinleştiriliyor
+video_pipe.enable_sequential_cpu_offload()
 video_pipe.vae.enable_tiling()
+video_pipe.enable_attention_slicing()
 
-# 2. Ses Efekti Motoru
+# 2. Ses Efekti Motoru - VRAM Optimizasyonu
 sfx_pipe = AudioLDM2Pipeline.from_pretrained(
     "cvssp/audioldm2", 
     torch_dtype=torch.float16,
     low_cpu_mem_usage=True
-).to("cuda")
+)
+sfx_pipe.enable_sequential_cpu_offload()
+sfx_pipe.enable_attention_slicing()
 
 # 3. Seslendirme (TTS) Motoru - Lazy loading ile sadece talep anında belleğe yüklenir
 tts_model = None
