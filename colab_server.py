@@ -126,7 +126,14 @@ def generate_media():
         cap.release()
         init_image = load_image("/content/last_frame.jpg")
     else:
-        init_image = load_image(user_image_path) if user_image_path and os.path.exists(user_image_path) else load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/cogvideox_sample.png")
+        # Eğer kullanıcı görsel yüklemediyse, internetten çekmek yerine otonom siyah/varsayılan görsel üretiyoruz (Boyut: 720x480)
+        if user_image_path and os.path.exists(user_image_path):
+            init_image = load_image(user_image_path)
+        else:
+            print("ℹ️ Başlangıç görseli bulunamadı. Boş referans şablonu oluşturuluyor...")
+            blank_img = np.zeros((480, 720, 3), dtype=np.uint8)
+            cv2.imwrite("/content/blank_init.jpg", blank_img)
+            init_image = load_image("/content/blank_init.jpg")
 
     # 1. Video Üret (Lazy)
     raw_video_path = "/content/raw_video.mp4"
