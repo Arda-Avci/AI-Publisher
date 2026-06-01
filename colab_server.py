@@ -155,15 +155,21 @@ def generate_media():
         cap.release()
         init_image = load_image("/content/last_frame.jpg")
     else:
-        # Önbelleği tamamen aşmak için her seferinde benzersiz timestamp'li dosya adı üretiyoruz
+        # VAE latent hatasını ezmek için gerçek renklerden oluşan dinamik bir gürültü görseli üretiyoruz
         if user_image_path and os.path.exists(user_image_path):
             init_image = load_image(user_image_path)
             init_image = init_image.resize((720, 480))
         else:
-            print("ℹ️ Başlangıç görseli bulunamadı. Boş referans şablonu oluşturuluyor...")
+            print("ℹ️ Başlangıç görseli bulunamadı. Yapay dokulu referans görsel oluşturuluyor...")
+            # OpenCV ile 3 kanallı renkli ve dokulu bir test resmi çiziyoruz
+            textured_img = np.zeros((480, 720, 3), dtype=np.uint8)
+            # Rastgele renkler içeren yumuşak bir degrade ve gürültü ekleyelim
+            cv2.randu(textured_img, (50, 50, 50), (200, 200, 200))
+            # Kenarları biraz yumuşatalım
+            textured_img = cv2.GaussianBlur(textured_img, (15, 15), 0)
+            
             blank_name = f"/content/blank_{int(time.time())}.jpg"
-            blank_pil = Image.new("RGB", (720, 480), (0, 0, 0))
-            blank_pil.save(blank_name)
+            cv2.imwrite(blank_name, textured_img)
             init_image = load_image(blank_name)
 
     # 1. Video Üret (Lazy)
