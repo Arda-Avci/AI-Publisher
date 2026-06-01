@@ -8,11 +8,17 @@ from diffusers.utils import load_image, export_to_video
 import scipy.io.wavfile as wavfile
 import gc
 from pyngrok import ngrok
+from PIL import Image
+import traceback
 
-# CUDA Bellek fragmantasyonunu önleyen kritik ayar
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 app = Flask(__name__)
+
+# Flask içerisindeki tüm hataları zorla konsola yazdıran hata yakalayıcı
+@app.errorhandler(Exception)
+def handle_exception(e):
+    print("❌ SUNUCU HATA DETAYI:")
+    traceback.print_exc()
+    return jsonify({"status": "error", "message": str(e)}), 500
 
 print("🚀 Flask sunucusu Lazy Loading (Sıralı Bellek Yönetimi) ile hazırlandı.")
 
@@ -31,6 +37,7 @@ def generate_video_lazy(prompt, init_image):
     )
     video_pipe.enable_model_cpu_offload()
     video_pipe.vae.enable_tiling()
+    video_pipe.vae.enable_slicing() # Bellek için VAE dilimleme eklendi
     video_pipe.enable_attention_slicing()
     
     print("🎬 Video üretimi başlatıldı...")
