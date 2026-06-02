@@ -72,6 +72,14 @@ FFmpeg kullanılarak yatay/kare sahneler dikey formata dönüştürülür:
 *   **Ön İzleme & Onay Ekranı:** Yayınlanmadan önce ana yatay video ve shorts dikey videosu ayrı ayrı izlenebilir. Kullanıcı platform bazlı SEO metinlerini düzenleyebilir ve YouTube Playlist seçimini yapabilir.
 *   **Playwright Oynatma Listesi Otomasyonu:** Playwright, YouTube Studio yükleme sayfasında playlist seçme veya yeni playlist oluşturma adımlarını simüle eder.
 
+### 🤖 4. Playwright Otomatik Dosya Yükleme (Upload) Akışı
+Playwright, çerez dosyalarını (`auth_youtube.json` vb.) kullanarak oturum açma engellerine takılmadan yükleme sürecini şu adımlarla tamamen otomatik yürütür:
+1.  **Tarayıcı Başlatma:** İlgili platformun yükleme sayfasına (örn: `https://youtube.com/upload` veya YouTube Studio) gidilir.
+2.  **Dosya Seçici Tetikleme:** Yükleme butonuna tıklanır ve Playwright'ın dosya seçici dinleyicisi (`page.waitForEvent('filechooser')`) aktif edilir.
+3.  **Otomatik Yükleme (setInputFiles):** Sunucunun diskindeki video dosyası (`videolar/film_x.mp4`) ve üretilen kapak resmi (`cover_x.png`) dosya seçiciye programatik olarak beslenir (`fileChooser.setFiles()`). Dosyalar tarayıcıya otomatik yüklenmeye başlar.
+4.  **Metin & Playlist Girişi:** Gemini tarafından üretilen başlık, açıklama ve etiketler ilgili metin alanlarına yazılır. Oynatma listesi seçilir.
+5.  **Yayınlama:** Yükleme ve işleme bittikten sonra "Yayınla" (Publish) butonuna tıklanarak işlem sonlandırılır.
+
 ---
 
 ## 🧪 Doğrulama ve Test Planı
