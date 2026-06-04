@@ -3,13 +3,22 @@
 Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformunu (SaaS) uçtan uca, temiz, tür güvenli (type-safe) ve üretime hazır şekilde kodlamayı amaçlamaktadır.
 
 ## Mevcut Durum
-- **Başlangıç:** Proje kodlaması tamamlandı.
-- **Dizin Yapısı:** `src/` klasörü altında `db.ts`, `publisher.ts`, `queue.ts`, `server.ts` dosyaları oluşturuldu. Ana dizinde `tsconfig.json`, `.env`, `.env.example`, `colab_server.py` hazırlandı.
-- **Veritabanı:** SQLite entegrasyonu tamamlandı, `admin/admin123` kullanıcısı eklendi.
-- **İş Kuyruğu:** Gemini-2.5-Flash entegrasyonu ve SSE tabanlı kuyruk yapısı FFmpeg altyazı gömme/miksleme mantığı ile kuruldu.
-- **Sosyal Medya Yayın Motoru:** Playwright tabanlı YouTube, TikTok, X ve Meta Reels modülleri tamamlandı.
-- **Sunucu & Arayüz:** Neon Cyan rengi odaklı, premium ve hareketli cam-morfik dashboard geliştirildi.
-- **Google Colab Katmanı:** `colab_server.py` Flask API kodu hazırlandı.
+- **Başlangıç:** Proje kodlaması ve entegrasyonu tamamlandı.
+- **Fırsatlar Hunisi:** YouTube API v3 veya yedek scraping tabanlı, horizontal scroll barı ve ısı haritalı premium arayüz entegre edildi.
+- **Kapak Fotoğrafı Sentezi:** Stable Diffusion 1.5 (`DreamShaper 8`) modeliyle lazy loading yöntemiyle Colab'da 3 alternatif kapak üretme ve Node.js sunucusuna indirme mantığı kuruldu.
+- **Akıllı Dikey Video Motoru:** FFmpeg `boxblur=40` filtre zinciriyle Shorts formatına akıllı dönüştürücü ve Like, Abone ol sembolleri ile bitiş ekranı (callout) yerleşimleri tamamlandı.
+- **Playwright Otomasyonu:** YouTube playlist seçme / yeni oynatma listesi oluşturma simülasyonları ve çerez kontrolleri entegre edildi.
+- **Tür Güvenliği:** `npx tsc --noEmit` ile TypeScript tür denetimi başarıyla doğrulandı.
+- **D-Note Arayüz Entegrasyonu:** D-Note projesindeki tema yapısı (8 premium tema) ve çoklu dil desteği (i18n), JSON dil dosyaları (`tr.json`, `en.json`), Express middleware katmanları ve `themes.ts` modülleri ile baştan aşağı yenilendi. Hardcoded metinler temizlendi.
 
 ## Bilinen Sorunlar / Eksikler
-- Yok. TypeScript derlemesi (`tsc --noEmit`) başarıyla tamamlandı.
+- **Uzak Colab URL Benimseme (Adoption) Desteği:** Node.js sunucusunun `.env` dosyasında `COLAB_URL` tanımlı olduğunda, yerelde `colab_setup.py` sürecini başlatmaya çalışarak 90 saniyelik zaman aşımına uğraması engellendi. `ColabManager` artık başlangıçta veya `start()` çağrısında çevresel `COLAB_URL` değişkenini kontrol ederek doğrudan bu bağlantıyı "running" statüsüyle benimsemektedir.
+- Yok.
+
+## Yapılan Testler ve Doğrulama
+- **Sistem Entegrasyon Testleri:** `/src/test_integration.spec.ts` oluşturuldu; oturum yönetimi, Colab kontrol endpoints (`/colab-start`, `/colab-stop`), SQLite ayarlarının kaydedilmesi, iş kuyruğu manipülasyonu (ekleme, iptal etme, yeniden deneme, silme) ve YouTube Scraper'ın API anahtarlı ile yedek scraping (Invidious/Piped) fallback mekanizmaları Vitest ile başarıyla doğrulandı.
+- **Kuyruk Temizleme ve Test Hazırlığı:** SQLite veritabanındaki tüm eski/başarısız işler temizlendi ve testler için 2 adet pending durumunda iş kuyruğa hazırlandı.
+- **Tarayıcı ve Arayüz Doğrulaması:** [walkthrough.md](file:///C:/Users/Damla/.gemini/antigravity-ide/brain/30ddbda6-55cb-42b8-a053-f2538eb9184a/walkthrough.md) raporuna göre, giriş yapma, ayarlar arayüzü, YouTube API arama entegrasyonu ve Gemini tabanlı farklılaştırma (özgünleştirme) akışları başarıyla çalıştırıldı.
+- **Colab Betiği Jupyter Hata Giderimi:** Sunucu ilk açılışta `colab_setup.py` dosyasındaki jupyter bang (`!`) komutları yüzünden hata veriyordu, tüm betik saf python standardına (`subprocess`) uyarlandı. Ayrıca, Colab ortamında `sys.stdout`'un `fileno()` metodu olmamasından ötürü oluşan `UnsupportedOperation: fileno` hatası giderilerek sunucu logları `colab_server.log` dosyasına yönlendirildi. Ek olarak, `colab_setup.py` betiğindeki çalışmayan placeholder ve SharePoint Wav2Lip (`wav2lip.pth` ve `wav2lip_gan.pth`) indirme adresleri çalışan alternatif Hugging Face bağlantılarıyla güncellendi. Yeni kütüphanelerin kurulmasından sonra Python'ın belleği tazeleyebilmesi için kurulum sonuna "Çalışma Zamanını Yeniden Başlat" (Restart session) uyarısı, `colab_server.py` içine Ngrok tokenını güvenli şekilde okuyabilen Colab Secrets (`google.colab.userdata`) desteği ve arka planda başlayan sunucunun ürettiği Ngrok URL'inin `ngrok_url.txt` dosyası üzerinden okunarak hücre ekran çıktısına doğrudan yazdırılması mantığı eklendi. (Hücrede ilk import işlemlerinin yavaş olması veya hata oluşması durumunu yakalamak için URL bekleme süresi 30 saniyeye çıkarıldı ve başarısızlık durumunda sunucu loglarının doğrudan ekrana basılması sağlandı.) Python 3.12 uyumluluğu için kurulum betiğinde sorun yaratan `TTS` paketi `coqui-tts` ile değiştirildi, `Wav2Lip` klasörünün zaten mevcut olması durumunda `git clone` komutunun hata vermesini engelleyen klasör kontrol mantığı, `colab_server.py` dosyasının Colab bulut ortamında bulunamaması durumunda otomatik yükleme istemi (`files.upload()`), logların tamponlanmadan (buffer edilmeden) anlık dosyaya yazılması için `-u` (unbuffered) parametresi ve `NGROK_TOKEN` eksikse kullanıcıya `input()` ile sorup bunu alt sürece çevre değişkeni olarak aktaran garanti Ngrok bağlantı yapısı eklendi.
+- **Dotenv ve Ngrok Sağlık Kontrolü İyileştirmeleri:** `server.ts` içerisindeki `dotenv.config()` en üst satıra taşınarak `colab-manager.ts` import edildiğinde `process.env.COLAB_URL`'in okunabilmesi sağlandı. Ayrıca ngrok'un ücretsiz planlardaki tarayıcı uyarı sayfalarını (`interstitial page`) bypass etmek için stüdyonun backend üzerinden Colab'a attığı tüm `/health` isteklerine `ngrok-skip-browser-warning: true` header'ı eklendi. ColabManager constructor ve start süreçlerinde SSE bildirim mekanizmaları `setStatus` aracılığıyla tünel entegrasyonu için optimize edildi.
+

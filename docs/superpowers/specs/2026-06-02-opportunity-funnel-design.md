@@ -80,6 +80,15 @@ Playwright, çerez dosyalarını (`auth_youtube.json` vb.) kullanarak oturum aç
 4.  **Metin & Playlist Girişi:** Gemini tarafından üretilen başlık, açıklama ve etiketler ilgili metin alanlarına yazılır. Oynatma listesi seçilir.
 5.  **Yayınlama:** Yükleme ve işleme bittikten sonra "Yayınla" (Publish) butonuna tıklanarak işlem sonlandırılır.
 
+### 🔐 5. Akıllı Oturum/Giriş Kontrolü Akışı (Session Check Flow)
+Yayın platformlarındaki çerezlerin durumunu denetlemek için iki kademeli kontrol mekanizması uygulanır:
+1.  **Üretim Öncesi Kontrol (Pre-check):**
+    *   Kullanıcı işi kuyruğa eklemeden önce, seçilen platformların `auth_*.json` dosyalarının varlığı sunucuda kontrol edilir.
+    *   Eksik çerez olması durumunda kullanıcıya *"Çerez eksik, video otomatik yayınlanamayacak"* uyarısı verilerek onay istenir.
+2.  **Yayın Öncesi / Hata Durumunda Kurtarma (On-demand Recovery):**
+    *   Yayınlama sırasında oturum hatası (`auth error`) alınırsa, arayüzde **"Oturumu Yenile / Giriş Yap"** butonu tetiklenir.
+    *   Playwright, sunucu ekranında görünür modda (`headless: false`) ilgili giriş sayfasını açar. Kullanıcı manuel giriş yaptığında çerezleri yeniden kaydedip yayına devam eder.
+
 ---
 
 ## 🧪 Doğrulama ve Test Planı

@@ -2,8 +2,19 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
 
-export async function uploadToYouTube(videoPath: string, title: string, desc: string, tags: string): Promise<boolean> {
-  console.log(`[INFO] YouTube Shorts yükleme başlatılıyor: ${videoPath}`);
+export async function checkSession(platform: string): Promise<boolean> {
+  const authFile = `auth_${platform}.json`;
+  return await fs.pathExists(authFile);
+}
+
+export async function uploadToYouTube(
+  videoPath: string, 
+  title: string, 
+  desc: string, 
+  tags: string, 
+  playlistIdOrName?: string
+): Promise<boolean> {
+  console.log(`[INFO] YouTube yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_youtube.json';
   if (!await fs.pathExists(authFile)) {
     console.error(`[ERROR] YouTube yetkilendirme dosyası bulunamadı: ${authFile}`);
@@ -39,7 +50,6 @@ export async function uploadToYouTube(videoPath: string, title: string, desc: st
 
     const titleBoxes = await page.$$('div#textbox[contenteditable="true"]');
     if (titleBoxes.length > 0) {
-      // Birinci kutu başlık, ikinci kutu açıklamadır
       await titleBoxes[0].click();
       await page.keyboard.press('Control+A');
       await page.keyboard.press('Backspace');
@@ -50,6 +60,117 @@ export async function uploadToYouTube(videoPath: string, title: string, desc: st
         await page.keyboard.press('Control+A');
         await page.keyboard.press('Backspace');
         await titleBoxes[1].fill(`${desc}\n\n${tags}`);
+      }
+    }
+
+    // Oynatma Listesi (Playlist) Seçimi — playlistIdOrName aslında bir playlist ADI
+    if (playlistIdOrName) {
+      try {
+        console.log(`[INFO] Oynatma listesi seçimi başlatılıyor: ${playlistIdOrName}`);
+        // Open the playlist section. Selector may change with YouTube Studio UI updates.
+        const playlistSelect = await page.waitForSelector(
+          '.row-value-container.style-scope.ytcp-video-metadata-editor-playlists',
+          { timeout: 10_000 }
+        ).catch(() => null);
+        if (!playlistSelect) {
+          console.warn('[WARN] Playlist alanı bulunamadı — UI değişmiş olabilir, atlanıyor.');
+        } else {
+          await playlistSelect.click();
+          await page.waitForTimeout(2_000);
+
+          // Mevcut listelerden aramaya çalış — birden çok olası placeholder
+          const searchSelectors = [
+            'input[placeholder="Oynatma listelerinde ara"]',
+            'input[placeholder="Search playlists"]',
+            'input[placeholder*="ara"]',
+            'input[placeholder*="search" i]',
+            'input[type="text"]'
+          ];
+          let searchInput: any = null;
+          for (const sel of searchSelectors) {
+            const found = await page.$(sel);
+            if (found) { searchInput = found; break; }
+          }
+          if (searchInput) {
+            await searchInput.fill(playlistIdOrName);
+            await page.waitForTimeout(1_500);
+          }
+
+          // Try to find an existing playlist matching the name (case-insensitive)
+          const existingCheckbox = await page.evaluateHandle((name: string) => {
+            const lcName = name.toLowerCase();
+            const labels = Array.from(document.querySelectorAll('label, span, div')) as HTMLElement[];
+            for (const el of labels) {
+              const text = (el.textContent || '').trim().toLowerCase();
+              if (text === lcName || text.includes(lcName)) {
+                const cb = el.closest('tp-yt-paper-checkbox') || el.closest('[role="checkbox"]') || el.querySelector('tp-yt-paper-checkbox');
+                if (cb) return cb as HTMLElement;
+              }
+            }
+            return null;
+          }, playlistIdOrName);
+          const existingEl = existingCheckbox.asElement();
+          if (existingEl) {
+            await existingEl.click();
+            console.log(`[INFO] Mevcut playlist seçildi: ${playlistIdOrName}`);
+          } else {
+            // Playlist bulunamadı — yenisini oluştur
+            console.log(`[INFO] Oynatma listesi bulunamadı. Yeni oluşturuluyor: ${playlistIdOrName}`);
+            const newBtnSelectors = [
+              'div.create-playlist-button',
+              'button:has-text("Yeni oynatma listesi")',
+              'button:has-text("New playlist")',
+              'tp-yt-paper-item:has-text("Yeni oynatma listesi")',
+              'tp-yt-paper-item:has-text("New playlist")'
+            ];
+            for (const sel of newBtnSelectors) {
+              const btn = await page.$(sel);
+              if (btn) { await btn.click(); await page.waitForTimeout(1_000); break; }
+            }
+
+            // Title input — try several variants
+            const titleInputSelectors = [
+              'textarea[placeholder="Başlık ekleyin"]',
+              'textarea[placeholder="Add title"]',
+              'input[placeholder*="title" i]',
+              'input[placeholder*="başlık" i]'
+            ];
+            let titleInput: any = null;
+            for (const sel of titleInputSelectors) {
+              const found = await page.$(sel);
+              if (found) { titleInput = found; break; }
+            }
+            if (titleInput) {
+              await titleInput.fill(playlistIdOrName);
+              const saveBtn = await page.$('ytcp-button:has-text("Oluştur"), ytcp-button:has-text("Create")');
+              if (saveBtn) {
+                await saveBtn.click();
+                await page.waitForTimeout(2_000);
+                // Yeni oluşturulan listeyi tekrar seç
+                const newCheckbox = await page.evaluateHandle((name: string) => {
+                  const lcName = name.toLowerCase();
+                  const labels = Array.from(document.querySelectorAll('label, span, div')) as HTMLElement[];
+                  for (const el of labels) {
+                    const text = (el.textContent || '').trim().toLowerCase();
+                    if (text === lcName || text.includes(lcName)) {
+                      const cb = el.closest('tp-yt-paper-checkbox') || el.closest('[role="checkbox"]') || el.querySelector('tp-yt-paper-checkbox');
+                      if (cb) return cb as HTMLElement;
+                    }
+                  }
+                  return null;
+                }, playlistIdOrName);
+                const newCbEl = newCheckbox.asElement();
+                if (newCbEl) await newCbEl.click();
+              }
+            }
+          }
+          // "Bitti" veya "Done" butonuna basarak playlist modalını kapat
+          const donePlaylistBtn = await page.$('ytcp-button.done-button');
+          if (donePlaylistBtn) await donePlaylistBtn.click();
+        }
+      } catch (playlistErr) {
+        // Defensive: never fail the whole upload on a playlist error
+        console.warn(`[WARN] Oynatma listesi seçilirken bir hata oluştu:`, playlistErr);
       }
     }
 
@@ -84,6 +205,7 @@ export async function uploadToYouTube(videoPath: string, title: string, desc: st
     await browser.close();
   }
 }
+
 
 export async function uploadToTikTok(videoPath: string, desc: string, tags: string): Promise<boolean> {
   console.log(`[INFO] TikTok yükleme başlatılıyor: ${videoPath}`);

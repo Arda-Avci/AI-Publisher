@@ -1,0 +1,231 @@
+◇ injected env (4) from .env // tip: ⌘ suppress logs { quiet: true }
+[INFO] Veritabanı hazır.
+[INFO] AI Publisher sunucusu aktif: http://localhost:3014
+[opportunity] YouTube API failed, falling back to Invidious/Piped: API key not valid. Please pass a valid API key.
+[Fallback] invidious:https://inv.nadeko.net failed: HTTP 403
+[Fallback] invidious:https://invidious.privacyredirect.com failed: HTTP 404
+[Fallback] invidious:https://invidious.fdn.fr failed: fetch failed
+[Fallback] piped:https://pipedapi.adminforge.de failed: fetch failed
+[Fallback] piped:https://watchapi.whatever.social failed: fetch failed
+[Fallback] piped:https://api-piped.mha.fi failed: HTTP 522
+[Fallback] piped:https://pipedapi.kavin.rocks failed: HTTP 502
+[INFO] Differentiation Phase 1 tamamlandı: job #28
+[INFO] Differentiation Phase 1 tamamlandı: job #29
+[INFO] İş kuyruğu için Colab başlatılıyor...
+[colab:err] ERROR: Ignored the following versions that require a different python version: 0.0.10.2 Requires-Python >=3.6.0,<3.9; 0.0.10.3 Requires-Python >=3.6.0,<3.9; 0.0.11 Requires-Python >=3.6.0,<3.9; 0.0.12 Requires-Python >=3.6.0,<3.9; 0.0.13.1 Requires-Python >=3.6.0,<3.9; 0.0.13.2 Requires-Python >=3.6.0,<3.9; 0.0.14.1 Requires-Python >=3.6.0,<3.9; 0.0.15 Requires-Python >=3.6.0,<3.9; 0.0.15.1 Requires-Python >=3.6.0,<3.9; 0.0.9 Requires-Python >=3.6.0,<3.9; 0.0.9.1 Requires-Python >=3.6.0,<3.9; 0.0.9.2 Requires-Python >=3.6.0,<3.9; 0.0.9a10 Requires-Python >=3.6.0,<3.9; 0.0.9a9 Requires-Python >=3.6.0,<3.9; 0.1.0 Requires-Python >=3.6.0,<3.10; 0.1.1 Requires-Python >=3.6.0,<3.10; 0.1.2 Requires-Python >=3.6.0,<3.10; 0.1.3 Requires-Python >=3.6.0,<3.10; 0.10.0 Requires-Python >=3.7.0,<3.11; 0.10.1 Requires-Python >=3.7.0,<3.11; 0.10.2 Requires-Python >=3.7.0,<3.11; 0.11.0 Requires-Python >=3.7.0,<3.11; 0.11.1 Requires-Python >=3.7.0,<3.11; 0.12.0 Requires-Python >=3.7.0,<3.11; 0.13.0 Requires-Python >=3.7.0,<3.11; 0.13.1 Requires-Python >=3.7.0,<3.11; 0.13.2 Requires-Python >=3.7.0,<3.11; 0.13.3 Requires-Python >=3.7.0,<3.11; 0.14.0 Requires-Python >=3.7.0,<3.11; 0.14.2 Requires-Python >=3.7.0,<3.11; 0.14.3 Requires-Python >=3.7.0,<3.11; 0.15.0 Requires-Python >=3.9.0,<3.12; 0.15.1 Requires-Python >=3.9.0,<3.12; 0.15.2 Requires-Python >=3.9.0,<3.12; 0.15.4 Requires-Python >=3.9.0,<3.12; 0.15.5 Requires-Python >=3.9.0,<3.12; 0.15.6 Requires-Python >=3.9.0,<3.12; 0.16.0 Requires-Python >=3.9.0,<3.12; 0.16.1 Requires-Python >=3.9.0,<3.12; 0.16.3 Requires-Python >=3.9.0,<3.12; 0.16.4 Requires-Python >=3.9.0,<3.12; 0.16.5 Requires-Python >=3.9.0,<3.12; 0.16.6 Requires-Python >=3.9.0,<3.12; 0.17.0 Requires-Python >=3.9.0,<3.12; 0.17.1 Requires-Python >=3.9.0,<3.12; 0.17.2 Requires-Python >=3.9.0,<3.12; 0.17.4 Requires-Python >=3.9.0,<3.12; 0.17.5 Requires-Python >=3.9.0,<3.12; 0.17.6 Requires-Python >=3.9.0,<3.12; 0.17.7 Requires-Python >=3.9.0,<3.12; 0.17.8 Requires-Python >=3.9.0,<3.12; 0.17.9 Requires-Python >=3.9.0,<3.12; 0.18.0 Requires-Python >=3.9.0,<3.12; 0.18.1 Requires-Python >=3.9.0,<3.12; 0.18.2 Requires-Python >=3.9.0,<3.12; 0.19.0 Requires-Python >=3.9.0,<3.12; 0.19.1 Requires-Python >=3.9.0,<3.12; 0.2.0 Requires-Python >=3.6.0,<3.10; 0.2.1 Requires-Python >=3.6.0,<3.10; 0.2.2 Requires-Python >=3.6.0,<3.10; 0.20.0 Requires-Python >=3.9.0,<3.12; 0.20.1 Requires-Python >=3.9.0,<3.12; 0.20.2 Requires-Python >=3.9.0,<3.12; 0.20.3 Requires-Python >=3.9.0,<3.12; 0.20.4 Requires-Python >=3.9.0,<3.12; 0.20.5 Requires-Python >=3.9.0,<3.12; 0.20.6 Requires-Python >=3.9.0,<3.12; 0.21.0 Requires-Python >=3.9.0,<3.12; 0.21.1 Requires-Python >=3.9.0,<3.12; 0.21.2 Requires-Python >=3.9.0,<3.12; 0.21.3 Requires-Python >=3.9.0,<3.12; 0.22.0 Requires-Python >=3.9.0,<3.12; 0.3.0 Requires-Python >=3.6.0,<3.10; 0.3.1 Requires-Python >=3.6.0,<3.10; 0.4.0 Requires-Python >=3.6.0,<3.10; 0.4.1 Requires-Python >=3.6.0,<3.10; 0.4.2 Requires-Python >=3.6.0,<3.10; 0.5.0 Requires-Python >=3.6.0,<3.10; 0.6.0 Requires-Python >=3.6.0,<3.10; 0.6.1 Requires-Python >=3.6.0,<3.10; 0.6.2 Requires-Python >=3.6.0,<3.10; 0.7.0 Requires-Python >=3.7.0,<3.11; 0.7.1 Requires-Python >=3.7.0,<3.11; 0.8.0 Requires-Python >=3.7.0,<3.11; 0.9.0 Requires-Python >=3.7.0,<3.11
+[colab:err] ERROR: Could not find a version that satisfies the requirement TTS (from versions: none)
+[colab:err] 
+[[colab:err] notice] A new release of pip is available: 25.3 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip[colab:err] 
+[colab:err] ERROR: No matching distribution found for TTS
+[colab:err] 
+[[colab:err] notice] A new release of pip is available: 25.3 -> [colab:err] 26.1.2
+[[colab:err] notice] To update, run: [colab:err] python.exe -m pip install --upgrade pip
+[colab:err] fatal: destination path 'Wav2Lip' already exists and is not an empty directory.
+[colab:err]   [colab:err] error: subprocess-exited-with-error
+  
+  Preparing metadata (pyproject.toml) did not run successfully.
+  exit code: 1
+  
+  [28 lines of output]
+[colab:err]   Running from numpy source directory.
+  <string>:418: UserWarning: Unrecognized setuptools command, proceeding with generating Cython sources and expanding templates
+  Traceback (most recent call last):
+  [colab:err]   File "C:\Python314\Lib\site-packages\pip\_vendor\pyproject_hooks\_in_process\_in_process.py", line 389, in <module>
+      main()
+      ~~~~^^
+    File "C:\Python314\Lib\site-packages\pip\_vendor\pyproject_hooks\_in_process\_in_process.py", line 373, in main
+      json_out["return_val"] = hook(**hook_input["kwargs"])
+                               ~~~~^^^^^^^^^^^^^^^^^^^^^^^^[colab:err] 
+    File "C:\Python314\Lib\site-packages\pip\_vendor\pyproject_hooks\_in_process\_in_process.py", line 175, in prepare_metadata_for_build_wheel
+      return hook(metadata_directory, config_settings)
+    File "C:\Users\Damla\AppData\Local\Temp\claude\pip-build-env-vy7gjw84\overlay\Lib\site-packages\setuptools\build_meta.py", line 380, in prepare_metadata_for_build_wheel[colab:err] 
+      self.run_setup()
+      ~~~~~~~~~~~~~~^^
+  [colab:err]   File "C:\Users\Damla\AppData\Local\Temp\claude\pip-build-env-vy7gjw84\overlay\Lib\site-packages\setuptools\build_meta.py", line 520, in run_setup
+      super().run_setup(setup_script=setup_script)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "C:\Users\Damla\AppData\Local\Temp\claude\pip-build-env-vy7gjw84\overlay\Lib\site-packages\setuptools\build_meta.py", line 317, in run_setup
+  [colab:err]     exec(code, locals())
+      ~~~~^^^^^^^^^^^^^^^^
+    File "<string>", line 443, in <module>
+    File "<string>", line 422, in setup_package
+[colab:err]     File "C:\Users\Damla\AppData\Local\Temp\claude\pip-install-xjnrpah2\numpy_29eac766feb9430a800fa5fdc18da77c\numpy\distutils\__init__.py", line 6, in <module>
+      from . import ccompiler
+    File "C:\Users\Damla\AppData\Local\Temp\claude\pip-install-xjnrpah2\numpy_29eac766feb9430a800fa5fdc18da77c\numpy\distutils\ccompiler.py", line 111, in <module>
+[colab:err]   [colab:err]     replace_method(CCompiler, 'find_executables', CCompiler_find_executables)
+  [colab:err]                    ^^^^^^^^^
+  NameError: name 'CCompiler' is not defined. Did you mean: 'ccompiler'?
+  [end of output]
+  [colab:err] 
+  note: This error originates from a subprocess, and is likely not a problem with pip.[colab:err] 
+[colab:err] 
+[notice] A new release of pip is available: [colab:err] 25.3 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip
+[colab:err] error: metadata-generation-failed[colab:err] 
+
+Encountered error while generating package metadata.
+
+numpy
+
+note: This is an issue with the package mentioned above, not pip.
+hint: See above for details.
+[ERROR] Colab başlatılamadı: Error: Colab başlatma zaman aşımı (90s) — ngrok URL bulunamadı.
+    at Timeout._onTimeout (C:\Users\Damla\Proje\AI-Publisher\src\lib\colab-manager.ts:141:20)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[INFO] Differentiation Phase 1 tamamlandı: job #30
+[INFO] İş kuyruğu için Colab başlatılıyor...
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]   [colab]  ---------------------------------------- [colab] 6.3/6.3 MB 13.5 MB/s  [colab] 0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    ----------------------------------------[colab]  536.2/536.2 kB 14.2 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
+[colab] 
+[colab] Successfully installed mpmath-1.3.0 sympy-1.14.0
+[colab:err] 
+[notice] A new release of pip is available: 25.3 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip
+[ERROR] Colab başlatılamadı: Error: Colab başlatma zaman aşımı (90s) — ngrok URL bulunamadı.
+    at Timeout._onTimeout (C:\Users\Damla\Proje\AI-Publisher\src\lib\colab-manager.ts:141:20)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]    [colab] ---------------------------------------- 6.3/6.3 MB 13.5 MB/s  [colab] 0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    [colab] ---------------------------------------- 536.2/536.2 kB 9.5 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
+[colab] 
+[colab] Successfully installed mpmath-1.3.0 sympy-1.14.0
+[colab:err] 
+[notice[colab:err] ] A new release of pip is available: 25.3 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]   [colab]  ---------------------------------------- [colab] 6.3/6.3 MB 13.5 MB/s[colab]   0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    ---------------------------------------- 536.2/536.2 kB[colab]  14.0 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
+[colab] 
+[colab] Successfully installed mpmath-1.3.0 sympy-1.14.0
+[colab:err] 
+[notice[colab:err] ] A new release of pip is available: 25.3 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]    [colab] ---------------------------------------- 6.3/6.3 MB 12.7 MB/s  0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    [colab] ---------------------------------------- 536.2/536.2 kB 14.8 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
+[colab] 
+[colab] Successfully installed mpmath-1.3.0 sympy-1.14.0
+[colab:err] 
+[[colab:err] notice] A new release of pip is available: 25.3 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]    ---------------------------------------- [colab] 6.3/6.3 MB 10.5 MB/s  0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]   [colab]  ---------------------------------------- 536.2/536.2 kB 8.7 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
+[colab] 
+[colab] Successfully installed mpmath-1.3.0 sympy-1.14.0
+[colab:err] 
+[[colab:err] notice] A new release of pip is available: 25.3 -> 26.1.2
+[[colab:err] notice] To update, run: python.exe -m pip install --upgrade pip
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)[colab] 
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]   [colab]  ---------------------------------------- 6.3/6.3 MB 13.9 MB/s  0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    ---------------------------------------- 536.2/536.2 kB[colab]  7.4 MB/s  0:00:00
+[colab] Installing collected packages: mpmath, sympy
+[colab] 
+[colab] Successfully installed mpmath-1.3.0 sympy-1.14.0
+[colab:err] 
+[[colab:err] notice] A new release of pip is available: 25.3 -> 26.1.2
+[notice[colab:err] ] To update, run: [colab:err] python.exe -m pip install --upgrade pip
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]   [colab]  [colab] ----------------------------------------[colab]  6.3/6.3 MB[colab]  [colab] 11.1 MB/s[colab]   [colab] 0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    ----------------------------------------[colab]  536.2/536.2 kB 11.8 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
