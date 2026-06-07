@@ -13,27 +13,17 @@ const poolConfig: PoolConfig = {
 const pool = new Pool(poolConfig);
 
 function convertQuery(sql: string): string {
+  // PostgreSQL uses '' for escaping quotes, not \'
+  // So we only track quote state for ' and "
   let counter = 1;
   let inSingleQuote = false;
   let inDoubleQuote = false;
-  let inEscape = false;
   let result = '';
 
   for (let i = 0; i < sql.length; i++) {
     const char = sql[i];
 
-    if (inEscape) {
-      inEscape = false;
-      result += char;
-      continue;
-    }
-
-    if (char === '\\') {
-      inEscape = true;
-      result += char;
-      continue;
-    }
-
+    // Toggle quote state (PostgreSQL escapes quotes by doubling: '' or "")
     if (char === "'" && !inDoubleQuote) {
       inSingleQuote = !inSingleQuote;
       result += char;
@@ -46,6 +36,7 @@ function convertQuery(sql: string): string {
       continue;
     }
 
+    // Replace ? parameter placeholders with $N outside quotes
     if (char === '?' && !inSingleQuote && !inDoubleQuote) {
       result += `$${counter++}`;
     } else {

@@ -183,6 +183,17 @@ async function startProduction(job: any) {
     );
     const applyLipsync = userSettings?.apply_lipsync === 1;
 
+    // Helper: download a file from URL to dest path
+    const dl = async (url: string, dest: string) => {
+      const res = await axios({ method: 'GET', url, responseType: 'stream' });
+      const w = fs.createWriteStream(dest);
+      res.data.pipe(w);
+      return new Promise((resolve, reject) => {
+        w.on('finish', resolve);
+        w.on('error', reject);
+      });
+    };
+
     for (const scene of object.scenes) {
       // S6: Cancellation check at scene boundary.
       const cancelCheck: any = await db.get(
@@ -274,16 +285,6 @@ async function startProduction(job: any) {
       const tSRT = path.join(process.cwd(), 'videolar', `srt_${job.id}_${scene.sceneNumber}.srt`);
       const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber}.mp4`);
 
-      const dl = async (url: string, dest: string) => {
-        const res = await axios({ method: 'GET', url, responseType: 'stream' });
-        const w = fs.createWriteStream(dest);
-        res.data.pipe(w);
-        return new Promise((resolve, reject) => {
-          w.on('finish', resolve);
-          w.on('error', reject);
-        });
-      };
-
       await dl(`${COLAB_URL}/download/video`, tV);
       await dl(`${COLAB_URL}/download/speech`, tS);
       await dl(`${COLAB_URL}/download/sfx`, tE);
@@ -303,18 +304,9 @@ async function startProduction(job: any) {
         fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speechText}`);
       }
 
-      const escapedSrtPath = srtFile ? srtFile.replace(/\\/g, '/').replace(/:/g, '\\:') : '';
-      const vf = srtFile 
-        ? `-vf "subtitles=${escapedSrtPath}:force_style='Alignment=2,FontSize=18,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,Outline=1'" ` 
-        : '';
-
-      const cmdNVENC = `ffmpeg -y -i "${tV}" -i "${tS}" -i "${tE}" ${vf}-filter_complex "[1:a][2:a]amix=inputs=2:duration=first[a]" -map 0:v -map "[a]" -c:v h264_nvenc -pix_fmt yuv420p -c:a aac -shortest "${mS}"`;
-      const cmdLibx264 = `ffmpeg -y -i "${tV}" -i "${tS}" -i "${tE}" ${vf}-filter_complex "[1:a][2:a]amix=inputs=2:duration=first[a]" -map 0:v -map "[a]" -c:v libx264 -pix_fmt yuv420p -preset medium -crf 23 -c:a aac -shortest "${mS}"`;
-      const cmdDefault = `ffmpeg -y -i "${tV}" -i "${tS}" -i "${tE}" ${vf}-filter_complex "[1:a][2:a]amix=inputs=2:duration=first[a]" -map 0:v -map "[a]" -c:a aac -shortest "${mS}"`;
-
       try {
-        
-      const vfArr = srtFile ? ['-vf', `subtitles=${escapedSrtPath}:force_style='Alignment=2,FontSize=18,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,Outline=1'`] : [];
+
+      const vfArr = srtFile ? ['-vf', `subtitles=${srtFile.replace(/\\/g, '/').replace(/:/g, '\\:')}:force_style='Alignment=2,FontSize=18,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,Outline=1'`] : [];
       const baseArgs = ['-y', '-i', tV, '-i', tS, '-i', tE, ...vfArr, '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=first[a]', '-map', '0:v', '-map', '[a]'];
       const nvencArgs = [...baseArgs, '-c:v', 'h264_nvenc', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', mS];
       const libx264Args = [...baseArgs, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '23', '-c:a', 'aac', '-shortest', mS];
@@ -364,8 +356,6 @@ async function startProduction(job: any) {
     const txt = path.join(process.cwd(), 'videolar', `l_${job.id}.txt`);
     fs.writeFileSync(txt, finalScenes.map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'));
 
-    const concatCopy = `ffmpeg -y -f concat -safe 0 -i "${txt}" -c copy "${fPath}"`;
-    const concatLib = `ffmpeg -y -f concat -safe 0 -i "${txt}" -c:v libx264 -pix_fmt yuv420p -c:a aac "${fPath}"`;
     await runFFmpegWithFallback([{ cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', fPath] }, { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', fPath] }]);
 
     // Temizlik

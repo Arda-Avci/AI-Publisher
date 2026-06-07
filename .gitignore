@@ -15,3 +15,18 @@ auth_meta.json
 .idea
 .vscode
 dist
+
+# Markdown files
+*.md
+**/*.md
+
+# Temporary and local development files
+*.html
+*.txt
+*.db
+*.mp3
+*.png
+/*.js
+new_keys.json
+scratch/
+Wav2Lip/

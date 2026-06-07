@@ -229,3 +229,20 @@ hint: See above for details.
 [colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
 [colab]    ----------------------------------------[colab]  536.2/536.2 kB 11.8 MB/s  0:00:00[colab] 
 [colab] Installing collected packages: mpmath, sympy
+[colab] Found existing installation: sympy 1.14.0
+[colab] Uninstalling sympy-1.14.0:
+[colab]   Successfully uninstalled sympy-1.14.0
+[colab] Found existing installation: mpmath 1.3.0
+[colab] Uninstalling mpmath-1.3.0:
+[colab]   Successfully uninstalled mpmath-1.3.0
+[colab] Defaulting to user installation because normal site-packages is not writeable
+[colab] Collecting sympy
+[colab]   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+[colab] Collecting mpmath
+[colab]   Downloading mpmath-1.4.1-py3-none-any.whl.metadata (9.1 kB)
+[colab]   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+[colab] Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+[colab]    [colab] ---------------------------------------- 6.3/6.3 MB 7.0 MB/s  [colab] 0:00:00[colab] 
+[colab] Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+[colab]    ---------------------------------------- [colab] 536.2/536.2 kB 11.7 MB/s  0:00:00[colab] 
+[colab] Installing collected packages: mpmath, sympy
