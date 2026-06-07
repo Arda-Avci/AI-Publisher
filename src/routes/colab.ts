@@ -65,6 +65,24 @@ export function registerColabRoutes(app: Application): void {
     }
   });
 
+  app.post('/colab-connect', mediumLimiter, requireAuth, async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url || !url.startsWith('http')) {
+        return res.status(400).json({ success: false, error: 'Geçersiz URL formatı' });
+      }
+      const result = await colab.connect(url);
+      logAudit({
+        userId: req.session.userId,
+        action: 'colab.connect',
+        req
+      });
+      res.json({ success: true, ngrokUrl: result.ngrokUrl });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post('/colab-stop', mediumLimiter, requireAuth, async (req, res) => {
     try {
       await colab.stop();

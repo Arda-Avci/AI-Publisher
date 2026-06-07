@@ -2,7 +2,8 @@ import { Application, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs-extra';
 import { db } from '../db.js';
-import { checkQueue, broadcast } from '../queue.js';
+import { broadcast } from '../queue.js';
+import { sendToQueue, VIDEO_JOBS_QUEUE } from '../lib/rabbitmq.js';
 import { requireAuth } from '../middleware/auth.js';
 import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
@@ -24,20 +25,36 @@ import { logAudit } from '../lib/audit.js';
 export function registerJobRoutes(app: Application): void {
   // Is Ekleme
   app.post('/create-job', heavyLimiter, requireAuth, upload.single('material'), async (req: any, res) => {
-    const { master_prompt, production_notes, character_features, platforms, playlist_id, has_shorts, has_subtitles } = req.body;
-    const material_path = req.file ? req.file.path : '';
+    const { 
+      master_prompt, 
+      production_notes, 
+      character_features, 
+      platforms, 
+      playlist_id, 
+      has_shorts, 
+      has_subtitles,
+      material_path_hidden,
+      transcript_text 
+    } = req.body;
+    let materialPath = '';
+    if (req.file) {
+      materialPath = `/uploads/${req.file.filename}`;
+    } else if (material_path_hidden) {
+      materialPath = String(material_path_hidden);
+    }
     const userId = req.session.userId;
 
     const targetPlatforms = Array.isArray(platforms) ? platforms : (platforms ? [platforms] : []);
-    const shortsVal = has_shorts === '1' ? 1 : 0;
-    const subVal = has_subtitles === '1' ? 1 : 0;
+    const platformsJson = JSON.stringify(targetPlatforms);
+    const hasShorts = has_shorts === '1' ? 1 : 0;
+    const hasSubtitles = has_subtitles === '1' ? 1 : 0;
 
     try {
       const insertResult: any = await db.run(
         `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, master_prompt, production_notes, character_features, material_path, JSON.stringify(targetPlatforms), playlist_id || '', shortsVal, subVal]
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '']
       );
 
       const newJobId = Number(insertResult.lastID);
@@ -48,13 +65,13 @@ export function registerJobRoutes(app: Application): void {
         action: 'job.create',
         entityType: 'video_job',
         entityId: newJobId,
-        details: { platforms: targetPlatforms, has_shorts: shortsVal, has_subtitles: subVal },
+        details: { platforms: targetPlatforms, has_shorts: hasShorts, has_subtitles: hasSubtitles },
         req
       });
 
       res.redirect('/');
       // Arka planda is kuyrugunu tetikle
-      checkQueue();
+      await sendToQueue(VIDEO_JOBS_QUEUE, { jobId: newJobId });
     } catch (err: any) {
       console.error('[ERROR] /create-job failed:', err);
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
@@ -165,7 +182,7 @@ export function registerJobRoutes(app: Application): void {
       });
 
       res.json({ success: true });
-      checkQueue();
+      await sendToQueue(VIDEO_JOBS_QUEUE, { jobId: parseInt(String(id), 10) });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -207,7 +224,9 @@ export function registerJobRoutes(app: Application): void {
         req
       });
 
-      setImmediate(() => { checkQueue(); });
+      await db.run("UPDATE video_jobs SET status = 'processing_phase1', current_stage = 'Kuyruğa Eklendi', progress_percent = 5 WHERE id = ?", [jobId]);
+
+      await sendToQueue(VIDEO_JOBS_QUEUE, { jobId });
       return res.json({ success: true, message: 'Proje kuyruga eklendi, uretim basliyor.' });
     } catch (err: any) {
       console.error('[ERROR] /start-job failed:', err);

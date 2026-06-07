@@ -5,8 +5,12 @@ import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import { initDatabase } from './db.js';
-import { checkQueue } from './queue.js';
+import { startVideoQueueWorker } from './queue.js';
+import { startGarbageCollector } from './lib/cleanup.js';
+import { initRabbitMQ } from './lib/rabbitmq.js';
+import { startPublishQueueWorker } from './lib/publish-queue.js';
 import { i18nMiddleware } from './middleware/i18n.js';
+
 import { themeMiddleware } from './middleware/theme.js';
 import { utf8Middleware } from './middleware/utf8.js';
 import { errorHandler } from './middleware/error.js';
@@ -32,7 +36,7 @@ declare module 'express-session' {
 
 
 const app = express();
-const PORT = process.env.PORT || 3014;
+const PORT = process.env.PORT || 3016;
 
 // UTF-8 encoding middleware — tüm response'larda Türkçe karakter desteği
 app.use(utf8Middleware);
@@ -74,9 +78,12 @@ app.use(errorHandler);
 // Sunucu Başlatma
 async function startServer() {
   await initDatabase();
+  await initRabbitMQ();
   app.listen(PORT, () => {
     console.log(`[INFO] AI Publisher sunucusu aktif: http://localhost:${PORT}`);
-    checkQueue();
+    startGarbageCollector();
+    startVideoQueueWorker();
+    startPublishQueueWorker();
   });
 }
 

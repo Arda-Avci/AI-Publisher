@@ -1,14 +1,14 @@
 import { requireAuth } from '../middleware/auth.js';
 import { sseLimiter } from '../middleware/rate-limit.js';
-import { clients } from '../queue.js';
 import { db } from '../db.js';
+import { redisSub } from '../lib/redis.js';
 import { Application, Request, Response } from 'express';
 
 /**
  * SSE progress route: GET /progress/:id.
  *
  * Streams real-time job progress events emitted by src/queue.ts via
- * the `clients` Map. S6 hardening: requires an authenticated session
+ * Redis Pub/Sub. S6 hardening: requires an authenticated session
  * and verifies the job belongs to the requesting user (ownership check).
  * Sends a 25s heartbeat to keep the connection alive through proxies
  * that buffer idle responses.
@@ -59,10 +59,6 @@ export function registerProgressRoutes(app: Application): void {
         res.flushHeaders();
       }
 
-      // Register the response in the clients map BEFORE writing so
-      // any subsequent broadcast() in queue.ts reaches this client.
-      clients.set(jobId, res);
-
       // Initial heartbeat so the browser knows the connection is open
       // and any proxy sees real bytes immediately.
       try {
@@ -83,6 +79,22 @@ export function registerProgressRoutes(app: Application): void {
         // ignore
       }
 
+      const channel = `job_progress:${jobId}`;
+
+      // Yeni bir Redis Subscriber kopyası açıyoruz (Pub/Sub izolasyonu)
+      const subscriber = redisSub.duplicate();
+      await subscriber.subscribe(channel);
+
+      subscriber.on('message', (chan, message) => {
+        if (chan === channel) {
+          try {
+            res.write(`data: ${message}\n\n`);
+          } catch (err) {
+            console.error('[progress SSE] Failed to write to client:', err);
+          }
+        }
+      });
+
       // Heartbeat every 25s — keeps idle connections alive through
       // nginx, cloudflare, and corporate proxies (most timeout at
       // 30-60s of inactivity).
@@ -93,14 +105,16 @@ export function registerProgressRoutes(app: Application): void {
           // Socket already closed; clear the interval and drop the
           // client from the map so we don't keep a dead reference.
           clearInterval(heartbeat);
-          clients.delete(jobId);
+          subscriber.unsubscribe(channel);
+          subscriber.quit();
         }
       }, 25_000);
 
       // Clean up on connection close.
       req.on('close', () => {
         clearInterval(heartbeat);
-        clients.delete(jobId);
+        subscriber.unsubscribe(channel).catch(() => {});
+        subscriber.quit().catch(() => {});
       });
     } catch (err: any) {
       console.error('[progress SSE] error:', err);

@@ -1,25 +1,79 @@
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
-import path from 'path';
+import { Pool, PoolConfig } from 'pg';
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
 
-export let db: Database;
+dotenv.config();
+
+// PostgreSQL Pool Config
+const poolConfig: PoolConfig = {
+  connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ai_publisher',
+};
+
+const pool = new Pool(poolConfig);
+
+/**
+ * SQLite '?' parametrelerini PostgreSQL '$1, $2, ...' formatına dönüştürür.
+ */
+function convertQuery(sql: string): string {
+  let counter = 1;
+  return sql.replace(/\?(?=(?:[^']*'[^']*')*[^']*$)/g, () => `$${counter++}`);
+}
+
+/**
+ * SQLite benzeri db interface'i sunarak projenin geri kalanının (70+ sorgu)
+ * değişikliğe uğramadan çalışmasını sağlar.
+ */
+export const db = {
+  async get(sql: string, params: any[] = []): Promise<any> {
+    const res = await pool.query(convertQuery(sql), params);
+    return res.rows[0];
+  },
+
+  async all(sql: string, params: any[] = []): Promise<any[]> {
+    const res = await pool.query(convertQuery(sql), params);
+    return res.rows;
+  },
+
+  async run(sql: string, params: any[] = []): Promise<{ lastID?: number; changes?: number }> {
+    const converted = convertQuery(sql);
+    // RETURNING id mantığı postgres'de run sonrası insert ID'yi alabilmek için
+    const isInsert = converted.trim().toUpperCase().startsWith('INSERT');
+    const finalSql = isInsert && !converted.toUpperCase().includes('RETURNING') 
+      ? converted + ' RETURNING id' 
+      : converted;
+
+    const res = await pool.query(finalSql, params);
+    
+    return {
+      lastID: isInsert && res.rows[0] ? res.rows[0].id : undefined,
+      changes: res.rowCount || 0
+    };
+  },
+
+  async exec(sql: string): Promise<void> {
+    await pool.query(sql);
+  }
+};
 
 export async function initDatabase() {
-  db = await open({
-    filename: path.join(process.cwd(), 'database.sqlite'),
-    driver: sqlite3.Database
-  });
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       username TEXT UNIQUE,
-      password TEXT
+      password TEXT,
+      youtube_api_key TEXT,
+      sample_cover_base64 TEXT,
+      personal_avatar_base64 TEXT,
+      text_position_grid TEXT,
+      default_preset_tone TEXT,
+      preferred_language TEXT DEFAULT 'tr',
+      selected_theme TEXT DEFAULT 'default',
+      apply_lipsync INTEGER DEFAULT 1,
+      apply_end_screen INTEGER DEFAULT 1
     );
     
     CREATE TABLE IF NOT EXISTS video_jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER,
       master_prompt TEXT,
       production_notes TEXT,
@@ -32,7 +86,7 @@ export async function initDatabase() {
       progress_percent INTEGER DEFAULT 0,
       final_filename TEXT,
       status TEXT DEFAULT 'pending',
-      target_platforms TEXT, -- JSON Array string ['youtube', 'tiktok', 'x', 'meta']
+      target_platforms TEXT,
       yt_title TEXT,
       yt_desc TEXT,
       yt_tags TEXT,
@@ -45,13 +99,24 @@ export async function initDatabase() {
       x_status TEXT DEFAULT 'not_selected',
       meta_desc TEXT,
       meta_tags TEXT,
-      meta_status TEXT DEFAULT 'not_selected'
+      meta_status TEXT DEFAULT 'not_selected',
+      playlist_id TEXT,
+      cover_image_path TEXT,
+      has_shorts INTEGER DEFAULT 1,
+      has_subtitles INTEGER DEFAULT 1,
+      source_video_id TEXT,
+      source_video_meta TEXT,
+      differentiation_target_lang TEXT,
+      differentiation_duration_mode TEXT,
+      transcript TEXT,
+      transcript_cleaned TEXT,
+      transcript_translated TEXT,
+      scene_prompts TEXT,
+      colab_task_id TEXT
     );
 
-    -- S6: Audit log for tracking user actions (login, job create/cancel/delete,
-    -- publish trigger, settings save, differentiation events). Append-only.
     CREATE TABLE IF NOT EXISTS audit_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER,
       action TEXT NOT NULL,
       entity_type TEXT,
@@ -59,58 +124,12 @@ export async function initDatabase() {
       details TEXT,
       ip_address TEXT,
       user_agent TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
     CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
   `);
-
-  // Yeni sütunları eklemek için ALTER TABLE sorgularını güvenli çalıştır
-  const alterUserQueries = [
-    'ALTER TABLE users ADD COLUMN youtube_api_key TEXT',
-    'ALTER TABLE users ADD COLUMN sample_cover_base64 TEXT',
-    'ALTER TABLE users ADD COLUMN personal_avatar_base64 TEXT',
-    'ALTER TABLE users ADD COLUMN text_position_grid TEXT',
-    'ALTER TABLE users ADD COLUMN default_preset_tone TEXT',
-    'ALTER TABLE users ADD COLUMN preferred_language TEXT DEFAULT \'tr\'',
-    'ALTER TABLE users ADD COLUMN selected_theme TEXT DEFAULT \'default\'',
-    'ALTER TABLE users ADD COLUMN apply_lipsync INTEGER DEFAULT 1',
-    'ALTER TABLE users ADD COLUMN apply_end_screen INTEGER DEFAULT 1'
-  ];
-
-  for (const q of alterUserQueries) {
-    try {
-      await db.exec(q);
-      console.log(`[INFO] Sütun eklendi veya zaten var: ${q.split(' ').pop()}`);
-    } catch (err) {
-      // Sütun zaten varsa hata verebilir, yoksay
-    }
-  }
-
-  const alterJobQueries = [
-    'ALTER TABLE video_jobs ADD COLUMN playlist_id TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN cover_image_path TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN has_shorts INTEGER DEFAULT 1',
-    'ALTER TABLE video_jobs ADD COLUMN has_subtitles INTEGER DEFAULT 1',
-    'ALTER TABLE video_jobs ADD COLUMN source_video_id TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN source_video_meta TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN differentiation_target_lang TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN differentiation_duration_mode TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN transcript TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN transcript_cleaned TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN transcript_translated TEXT',
-    'ALTER TABLE video_jobs ADD COLUMN scene_prompts TEXT'
-  ];
-
-  for (const q of alterJobQueries) {
-    try {
-      await db.exec(q);
-      console.log(`[INFO] Sütun eklendi veya zaten var: ${q.split(' ').pop()}`);
-    } catch (err) {
-      // Sütun zaten varsa hata verebilir, yoksay
-    }
-  }
 
   const userExists = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
   if (!userExists) {
@@ -118,7 +137,14 @@ export async function initDatabase() {
     await db.run('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', hashedPassword]);
     console.log('[INFO] Varsayılan admin kullanıcısı oluşturuldu: admin / admin123');
   } else {
-    console.log('[INFO] Veritabanı hazır.');
+    console.log('[INFO] PostgreSQL Veritabanı hazır.');
+  }
+
+  // Schema migration for colab_task_id
+  try {
+    await db.exec('ALTER TABLE video_jobs ADD COLUMN colab_task_id TEXT;');
+    console.log('[INFO] colab_task_id sütunu eklendi.');
+  } catch (e: any) {
+    // Sütun zaten varsa hata verir, yoksay
   }
 }
-

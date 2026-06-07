@@ -5,7 +5,7 @@ import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
-import { broadcast } from '../queue.js';
+import { sendToQueue } from '../lib/rabbitmq.js';
 import {
   uploadToYouTube,
   uploadToTikTok,
@@ -113,66 +113,31 @@ export function registerPublishRoutes(app: Application): void {
       res.json({
         success: true,
         async: true,
-        message: 'Yayin baslatildi, arka planda calisiyor. Durum icin sayfayi yenileyin.'
+        message: 'Yayın kuyruğa alındı, arka planda çalışıyor. Durum için sayfayı yenileyin.'
       });
 
-      // Run the upload in the background.
-      setImmediate(async () => {
-        try {
-          let success = false;
-          if (platform === 'youtube') {
-            success = await uploadToYouTube(videoPath, job.yt_title, job.yt_desc, job.yt_tags, job.playlist_id);
-          } else if (platform === 'tiktok') {
-            success = await uploadToTikTok(videoPath, job.tt_desc, job.tt_tags);
-          } else if (platform === 'x') {
-            success = await uploadToX(videoPath, job.x_desc, job.x_tags);
-          } else if (platform === 'meta') {
-            success = await uploadToMeta(videoPath, job.meta_desc, job.meta_tags);
-          }
-
-          await db.run(
-            'UPDATE video_jobs SET ' + statusField + ' = ? WHERE id = ?',
-            [success ? 'published' : 'failed', jobId]
-          );
-
-          // Broadcast SSE so the frontend can update without polling.
-          try {
-            broadcast(jobId, {
-              event: 'publish-complete',
-              platform,
-              success,
-              stage: success ? 'Yayin tamamlandi' : 'Yayin basarisiz',
-              percent: 100
-            });
-          } catch (broadcastErr) {
-            console.warn('[WARN] publish broadcast failed:', broadcastErr);
-          }
-
-          console.log('[publish ' + platform + '] job #' + jobId + ' -> ' + (success ? 'success' : 'failed'));
-        } catch (err: any) {
-          console.error('[ERROR] ' + platform + ' yayin hatasi:', err);
-          try {
-            await db.run(
-              'UPDATE video_jobs SET ' + statusField + ' = ? WHERE id = ?',
-              ['failed', jobId]
-            );
-            const errStr = String(err);
-            const isAuthError = /auth|login|cookie|expired|session/i.test(errStr);
-            // Broadcast the failure + auth-recovery hint.
-            broadcast(jobId, {
-              event: 'publish-complete',
-              platform,
-              success: false,
-              error: errStr,
-              needsRecovery: isAuthError,
-              stage: 'Yayin hatasi: ' + (err?.message || 'bilinmeyen'),
-              percent: 100
-            });
-          } catch (innerErr) {
-            console.error('[ERROR] publish failure handler crashed:', innerErr);
-          }
+      // Run the upload in the publish queue (concurrency=1 to prevent OOM).
+      const payload = {
+        jobId,
+        platform,
+        videoPath,
+        statusField,
+        jobData: {
+          yt_title: job.yt_title,
+          yt_desc: job.yt_desc,
+          yt_tags: job.yt_tags,
+          playlist_id: job.playlist_id,
+          tt_desc: job.tt_desc,
+          tt_tags: job.tt_tags,
+          x_desc: job.x_desc,
+          x_tags: job.x_tags,
+          meta_desc: job.meta_desc,
+          meta_tags: job.meta_tags
         }
-      });
+      };
+
+      await sendToQueue('publish_jobs_queue', payload);
+
     } catch (err: any) {
       console.error('[ERROR] /publish pre-check failed:', err);
       try {

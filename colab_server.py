@@ -24,8 +24,12 @@ import scipy.io.wavfile as wavfile
 import gc
 import traceback
 from pyngrok import ngrok
+import uuid
+import threading
 
 app = Flask(__name__)
+
+TASKS = {}
 
 # ── S3: Son aktivite zamanı (şu an /apply-lipsync için) ──────────────────────
 last_activity = time.time()
@@ -287,56 +291,57 @@ def generate_subtitles_whisper(audio_path: str, output_srt: str, language: str =
     return output_srt
 
 
-@app.route("/generate-media", methods=["POST"])
-def generate_media():
-    data              = request.get_json(force=True)
+def _generate_media_worker(task_id: str, data: dict):
     video_prompt      = data.get("video_prompt", "")
     speech_text       = data.get("speech_text", "")
     sfx_prompt        = data.get("sfx_prompt", "")
     character_features= data.get("character_features", "")
-    apply_lipsync     = bool(data.get("apply_lipsync", False))   # S3: yeni alan
+    apply_lipsync     = bool(data.get("apply_lipsync", False))
 
     final_prompt = f"{character_features}, {video_prompt}" if character_features else video_prompt
 
     # 1. Video
     try:
         frames = generate_video_lazy(final_prompt)
-    except RuntimeError as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 503
+    except Exception as exc:
+        TASKS[task_id] = {"status": "error", "message": str(exc)}
+        return
 
     frames_to_mp4(frames, RAW_VIDEO_PATH, fps=8)
 
     # 2. TTS
     if speech_text:
-        tts = get_tts()
-        speaker_wav_path = "/content/karakter.wav"
-        if os.path.exists(speaker_wav_path):
-            # Ses klonlama: /content/karakter.wav referans sesi kullanılır
-            print("🎙️ Ses klonlama modu aktif (karakter.wav bulundu)")
-            tts.tts_to_file(
-                text=speech_text,
-                speaker_wav=speaker_wav_path,
-                language="tr",
-                file_path=AUDIO_PATH,
-            )
-        else:
-            # Yerleşik ses: referans dosya yoksa XTTS varsayılan sesi
-            print("🎙️ Yerleşik ses modu (karakter.wav bulunamadı, varsayılan kullanılıyor)")
-            tts.tts_to_file(
-                text=speech_text,
-                speaker="Claribel Dervla",   # XTTS-v2 yerleşik Türkçe-uyumlu ses
-                language="tr",
-                file_path=AUDIO_PATH,
-            )
+        try:
+            tts = get_tts()
+            speaker_wav_path = "/content/karakter.wav"
+            if os.path.exists(speaker_wav_path):
+                print("🎙️ Ses klonlama modu aktif (karakter.wav bulundu)")
+                tts.tts_to_file(
+                    text=speech_text,
+                    speaker_wav=speaker_wav_path,
+                    language="tr",
+                    file_path=AUDIO_PATH,
+                )
+            else:
+                print("🎙️ Yerleşik ses modu (karakter.wav bulunamadı, varsayılan kullanılıyor)")
+                tts.tts_to_file(
+                    text=speech_text,
+                    speaker="Claribel Dervla",
+                    language="tr",
+                    file_path=AUDIO_PATH,
+                )
+        except Exception as exc:
+            TASKS[task_id] = {"status": "error", "message": f"TTS hatası: {str(exc)}"}
+            return
     else:
-        silence = np.zeros(int(16000 * 3), dtype=np.int16)  # 3 sn sessizlik
+        silence = np.zeros(int(16000 * 3), dtype=np.int16)
         wavfile.write(AUDIO_PATH, 16000, silence)
 
-    # 3. Altyazı Üretimi (faster-whisper — Colab'da pip install faster-whisper gerekir)
+    # 3. Altyazı Üretimi
     if speech_text:
         generate_subtitles_whisper(AUDIO_PATH, SUBTITLE_PATH, language="tr")
 
-    # 4. S3 — Wav2Lip lip-sync (opsiyonel, yüz bulunamazsa orijinal video)
+    # 4. S3 — Wav2Lip lip-sync
     out_path = RAW_VIDEO_PATH
     if apply_lipsync and speech_text:
         print("👄 Wav2Lip uygulanıyor...")
@@ -345,14 +350,10 @@ def generate_media():
             out_path = lipsync_result["output_path"]
             print(f"✅ Wav2Lip tamam: {out_path}")
         else:
-            # skipped=True → orijinal RAW_VIDEO_PATH kullanılsın
             print(f"⚠️ Lip-sync atlandı: {lipsync_result.get('error', 'bilinmeyen')}")
     else:
-        # Eski davranış: OpenCV tabanlı apply_lipsync çağrısı artık yok.
-        # apply_lipsync=False ise raw video olduğu gibi kullanılır.
         print("ℹ️ Lip-sync devre dışı — ham video kullanılacak")
 
-    # raw → last kopyası (hâlâ /download/video ile aynı isimde olmalı)
     if out_path != LAST_VIDEO_PATH:
         try:
             import shutil
@@ -362,17 +363,40 @@ def generate_media():
 
     # 5. SFX
     if sfx_prompt:
-        audio_sfx = generate_sfx_lazy(sfx_prompt)
-        wavfile.write(SFX_PATH, 16000, (audio_sfx[0] * 32767).astype(np.int16))
+        try:
+            audio_sfx = generate_sfx_lazy(sfx_prompt)
+            wavfile.write(SFX_PATH, 16000, (audio_sfx[0] * 32767).astype(np.int16))
+        except Exception as exc:
+            TASKS[task_id] = {"status": "error", "message": f"SFX hatası: {str(exc)}"}
+            return
     else:
         silence = np.zeros(int(16000 * 3), dtype=np.int16)
         wavfile.write(SFX_PATH, 16000, silence)
 
-    return jsonify({
+    TASKS[task_id] = {
         "status": "success",
         "has_subtitle": os.path.exists(SUBTITLE_PATH),
         "lipsync_applied": out_path != RAW_VIDEO_PATH
-    })
+    }
+
+
+@app.route("/generate-media", methods=["POST"])
+def generate_media():
+    data = request.get_json(force=True)
+    task_id = str(uuid.uuid4())
+    TASKS[task_id] = {"status": "processing"}
+    
+    # Asenkron çalışması için thread başlatıyoruz
+    thread = threading.Thread(target=_generate_media_worker, args=(task_id, data))
+    thread.start()
+    
+    return jsonify({"status": "accepted", "task_id": task_id}), 202
+
+@app.route("/status/<task_id>", methods=["GET"])
+def task_status(task_id):
+    if task_id not in TASKS:
+        return jsonify({"status": "error", "message": "Task ID bulunamadı"}), 404
+    return jsonify(TASKS[task_id])
 
 
 # ── S3: Bağımsız lip-sync endpoint ────────────────────────────────────────────

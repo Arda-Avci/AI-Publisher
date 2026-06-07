@@ -4,12 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --ignore \"videolar/**\" --ignore \"uploads/**\" src/server.ts",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run test",
+    "check:types": "tsc --noEmit",
+    "check:lint": "eslint src --ext .ts --quiet",
+    "lint": "eslint src --ext .ts",
     "build": "tsc",
     "setup-ngrok": "node scripts/setup-ngrok.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx vitest run"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +21,9 @@
   "type": "commonjs",
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
+    "@ai-sdk/openai": "^3.0.68",
     "ai": "^6.0.193",
+    "amqplib": "^2.0.1",
     "axios": "^1.16.1",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
@@ -25,23 +31,30 @@
     "express-rate-limit": "^7.5.1",
     "express-session": "^1.19.0",
     "fs-extra": "^11.3.5",
+    "ioredis": "^5.11.1",
     "multer": "^2.1.1",
+    "pg": "^8.21.0",
     "playwright": "^1.60.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",
-    "youtube-transcript": "^1.2.1"
+    "youtube-transcript": "^1.2.1",
+    "yt-search": "^2.13.1"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.8",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
     "@types/fs-extra": "^11.0.4",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
     "@types/sqlite3": "^3.1.11",
     "@types/supertest": "^7.2.0",
+    "@types/yt-search": "^2.10.3",
     "supertest": "^7.2.2",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

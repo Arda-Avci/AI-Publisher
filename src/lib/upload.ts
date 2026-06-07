@@ -10,7 +10,9 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/');
   },
   filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-    cb(null, `${Date.now()}_${file.originalname}`);
+    // Sadece alfanumerik ve nokta karakterlerine izin ver, geri kalanları '-' yap
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '-');
+    cb(null, `${Date.now()}_${safeName}`);
   }
 });
 

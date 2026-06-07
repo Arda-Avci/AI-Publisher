@@ -28,7 +28,8 @@ export type AuditAction =
   | 'differentiate.cancel'
   | 'settings.save'
   | 'colab.start'
-  | 'colab.stop';
+  | 'colab.stop'
+  | 'colab.connect';
 
 export interface AuditEntry {
   userId: number | null | undefined;

@@ -1,3 +1,5 @@
+import { getRabbitChannel, VIDEO_JOBS_QUEUE } from './lib/rabbitmq.js';
+import { extractReferenceFrame } from './services/videoService.js';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -7,6 +9,31 @@ import path from 'path';
 import { exec } from 'child_process';
 import { db } from './db.js';
 import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
+
+class SimpleMutex {
+  private queue: (() => void)[] = [];
+  private locked = false;
+
+  async acquire(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return Promise.resolve();
+    }
+    return new Promise(resolve => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+}
+const colabMutex = new SimpleMutex();
 
 async function runFFmpegWithFallback(commands: string[]): Promise<void> {
   for (let i = 0; i < commands.length; i++) {
@@ -275,40 +302,11 @@ export async function checkQueue() {
   const nextJob = await db.get("SELECT * FROM video_jobs WHERE status = 'pending' ORDER BY id ASC");
   if (!nextJob) return;
 
-  // ── S3 Colab auto-start: ensure Colab is up before processing ──
-  const colabState = colab.getState();
-  if (colabState.status === 'stopped' || colabState.status === 'error') {
-    try {
-      console.log(`[INFO] İş kuyruğu için Colab başlatılıyor...`);
-      await colab.start();
-      console.log(`[INFO] Colab hazır: ${colab.getState().ngrokUrl}`);
-    } catch (colabErr: any) {
-      console.error(`[ERROR] Colab başlatılamadı:`, colabErr);
-      // Re-queue the job (mark it failed so user sees the error) and exit early
-      await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Colab Başlatılamadı' WHERE id = ?", [nextJob.id]);
-      return;
-    }
-  }
-  colab.cancelIdleStop();   // we're using it, don't stop now
-
   isProcessing = true;
   try {
     await startProduction(nextJob);
   } finally {
     isProcessing = false;
-    // After each job, check if any pending jobs remain. If not, arm the idle-stop timer.
-    try {
-      const remaining = await db.get(
-        "SELECT COUNT(*) as cnt FROM video_jobs WHERE status = 'pending' OR status = 'processing'"
-      );
-      const remainingCount = remaining?.cnt || 0;
-      if (remainingCount === 0) {
-        console.log(`[INFO] Kuyruk boş — Colab ${DEFAULT_IDLE_STOP_MS / 1000}s sonra durdurulacak.`);
-        colab.scheduleIdleStop(DEFAULT_IDLE_STOP_MS);
-      }
-    } catch (idleErr) {
-      console.warn(`[WARN] Idle-stop check failed:`, idleErr);
-    }
     setImmediate(checkQueue);
   }
 }
@@ -318,13 +316,6 @@ async function startProduction(job: any) {
   const finalScenes: string[] = [];
 
   // ── S2.5 Differentiation fast-path ──
-  // If the job was created via /differentiate-video, the differentiation
-  // pipeline (transcript → clean → translate → scene prompts) has already
-  // run locally and the JSON of scenes is stored in `scene_prompts`. In
-  // that case we skip the Gemini Director call and use the pre-generated
-  // scenes as-is. The marketing copy may also already exist (we let
-  // Gemini regenerate it for differentiation jobs so titles/descriptions
-  // match the differentiated content).
   let preGeneratedScenes: { sceneNumber: number; videoPrompt: string; speechText: string; sfxPrompt: string }[] | null = null;
   if (job.scene_prompts) {
     try {
@@ -341,12 +332,10 @@ async function startProduction(job: any) {
   try {
     console.log(`[INFO] İş başladı: ID=${job.id}`);
     await db.run("UPDATE video_jobs SET status = 'processing', current_stage = 'Yönetmen Planlaması', progress_percent = 5 WHERE id = ?", [job.id]);
-    broadcast(job.id, { stage: 'Yönetmen Planlaması', percent: 5 });
+    broadcast(job.id, { stageKey: 'stageDirectorPlanning', percent: 5 });
 
     let object: { scenes: any[]; marketing: any };
     if (preGeneratedScenes) {
-      // Synthesize a marketing object using the original master_prompt
-      // (we keep this simple — the user can edit before publishing).
       object = {
         scenes: preGeneratedScenes,
         marketing: {
@@ -386,7 +375,7 @@ Karakter Özellikleri: ${job.character_features}
     }
 
     const totalScenes = object.scenes.length;
-    const estMin = totalScenes * 4.5 + 2; // +2 dk kapak üretimi için
+    const estMin = totalScenes * 4.5 + 2; 
 
     await db.run(
       `UPDATE video_jobs SET
@@ -419,7 +408,7 @@ Karakter Özellikleri: ${job.character_features}
     );
 
     broadcast(job.id, {
-      stage: 'Sahneler Hazırlanıyor',
+      stageKey: 'stageScenesPreparing',
       percent: 10,
       totalScenes,
       estimatedMinutes: estMin,
@@ -431,10 +420,29 @@ Karakter Özellikleri: ${job.character_features}
     });
 
     // ── KAPAK SENTEZİ ──
+    await colabMutex.acquire();
     try {
-      console.log(`[INFO] Kapak resimleri Colab'da üretiliyor...`);
+      // ── Colab auto-start: ensure Colab is up before processing ──
+      const colabState = colab.getState();
+      if (colabState.status === 'stopped' || colabState.status === 'error') {
+        try {
+          console.log(`[INFO] İş #${job.id} Colab'ı başlatıyor...`);
+          await db.run("UPDATE video_jobs SET current_stage = 'Colab Sunucusu Başlatılıyor (2-5 dk sürebilir)...' WHERE id = ?", [job.id]);
+          broadcast(job.id, { stageKey: 'stageColabStarting', percent: 11 });
+          
+          await colab.start();
+          console.log(`[INFO] Colab hazır: ${colab.getState().ngrokUrl}`);
+        } catch (colabErr: any) {
+          console.error(`[ERROR] Colab başlatılamadı:`, colabErr);
+          throw new Error('Colab Başlatılamadı: ' + colabErr.message);
+        }
+      }
+      colab.cancelIdleStop();   // we're using it, don't stop now
+
+      try {
+        console.log(`[INFO] Kapak resimleri Colab'da üretiliyor...`);
       await db.run("UPDATE video_jobs SET current_stage = 'Kapak Fotoğrafı Sentezi', progress_percent = 12 WHERE id = ?", [job.id]);
-      broadcast(job.id, { stage: 'Kapak Fotoğrafı Sentezi', percent: 12 });
+      broadcast(job.id, { stageKey: 'stageCoverSynthesis', percent: 12 });
 
       await axios.post(`${COLAB_URL}/generate-covers`, {
         cover_prompt: `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`
@@ -461,26 +469,33 @@ Karakter Özellikleri: ${job.character_features}
     const applyLipsync = userSettings?.apply_lipsync === 1;
 
     for (const scene of object.scenes) {
-      // S6: Cancellation check at scene boundary. The cancel-job
-      // endpoint flips status to 'cancelled' in the DB; if we see
-      // that here, we abort the loop and bail out. We check
-      // BEFORE doing any heavy work for this scene (no Colab
-      // request, no FFmpeg pass).
+      // S6: Cancellation check at scene boundary.
       const cancelCheck: any = await db.get(
         'SELECT status FROM video_jobs WHERE id = ?',
         [job.id]
       );
       if (cancelCheck && cancelCheck.status === 'cancelled') {
         console.log(`[INFO] Is #${job.id} iptal edildi, uretim durduruluyor (sahne ${scene.sceneNumber} oncesi).`);
-        // Cleanup any partially-downloaded temp files. The
-        // mid-scene downloads (tV/tS/tE) won't exist yet since
-        // we abort before the request, but be defensive.
         break;
       }
 
       const pct = Math.floor((scene.sceneNumber / totalScenes) * 75) + 15;
       await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = ? WHERE id = ?", [`Sahne ${scene.sceneNumber} İşleniyor`, pct, job.id]);
-      broadcast(job.id, { stage: `Sahne ${scene.sceneNumber} Üretiliyor`, percent: pct, completedScenes: scene.sceneNumber - 1 });
+      broadcast(job.id, { stageKey: 'stageSceneGenerating', sceneNumber: scene.sceneNumber, percent: pct, completedScenes: scene.sceneNumber - 1 });
+
+      let finalCharacterFeatures = job.character_features;
+      let referenceImageBase64 = '';
+      if (!finalCharacterFeatures && job.material_path) {
+        try {
+          const videoAbsPath = path.join(process.cwd(), job.material_path);
+          if (await fs.pathExists(videoAbsPath)) {
+             referenceImageBase64 = await extractReferenceFrame(videoAbsPath);
+             console.log(`[INFO] Is #${job.id} - Referans görseli otomatik çıkarıldı.`);
+          }
+        } catch(e) {
+          console.error('[ERROR] Referans görseli çıkarılırken hata:', e);
+        }
+      }
 
       console.log(`[INFO] Colab'a sahne ${scene.sceneNumber} gönderiliyor (apply_lipsync=${applyLipsync})...`);
       const response = await axios.post(`${COLAB_URL}/generate-media`, {
@@ -488,7 +503,8 @@ Karakter Özellikleri: ${job.character_features}
         video_prompt: scene.videoPrompt,
         speech_text: scene.speechText,
         sfx_prompt: scene.sfxPrompt,
-        character_features: job.character_features,
+        character_features: finalCharacterFeatures,
+        reference_image_base64: referenceImageBase64,
         user_image_path: job.material_path,
         apply_lipsync: applyLipsync
       }, { timeout: 0 });
@@ -553,17 +569,17 @@ Karakter Özellikleri: ${job.character_features}
       finalScenes.push(mS);
       await db.run("UPDATE video_jobs SET completed_scenes = ? WHERE id = ?", [scene.sceneNumber, job.id]);
     }
+    } finally {
+      colabMutex.release();
+    }
 
-    // S6: After the scene loop, re-check cancellation. If the user
-    // hit cancel during the final scene, finalScenes may be partial
-    // and we must not attempt the merge below.
+    // S6: After the scene loop, re-check cancellation.
     const postLoopCheck: any = await db.get(
       'SELECT status FROM video_jobs WHERE id = ?',
       [job.id]
     );
     if (postLoopCheck && postLoopCheck.status === 'cancelled') {
       console.log(`[INFO] Is #${job.id} iptal edildi, montaj adimi atlandi.`);
-      // Clean up any partial scene outputs so we don't leak temp files.
       for (const f of finalScenes) {
         try { await fs.remove(f); } catch { /* ignore */ }
       }
@@ -572,7 +588,7 @@ Karakter Özellikleri: ${job.character_features}
 
     // Sahneleri birleştir
     await db.run("UPDATE video_jobs SET current_stage = 'Final Montaj', progress_percent = 90 WHERE id = ?", [job.id]);
-    broadcast(job.id, { stage: 'Final Montaj', percent: 90 });
+    broadcast(job.id, { stageKey: 'stageFinalMontage', percent: 90 });
 
     const fName = `film_${job.id}_${Date.now()}.mp4`;
     const fPath = path.join(process.cwd(), 'videolar', fName);
@@ -630,30 +646,24 @@ Karakter Özellikleri: ${job.character_features}
     if (job.has_shorts !== 0) {
       console.log(`[INFO] Dikey 9:16 Shorts/TikTok videosu üretiliyor...`);
       await db.run("UPDATE video_jobs SET current_stage = 'Dikey Shorts Dönüşümü', progress_percent = 95 WHERE id = ?", [job.id]);
-      broadcast(job.id, { stage: 'Dikey Shorts Dönüşümü', percent: 95 });
+      broadcast(job.id, { stageKey: 'stageShortsConversion', percent: 95 });
 
       const dName = `shorts_${fName}`;
       const dPath = path.join(process.cwd(), 'videolar', dName);
 
-      // S4: Compute percentage-based timestamps so callouts work for any video length
-      const t1 = (dur * 0.30).toFixed(2); // Like
-      const t2 = (dur * 0.50).toFixed(2); // Subscribe center
-      const t3 = (dur * 0.65).toFixed(2); // Bell
+      const t1 = (dur * 0.30).toFixed(2);
+      const t2 = (dur * 0.50).toFixed(2);
+      const t3 = (dur * 0.65).toFixed(2);
       const t1End = (dur * 0.30 + 3).toFixed(2);
       const t2End = (dur * 0.50 + 4).toFixed(2);
       const t3End = (dur * 0.65 + 3).toFixed(2);
 
-      // FFmpeg ile dikey boxblur ve callout'lar zinciri
-      // %30 süresinde Like sembolü
-      // %50 süresinde ortada sarı renkli "Kanalıma abone olmayı unutmayın"
-      // %65 süresinde Abone Ol ve zil sembolü
       const ffmpegBlurCmd = `ffmpeg -y -i "${finalHorizontalPath}" -vf "split[original][copy];[copy]scale=1080:1920,boxblur=40[blurred];[original]scale=1080:-1[scaled];[blurred][scaled]overlay=(W-w)/2:(H-h)/2,drawtext=text='👍 BEGEN':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t1},${t1End})',drawtext=text='🔔 Kanalima abone olmayi unutmayin':fontcolor=yellow:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${t2},${t2End})',drawtext=text='🔔 ABONE OL':fontcolor=cyan:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t3},${t3End})'" -c:a copy "${dPath}"`;
 
       try {
         await runFFmpegWithFallback([ffmpegBlurCmd]);
         console.log(`[INFO] Shorts üretimi tamamlandı: ${dName}`);
 
-        // S4: Add ping sounds at 30/50/65% (G4)
         try {
           const pingedPath = path.join(process.cwd(), 'videolar', `pinged_${dName}`);
           await addCalloutPings(dPath, pingedPath);
@@ -663,7 +673,6 @@ Karakter Özellikleri: ${job.character_features}
           console.warn(`[WARN] Ping sesleri eklenemedi, video sessiz callout'larla devam ediyor:`, pingErr);
         }
 
-        // S4: Apply end screen to shorts (if enabled and video is long enough)
         try {
           const userEndScreen: any = await db.get(
             'SELECT apply_end_screen, personal_avatar_base64 FROM users WHERE id = ?',
@@ -692,23 +701,83 @@ Karakter Özellikleri: ${job.character_features}
       "UPDATE video_jobs SET status = 'completed', current_stage = 'Tamamlandı', progress_percent = 100, final_filename = ? WHERE id = ?", 
       [fName, job.id]
     );
-    broadcast(job.id, { stage: 'Tamamlandı', percent: 100, finalFilename: fName });
+    broadcast(job.id, { stageKey: 'stageCompleted', percent: 100, finalFilename: fName });
     console.log(`[INFO] İş başarıyla tamamlandı: ID=${job.id}`);
 
   } catch (error) {
-    // S6: Don't overwrite a user-initiated cancellation with a
-    // generic 'failed' status. JOB_CANCELLED is a sentinel we
-    // throw ourselves when the user hits /cancel-job.
     if (error && (error as any).message === 'JOB_CANCELLED') {
       console.log(`[INFO] Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);
-      // Status was already set to 'cancelled' by /cancel-job — no
-      // need to update. Just notify the SSE client.
-      broadcast(job.id, { stage: 'Iptal Edildi', percent: 0 });
+      broadcast(job.id, { stageKey: 'stageCancelled', percent: 0 });
       return;
     }
     console.error(`[ERROR] İş sırasında kritik hata (ID=${job.id}):`, error);
     await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata Oluştu' WHERE id = ?", [job.id]);
-    broadcast(job.id, { stage: 'Hata Oluştu', percent: 0 });
+    broadcast(job.id, { stageKey: 'stageError', percent: 0 });
+  } finally {
+    // Check if any jobs remain in queue. If not, stop Colab immediately.
+    try {
+      const remaining = await db.get(
+        "SELECT COUNT(*) as cnt FROM video_jobs WHERE status = 'pending' OR status = 'processing'"
+      );
+      const remainingCount = remaining?.cnt || 0;
+      if (remainingCount === 0) {
+        console.log(`[INFO] Kuyruk tamamen boşaldı — Colab sunucusu kapatılıyor.`);
+        await colab.stop();
+      }
+    } catch (err) {
+      console.error('[ERROR] Could not check queue for colab.stop():', err);
+    }
   }
 }
 
+
+export async function startVideoQueueWorker() {
+  const channel = getRabbitChannel();
+  await channel.prefetch(3);
+
+  console.log(`[INFO] RabbitMQ Worker: ${VIDEO_JOBS_QUEUE} dinleniyor (Prefetch=3)`);
+
+  channel.consume(VIDEO_JOBS_QUEUE, async (msg: any) => {
+    if (!msg) return;
+
+    let payload: { jobId: number };
+    try {
+      payload = JSON.parse(msg.content.toString());
+    } catch (e) {
+      console.error('[ERROR] Kuyruktan geçersiz mesaj geldi:', msg.content.toString());
+      channel.ack(msg);
+      return;
+    }
+
+    try {
+      const job = await db.get("SELECT * FROM video_jobs WHERE id = ?", [payload.jobId]);
+      if (!job) {
+        console.warn(`[WARN] İş #${payload.jobId} veritabanında bulunamadı. Atlanıyor.`);
+        channel.ack(msg);
+        return;
+      }
+
+      if (job.status === 'cancelled') {
+        console.log(`[INFO] İş #${payload.jobId} önceden iptal edilmiş. İşlenmeden geçiliyor.`);
+        channel.ack(msg);
+        return;
+      }
+
+      await startProduction(job);
+
+      channel.ack(msg);
+    } catch (error: any) {
+      console.error(`[ERROR] İş #${payload.jobId} işlenirken hata:`, error);
+      
+      if (error && error.message === 'JOB_CANCELLED') {
+         console.log(`[INFO] İş #${payload.jobId} iptal edildi. Kuyruktan çıkarılıyor.`);
+         channel.ack(msg);
+         return;
+      }
+
+      await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata: ' || ? WHERE id = ?", [error.message, payload.jobId]);
+      broadcast(payload.jobId, { stageKey: 'stageError', percent: 0 });
+      channel.ack(msg);
+    }
+  });
+}

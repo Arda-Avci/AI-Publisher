@@ -9,6 +9,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   if (req.session && req.session.userId) {
     next();
   } else {
-    res.redirect('/login');
+    // Eğer istek bir API isteği ise veya JSON bekliyorsa 302 yönlendirmesi yerine 401 dön.
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || req.path.startsWith('/differentiate-status')) {
+      res.status(401).json({ success: false, error: 'Oturum süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.' });
+    } else {
+      res.redirect('/login');
+    }
   }
 }

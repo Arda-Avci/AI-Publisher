@@ -14,10 +14,10 @@ import bcrypt from 'bcrypt';
 
 // Mock rate limiters to avoid being blocked in tests
 vi.mock('../src/middleware/rate-limit.js', () => ({
-  authLimiter: (req, res, next) => next(),
-  mediumLimiter: (req, res, next) => next(),
-  heavyLimiter: (req, res, next) => next(),
-  sseLimiter: (req, res, next) => next()
+  authLimiter: (req: any, res: any, next: any) => next(),
+  mediumLimiter: (req: any, res: any, next: any) => next(),
+  heavyLimiter: (req: any, res: any, next: any) => next(),
+  sseLimiter: (req: any, res: any, next: any) => next()
 }));
 
 // Mock queue.ts to prevent background worker from starting during testing
@@ -69,7 +69,7 @@ vi.spyOn(colab, 'start').mockImplementation(async () => {
     startedAt: new Date().toISOString(),
     uptimeSeconds: 10
   };
-  colab.emit('state-change', colab.getState());
+  (colab as any).emit('state-change', colab.getState());
   return { ngrokUrl: 'https://mocked-ngrok-url.ngrok-free.app' };
 });
 
@@ -83,7 +83,7 @@ vi.spyOn(colab, 'stop').mockImplementation(async () => {
     startedAt: null,
     uptimeSeconds: null
   };
-  colab.emit('state-change', colab.getState());
+  (colab as any).emit('state-change', colab.getState());
 });
 
 describe('AI-Publisher System Integration Tests', () => {

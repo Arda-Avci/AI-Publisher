@@ -19,6 +19,7 @@ import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import path from 'path';
 import axios from 'axios';
+import fs from 'fs';
 
 export type ColabStatus = 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
 
@@ -34,6 +35,7 @@ export interface ColabState {
 
 export interface ColabManager {
   start(): Promise<{ ngrokUrl: string }>;
+  connect(url: string): Promise<{ ngrokUrl: string }>;
   stop(): Promise<void>;
   getState(): ColabState;
   scheduleIdleStop(delayMs?: number): void;
@@ -141,6 +143,53 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       return result;
     } finally {
       this.startPromise = null;
+    }
+  }
+
+  async connect(url: string): Promise<{ ngrokUrl: string }> {
+    this.setStatus('starting', url, null);
+
+    // Clean up url
+    let finalUrl = url.trim();
+    if (finalUrl.endsWith('/')) {
+      finalUrl = finalUrl.slice(0, -1);
+    }
+
+    try {
+      // Validate health
+      await axios.get(`${finalUrl}/health`, { 
+        timeout: 8000,
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
+
+      // Valid url, set status
+      process.env.COLAB_URL = finalUrl;
+      this.setStatus('running', finalUrl, null);
+      this.state.startedAt = new Date().toISOString();
+      this.startHealthChecks();
+
+      // Persist to .env
+      try {
+        const envPath = path.join(process.cwd(), '.env');
+        let envContent = '';
+        if (fs.existsSync(envPath)) {
+          envContent = fs.readFileSync(envPath, 'utf8');
+        }
+        if (envContent.includes('COLAB_URL=')) {
+          envContent = envContent.replace(/COLAB_URL=.*/g, `COLAB_URL=${finalUrl}`);
+        } else {
+          envContent += `\nCOLAB_URL=${finalUrl}\n`;
+        }
+        fs.writeFileSync(envPath, envContent.trim() + '\n');
+      } catch (e) {
+        console.warn('[colab] Failed to write to .env:', e);
+      }
+
+      return { ngrokUrl: finalUrl };
+    } catch (err: any) {
+      const msg = `Bağlantı başarısız veya sunucu yanıt vermiyor: ${err.message}`;
+      this.setStatus('error', finalUrl, msg);
+      throw new Error(msg);
     }
   }
 

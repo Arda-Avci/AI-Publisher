@@ -1,5 +1,6 @@
 import { Application, Request, Response } from 'express';
 import { db } from '../db.js';
+import yts from 'yt-search';
 import { requireAuth } from '../middleware/auth.js';
 
 /**
@@ -78,7 +79,10 @@ async function fetchFromYouTubeAPI(
     for (const lang of langs) {
       const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(rawQ)}&type=video&relevanceLanguage=${lang}&key=${apiKey}`;
       try {
-        const searchRes = await fetch(searchUrl);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const searchRes = await fetch(searchUrl, { signal: controller.signal });
+        clearTimeout(timer);
         const searchData: any = await searchRes.json();
         if (searchData.error) {
           if (!firstError) firstError = searchData.error;
@@ -119,34 +123,44 @@ async function fetchFromYouTubeAPI(
     const videoStatsMap = new Map<string, any>();
     for (const batch of chunk(videoIds, 50)) {
       const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${batch.join(',')}&key=${apiKey}`;
-      const vRes = await fetch(vUrl);
-      const vData: any = await vRes.json();
-      if (vData.error) {
-        return {
-          success: false,
-          error: 'API_ERROR',
-          message: vData.error.message || 'YouTube API error',
-          code: vData.error.code
-        };
-      }
-      for (const v of (vData.items || [])) videoStatsMap.set(v.id, v);
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const vRes = await fetch(vUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        const vData: any = await vRes.json();
+        if (vData.error) {
+          return {
+            success: false,
+            error: 'API_ERROR',
+            message: vData.error.message || 'YouTube API error',
+            code: vData.error.code
+          };
+        }
+        for (const v of (vData.items || [])) videoStatsMap.set(v.id, v);
+      } catch (e) { continue; }
     }
 
     // --- Step C: channels.list for subscriber counts (batched in 50s)
     const channelStatsMap = new Map<string, any>();
     for (const batch of chunk(channelIds, 50)) {
       const cUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${batch.join(',')}&key=${apiKey}`;
-      const cRes = await fetch(cUrl);
-      const cData: any = await cRes.json();
-      if (cData.error) {
-        return {
-          success: false,
-          error: 'API_ERROR',
-          message: cData.error.message || 'YouTube API error',
-          code: cData.error.code
-        };
-      }
-      for (const c of (cData.items || [])) channelStatsMap.set(c.id, c);
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const cRes = await fetch(cUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        const cData: any = await cRes.json();
+        if (cData.error) {
+          return {
+            success: false,
+            error: 'API_ERROR',
+            message: cData.error.message || 'YouTube API error',
+            code: cData.error.code
+          };
+        }
+        for (const c of (cData.items || [])) channelStatsMap.set(c.id, c);
+      } catch (e) { continue; }
     }
 
     // --- Compose results + score (engagement-corrected viral) ---
@@ -206,147 +220,32 @@ async function fetchFromYouTubeAPI(
  * is always 0 and the score formula is reduced to a views/likes ratio.
  */
 async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchResult> {
-  // Neither Invidious nor Piped support a relevanceLanguage parameter, so the
-  // langs list is accepted for API parity but not forwarded.
-  for (const instance of FALLBACK_INSTANCES) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6000); // 6s timeout
-
-    const label = `${instance.type}:${instance.base}`;
-    try {
-      const items: any[] = await fetchFallbackItems(instance, rawQ, controller.signal);
-      clearTimeout(timer);
-
-      if (!Array.isArray(items) || items.length === 0) {
-        // Empty result is still a valid response — return empty rather than
-        // trying the next instance, otherwise a healthy but low-yield
-        // instance would be skipped in favour of a slower one.
-        console.log(`[Fallback] ${label} returned 0 results — using as source`);
-        return { success: true, videos: [], source: label };
-      }
-
-      const videos: VideoResult[] = items.slice(0, 20).map((item) => {
-        const videoId = String(item.videoId || '').trim();
-        const views = Number(item.views) || 0;
-        const likes = Number(item.likes) || 0;
-        const safeLikes = Math.max(likes, 1);
-        // No subscriber count from either search endpoint; use a simpler
-        // views/likes ratio (capped at 15) to surface high-engagement videos.
-        const score = Math.min(15, Math.round((views / safeLikes / 100) * 10) / 10);
-
-        return {
-          videoId,
-          title: item.title || '',
-          thumbnail:
-            item.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-          channelId: item.channelId || '',
-          channelTitle: item.channelTitle || '',
-          subscribers: 0, // Not available from the search endpoint
-          views,
-          likes,
-          score,
-          description: item.description || '',
-          publishedAt: item.publishedAt || ''
-        };
-      });
-
-      console.log(`[Fallback] ${label} returned ${videos.length} videos`);
-      return { success: true, videos, source: label };
-    } catch (err: any) {
-      clearTimeout(timer);
-      console.warn(`[Fallback] ${label} failed: ${err?.message || err}`);
-      continue; // try next instance
-    }
+  try {
+    const r = await yts(rawQ);
+    const videos: VideoResult[] = r.videos.slice(0, 20).map((v: any) => {
+      const views = v.views || 0;
+      const score = Math.min(15, Math.round((views / 1000) * 10) / 10);
+      return {
+        videoId: v.videoId,
+        title: v.title || '',
+        thumbnail: v.thumbnail || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+        channelId: v.author?.url || '',
+        channelTitle: v.author?.name || '',
+        subscribers: 0,
+        views,
+        likes: 0,
+        score,
+        description: v.description || '',
+        publishedAt: v.ago || ''
+      };
+    });
+    
+    console.log(`[Fallback] yt-search returned ${videos.length} videos`);
+    return { success: true, videos, source: 'yt-search' };
+  } catch (err: any) {
+    console.warn(`[Fallback] yt-search failed: ${err?.message || err}`);
+    return { success: false, error: 'ALL_FALLBACKS_FAILED' };
   }
-
-  return { success: false, error: 'ALL_FALLBACKS_FAILED' };
-}
-
-/**
- * Hits a single Invidious or Piped instance and returns a normalized
- * list of raw items (each with { videoId, title, thumbnail, channelId,
- * channelTitle, views, likes, description, publishedAt }) ready to be
- * mapped to VideoResult by the caller.
- */
-async function fetchFallbackItems(
-  instance: { type: 'invidious' | 'piped'; base: string },
-  rawQ: string,
-  signal: AbortSignal
-): Promise<any[]> {
-  if (instance.type === 'invidious') {
-    const fields = [
-      'videoId',
-      'title',
-      'author',
-      'authorId',
-      'viewCount',
-      'likeCount',
-      'lengthSeconds',
-      'published',
-      'publishedText',
-      'description'
-    ].join(',');
-
-    const url = `${instance.base}/api/v1/search?q=${encodeURIComponent(rawQ)}&type=video&page=1&fields=${encodeURIComponent(fields)}`;
-
-    const res = await fetch(url, { signal });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const items: any[] = await res.json();
-    if (!Array.isArray(items)) return [];
-
-    // Normalize to the common shape used by the caller.
-    return items.map((it) => ({
-      videoId: it.videoId,
-      title: it.title,
-      thumbnail: it.videoThumbnails?.[0]?.url || '',
-      channelId: it.authorId,
-      channelTitle: it.author,
-      views: it.viewCount,
-      likes: it.likeCount,
-      description: it.description,
-      publishedAt: it.publishedText
-    }));
-  }
-
-  // Piped: /search?q=...&filter=videos
-  // Response: { items: [ { url, title, thumbnail, uploaderName, uploaderUrl,
-  //                       views, duration, uploaded, uploadedDate } ] }
-  const url = `${instance.base}/search?q=${encodeURIComponent(rawQ)}&filter=videos`;
-  const res = await fetch(url, { signal });
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
-  const data: any = await res.json();
-  const rawItems: any[] = Array.isArray(data?.items) ? data.items : [];
-  if (rawItems.length === 0) return [];
-
-  return rawItems.map((it) => {
-    // Piped's url looks like "/watch?v=VIDEOID"; extract the id.
-    let videoId = '';
-    if (typeof it.url === 'string') {
-      const m = it.url.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
-      if (m) videoId = m[1];
-    }
-    // uploaderUrl looks like "/channel/UCxxxx" — extract the channel id.
-    let channelId = '';
-    if (typeof it.uploaderUrl === 'string') {
-      const m = it.uploaderUrl.match(/\/channel\/([A-Za-z0-9_-]+)/);
-      if (m) channelId = m[1];
-    }
-    return {
-      videoId,
-      title: it.title,
-      thumbnail: it.thumbnail,
-      channelId,
-      channelTitle: it.uploaderName,
-      views: it.views,
-      likes: 0, // Piped's search endpoint doesn't return likes
-      description: it.description || it.shortDescription || '',
-      publishedAt: it.uploadedDate || it.uploaded || ''
-    };
-  });
 }
 
 export function registerOpportunityRoutes(app: Application): void {

@@ -15,30 +15,28 @@ export function registerSettingsRoutes(app: Application): void {
   });
 
   app.post('/save-settings', mediumLimiter, requireAuth, async (req, res) => {
-    const { youtube_api_key, sample_cover_base64, personal_avatar_base64, text_position_grid, default_preset_tone, preferred_language, selected_theme, apply_lipsync, apply_end_screen } = req.body;
     try {
-      // Avatar boş gönderildiyse mevcut değeri koru (null overwrite yapma)
-      let avatarToSave = personal_avatar_base64;
-      if (avatarToSave === undefined || avatarToSave === null || avatarToSave === '') {
-        const current = await db.get('SELECT personal_avatar_base64 FROM users WHERE id = ?', [req.session.userId]);
-        avatarToSave = current?.personal_avatar_base64 || null;
+      // Mevcut kullanıcıyı çek
+      const current = await db.get('SELECT * FROM users WHERE id = ?', [req.session.userId]);
+      if (!current) return res.status(404).json({ success: false, error: 'User not found' });
+
+      // Sadece gönderilen değerleri güncelle, gönderilmeyenleri (undefined) mevcut haliyle bırak
+      const youtube_api_key = req.body.youtube_api_key !== undefined ? req.body.youtube_api_key : current.youtube_api_key;
+      const sample_cover_base64 = req.body.sample_cover_base64 !== undefined ? req.body.sample_cover_base64 : current.sample_cover_base64;
+      
+      let avatarToSave = current.personal_avatar_base64;
+      if (req.body.personal_avatar_base64 !== undefined) {
+        avatarToSave = req.body.personal_avatar_base64 || current.personal_avatar_base64;
       }
-      // apply_lipsync: 0/1 — undefined ise mevcut değeri koru
-      let applyLipsyncToSave: number;
-      if (apply_lipsync === undefined || apply_lipsync === null) {
-        const cur = await db.get('SELECT apply_lipsync FROM users WHERE id = ?', [req.session.userId]);
-        applyLipsyncToSave = (cur?.apply_lipsync === undefined || cur?.apply_lipsync === null) ? 1 : Number(cur.apply_lipsync);
-      } else {
-        applyLipsyncToSave = apply_lipsync ? 1 : 0;
-      }
-      // S4: apply_end_screen: 0/1 — undefined ise mevcut değeri koru (default ON)
-      let applyEndScreenToSave: number;
-      if (apply_end_screen === undefined || apply_end_screen === null) {
-        const cur = await db.get('SELECT apply_end_screen FROM users WHERE id = ?', [req.session.userId]);
-        applyEndScreenToSave = (cur?.apply_end_screen === undefined || cur?.apply_end_screen === null) ? 1 : Number(cur.apply_end_screen);
-      } else {
-        applyEndScreenToSave = apply_end_screen ? 1 : 0;
-      }
+
+      const text_position_grid = req.body.text_position_grid !== undefined ? req.body.text_position_grid : current.text_position_grid;
+      const default_preset_tone = req.body.default_preset_tone !== undefined ? req.body.default_preset_tone : current.default_preset_tone;
+      const preferred_language = req.body.preferred_language !== undefined ? req.body.preferred_language : current.preferred_language;
+      const selected_theme = req.body.selected_theme !== undefined ? req.body.selected_theme : current.selected_theme;
+
+      const applyLipsyncToSave = req.body.apply_lipsync !== undefined ? (req.body.apply_lipsync ? 1 : 0) : current.apply_lipsync;
+      const applyEndScreenToSave = req.body.apply_end_screen !== undefined ? (req.body.apply_end_screen ? 1 : 0) : current.apply_end_screen;
+
       await db.run(
         `UPDATE users SET
         youtube_api_key = ?,

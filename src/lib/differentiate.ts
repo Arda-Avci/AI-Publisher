@@ -17,6 +17,10 @@
 
 import { db } from '../db.js';
 import { fetchYouTubeTranscript } from './transcript.js';
+import { downloadYouTubeVideo } from '../services/videoDownloader.js';
+import { extractReferenceFrame } from '../services/videoService.js';
+import path from 'path';
+import fs from 'fs';
 import {
   cleanText,
   translateText,
@@ -227,40 +231,89 @@ export async function runPhase1Background(
     }
     const targetLang = rawLang as SupportedLang;
 
-    // Step 2: fetch transcript
-    const transcript = await fetchYouTubeTranscript(videoId);
-    const originalText = transcript.plainText;
-
-    // Step 3: clean text
+    // Step 2: Download Video & Extract Frame
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Metin temizleniyor...', progress_percent = 40, transcript = ? WHERE id = ? AND user_id = ?",
+      "UPDATE video_jobs SET current_stage = 'Video indiriliyor...', progress_percent = 20 WHERE id = ? AND user_id = ?",
+      [jobId, userId]
+    );
+    const videoPath = await downloadYouTubeVideo(videoId);
+    
+    await db.run(
+      "UPDATE video_jobs SET current_stage = 'Referans kare çıkartılıyor...', progress_percent = 35 WHERE id = ? AND user_id = ?",
+      [jobId, userId]
+    );
+    
+    const imageFilename = `ref_${Date.now()}.jpg`;
+    const imagePath = path.join(process.cwd(), 'uploads', imageFilename);
+    const base64Image = await extractReferenceFrame(videoPath);
+    await fs.promises.writeFile(imagePath, Buffer.from(base64Image, 'base64'));
+
+    // Step 3: fetch transcript
+    await db.run(
+      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 45 WHERE id = ? AND user_id = ?",
+      [jobId, userId]
+    );
+    let originalText = '';
+    try {
+      const transcript = await fetchYouTubeTranscript(videoId);
+      originalText = transcript.plainText;
+    } catch (err: any) {
+      console.warn(`[WARN] YouTube transcript failed for ${videoId}. Falling back to AI extraction...`, err.message);
+      await db.run(
+        "UPDATE video_jobs SET current_stage = 'Sesten transkript üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ? AND user_id = ?",
+        [jobId, userId]
+      );
+      const { transcribeVideoAudio } = await import('./audio-transcriber.js');
+      originalText = await transcribeVideoAudio(videoPath);
+    }
+
+    // Step 4: clean text
+    await db.run(
+      "UPDATE video_jobs SET current_stage = 'Metin temizleniyor...', progress_percent = 60, transcript = ? WHERE id = ? AND user_id = ?",
       [originalText, jobId, userId]
     );
-
     const cleanedText = await cleanText(originalText);
 
-    // Step 4: translate
+    // Step 5: translate
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Çeviri yapılıyor...', progress_percent = 70, transcript_cleaned = ? WHERE id = ? AND user_id = ?",
+      "UPDATE video_jobs SET current_stage = 'Çeviri yapılıyor...', progress_percent = 75, transcript_cleaned = ? WHERE id = ? AND user_id = ?",
       [cleanedText, jobId, userId]
     );
-
     const translatedText = await translateText(cleanedText || originalText, targetLang);
 
-    // Step 5: finalize — status='awaiting_approval'
-    const productionNotesPreview = translatedText.substring(0, 2000);
+    // Step 6: generate scene prompts directly
+    await db.run(
+      "UPDATE video_jobs SET current_stage = 'Promptlar üretiliyor...', progress_percent = 90 WHERE id = ? AND user_id = ?",
+      [jobId, userId]
+    );
+    
+    const durationMode: DurationMode = isValidDurationMode(job.differentiation_duration_mode)
+      ? job.differentiation_duration_mode
+      : 'same';
+      
+    const baseScenes = await generateScenePrompts(translatedText, targetLang);
+    const finalScenes = applyDurationMode(baseScenes, durationMode);
+    const scenesJson = JSON.stringify(finalScenes);
+
+    // Step 7: finalize — status='pending' (ready for manual start in the UI)
+    const firstScenePrompt = finalScenes[0]?.videoPrompt || job.master_prompt;
+    const productionNotesPreview = translatedText; // Use full text so user can edit it
+    
     await db.run(
       `UPDATE video_jobs SET
-        status = 'awaiting_approval',
-        current_stage = 'Kullanıcı onayı bekleniyor — çeviri gözden geçirilmeli',
+        status = 'pending',
+        current_stage = 'Onaylandı — Manuel başlatma bekleniyor',
         progress_percent = 100,
         transcript_translated = ?,
-        production_notes = ?
+        production_notes = ?,
+        scene_prompts = ?,
+        master_prompt = ?,
+        material_path = ?
        WHERE id = ? AND user_id = ?`,
-      [translatedText, productionNotesPreview, jobId, userId]
+      [translatedText, productionNotesPreview, scenesJson, firstScenePrompt, imagePath, jobId, userId]
     );
 
-    console.log('[INFO] Differentiation Phase 1 tamamlandı: job #' + jobId);
+    console.log('[INFO] Differentiation tamamlandı: job #' + jobId);
   } catch (err: any) {
     const errorMsg = (err && err.message) ? err.message : String(err);
     console.error('[ERROR] Phase 1 background job #' + jobId + ' başarısız:', err);
@@ -328,6 +381,10 @@ export interface Phase2Result {
   jobId: number;
   sceneCount: number;
   scenePrompts: GeneratedScene[];
+  masterPrompt: string;
+  productionNotes: string;
+  materialPath: string;
+  platforms: string[];
 }
 
 export async function differentiateVideoPhase2(
@@ -391,7 +448,22 @@ export async function differentiateVideoPhase2(
     ]
   );
 
-  return { jobId, sceneCount: finalScenes.length, scenePrompts: finalScenes };
+  // Parse platforms from the stored JSON (fallback to all 4)
+  let platforms: string[] = ['youtube', 'tiktok', 'x', 'meta'];
+  try {
+    const parsed = JSON.parse(job.target_platforms || '[]');
+    if (Array.isArray(parsed) && parsed.length > 0) platforms = parsed;
+  } catch { /* use default */ }
+
+  return {
+    jobId,
+    sceneCount: finalScenes.length,
+    scenePrompts: finalScenes,
+    masterPrompt: firstScenePrompt,
+    productionNotes,
+    materialPath: job.material_path || '',
+    platforms
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────

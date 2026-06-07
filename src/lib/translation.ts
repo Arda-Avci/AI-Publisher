@@ -5,9 +5,10 @@
 // the project's existing @ai-sdk/google model. Structured scene output uses
 // `generateObject` with a Zod schema, matching the pattern in queue.ts.
 
-import { google } from '@ai-sdk/google';
+import { getAIModel } from './ai-provider.js';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
+import { withRetry } from './ai-utils.js';
 
 // Languages we expose in the UI. Keep the same set as the front-end.
 export const SUPPORTED_LANGS = ['tr', 'en', 'de', 'fr', 'es'] as const;
@@ -28,13 +29,17 @@ export function isSupportedLang(code: string): code is SupportedLang {
 // ── 1. Clean the raw transcript ───────────────────────────────────────────
 export async function cleanText(raw: string): Promise<string> {
   if (!raw || !raw.trim()) return '';
-  const { text } = await generateText({
-    model: google('gemini-2.5-flash'),
+  const { text } = await withRetry(() => generateText({
+    model: getAIModel(),
     prompt:
-      'Fix grammar, punctuation, remove filler words, improve flow. Keep meaning intact. ' +
-      'Return ONLY the cleaned text. No preamble, no quotes, no language tag.\n\n' +
+      'Görevin: Bir YouTube videosunun ham transkriptini temizlemek ve kusursuzlaştırmaktır. ' +
+      'Yazım hatalarını düzelt, dolgu kelimelerini at. Fikrin özüne ve iskeletine %100 sadık kal. ' +
+      'Ancak AI tespiti (AI detection) yazılımlarına yakalanmamak için: kelimelerin yerlerini hafifçe değiştir, ' +
+      'eş anlamlılar kullan ve cümle yapılarını anlamı bozmadan yeniden kurgula (Eşsizleştirme). ' +
+      'Dili daha doğal bir hale getir. ' +
+      'Return ONLY the cleaned text. No preamble, no quotes.\n\n' +
       raw
-  });
+  }));
   return text.trim();
 }
 
@@ -44,14 +49,17 @@ export async function translateText(text: string, targetLang: SupportedLang): Pr
   if (!isSupportedLang(targetLang)) {
     throw new Error('translateText: unsupported target language: ' + targetLang);
   }
-  const { text: out } = await generateText({
-    model: google('gemini-2.5-flash'),
+  const { text: out } = await withRetry(() => generateText({
+    model: getAIModel(),
     prompt:
-      'Translate this text to ' + LANG_NAMES[targetLang] + ' (' + targetLang + '). ' +
-      'Keep technical terms in original language. Maintain tone and style. ' +
-      'Return ONLY the translated text.\n\n' +
+      'Translate the following text to ' + LANG_NAMES[targetLang] + ' (' + targetLang + '). ' +
+      'ÖNEMLİ KURAL: Orijinal metin akademik, resmi veya soğuk olsa bile, sen bunu her zaman ' +
+      '"samimi, arkadaş canlısı bir hikaye anlatımı (storytelling)" formuna dönüştürerek çevirmelisin. ' +
+      'İzleyicinin ekranda kalmasını sağlayacak bir duygu kat. ' +
+      'Hedef dilin kültürel kullanım alışkanlıklarına göre lokalize et (Yerelleştir). ' +
+      'Return ONLY the translated text without any explanations.\n\n' +
       text
-  });
+  }));
   return out.trim();
 }
 
@@ -77,8 +85,8 @@ export async function generateScenePrompts(
   targetLang: SupportedLang
 ): Promise<GeneratedScene[]> {
   if (!content || !content.trim()) return [];
-  const { object } = await generateObject({
-    model: google('gemini-2.5-flash'),
+  const { object } = await withRetry(() => generateObject({
+    model: getAIModel(),
     schema: SceneSchema,
     prompt:
       'Based on this content, generate 3-5 video scenes. Each scene has: ' +
@@ -87,7 +95,7 @@ export async function generateScenePrompts(
       'sfxPrompt (background sound effect). ' +
       'Return JSON array of scenes.\n\n' +
       content
-  });
+  }));
   return object.scenes.map((s) => ({
     sceneNumber: s.sceneNumber,
     videoPrompt: s.videoPrompt,

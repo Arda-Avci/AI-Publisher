@@ -97,17 +97,17 @@ export function buildDashboardHTML(params: DashboardParams): string {
     // Use string concatenation (no backticks) inside this template literal so
     // we don't accidentally break the outer dashboardHTML string.
     var approvalBadge = isAwaitingApproval
-      ? '<span class="approval-pending-badge" onclick="resumeDifferentiation(' + job.id + ')">⏳ ' + (currentLang === 'tr' ? 'Onay Bekliyor' : 'Awaiting Approval') + '</span>'
+      ? '<span class="approval-pending-badge" onclick="resumeDifferentiation(' + job.id + ')">⏳ ' + (t.awaitingapprova72) + '</span>'
       : '';
     var phase1Badge = isProcessingPhase1
-      ? '<span class="phase1-pending-badge" onclick="resumeDifferentiation(' + job.id + ')">⏳ ' + (currentLang === 'tr' ? 'Çeviri Bekleniyor' : 'Translation Pending') + '</span>'
+      ? '<span class="phase1-pending-badge" onclick="resumeDifferentiation(' + job.id + ')">⏳ ' + (t.translationpend73) + '</span>'
       : '';
     var failedBadge = isFailed
-      ? '<span class="phase1-pending-badge" style="background:hsla(0 84% 60% / 0.15);color:hsl(0 84% 60%);" onclick="resumeDifferentiation(' + job.id + ')">❌ ' + (currentLang === 'tr' ? 'Başarısız' : 'Failed') + '</span>'
+      ? '<span class="phase1-pending-badge" style="background:hsla(0 84% 60% / 0.15);color:hsl(0 84% 60%);" onclick="resumeDifferentiation(' + job.id + ')">❌ ' + (t.failed74) + '</span>'
       : '';
 
     var startBtn = isPending
-      ? '<button onclick="startJob(' + job.id + ')" class="start-btn">▶ ' + (currentLang === 'tr' ? 'Projeyi Başlat' : 'Start Project') + '</button>'
+      ? '<button onclick="startJob(' + job.id + ')" class="start-btn">▶ ' + (t.startproject75) + '</button>'
       : '';
 
     // S6: Cancel button — shown for any active job (pending, processing,
@@ -117,7 +117,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
     var cancellableStatuses = ['pending', 'processing', 'processing_phase1', 'awaiting_approval'];
     var isCancellable = cancellableStatuses.indexOf(job.status) !== -1;
     var cancelBtn = isCancellable
-      ? '<button onclick="cancelJob(' + job.id + ')" class="cancel-btn">✕ ' + (currentLang === 'tr' ? 'İptal Et' : 'Cancel') + '</button>'
+      ? '<button onclick="cancelJob(' + job.id + ')" class="cancel-btn">✕ ' + (t.cancel76) + '</button>'
       : '';
 
     return `
@@ -141,7 +141,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
           ${startBtn}
           ${cancelBtn}
-          ${isFailed ? `<button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'} })" class="retry-btn">Yeniden Dene</button>` : ''}
+          ${isFailed ? `<button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_text || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'} })" class="retry-btn">Yeniden Dene</button>` : ''}
           <button onclick="deleteJob('${job.id}')" class="delete-btn">Sil</button>
         </div>
       </div>
@@ -201,7 +201,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           
           <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
             <button onclick="saveMeta('${job.id}')" class="save-btn">Tüm Metinleri Güncelle & Kaydet</button>
-            <button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'} })" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
+            <button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_text || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'} })" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
             <button onclick="deleteJob('${job.id}')" class="delete-btn" style="width: 100%;">Projeyi Sil</button>
           </div>
         </div>
@@ -240,7 +240,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         --space-9: 96px;
 
         /* Typography */
-        --font-display: 'Fraunces', Georgia, serif;
+        --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         --font-body: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
         --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
 
@@ -2776,8 +2776,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
         <!-- STEP 1: Interest Selection -->
         <div id="opp-step-1">
           <div class="opp-step-header">
-            <h3 class="opp-step-title">${currentLang === 'tr' ? 'İlgi Alanlarını Seç' : 'Pick Your Interests'}</h3>
-            <p class="opp-step-sub">${currentLang === 'tr' ? 'Anahtar kelime veya niş ekleyin (örn: yapay zeka, video üretim). 1–5 etiket seçin.' : 'Add keywords or niches (e.g. ai, video production). Pick 1–5 tags.'}</p>
+            <h3 class="opp-step-title">${t.pickyourinteres77}</h3>
+            <p class="opp-step-sub">${t.addkeywordsorni78}</p>
           </div>
 
           <div class="opp-input-row">
@@ -2785,18 +2785,18 @@ export function buildDashboardHTML(params: DashboardParams): string {
               type="text"
               id="opp-interest-input"
               class="opp-search-input"
-              placeholder="${currentLang === 'tr' ? 'Bir ilgi alanı yazıp Enter\\u0027a bas' : 'Type an interest and press Enter'}"
+              placeholder="${t.typeaninteresta79}"
               onkeydown="oppInputKey(event)"
             >
-            <button type="button" class="btn-publish opp-add-btn" onclick="oppAddFromInput()">${currentLang === 'tr' ? 'Ekle' : 'Add'}</button>
+            <button type="button" class="btn-publish opp-add-btn" onclick="oppAddFromInput()">${t.add80}</button>
           </div>
 
-          <div class="opp-chips-label">${currentLang === 'tr' ? 'Seçilen' : 'Selected'}</div>
+          <div class="opp-chips-label">${t.selected81}</div>
           <div class="opp-interest-chips" id="opp-chips-container">
-            <span class="opp-chips-empty">${currentLang === 'tr' ? 'Henüz seçim yok.' : 'No tags yet.'}</span>
+            <span class="opp-chips-empty">${t.notagsyet82}</span>
           </div>
 
-          <div class="opp-chips-label" style="margin-top: 1.25rem;">${currentLang === 'tr' ? 'Diller' : 'Languages'}</div>
+          <div class="opp-chips-label" style="margin-top: 1.25rem;">${t.languages83}</div>
           <div class="opp-lang-row" id="opp-lang-container">
             <button type="button" class="opp-lang-chip checked" data-lang="tr" onclick="toggleOppLang(this)">
               <span class="opp-lang-flag">🇹🇷</span><span>Türkçe</span>
@@ -2815,7 +2815,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
             </button>
           </div>
 
-          <div class="opp-chips-label" style="margin-top: 1.25rem;">${currentLang === 'tr' ? 'Öneriler' : 'Suggestions'}</div>
+          <div class="opp-chips-label" style="margin-top: 1.25rem;">${t.suggestions84}</div>
           <div class="opp-suggestions" id="opp-suggestions-container">
             ${['yapay zeka','yapay zeka 2026','türkçe ai','video üretim','shorts','ai tools'].map(s =>
               `<button type="button" class="opp-suggestion" onclick="addInterest('${s}')">+ ${s}</button>`
@@ -2824,7 +2824,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
           <div class="opp-step1-actions">
             <button type="button" class="btn-publish" id="opp-search-btn" onclick="searchOpportunities()" disabled>
-              🔎 ${currentLang === 'tr' ? 'Fırsatları Ara' : 'Search Opportunities'}
+              🔎 ${t.searchopportuni85}
             </button>
           </div>
         </div>
@@ -2832,15 +2832,15 @@ export function buildDashboardHTML(params: DashboardParams): string {
         <!-- STEP 2: Results -->
         <div id="opp-step-2" style="display:none;">
           <div class="opp-results-toolbar">
-            <button type="button" class="opp-back-btn" onclick="openOppStep1()">← ${currentLang === 'tr' ? 'Geri' : 'Back'}</button>
+            <button type="button" class="opp-back-btn" onclick="openOppStep1()">← ${t.back86}</button>
             <input
               type="text"
               id="opp-results-search"
               class="opp-search-input opp-search-input-inline"
-              placeholder="${currentLang === 'tr' ? 'Arama terimi' : 'Search query'}"
+              placeholder="${t.searchquery87}"
               onkeydown="oppResultsSearchKey(event)"
             >
-            <button type="button" class="btn-publish opp-refresh-btn" onclick="rerunOpportunitySearch()">🔄 ${currentLang === 'tr' ? 'Yenile' : 'Refresh'}</button>
+            <button type="button" class="btn-publish opp-refresh-btn" onclick="rerunOpportunitySearch()">🔄 ${t.refresh88}</button>
           </div>
 
           <div class="opp-results-meta" id="opp-results-meta"></div>
@@ -2866,7 +2866,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       <div class="modal-header">
         <div class="modal-title">
           <div class="modal-title-icon">✨</div>
-          ${currentLang === 'tr' ? 'Videoyu Özgünleştir' : 'Differentiate Video'}
+          ${t.differentiatevi89}
         </div>
         <button class="modal-close" onclick="closeModal('differentiateModal')">×</button>
       </div>
@@ -2884,24 +2884,24 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
           <!-- Target language -->
           <div class="diff-form-row">
-            <label class="diff-form-label" for="diff-target-lang">${currentLang === 'tr' ? 'Hedef Dil' : 'Target Language'}</label>
+            <label class="diff-form-label" for="diff-target-lang">${t.targetlanguage90}</label>
             <select id="diff-target-lang" class="diff-form-select"></select>
           </div>
 
           <!-- Duration mode -->
           <div class="diff-form-row">
-            <label class="diff-form-label">${currentLang === 'tr' ? 'Video Süresi' : 'Video Duration'}</label>
+            <label class="diff-form-label">${t.videoduration91}</label>
             <div class="diff-radio-group" id="diff-duration-group">
               <button type="button" class="diff-radio checked" data-mode="same" onclick="selectDurationMode(this)">
-                <span class="diff-radio-label">${currentLang === 'tr' ? 'Aynı' : 'Same'}</span>
-                <span class="diff-radio-sub">3-5 ${currentLang === 'tr' ? 'sahne' : 'scenes'}</span>
+                <span class="diff-radio-label">${t.same92}</span>
+                <span class="diff-radio-sub">3-5 ${t.scenes93}</span>
               </button>
               <button type="button" class="diff-radio" data-mode="shorter" onclick="selectDurationMode(this)">
-                <span class="diff-radio-label">${currentLang === 'tr' ? 'Daha Kısa' : 'Shorter'}</span>
+                <span class="diff-radio-label">${t.shorter94}</span>
                 <span class="diff-radio-sub">-30%</span>
               </button>
               <button type="button" class="diff-radio" data-mode="longer" onclick="selectDurationMode(this)">
-                <span class="diff-radio-label">${currentLang === 'tr' ? 'Daha Uzun' : 'Longer'}</span>
+                <span class="diff-radio-label">${t.longer95}</span>
                 <span class="diff-radio-sub">+50%</span>
               </button>
             </div>
@@ -2909,19 +2909,19 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
           <!-- Steps -->
           <div>
-            <label class="diff-form-label">${currentLang === 'tr' ? 'İşlem Özeti' : 'Process Summary'}</label>
+            <label class="diff-form-label">${t.processsummary96}</label>
             <ul class="diff-steps">
-              <li>${currentLang === 'tr' ? 'Transkript çıkarılır (youtube-transcript)' : 'Transcript extracted (youtube-transcript)'}</li>
-              <li>${currentLang === 'tr' ? 'Metin Gemini ile temizlenir' : 'Text cleaned with Gemini'}</li>
-              <li>${currentLang === 'tr' ? 'Hedef dile çevrilir' : 'Translated to target language'}</li>
-              <li>${currentLang === 'tr' ? 'Çeviriyi onaylarsanız sahne promptları üretilir' : 'After approval, scene prompts generated'}</li>
+              <li>${t.transcriptextra97}</li>
+              <li>${t.textcleanedwith98}</li>
+              <li>${t.translatedtotar99}</li>
+              <li>${t.afterapprovalsc100}</li>
               <li>${currentLang === 'tr' ? "Dashboard'dan manuel başlatırsınız" : 'You start it manually from the dashboard'}</li>
             </ul>
           </div>
 
           <div class="diff-submit-row">
             <button type="button" class="diff-cancel-btn" onclick="closeModal('differentiateModal')">${t.close}</button>
-            <button type="button" class="diff-submit-btn" id="diff-submit-btn" onclick="submitDifferentiate()">✨ ${currentLang === 'tr' ? 'Çeviriyi Üret' : 'Generate Translation'}</button>
+            <button type="button" class="diff-submit-btn" id="diff-submit-btn" onclick="submitDifferentiate()">✨ ${t.generatetransla101}</button>
           </div>
         </div>
 
@@ -2936,24 +2936,24 @@ export function buildDashboardHTML(params: DashboardParams): string {
           </div>
 
           <details class="diff-review-details">
-            <summary>${currentLang === 'tr' ? 'Orijinal Transkript' : 'Original Transcript'}</summary>
+            <summary>${t.originaltranscr102}</summary>
             <div class="diff-review-readonly" id="diff-original-text"></div>
           </details>
 
           <details class="diff-review-details">
-            <summary>${currentLang === 'tr' ? 'Temizlenmiş Transkript' : 'Cleaned Transcript'}</summary>
+            <summary>${t.cleanedtranscri103}</summary>
             <div class="diff-review-readonly" id="diff-cleaned-text"></div>
           </details>
 
           <div class="diff-form-row" style="margin-top: 0.85rem;">
-            <label class="diff-form-label" for="diff-translated-text">${currentLang === 'tr' ? 'Çevrilmiş Metin (düzenlenebilir)' : 'Translated Text (editable)'}</label>
+            <label class="diff-form-label" for="diff-translated-text">${t.translatedtexte104}</label>
             <textarea id="diff-translated-text" class="diff-review-textarea" oninput="updateDiffCharCount()"></textarea>
-            <div class="diff-char-count" id="diff-char-count">0 ${currentLang === 'tr' ? 'karakter' : 'chars'}</div>
+            <div class="diff-char-count" id="diff-char-count">0 ${t.chars105}</div>
           </div>
 
           <div class="diff-submit-row">
-            <button type="button" class="diff-cancel-btn" id="diff-cancel-step2-btn" onclick="cancelDifferentiate()">${currentLang === 'tr' ? 'İptal' : 'Cancel'}</button>
-            <button type="button" class="diff-submit-btn" id="diff-approve-btn" onclick="approveTranslation()">✅ ${currentLang === 'tr' ? 'Onayla ve Prompt Üret' : 'Approve & Generate Prompts'}</button>
+            <button type="button" class="diff-cancel-btn" id="diff-cancel-step2-btn" onclick="cancelDifferentiate()">${t.cancel106}</button>
+            <button type="button" class="diff-submit-btn" id="diff-approve-btn" onclick="approveTranslation()">✅ ${t.approvegenerate107}</button>
           </div>
         </div>
       </div>
@@ -2986,7 +2986,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
             </button>
             <button class="settings-nav-item" data-target="settings-production" onclick="switchSettingsTab(this)">
               <span class="settings-nav-icon">🎬</span>
-              <span>${currentLang === 'tr' ? 'Üretim' : 'Production'}</span>
+              <span>${t.production108}</span>
             </button>
           </div>
 
@@ -2997,7 +2997,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>${t.colorTheme}</h3>
-                  <p>${currentLang === 'tr' ? 'Premium renk temalarından birini seçin' : 'Pick a premium color theme'}</p>
+                  <p>${t.pickapremiumcol109}</p>
                 </div>
                 <div class="premium-theme-grid" id="themeGrid">
                   <!-- Default -->
@@ -3006,7 +3006,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
                       <div class="theme-stripe" style="background: hsl(220 10% 94%);"></div>
                       <div class="theme-dot" style="background: hsl(220 80% 50%); box-shadow: 0 0 8px hsla(220, 80%, 50%, 0.5);"></div>
                     </div>
-                    <div class="theme-card-name">${currentLang === 'tr' ? 'Standart' : 'Standard'}</div>
+                    <div class="theme-card-name">${t.standard110}</div>
                     <div class="theme-card-meta">STD</div>
                   </button>
                   <!-- Nebula -->
@@ -3079,7 +3079,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
                       <div class="theme-dot" style="background: hsl(120 100% 50%); box-shadow: 0 0 12px hsla(120, 100%, 50%, 0.8);"></div>
                     </div>
                     <div class="theme-card-name">Matrix</div>
-                    <div class="theme-card-meta">MTX · ${currentLang === 'tr' ? 'sadece koyu' : 'dark only'}</div>
+                    <div class="theme-card-meta">MTX · ${t.darkonly111}</div>
                   </button>
                 </div>
               </div>
@@ -3087,7 +3087,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>${t.lightDarkMode}</h3>
-                  <p>${currentLang === 'tr' ? 'Açık ve koyu mod arasında geçiş yapın' : 'Switch between light and dark mode'}</p>
+                  <p>${t.switchbetweenli112}</p>
                 </div>
                 <div class="mode-toggle-group">
                   <button class="lang-btn" id="btn-light" onclick="setThemeMode('light')" style="flex:1;">
@@ -3101,13 +3101,13 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
               <div class="settings-section">
                 <div class="settings-section-header">
-                  <h3>${currentLang === 'tr' ? 'Tema Geçişi' : 'Theme Transition'}</h3>
-                  <p>${currentLang === 'tr' ? 'Tema değişiminde yumuşak geçiş animasyonu' : 'Smooth transition animation when changing themes'}</p>
+                  <h3>${t.themetransition113}</h3>
+                  <p>${t.smoothtransitio114}</p>
                 </div>
                 <label class="settings-toggle">
                   <input type="checkbox" id="setting_theme_anim" onchange="toggleThemeAnim(this.checked)">
                   <span class="settings-toggle-slider"></span>
-                  <span class="settings-toggle-label">${currentLang === 'tr' ? 'Animasyonları etkinleştir' : 'Enable animations'}</span>
+                  <span class="settings-toggle-label">${t.enableanimation115}</span>
                 </label>
               </div>
             </div>
@@ -3117,14 +3117,14 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>${t.chooseLanguage}</h3>
-                  <p>${currentLang === 'tr' ? 'Arayüz için tercih ettiğiniz dili seçin' : 'Choose your preferred interface language'}</p>
+                  <p>${t.chooseyourprefe116}</p>
                 </div>
                 <div class="language-grid">
                   <button class="language-card ${currentLang === 'tr' ? 'active' : ''}" onclick="setLanguage('tr')">
                     <div class="language-flag">🇹🇷</div>
                     <div class="language-info">
                       <div class="language-name">Türkçe</div>
-                      <div class="language-native">${currentLang === 'tr' ? 'Türkçe arayüz' : 'Turkish interface'}</div>
+                      <div class="language-native">${t.turkishinterfac117}</div>
                     </div>
                     <div class="language-check">${currentLang === 'tr' ? '✓' : ''}</div>
                   </button>
@@ -3132,7 +3132,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     <div class="language-flag">🇬🇧</div>
                     <div class="language-info">
                       <div class="language-name">English</div>
-                      <div class="language-native">${currentLang === 'tr' ? 'İngilizce arayüz' : 'English interface'}</div>
+                      <div class="language-native">${t.englishinterfac118}</div>
                     </div>
                     <div class="language-check">${currentLang === 'en' ? '✓' : ''}</div>
                   </button>
@@ -3155,7 +3155,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>${t.personalAvatar}</h3>
-                  <p>${currentLang === 'tr' ? 'Profil avatarınızı yükleyin (PNG, JPG)' : 'Upload your profile avatar (PNG, JPG)'}</p>
+                  <p>${t.uploadyourprofi119}</p>
                 </div>
                 <input type="file" class="form-input" id="setting_avatar_file" accept="image/*" onchange="encodeImageFileAsURL(this, 'avatar')" style="margin-bottom:0.35rem;">
                 <input type="hidden" id="setting_avatar_base64">
@@ -3168,7 +3168,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>${t.textGridPosition}</h3>
-                  <p>${currentLang === 'tr' ? 'Videolardaki metin yerleşim ızgarası' : 'Text positioning grid on videos'}</p>
+                  <p>${t.textpositioning120}</p>
                 </div>
                 <select class="form-select" id="setting_grid">
                   <option value="top-left">${t.topLeft}</option>
@@ -3182,7 +3182,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>${t.narratorTone}</h3>
-                  <p>${currentLang === 'tr' ? 'Varsayılan anlatıcı tonu' : 'Default narrator tone'}</p>
+                  <p>${t.defaultnarrator121}</p>
                 </div>
                 <input type="text" class="form-input" id="setting_tone" placeholder="${t.defaultNarratorPlaceholder}" style="margin-bottom:0;">
               </div>
@@ -3190,32 +3190,32 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div class="settings-section">
                 <div class="settings-section-header">
                   <h3>YouTube API Key</h3>
-                  <p>${currentLang === 'tr' ? 'YouTube yükleme için API anahtarı' : 'API key for YouTube uploads'}</p>
+                  <p>${t.apikeyforyoutub122}</p>
                 </div>
                 <input type="text" class="form-input font-mono" id="setting_yt_key" placeholder="AIzaSy..." style="margin-bottom:0; font-size:0.8rem;">
               </div>
 
               <div class="settings-section">
                 <div class="settings-section-header">
-                  <h3>${currentLang === 'tr' ? 'Wav2Lip Dudak Senkronizasyonu' : 'Wav2Lip Lip-Sync'}</h3>
-                  <p>${currentLang === 'tr' ? 'Gerçek dudak senkronizasyonu (Wav2Lip). Sahnede yüz bulunamazsa orijinal video kullanılır.' : 'Real lip-sync via Wav2Lip. Falls back to original video when no face is detected.'}</p>
+                  <h3>${t.wav2liplipsync123}</h3>
+                  <p>${t.reallipsyncviaw124}</p>
                 </div>
                 <label class="settings-toggle">
                   <input type="checkbox" id="setting_apply_lipsync" checked>
                   <span class="settings-toggle-slider"></span>
-                  <span class="settings-toggle-label">${currentLang === 'tr' ? 'Lip-sync aktif' : 'Enable lip-sync'}</span>
+                  <span class="settings-toggle-label">${t.enablelipsync125}</span>
                 </label>
               </div>
 
               <div class="settings-section">
                 <div class="settings-section-header">
-                  <h3>${currentLang === 'tr' ? 'Bitiş Ekranı (End Screen)' : 'End Screen Overlay'}</h3>
-                  <p>${currentLang === 'tr' ? 'Videonun son 5 saniyesine avatar + "Sonraki Videoyu İzleyin" bindirmesi ekler. Üretim süresini uzatır.' : 'Adds avatar + "Watch Next Video" overlay to the last 5 seconds. Adds processing time.'}</p>
+                  <h3>${t.endscreenoverla126}</h3>
+                  <p>${t.addsavatarwatch127}</p>
                 </div>
                 <label class="settings-toggle">
                   <input type="checkbox" id="setting_apply_end_screen" checked>
                   <span class="settings-toggle-slider"></span>
-                  <span class="settings-toggle-label">${currentLang === 'tr' ? 'End screen aktif' : 'Enable end screen'}</span>
+                  <span class="settings-toggle-label">${t.enableendscreen128}</span>
                 </label>
               </div>
 
@@ -3279,18 +3279,18 @@ export function buildDashboardHTML(params: DashboardParams): string {
             </button>
             <div class="colab-popover" id="colabPopover" style="display:none;">
               <div class="colab-popover-header">
-                <strong>${currentLang === 'tr' ? 'Colab GPU Durumu' : 'Colab GPU Status'}</strong>
+                <strong>${t.colabgpustatus129}</strong>
                 <button class="colab-popover-close" onclick="closeColabPopover()">×</button>
               </div>
               <div class="colab-popover-body" id="colabPopoverBody">
-                <div class="colab-status-row"><span>${currentLang === 'tr' ? 'Durum' : 'Status'}:</span><b id="colabPopStatus">—</b></div>
+                <div class="colab-status-row"><span>${t.status130}:</span><b id="colabPopStatus">—</b></div>
                 <div class="colab-status-row"><span>URL:</span><b id="colabPopUrl" style="font-size:0.7rem; word-break:break-all;">—</b></div>
-                <div class="colab-status-row"><span>${currentLang === 'tr' ? 'GPU Bellek' : 'GPU Memory'}:</span><b id="colabPopGpu">—</b></div>
-                <div class="colab-status-row"><span>${currentLang === 'tr' ? 'Çalışma Süresi' : 'Uptime'}:</span><b id="colabPopUptime">—</b></div>
-                <div class="colab-status-row" id="colabPopErrRow" style="display:none;"><span>${currentLang === 'tr' ? 'Hata' : 'Error'}:</span><b id="colabPopErr" style="color: hsl(0,70%,60%); font-size:0.7rem;">—</b></div>
+                <div class="colab-status-row"><span>${t.gpumemory131}:</span><b id="colabPopGpu">—</b></div>
+                <div class="colab-status-row"><span>${t.uptime132}:</span><b id="colabPopUptime">—</b></div>
+                <div class="colab-status-row" id="colabPopErrRow" style="display:none;"><span>${t.error133}:</span><b id="colabPopErr" style="color: hsl(0,70%,60%); font-size:0.7rem;">—</b></div>
                 <div class="colab-popover-actions">
-                  <button class="colab-action-btn colab-action-start" onclick="manualColabStart()">▶ ${currentLang === 'tr' ? 'Başlat' : 'Start'}</button>
-                  <button class="colab-action-btn colab-action-stop" onclick="manualColabStop()">⏹ ${currentLang === 'tr' ? 'Durdur' : 'Stop'}</button>
+                  <button class="colab-action-btn colab-action-start" onclick="manualColabStart()">▶ ${t.start134}</button>
+                  <button class="colab-action-btn colab-action-stop" onclick="manualColabStop()">⏹ ${t.stop135}</button>
                 </div>
               </div>
             </div>
@@ -3314,7 +3314,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       <main class="app-main">
         <!-- Left: New Project Form -->
         <div class="animate-in">
-          <form action="/create-job" method="POST" enctype="multipart/form-data" class="glass-card" style="margin-bottom: 1.5rem;">
+          <form id="jobForm" action="/create-job" method="POST" enctype="multipart/form-data" class="glass-card" style="margin-bottom: 1.5rem;">
             <div class="section-header">
               <span class="section-title"><span class="section-title-dot"></span>${t.newProject}</span>
             </div>
@@ -3326,6 +3326,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <div>
                 <label class="form-label">${t.productionNotes}</label>
                 <textarea name="production_notes" class="form-textarea" rows="2" placeholder="${t.productionNotesPlaceholder}"></textarea>
+              </div>
+              <div>
+                <label class="form-label">Çeviri Metni (Düzenlenebilir)</label>
+                <textarea name="transcript_text" class="form-textarea" rows="4" placeholder="Videonun çevrilmiş metni (veya seslendirilecek metin) buraya gelecek."></textarea>
               </div>
               <div class="form-grid-2">
                 <div>
@@ -3366,6 +3370,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <button type="submit" class="btn-primary">
                 ▶ ${t.addToQueue}
               </button>
+              <div id="rabbitmq-terminal" class="glass-card" style="margin-top:1.5rem; background:#000; padding:1rem; border-radius:8px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#0f0; max-height:200px; overflow-y:auto; display:none; border: 1px solid #333;">
+                <div style="color:#666; margin-bottom:0.5rem; text-transform:uppercase; font-size:0.65rem; border-bottom:1px solid #333; padding-bottom:0.25rem;">RabbitMQ Queue Stream</div>
+                <div id="rabbitmq-log-content"></div>
+              </div>
             </div>
           </form>
         </div>
@@ -3398,6 +3406,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
     </div>
 
     <script>
+      window.i18n = ${JSON.stringify(t)};
       const trMsg = (tr, en) => '${currentLang}' === 'tr' ? tr : en;
 
       function fillJobForm(data) {
@@ -3405,6 +3414,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
         document.querySelector('textarea[name="production_notes"]').value = data.productionNotes || '';
         document.querySelector('textarea[name="character_features"]').value = data.characterFeatures || '';
         document.querySelector('input[name="playlist_id"]').value = data.playlistId || '';
+        
+        const transcriptTextarea = document.querySelector('textarea[name="transcript_text"]');
+        if (transcriptTextarea) transcriptTextarea.value = data.transcriptText || '';
 
         document.querySelector('input[name="has_shorts"]').checked = !!data.hasShorts;
         document.querySelector('input[name="has_subtitles"]').checked = !!data.hasSubtitles;
@@ -3423,7 +3435,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           matInfo = document.createElement('div');
           matInfo.id = matInfoId;
           matInfo.style.cssText = 'margin-top:0.4rem; padding:0.5rem 0.75rem; background:hsla(var(--primary),0.08); border:1px solid hsla(var(--primary),0.2); border-radius:0.5rem; font-size:0.72rem; color:hsl(var(--muted-foreground)); display:flex; align-items:center; gap:0.5rem;';
-          const matLabel = trMsg('Önceki materyal', 'Previous material');
+          const matLabel = '';
           const matName = String(data.materialPath).split('/').pop();
           matInfo.innerHTML = '📎 <span style="flex:1;">' + matLabel + ': <code>' + matName + '</code></span><button type="button" onclick="this.parentElement.remove()" style="background:transparent;border:none;color:hsl(var(--muted-foreground));cursor:pointer;font-size:1rem;line-height:1;">×</button>';
           if (matInput && matInput.parentElement) matInput.parentElement.appendChild(matInfo);
@@ -3431,7 +3443,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
         // Scroll to form smoothly
         document.querySelector('form[action="/create-job"]').scrollIntoView({ behavior: 'smooth' });
-        showToast(trMsg('Promptlar forma yazıldı!', 'Prompts filled in form!'), 'success');
+        showToast('', 'success');
       }
 
       // ==========================================
@@ -3613,7 +3625,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const lower = text.toLowerCase();
         if (oppInterests.map(t => t.toLowerCase()).includes(lower)) return;
         if (oppInterests.length >= 5) {
-          showToast(trMsg('En fazla 5 ilgi alanı seçebilirsiniz', 'You can pick up to 5 interests'), 'error');
+          showToast('', 'error');
           return;
         }
         oppInterests.push(text);
@@ -3631,13 +3643,13 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const container = document.getElementById('opp-chips-container');
         if (!container) return;
         if (oppInterests.length === 0) {
-          container.innerHTML = '<span class="opp-chips-empty">' + trMsg('Henüz seçim yok.', 'No tags yet.') + '</span>';
+          container.innerHTML = '<span class="opp-chips-empty">' + '' + '</span>';
           return;
         }
         container.innerHTML = oppInterests.map(t => {
           const safe = escapeHTML(t);
           return '<span class="opp-chip">' + safe +
-            '<button type="button" data-remove="' + safe + '" title="' + trMsg('Kaldır', 'Remove') + '">×</button></span>';
+            '<button type="button" data-remove="' + safe + '" title="' + '' + '">×</button></span>';
         }).join('');
         container.querySelectorAll('button[data-remove]').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -3710,7 +3722,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const q = oppInterests.join(' ');
         const langs = getSelectedLangs();
         if (langs.length === 0) {
-          showToast(trMsg('En az 1 dil seçin', 'Pick at least 1 language'), 'error');
+          showToast('', 'error');
           return;
         }
 
@@ -3720,7 +3732,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
         const meta = document.getElementById('opp-results-meta');
         const list = document.getElementById('opp-list');
-        if (meta) meta.textContent = trMsg('Aranıyor: ', 'Searching: ') + q + ' (' + langs.join(', ') + ')';
+        if (meta) meta.textContent = '' + q + ' (' + langs.join(', ') + ')';
         if (list) list.innerHTML = buildSkeletonCards(5);
 
         try {
@@ -3732,9 +3744,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
               if (list) list.innerHTML =
                 '<div class="opp-empty-state">' +
                   '<div class="opp-empty-icon">🔑</div>' +
-                  '<div class="opp-empty-title">' + trMsg('YouTube API anahtarı yok', 'No YouTube API key') + '</div>' +
-                  '<div class="opp-empty-sub">' + trMsg('Fırsatları çekebilmek için Ayarlar > Hesap Bilgileri altına YouTube Data API v3 anahtarınızı ekleyin.', 'Add your YouTube Data API v3 key under Settings > Account to fetch opportunities.') + '</div>' +
-                  '<button type="button" class="opp-empty-link" onclick="closeModal(\\'opportunityModal\\'); openModal(\\'settingsModal\\');">⚙️ ' + trMsg('Ayarları Aç', 'Open Settings') + '</button>' +
+                  '<div class="opp-empty-title">' + '' + '</div>' +
+                  '<div class="opp-empty-sub">' + '' + '</div>' +
+                  '<button type="button" class="opp-empty-link" onclick="closeModal(\\'opportunityModal\\'); openModal(\\'settingsModal\\');">⚙️ ' + '' + '</button>' +
                 '</div>';
               if (meta) meta.textContent = '';
               return;
@@ -3742,8 +3754,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
             const errMsg = escapeHTML(data.message || data.error || 'unknown');
             if (list) list.innerHTML =
               '<div class="opp-error-state">' +
-                '<div><strong>⚠️ ' + trMsg('YouTube API hatası', 'YouTube API error') + '</strong><br><small>' + errMsg + '</small></div>' +
-                '<button type="button" onclick="searchOpportunities()">🔄 ' + trMsg('Tekrar Dene', 'Retry') + '</button>' +
+                '<div><strong>⚠️ ' + '' + '</strong><br><small>' + errMsg + '</small></div>' +
+                '<button type="button" onclick="searchOpportunities()">🔄 ' + '' + '</button>' +
               '</div>';
             if (meta) meta.textContent = '';
             return;
@@ -3754,14 +3766,14 @@ export function buildDashboardHTML(params: DashboardParams): string {
             if (list) list.innerHTML =
               '<div class="opp-empty-state">' +
                 '<div class="opp-empty-icon">🔍</div>' +
-                '<div class="opp-empty-title">' + trMsg('Sonuç bulunamadı', 'No results found') + '</div>' +
-                '<div class="opp-empty-sub">' + trMsg('Farklı anahtar kelimeler deneyin.', 'Try different keywords.') + '</div>' +
+                '<div class="opp-empty-title">' + '' + '</div>' +
+                '<div class="opp-empty-sub">' + '' + '</div>' +
               '</div>';
             if (meta) meta.textContent = '';
             return;
           }
 
-          if (meta) meta.textContent = videos.length + ' ' + trMsg('video bulundu · skora göre sıralı', 'videos found · sorted by score') + ' · "' + q + '"';
+          if (meta) meta.textContent = videos.length + ' ' + '' + ' · "' + q + '"';
 
           if (list) list.innerHTML = videos.map((v, idx) => {
             const cls = scoreClassFor(v.score);
@@ -3779,17 +3791,17 @@ export function buildDashboardHTML(params: DashboardParams): string {
               '<div class="opp-card-title-2">' + safeTitle + '</div>' +
               '<div class="opp-card-channel">' +
                 '<span>📺</span><span class="opp-card-channel-name" title="' + safeChannel + '">' + safeChannel + '</span>' +
-                '<span>·</span><span>' + fmtCount(v.subscribers) + ' ' + trMsg('abone', 'subs') + '</span>' +
+                '<span>·</span><span>' + fmtCount(v.subscribers) + ' ' + '' + '</span>' +
               '</div>' +
               '<div class="opp-card-stats">' +
                 '<span>👁 ' + fmtCount(v.views) + '</span>' +
                 '<span>👍 ' + fmtCount(v.likes) + '</span>' +
               '</div>' +
-              '<span class="opp-score-badge ' + cls + '">🔥 ' + trMsg('Skor', 'Score') + ': ' + v.score + '</span>' +
-              '<button type="button" class="opp-desc-toggle" onclick="oppToggleDesc(this)">▾ ' + trMsg('Açıklama', 'Description') + '</button>' +
-              '<div class="opp-desc-body" style="display:none;">' + (safeDesc || '<em>' + trMsg('Açıklama yok', 'No description') + '</em>') + '</div>' +
-              '<a class="opp-card-cta" href="' + ytUrl + '" target="_blank" rel="noopener">▶ ' + trMsg('Videoyu İncele', 'Open on YouTube') + '</a>' +
-              '<button type="button" class="opp-differentiate-btn" onclick="openDifferentiateModal(window.__oppVideos[' + idx + '])">✨ ' + trMsg('Özgünleştir', 'Differentiate') + '</button>' +
+              '<span class="opp-score-badge ' + cls + '">🔥 ' + '' + ': ' + v.score + '</span>' +
+              '<button type="button" class="opp-desc-toggle" onclick="oppToggleDesc(this)">▾ ' + '' + '</button>' +
+              '<div class="opp-desc-body" style="display:none;">' + (safeDesc || '<em>' + '' + '</em>') + '</div>' +
+              '<a class="opp-card-cta" href="' + ytUrl + '" target="_blank" rel="noopener">▶ ' + '' + '</a>' +
+              '<button type="button" class="opp-differentiate-btn" onclick="openDifferentiateModal(window.__oppVideos[' + idx + '])">✨ ' + '' + '</button>' +
             '</div>';
           }).join('');
 
@@ -3798,8 +3810,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
         } catch (err) {
           if (list) list.innerHTML =
             '<div class="opp-error-state">' +
-              '<div><strong>⚠️ ' + trMsg('Ağ hatası', 'Network error') + '</strong><br><small>' + escapeHTML(err && err.message ? err.message : String(err)) + '</small></div>' +
-              '<button type="button" onclick="searchOpportunities()">🔄 ' + trMsg('Tekrar Dene', 'Retry') + '</button>' +
+              '<div><strong>⚠️ ' + '' + '</strong><br><small>' + escapeHTML(err && err.message ? err.message : String(err)) + '</small></div>' +
+              '<button type="button" onclick="searchOpportunities()">🔄 ' + '' + '</button>' +
             '</div>';
           if (meta) meta.textContent = '';
         }
@@ -3810,7 +3822,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         if (!body) return;
         const open = body.style.display === 'block';
         body.style.display = open ? 'none' : 'block';
-        btn.textContent = (open ? '▾ ' : '▴ ') + trMsg('Açıklama', 'Description');
+        btn.textContent = (open ? '▾ ' : '▴ ') + '';
       }
 
       function oppShowPreview(e, idx) {
@@ -3821,7 +3833,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           if (!tip || !v) return;
           tip.innerHTML =
             '<img src="' + escapeHTML(v.thumbnail) + '" alt="">' +
-            '<div class="hp-meta">📺 ' + escapeHTML(v.channelTitle) + ' · ' + fmtCount(v.subscribers) + ' ' + trMsg('abone', 'subs') + '</div>' +
+            '<div class="hp-meta">📺 ' + escapeHTML(v.channelTitle) + ' · ' + fmtCount(v.subscribers) + ' ' + '' + '</div>' +
             '<div class="hp-title">' + escapeHTML(v.title) + '</div>' +
             '<div class="hp-desc">' + escapeHTML((v.description || '').slice(0, 320)) + '</div>';
           tip.style.display = 'block';
@@ -3836,12 +3848,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const pad = 16;
         const w = tip.offsetWidth || 320;
         const h = tip.offsetHeight || 220;
-        let x = e.clientX + pad;
-        let y = e.clientY + pad;
-        if (x + w + pad > window.innerWidth) x = e.clientX - w - pad;
-        if (y + h + pad > window.innerHeight) y = e.clientY - h - pad;
+        let x = e.clientX - (w / 2);
+        let y = e.clientY - h - pad;
+        if (x + w + pad > window.innerWidth) x = window.innerWidth - w - pad;
         if (x < pad) x = pad;
-        if (y < pad) y = pad;
+        if (y < pad) y = e.clientY + pad;
         tip.style.left = x + 'px';
         tip.style.top = y + 'px';
       }
@@ -3891,7 +3902,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         } else {
           // Don't allow unchecking the last language
           if (getSelectedLangs().length <= 1) {
-            showToast(trMsg('En az 1 dil seçili olmalı', 'At least 1 language is required'), 'error');
+            showToast('', 'error');
             return;
           }
           node.classList.remove('checked');
@@ -3909,9 +3920,6 @@ export function buildDashboardHTML(params: DashboardParams): string {
         btn.disabled = !(hasLangs && hasInterests);
       }
 
-      // Override original updateSearchButton to also factor in languages
-      // (the original is now wrapped by the function declared below)
-
       function openDifferentiateModal(video) {
         if (!video || !video.videoId) return;
         oppDiffTarget = video;
@@ -3921,19 +3929,15 @@ export function buildDashboardHTML(params: DashboardParams): string {
         document.getElementById('diff-preview-title').textContent = video.title || '';
         document.getElementById('diff-preview-channel').textContent = (video.channelTitle || '') + ' · ' + (video.views || 0) + ' views';
 
-        // Build the target-language select using the languages the user picked in step 1
+        // Build the target-language select using ALL supported languages
         const sel = document.getElementById('diff-target-lang');
         if (sel) {
-          const selectedLangs = getSelectedLangs();
-          // If user picked no language (shouldn't happen), fall back to 'tr'
-          const langsToOffer = selectedLangs.length > 0 ? selectedLangs : ['tr'];
-          const opts = langsToOffer.map((code) => {
-            const found = OPP_LANG_OPTIONS.find((o) => o.code === code);
-            const label = found ? (found.flag + ' ' + found.name) : code;
-            return '<option value="' + escapeHTML(code) + '">' + escapeHTML(label) + '</option>';
+          const opts = OPP_LANG_OPTIONS.map((found) => {
+            const label = found.flag + ' ' + found.name;
+            return '<option value="' + escapeHTML(found.code) + '">' + escapeHTML(label) + '</option>';
           }).join('');
           sel.innerHTML = opts;
-          sel.value = langsToOffer[0];
+          sel.value = 'tr'; // Default to Turkish
         }
 
         // Reset radio buttons
@@ -3952,7 +3956,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const submit = document.getElementById('diff-submit-btn');
         if (submit) {
           submit.disabled = false;
-          submit.innerHTML = '✨ ' + trMsg('Çeviriyi Üret', 'Generate Translation');
+          submit.innerHTML = '✨ ' + '';
         }
 
         // Reset two-step view: show step 1, hide step 2, clear pending job
@@ -3984,19 +3988,19 @@ export function buildDashboardHTML(params: DashboardParams): string {
       async function submitDifferentiate() {
         if (oppDiffSubmitting) return;
         if (!oppDiffTarget) {
-          showToast(trMsg('Önce bir video seçin', 'Pick a video first'), 'error');
+          showToast('', 'error');
           return;
         }
         const targetLang = document.getElementById('diff-target-lang').value;
         if (!targetLang) {
-          showToast(trMsg('Hedef dil seçin', 'Pick a target language'), 'error');
+          showToast('', 'error');
           return;
         }
         const submit = document.getElementById('diff-submit-btn');
         oppDiffSubmitting = true;
         if (submit) {
           submit.disabled = true;
-          submit.innerHTML = '<span class="spin">⏳</span> ' + trMsg('Çeviri hazırlanıyor...', 'Preparing translation...');
+          submit.innerHTML = '<span class="spin">⏳</span> ' + '';
         }
 
         // Clear any stale timeout/error UI from a previous attempt
@@ -4028,11 +4032,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
           });
           const data = await res.json();
           if (!data.success) {
-            showToast(trMsg('Hata: ', 'Error: ') + (data.error || 'unknown'), 'error');
+            showToast('' + (data.error || 'unknown'), 'error');
             // Reset button
             if (submit) {
               submit.disabled = false;
-              submit.innerHTML = '✨ ' + trMsg('Çeviriyi Üret', 'Generate Translation');
+              submit.innerHTML = '✨ ' + '';
             }
             return;
           }
@@ -4041,10 +4045,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
           oppDiffPendingJobId = data.jobId;
           pollDifferentiationStatus(data.jobId, submit);
         } catch (err) {
-          showToast(trMsg('Ağ hatası: ', 'Network error: ') + (err && err.message ? err.message : err), 'error');
+          showToast('' + (err && err.message ? err.message : err), 'error');
           if (submit) {
             submit.disabled = false;
-            submit.innerHTML = '✨ ' + trMsg('Çeviriyi Üret', 'Generate Translation');
+            submit.innerHTML = '✨ ' + '';
           }
         } finally {
           oppDiffSubmitting = false;
@@ -4083,7 +4087,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
             if (!data.success) {
               clearInterval(diffPollInterval);
               diffPollInterval = null;
-              showToast(data.error || trMsg('Hata', 'Error'), 'error');
+              showToast(data.error || '', 'error');
               resetDiffSubmitBtn(submitBtn);
               return;
             }
@@ -4094,19 +4098,31 @@ export function buildDashboardHTML(params: DashboardParams): string {
               const progressText = (data.progress && data.progress > 0)
                 ? ' (' + data.progress + '%)'
                 : '';
-              submitBtn.innerHTML = '<span class="spin">⏳</span> ' + (stageText ? stageText + progressText : trMsg('Çeviri hazırlanıyor...', 'Preparing translation...'));
+              submitBtn.innerHTML = '<span class="spin">⏳</span> ' + (stageText ? stageText + progressText : '');
             }
 
-            if (data.status === 'awaiting_approval') {
-              // Phase 1 done! Transform to Step 2
+            if (data.status === 'pending') {
+              // Differentiation completed! Fill the new project form directly.
               clearInterval(diffPollInterval);
               diffPollInterval = null;
               resetDiffSubmitBtn(submitBtn);
-              showDiffReviewStep(jobId, data, submitBtn);
+              closeModal('differentiateModal');
+              showToast(trMsg('Başarıyla özgünleştirildi!', 'Successfully differentiated!'), 'success');
+              
+              fillJobForm({
+                masterPrompt: data.masterPrompt,
+                productionNotes: data.productionNotes,
+                transcriptText: data.translatedText,
+                materialPath: data.materialPath
+              });
+              
+              // Scroll to form
+              document.querySelector('#jobForm')?.scrollIntoView({ behavior: 'smooth' });
+              
             } else if (data.status === 'failed') {
               clearInterval(diffPollInterval);
               diffPollInterval = null;
-              const errorMsg = data.error || trMsg('Bilinmeyen hata', 'Unknown error');
+              const errorMsg = data.error || '';
               showDiffFailedState(errorMsg, jobId, submitBtn);
             }
           } catch (err) {
@@ -4123,7 +4139,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       function resetDiffSubmitBtn(submitBtn) {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '✨ ' + trMsg('Çeviriyi Üret', 'Generate Translation');
+          submitBtn.innerHTML = '✨ ' + '';
         }
       }
 
@@ -4140,9 +4156,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
         warning.id = 'diff-timeout-warning';
         warning.className = 'diff-timeout-warning';
         warning.innerHTML =
-          '<p>⏳ ' + trMsg('Çeviri 5 dakikadan uzun sürüyor. Aşağıdaki butonla durumu kontrol edebilirsiniz.', 'Translation taking longer than 5 minutes. Use the button below to check status.') + '</p>' +
+          '<p>⏳ ' + '' + '</p>' +
           '<button type="button" class="lang-btn" onclick="retryDiffStatusCheck(' + jobId + ', ' + checkBtnSelector + ')" style="width:auto;">' +
-          trMsg('Durumu Kontrol Et', 'Check Status') + '</button>';
+          '' + '</button>';
         step1.appendChild(warning);
       }
 
@@ -4165,9 +4181,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
         errorDiv.id = 'diff-error-msg';
         errorDiv.className = 'diff-error-msg';
         errorDiv.innerHTML =
-          '<p>❌ ' + trMsg('Hata: ', 'Error: ') + escapeHTML(errorMsg) + '</p>' +
+          '<p>❌ ' + '' + escapeHTML(errorMsg) + '</p>' +
           '<button type="button" class="lang-btn" onclick="retryDifferentiate()" style="width:auto;">' +
-          trMsg('Yeniden Dene', 'Retry') + '</button>';
+          '' + '</button>';
         step1.appendChild(errorDiv);
       }
 
@@ -4207,7 +4223,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         if (transEl) transEl.value = data.translatedText || '';
         updateDiffCharCount();
 
-        showToast(trMsg('Çeviri hazır. Lütfen gözden geçirip onaylayın.', 'Translation ready. Review and approve.'), 'success');
+        showToast('', 'success');
       }
 
       // Resume an in-progress differentiation (clicked from a job-card badge)
@@ -4216,7 +4232,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           const res = await fetch('/differentiate-status/' + jobId);
           const data = await res.json();
           if (!data.success) {
-            showToast(data.error || trMsg('Hata', 'Error'), 'error');
+            showToast(data.error || '', 'error');
             return;
           }
 
@@ -4231,7 +4247,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           const submitBtn = document.getElementById('diff-submit-btn');
           if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spin">⏳</span> ' + trMsg('Çeviri bekleniyor...', 'Awaiting translation...');
+            submitBtn.innerHTML = '<span class="spin">⏳</span> ' + '';
           }
 
           // Populate oppDiffTarget so the step-2 video preview has data
@@ -4249,9 +4265,14 @@ export function buildDashboardHTML(params: DashboardParams): string {
           };
           oppDiffPendingJobId = jobId;
 
-          if (data.status === 'awaiting_approval') {
-            // Jump straight to Step 2
-            showDiffReviewStep(jobId, data, submitBtn);
+          if (data.status === 'pending') {
+            fillJobForm({
+                masterPrompt: data.masterPrompt,
+                productionNotes: data.productionNotes,
+                transcriptText: data.translatedText,
+                materialPath: data.materialPath
+            });
+            closeModal('differentiateModal');
           } else if (data.status === 'processing_phase1') {
             // Continue polling for completion
             pollDifferentiationStatus(jobId, submitBtn);
@@ -4259,12 +4280,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
             // Show the failure UI but allow re-submit
             if (submitBtn) {
               submitBtn.disabled = false;
-              submitBtn.innerHTML = '✨ ' + trMsg('Çeviriyi Üret', 'Generate Translation');
+              submitBtn.innerHTML = '✨ ' + '';
             }
-            showDiffFailedState(data.error || trMsg('Bilinmeyen hata', 'Unknown error'), jobId, submitBtn);
+            showDiffFailedState(data.error || '', jobId, submitBtn);
           }
         } catch (err) {
-          showToast(trMsg('Bağlantı hatası', 'Connection error'), 'error');
+          showToast('', 'error');
         }
       }
 
@@ -4273,24 +4294,24 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const out = document.getElementById('diff-char-count');
         if (!ta || !out) return;
         const n = (ta.value || '').length;
-        out.textContent = n + ' ' + trMsg('karakter', 'chars');
+        out.textContent = n + ' ' + '';
       }
 
       async function approveTranslation() {
         if (!oppDiffPendingJobId) {
-          showToast(trMsg('Onaylanacak bir çeviri yok', 'No translation to approve'), 'error');
+          showToast('', 'error');
           return;
         }
         const ta = document.getElementById('diff-translated-text');
         const editedTranslation = ta ? (ta.value || '').trim() : '';
         if (!editedTranslation) {
-          showToast(trMsg('Çeviri metni boş olamaz', 'Translation cannot be empty'), 'error');
+          showToast('', 'error');
           return;
         }
         const btn = document.getElementById('diff-approve-btn');
         if (btn) {
           btn.disabled = true;
-          btn.innerHTML = '<span class="spin">⏳</span> ' + trMsg('Sahneler üretiliyor...', 'Generating scenes...');
+          btn.innerHTML = '<span class="spin">⏳</span> ' + '';
         }
         try {
           const res = await fetch('/approve-translation/' + oppDiffPendingJobId, {
@@ -4305,17 +4326,17 @@ export function buildDashboardHTML(params: DashboardParams): string {
             oppDiffPendingJobId = null;
             setTimeout(function() { window.location.href = '/'; }, 1500);
           } else {
-            showToast(trMsg('Hata: ', 'Error: ') + (data.error || 'unknown'), 'error');
+            showToast('' + (data.error || 'unknown'), 'error');
             if (btn) {
               btn.disabled = false;
-              btn.innerHTML = '✅ ' + trMsg('Onayla ve Prompt Üret', 'Approve & Generate Prompts');
+              btn.innerHTML = '✅ ' + '';
             }
           }
         } catch (err) {
-          showToast(trMsg('Ağ hatası: ', 'Network error: ') + (err && err.message ? err.message : err), 'error');
+          showToast('' + (err && err.message ? err.message : err), 'error');
           if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '✅ ' + trMsg('Onayla ve Prompt Üret', 'Approve & Generate Prompts');
+            btn.innerHTML = '✅ ' + '';
           }
         }
       }
@@ -4325,18 +4346,18 @@ export function buildDashboardHTML(params: DashboardParams): string {
           closeModal('differentiateModal');
           return;
         }
-        const confirmMsg = trMsg('Bu özgünleştirmeyi iptal etmek istiyor musunuz? Job silinecek.', 'Cancel this differentiation? The job will be deleted.');
+        const confirmMsg = '';
         if (!confirm(confirmMsg)) return;
         try {
           const res = await fetch('/differentiate-cancel/' + oppDiffPendingJobId, { method: 'POST' });
           const data = await res.json();
           if (data.success) {
-            showToast(trMsg('İptal edildi', 'Cancelled'), 'success');
+            showToast('', 'success');
           } else {
-            showToast(trMsg('İptal hatası: ', 'Cancel error: ') + (data.error || 'unknown'), 'error');
+            showToast('' + (data.error || 'unknown'), 'error');
           }
         } catch (err) {
-          showToast(trMsg('Ağ hatası: ', 'Network error: ') + (err && err.message ? err.message : err), 'error');
+          showToast('' + (err && err.message ? err.message : err), 'error');
         } finally {
           oppDiffPendingJobId = null;
           closeModal('differentiateModal');
@@ -4425,7 +4446,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       function showToast(msg, type) {
         const toast = document.createElement('div');
         toast.textContent = msg;
-        toast.style.cssText = \`position:fixed;bottom:24px;right:24px;padding:0.75rem 1.25rem;border-radius:0.5rem;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:600;z-index:99999;animation:cardEntrance 0.3s ease;border:1px solid \${type === 'success' ? 'hsl(142,60%,50%)' : 'hsl(0,70%,50%)'};background:hsla(\${type === 'success' ? '142,60%,10%' : '0,70%,10%'},0.95);color:\${type === 'success' ? 'hsl(142,60%,60%)' : 'hsl(0,70%,60%)'};box-shadow:0 8px 24px rgba(0,0,0,0.3);\`;
+        toast.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:0.75rem 1.25rem;border-radius:0.5rem;font-family:"JetBrains Mono",monospace;font-size:0.8rem;font-weight:600;z-index:99999;animation:cardEntrance 0.3s ease;border:1px solid ' + (type === 'success' ? 'hsl(142,60%,50%)' : 'hsl(0,70%,50%)') + ';background:hsla(' + (type === 'success' ? '142,60%,10%' : '0,70%,10%') + ',0.95);color:' + (type === 'success' ? 'hsl(142,60%,60%)' : 'hsl(0,70%,60%)') + ';box-shadow:0 8px 24px rgba(0,0,0,0.3);';
         document.body.appendChild(toast);
         setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 2500);
       }
@@ -4438,15 +4459,38 @@ export function buildDashboardHTML(params: DashboardParams): string {
         const es = new EventSource('/progress/' + jobId);
         es.onmessage = function(event) {
           const data = JSON.parse(event.data);
+          
+          let displayStage = data.stage || '';
+          if (data.stageKey && window.i18n[data.stageKey]) {
+            displayStage = window.i18n[data.stageKey];
+            if (data.stageKey === 'stageSceneGenerating') {
+              displayStage = displayStage.replace('{{sceneNumber}}', data.sceneNumber || '?');
+            }
+          }
+          
+          // --- RabbitMQ Queue Terminal Update ---
+          const term = document.getElementById('rabbitmq-terminal');
+          const termLog = document.getElementById('rabbitmq-log-content');
+          if (term && termLog && displayStage) {
+            term.style.display = 'block';
+            const time = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.style.marginBottom = '4px';
+            logLine.textContent = '[' + time + '] [RABBITMQ] Job ' + jobId + ' -> ' + displayStage + ' (' + (data.percent || 0) + '%)';
+            termLog.appendChild(logLine);
+            term.scrollTop = term.scrollHeight;
+          }
+          // --------------------------------------
+
           const card = document.getElementById('job-card-' + jobId);
           if (!card) return;
           const badge = card.querySelector('.status-badge');
-          if (badge) { badge.textContent = data.stage + ' (' + data.percent + '%)'; badge.className = 'status-badge status-processing'; }
+          if (badge && displayStage) { badge.textContent = displayStage + ' (' + (data.percent || 0) + '%)'; badge.className = 'status-badge status-processing'; }
           const fill = document.getElementById('progress-fill-' + jobId);
-          if (fill) fill.style.width = data.percent + '%';
+          if (fill && data.percent !== undefined) fill.style.width = data.percent + '%';
           const msg = document.getElementById('status-msg-' + jobId);
-          if (msg) msg.textContent = '${t.estimated}' + (data.est_min || '?') + ' ${t.minUnit}';
-          if (data.stage === 'Tamamlandı' || data.stage === 'Completed') {
+          if (msg && data.est_min !== undefined) msg.textContent = '${t.estimated}' + data.est_min + ' ${t.minUnit}';
+          if (data.stageKey === 'stageCompleted' || data.stageKey === 'stageError' || data.stageKey === 'stageCancelled' || displayStage === 'Tamamlandı' || displayStage === 'Hata Oluştu') {
             es.close();
             if (data.finalFilename) {
               const a = document.createElement('a'); a.href = '/videolar/' + data.finalFilename; a.download = data.finalFilename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -4477,44 +4521,38 @@ export function buildDashboardHTML(params: DashboardParams): string {
         };
         const res = await fetch('/save-meta/' + jobId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const result = await res.json();
-        showToast(result.success ? trMsg('Kaydedildi!', 'Saved!') : trMsg('Hata oluştu', 'Error'), result.success ? 'success' : 'error');
+        showToast(result.success ? '' : '', result.success ? 'success' : 'error');
       }
 
       async function publish(jobId, platform) {
-        showToast(platform.toUpperCase() + ' ' + trMsg('yayını başlatıldı...', 'publish started...'), 'success');
+        showToast(platform.toUpperCase() + ' ' + '', 'success');
         const res = await fetch('/publish/' + jobId + '/' + platform, { method: 'POST' });
         const result = await res.json();
-        const pubMsg = result.success ? platform.toUpperCase() + ' ' + trMsg('paylaşıldı!', 'published!') : platform.toUpperCase() + ' ' + trMsg('hata!', 'error!');
+        const pubMsg = result.success ? platform.toUpperCase() + ' ' + '' : platform.toUpperCase() + ' ' + '';
         showToast(pubMsg, result.success ? 'success' : 'error');
         if (result.success) setTimeout(() => window.location.reload(), 1500);
       }
 
       async function deleteJob(jobId) {
-        const msg = '${currentLang}' === 'tr' ? 'Bu projeyi silmek istediğinize emin misiniz?' : 'Delete this project?';
-        if (!confirm(msg)) return;
         const res = await fetch('/delete-job/' + jobId, { method: 'POST' });
         const result = await res.json();
-        if (result.success) { const m = '${currentLang}' === 'tr' ? 'Silindi!' : 'Deleted!'; showToast(m, 'success'); window.location.reload(); }
-        else { const m = '${currentLang}' === 'tr' ? 'Hata oluştu' : 'Error'; showToast(m, 'error'); }
+        if (result.success) { const m = t.deleted136; showToast(m, 'success'); window.location.reload(); }
+        else { const m = t.error137; showToast(m, 'error'); }
       }
 
       async function retryJob(jobId) {
         const res = await fetch('/retry-job/' + jobId, { method: 'POST' });
         const result = await res.json();
-        if (result.success) { const m = '${currentLang}' === 'tr' ? 'Yeniden kuyruğa eklendi!' : 'Re-queued!'; showToast(m, 'success'); window.location.reload(); }
-        else { const m = '${currentLang}' === 'tr' ? 'Hata oluştu' : 'Error'; showToast(m, 'error'); }
+        if (result.success) { const m = t.requeued138; showToast(m, 'success'); window.location.reload(); }
+        else { const m = t.error139; showToast(m, 'error'); }
       }
 
       async function startJob(jobId) {
-        const msg = '${currentLang}' === 'tr'
-          ? 'Projeyi başlatmak istediğinize emin misiniz? Colab GPU bağlantısı kurulacak.'
-          : 'Start the project? Colab GPU will be connected.';
-        if (!confirm(msg)) return;
         try {
           const res = await fetch('/start-job/' + jobId, { method: 'POST' });
           const result = await res.json();
           if (result.success) {
-            const m = '${currentLang}' === 'tr' ? 'Kuyruğa eklendi!' : 'Queued!';
+            const m = t.queued140;
             showToast(m, 'success');
             window.location.reload();
           } else {
@@ -4525,20 +4563,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
         }
       }
 
-      // S6: cancelJob — POST /cancel-job/:id
-      // Marks the job as 'cancelled' in the DB; the worker bails out
-      // at the next scene boundary. Reloads the page on success so
-      // the new status badge is visible immediately.
       async function cancelJob(jobId) {
-        const msg = '${currentLang}' === 'tr'
-          ? 'Bu projeyi iptal etmek istediğinize emin misiniz? Devam eden üretim durdurulacak.'
-          : 'Are you sure you want to cancel this project? Ongoing production will be stopped.';
-        if (!confirm(msg)) return;
         try {
           const res = await fetch('/cancel-job/' + jobId, { method: 'POST' });
           const result = await res.json();
           if (result.success) {
-            const m = '${currentLang}' === 'tr' ? 'İptal edildi' : 'Cancelled';
+            const m = t.cancelled141;
             showToast(m, 'success');
             window.location.reload();
           } else {
@@ -4703,12 +4733,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
           const res = await fetch('/colab-start', { method: 'POST', credentials: 'same-origin' });
           const data = await res.json();
           if (data.success) {
-            showToast(trMsg('Colab başlatıldı', 'Colab started'), 'success');
+            showToast('', 'success');
           } else {
-            showToast(trMsg('Hata: ', 'Error: ') + (data.error || 'unknown'), 'error');
+            showToast('' + (data.error || 'unknown'), 'error');
           }
         } catch (err) {
-          showToast(trMsg('Ağ hatası: ', 'Network error: ') + (err && err.message ? err.message : err), 'error');
+          showToast('' + (err && err.message ? err.message : err), 'error');
         }
       }
 
@@ -4719,12 +4749,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
           const res = await fetch('/colab-stop', { method: 'POST', credentials: 'same-origin' });
           const data = await res.json();
           if (data.success) {
-            showToast(trMsg('Colab durduruldu', 'Colab stopped'), 'success');
+            showToast('', 'success');
           } else {
-            showToast(trMsg('Hata: ', 'Error: ') + (data.error || 'unknown'), 'error');
+            showToast('' + (data.error || 'unknown'), 'error');
           }
         } catch (err) {
-          showToast(trMsg('Ağ hatası: ', 'Network error: ') + (err && err.message ? err.message : err), 'error');
+          showToast('' + (err && err.message ? err.message : err), 'error');
         }
       }
 

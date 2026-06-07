@@ -107,7 +107,8 @@ export function registerDifferentiationRoutes(app: Application): void {
         `SELECT id, status, current_stage, progress_percent,
                 source_video_meta, source_video_id,
                 differentiation_target_lang, differentiation_duration_mode,
-                transcript, transcript_cleaned, transcript_translated
+                transcript, transcript_cleaned, transcript_translated,
+                master_prompt, production_notes, material_path
          FROM video_jobs WHERE id = ? AND user_id = ?`,
         [jobId, userId]
       );
@@ -126,11 +127,12 @@ export function registerDifferentiationRoutes(app: Application): void {
         sourceVideoMeta: job.source_video_meta ? JSON.parse(job.source_video_meta) : null
       };
 
-      if (job.status === 'awaiting_approval') {
-        // Phase 1 complete — return the texts so the client can show Step 2
+      if (job.status === 'pending') {
+        // Differentiation is complete, return the fields to auto-fill the form
         response.translatedText = job.transcript_translated || '';
-        response.cleanedText = job.transcript_cleaned || '';
-        response.originalText = job.transcript || '';
+        response.masterPrompt = job.master_prompt || '';
+        response.productionNotes = job.production_notes || '';
+        response.materialPath = job.material_path || '';
       } else if (job.status === 'failed') {
         // current_stage contains the error message in the form "Hata: ..."
         const stage = String(job.current_stage || '');
@@ -140,49 +142,6 @@ export function registerDifferentiationRoutes(app: Application): void {
       return res.json(response);
     } catch (err: any) {
       console.error('[ERROR] /differentiate-status failed:', err);
-      return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
-    }
-  });
-
-  // POST /approve-translation/:jobId
-  // Body: { editedTranslation }
-  // Phase 2: generate scene prompts on the (possibly edited) translation,
-  // UPDATE row with scene_prompts + status='pending'. NO checkQueue.
-  app.post('/approve-translation/:jobId', heavyLimiter, requireAuth, async (req, res) => {
-    const jobId = parseInt(String(req.params.jobId), 10);
-    const userId = req.session.userId;
-    const editedTranslation = String(req.body?.editedTranslation || '').trim();
-
-    if (!userId) {
-      return res.status(401).json({ success: false, error: 'NOT_AUTHENTICATED' });
-    }
-    if (!jobId || Number.isNaN(jobId)) {
-      return res.status(400).json({ success: false, error: 'INVALID_JOB_ID' });
-    }
-    if (!editedTranslation) {
-      return res.json({ success: false, error: 'Çeviri metni boş olamaz.' });
-    }
-
-    try {
-      const result = await differentiateVideoPhase2(jobId, userId, editedTranslation);
-
-      logAudit({
-        userId,
-        action: 'differentiate.approve',
-        entityType: 'video_job',
-        entityId: jobId,
-        details: { sceneCount: result.sceneCount },
-        req
-      });
-
-      return res.json({
-        success: true,
-        jobId: result.jobId,
-        sceneCount: result.sceneCount,
-        message: "Onaylandı. Dashboard'dan projeyi manuel başlatabilirsiniz."
-      });
-    } catch (err: any) {
-      console.error('[ERROR] /approve-translation failed:', err);
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
