@@ -14,7 +14,16 @@ import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
+import subprocess
+try:
+    import yt_dlp
+except ImportError:
+    print("Installing yt-dlp...")
+    subprocess.run(["pip", "install", "yt-dlp"])
+    import yt_dlp
+
 import time
+server_start_time = time.time()
 import torch
 import cv2
 import numpy as np
@@ -26,6 +35,7 @@ import traceback
 from pyngrok import ngrok
 import uuid
 import threading
+import base64
 
 app = Flask(__name__)
 
@@ -50,52 +60,89 @@ def flush_memory():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
-# ── 1. VİDEO ÜRETİMİ (ModelScope - T4 Uyumlu) ───────────────────────────────
-def generate_video_lazy(prompt: str) -> list:
+# ── 1. VİDEO ÜRETİMİ (CogVideoX-5b - Premium 6sn) ───────────────────────────────
+def generate_video_image_5b_lazy(prompt: str, image_path: str) -> list:
     """
-    damo-vilab/text-to-video-ms-1.7b ile metin → video üretir.
-    Inference RAM: ~4-5 GB  (Colab T4 limitinde güvenli)
-    Çıktı: frame listesi (numpy array)
+    THUDM/CogVideoX-5b-I2V ile görselden video üretir.
+    Çıktı: frame listesi (PIL.Image)
     """
+    from diffusers import CogVideoXImageToVideoPipeline
+    from diffusers.utils import load_image
+    
     flush_memory()
-
-    print("🎬 Video motoru (ModelScope-1.7b) belleğe yükleniyor...")
-    pipe = DiffusionPipeline.from_pretrained(
-        "damo-vilab/text-to-video-ms-1.7b",
-        torch_dtype=torch.float16,
-        variant="fp16",
-        low_cpu_mem_usage=True,
+    print("🎬 Görselden Video motoru (CogVideoX-5b-I2V) belleğe yükleniyor...")
+    pipe = CogVideoXImageToVideoPipeline.from_pretrained(
+        "THUDM/CogVideoX-5b-I2V",
+        torch_dtype=torch.float16
     )
-    pipe.enable_model_cpu_offload()   # Katmanları sırayla GPU'ya taşır
-    pipe.enable_vae_slicing()         # VAE decode belleğini böler
+    pipe.enable_model_cpu_offload()   # GPU RAM tasarrufu
+    pipe.vae.enable_tiling()          # Büyük VAE decode bölme
 
-    print("🎬 Video üretimi başlatıldı...")
+    print("🎬 Görselden Video üretimi başlatıldı...")
     try:
+        init_image = load_image(image_path)
         with torch.inference_mode():
             output = pipe(
                 prompt=prompt,
-                num_frames=16,           # ~2 sn @8fps — T4 için optimize
-                num_inference_steps=25,  # Kalite/hız dengesi
-                height=256,
-                width=256,
+                image=init_image,
+                num_frames=49,           # 6 saniye @8fps
+                num_inference_steps=30,
             )
-        frames = output.frames[0]        # List[PIL.Image] veya ndarray
+        frames = output.frames[0]
     except torch.cuda.OutOfMemoryError as exc:
         print(f"❌ GPU OOM: {exc}")
         del pipe
         flush_memory()
-        raise RuntimeError(
-            "GPU belleği yetersiz. Colab oturumunu yeniden başlatın ve tekrar deneyin."
-        ) from exc
+        raise RuntimeError("GPU OOM hatası oluştu.") from exc
     except Exception as exc:
         print(f"❌ Video üretim hatası: {exc}")
         del pipe
         flush_memory()
         raise
+    finally:
+        del pipe
+        flush_memory()
+    return frames
 
-    del pipe
+def generate_video_text_5b_lazy(prompt: str) -> list:
+    """
+    THUDM/CogVideoX-5b ile metinden video üretir.
+    Çıktı: frame listesi (PIL.Image)
+    """
+    from diffusers import CogVideoXPipeline
+    
     flush_memory()
-    return frames   # List[PIL.Image]
+    print("🎬 Metinden Video motoru (CogVideoX-5b) belleğe yükleniyor...")
+    pipe = CogVideoXPipeline.from_pretrained(
+        "THUDM/CogVideoX-5b",
+        torch_dtype=torch.float16
+    )
+    pipe.enable_model_cpu_offload()
+    pipe.vae.enable_tiling()
+
+    print("🎬 Metinden Video üretimi başlatıldı...")
+    try:
+        with torch.inference_mode():
+            output = pipe(
+                prompt=prompt,
+                num_frames=49,           # 6 saniye @8fps
+                num_inference_steps=30,
+            )
+        frames = output.frames[0]
+    except torch.cuda.OutOfMemoryError as exc:
+        print(f"❌ GPU OOM: {exc}")
+        del pipe
+        flush_memory()
+        raise RuntimeError("GPU OOM hatası oluştu.") from exc
+    except Exception as exc:
+        print(f"❌ Video üretim hatası: {exc}")
+        del pipe
+        flush_memory()
+        raise
+    finally:
+        del pipe
+        flush_memory()
+    return frames
 
 # ── 2. TTS ───────────────────────────────────────────────────────────────────
 _tts_model = None
@@ -291,23 +338,112 @@ def generate_subtitles_whisper(audio_path: str, output_srt: str, language: str =
     return output_srt
 
 
+def _update_task(task_id: str, **kwargs):
+    """TASKS dict güncellerken mevcut alanları korur."""
+    if task_id in TASKS:
+        TASKS[task_id].update(kwargs)
+    else:
+        TASKS[task_id] = kwargs
+
+def get_youtube_video_path(video_id: str) -> str:
+    os.makedirs("/content/source_videos", exist_ok=True)
+    target_path = f"/content/source_videos/{video_id}.mp4"
+    if os.path.exists(target_path):
+        return target_path
+        
+    print(f"Downloading YouTube video {video_id} directly on Colab...")
+    ydl_opts = {
+        'outtmpl': '/content/source_videos/%(id)s.%(ext)s',
+        'format': 'best[ext=mp4]/mp4',
+        'quiet': True,
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+        
+    if os.path.exists(target_path):
+        return target_path
+    for f in os.listdir("/content/source_videos"):
+        if f.startswith(video_id):
+            return os.path.join("/content/source_videos", f)
+    raise FileNotFoundError(f"Downloaded video not found for ID: {video_id}")
+
+def extract_frame_at_time(video_path: str, timestamp_sec: float, out_img_path: str):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0:
+        fps = 30.0
+    frame_index = int(timestamp_sec * fps)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+    ret, frame = cap.read()
+    if not ret:
+        cap.set(cv2.CAP_PROP_POS_MSEC, int(timestamp_sec * 1000))
+        ret, frame = cap.read()
+        if not ret:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ret, frame = cap.read()
+    
+    if ret:
+        cv2.imwrite(out_img_path, frame)
+        cap.release()
+    else:
+        cap.release()
+        raise RuntimeError(f"Failed to extract frame at {timestamp_sec}s from {video_path}")
+
 def _generate_media_worker(task_id: str, data: dict):
-    video_prompt      = data.get("video_prompt", "")
-    speech_text       = data.get("speech_text", "")
-    sfx_prompt        = data.get("sfx_prompt", "")
-    character_features= data.get("character_features", "")
-    apply_lipsync     = bool(data.get("apply_lipsync", False))
+    video_prompt        = data.get("video_prompt", "")
+    speech_text         = data.get("speech_text", "")
+    sfx_prompt          = data.get("sfx_prompt", "")
+    character_features  = data.get("character_features", "")
+    apply_lipsync       = bool(data.get("apply_lipsync", False))
+    scene_number        = int(data.get("scene_number", 1))
+    source_video_id     = data.get("source_video_id", "")
+    reference_image_base64 = data.get("reference_image_base64", "")
 
     final_prompt = f"{character_features}, {video_prompt}" if character_features else video_prompt
 
+    image_path = None
+    if source_video_id:
+        _update_task(task_id, status="processing", stage="video_downloading", stagePercent=5, message="Orijinal video indiriliyor...")
+        try:
+            video_path = get_youtube_video_path(source_video_id)
+            _update_task(task_id, stage="frame_extraction", stagePercent=10, message="Referans kare kesiliyor...")
+            timestamp = (scene_number - 1) * 6.0
+            image_path = f"/content/scene_{scene_number}_init.jpg"
+            extract_frame_at_time(video_path, timestamp, image_path)
+        except Exception as exc:
+            print(f"❌ YouTube indirme/kare kesme hatası (T2V fallback): {exc}")
+            image_path = None
+    elif reference_image_base64:
+        _update_task(task_id, status="processing", stage="image_decoding", stagePercent=10, message="Referans görsel çözülüyor...")
+        try:
+            image_path = f"/content/scene_{scene_number}_init.jpg"
+            b64_data = reference_image_base64
+            if "," in b64_data:
+                b64_data = b64_data.split(",")[1]
+            img_bytes = base64.b64decode(b64_data)
+            with open(image_path, "wb") as f:
+                f.write(img_bytes)
+        except Exception as exc:
+            print(f"❌ Base64 çözme hatası: {exc}")
+            image_path = None
+
     # 1. Video
+    _update_task(task_id, status="processing", stage="video_generation", stagePercent=15, message="Video üretiliyor (CogVideoX-5b)...")
     try:
-        frames = generate_video_lazy(final_prompt)
+        if image_path and os.path.exists(image_path):
+            print(f"Using CogVideoX-5b-I2V with init_image: {image_path}")
+            frames = generate_video_image_5b_lazy(final_prompt, image_path)
+        else:
+            print("Using CogVideoX-5b Text-to-Video...")
+            frames = generate_video_text_5b_lazy(final_prompt)
     except Exception as exc:
         TASKS[task_id] = {"status": "error", "message": str(exc)}
         return
 
     frames_to_mp4(frames, RAW_VIDEO_PATH, fps=8)
+    _update_task(task_id, stagePercent=30, message="Video üretildi, ses işleniyor...")
 
     # 2. TTS
     if speech_text:
@@ -337,9 +473,13 @@ def _generate_media_worker(task_id: str, data: dict):
         silence = np.zeros(int(16000 * 3), dtype=np.int16)
         wavfile.write(AUDIO_PATH, 16000, silence)
 
+    _update_task(task_id, stage="tts_generation", stagePercent=40, message="TTS tamam, altyazı üretiliyor...")
+
     # 3. Altyazı Üretimi
     if speech_text:
         generate_subtitles_whisper(AUDIO_PATH, SUBTITLE_PATH, language="tr")
+
+    _update_task(task_id, stagePercent=55, message="Altyazı hazır, dudak senkroni uygulanıyor...")
 
     # 4. S3 — Wav2Lip lip-sync
     out_path = RAW_VIDEO_PATH
@@ -361,6 +501,8 @@ def _generate_media_worker(task_id: str, data: dict):
         except Exception as copy_err:
             print(f"[WARN] last_video kopyalanamadı: {copy_err}")
 
+    _update_task(task_id, stage="lipsync_done", stagePercent=70, message="Dudak senkroni tamam, ses efekti üretiliyor...")
+
     # 5. SFX
     if sfx_prompt:
         try:
@@ -373,10 +515,14 @@ def _generate_media_worker(task_id: str, data: dict):
         silence = np.zeros(int(16000 * 3), dtype=np.int16)
         wavfile.write(SFX_PATH, 16000, silence)
 
+    _update_task(task_id, stage="finalizing", stagePercent=90, message="Dosyalar hazırlanıyor...")
     TASKS[task_id] = {
         "status": "success",
         "has_subtitle": os.path.exists(SUBTITLE_PATH),
-        "lipsync_applied": out_path != RAW_VIDEO_PATH
+        "lipsync_applied": out_path != RAW_VIDEO_PATH,
+        "stage": "done",
+        "stagePercent": 100,
+        "message": "Tamamlandı"
     }
 
 
@@ -459,10 +605,43 @@ def download_subtitle():
 @app.route("/health")
 def health():
     mem = {}
+    util = {}
+    runtime_info = {}
+
     if torch.cuda.is_available():
-        mem["gpu_free_gb"]  = round(torch.cuda.mem_get_info()[0] / 1e9, 2)
-        mem["gpu_total_gb"] = round(torch.cuda.mem_get_info()[1] / 1e9, 2)
-    return jsonify({"status": "ok", "memory": mem})
+        free_gb  = torch.cuda.mem_get_info()[0] / 1e9
+        total_gb = torch.cuda.mem_get_info()[1] / 1e9
+        used_gb  = total_gb - free_gb
+        mem["gpu_free_gb"]   = round(free_gb, 2)
+        mem["gpu_total_gb"]  = round(total_gb, 2)
+        mem["gpu_used_gb"]   = round(used_gb, 2)
+        mem["gpu_used_pct"]  = round((used_gb / total_gb) * 100, 1) if total_gb > 0 else 0
+
+ # GPU utilization via nvidia-smi (opsyonel, yoksa tahmini)
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=3
+            )
+            if result.returncode == 0:
+                util["gpu_pct"] = float(result.stdout.strip().split("\n")[0])
+        except Exception:
+            # Fallback: tahmini utilisation (kullanılan bellek oranından)
+            util["gpu_pct"] = round((used_gb / total_gb) * 100, 1)
+
+ # Runtime süresi (sunucu başlatıldığından beri geçen zaman)
+    if hasattr(health, "_start_time"):
+        runtime_info["uptime_seconds"] = int(time.time() - health._start_time)
+    else:
+        runtime_info["uptime_seconds"] = 0
+
+    return jsonify({
+        "status": "ok",
+        "memory": mem,
+        "gpu_utilization": util,
+        "runtime": runtime_info
+    })
 
 # ── 6. KAPAK RESMİ ÜRETİMİ (DreamShaper 8 - SD 1.5) ───────────────────────────
 COVER_PATHS = ["/content/cover_0.jpg", "/content/cover_1.jpg", "/content/cover_2.jpg"]
@@ -518,6 +697,38 @@ def download_cover(index):
         return jsonify({"error": "Kapak görseli bulunamadı"}), 404
     return send_file(path, mimetype="image/jpeg")
 
+# ── HEALTH CHECK ──────────────────────────────────────────────────────────────
+@app.route("/health", methods=["GET"])
+def health_check():
+    gpu_total_gb = 0.0
+    gpu_used_gb = 0.0
+    gpu_pct = 0.0
+    
+    if torch.cuda.is_available():
+        try:
+            device = torch.cuda.current_device()
+            gpu_total_gb = torch.cuda.get_device_properties(device).total_memory / (1024**3)
+            gpu_used_gb = torch.cuda.memory_allocated(device) / (1024**3)
+            gpu_pct = (gpu_used_gb / gpu_total_gb) * 100 if gpu_total_gb > 0 else 0.0
+        except Exception:
+            pass
+            
+    uptime_seconds = int(time.time() - server_start_time)
+    
+    return jsonify({
+        "status": "healthy",
+        "memory": {
+            "gpu_total_gb": gpu_total_gb,
+            "gpu_used_gb": gpu_used_gb
+        },
+        "gpu_utilization": {
+            "gpu_pct": gpu_pct
+        },
+        "runtime": {
+            "uptime_seconds": uptime_seconds
+        }
+    })
+
 # ── BAŞLATMA ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # Ngrok token — env değişkeninden oku (güvenlik: hardcoded olmamalı)
@@ -544,5 +755,7 @@ if __name__ == "__main__":
         print("   veya yerel bilgisayarda:")
         print("                       cd AI-Publisher && npm run setup-ngrok\n")
 
+    import time as _time_module
+    health._start_time = _time_module.time()
     app.run(port=5000, debug=True, use_reloader=False)
 
