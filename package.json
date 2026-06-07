@@ -35,8 +35,6 @@
     "multer": "^2.1.1",
     "pg": "^8.21.0",
     "playwright": "^1.60.0",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^6.0.1",
     "youtube-transcript": "^1.2.1",
     "yt-search": "^2.13.1"
   },
@@ -49,7 +47,6 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
-    "@types/sqlite3": "^3.1.11",
     "@types/supertest": "^7.2.0",
     "@types/yt-search": "^2.10.3",
     "supertest": "^7.2.2",

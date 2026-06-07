@@ -20,3 +20,5 @@ Bu dosya, geliştirme süreci boyunca yapay zekaya (Cursor/IDE) verilen tüm tal
 16. "transkripti youtubedan alamıyorsak, kendimiz videodan üretelim"
 17. "git push yapalım, hover modalı videonun üst tarafında görüntülensin"
 18. "4 emin misin? (1)"
+
+19. "sqlite veri tabanı bağımlılığı kalmış olmasın, tüm işlemler için postgresql + redis + rabbitmq mantığı kullanılmalı, tüm kodu agentic yapı ile kontrol et"
