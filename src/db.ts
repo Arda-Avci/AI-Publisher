@@ -1,6 +1,7 @@
 import { Pool, PoolConfig } from 'pg';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
+import { encryptUsername } from './lib/crypto.js';
 
 dotenv.config();
 
@@ -131,11 +132,15 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
   `);
 
-  const userExists = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
+  const defaultUsername = 'arda.avci@gmail.com';
+  const encryptedUsername = encryptUsername(defaultUsername);
+  
+  const userExists = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
   if (!userExists) {
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', hashedPassword]);
-    console.log('[INFO] Varsayılan admin kullanıcısı oluşturuldu: admin / admin123');
+    const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
+    const hashedPassword = await bcrypt.hash(adminPass, 10);
+    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedUsername, hashedPassword]);
+    console.log('[INFO] Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com / admin1234!!');
   } else {
     console.log('[INFO] PostgreSQL Veritabanı hazır.');
   }

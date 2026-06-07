@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import crypto from 'crypto';
 
 /**
@@ -18,12 +18,17 @@ export async function downloadYouTubeVideo(videoId: string): Promise<string> {
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
   
   // Best video+audio, merged into mp4
-  const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 -o "${outputPath}" "${videoUrl}"`;
+  const args = [
+    '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+    '--merge-output-format', 'mp4',
+    '-o', outputPath,
+    videoUrl
+  ];
   
   console.log(`[INFO] İndiriliyor: ${videoUrl}`);
   
   await new Promise<void>((resolve, reject) => {
-    exec(command, (err, stdout, stderr) => {
+    execFile('yt-dlp', args, (err, stdout, stderr) => {
       if (err) {
         console.error(`[ERROR] yt-dlp hatası: ${stderr}`);
         reject(new Error(`yt-dlp failed: ${err.message}`));

@@ -1,8 +1,8 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import util from 'util';
 import fs from 'fs';
 
-const execAsync = util.promisify(exec);
+const execFileAsync = util.promisify(execFile);
 
 /**
  * Fallback AI Transcriber
@@ -15,7 +15,16 @@ export async function transcribeVideoAudio(videoPath: string): Promise<string> {
   
   try {
     // 1. Extract audio: 16kHz, mono, 32k bitrate (sufficient for speech-to-text, keeps size small)
-    await execAsync(`ffmpeg -y -i "${videoPath}" -vn -acodec libmp3lame -ar 16000 -ac 1 -b:a 32k "${audioPath}"`);
+    await execFileAsync('ffmpeg', [
+      '-y',
+      '-i', videoPath,
+      '-vn',
+      '-acodec', 'libmp3lame',
+      '-ar', '16000',
+      '-ac', '1',
+      '-b:a', '32k',
+      audioPath
+    ]);
     
     // 2. Read as base64
     const audioData = fs.readFileSync(audioPath).toString('base64');

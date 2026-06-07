@@ -3,6 +3,8 @@ import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
+import bcrypt from 'bcrypt';
+import { decryptUsername } from '../lib/crypto.js';
 
 /**
  * Settings routes: /settings GET and /save-settings POST.
@@ -11,6 +13,9 @@ export function registerSettingsRoutes(app: Application): void {
   // Ayarlar Sayfası Rotaları
   app.get('/settings', requireAuth, async (req, res) => {
     const user = await db.get('SELECT * FROM users WHERE id = ?', [req.session.userId]);
+    if (user && user.username) {
+      user.username = decryptUsername(user.username);
+    }
     res.json({ success: true, user });
   });
 
@@ -37,6 +42,11 @@ export function registerSettingsRoutes(app: Application): void {
       const applyLipsyncToSave = req.body.apply_lipsync !== undefined ? (req.body.apply_lipsync ? 1 : 0) : current.apply_lipsync;
       const applyEndScreenToSave = req.body.apply_end_screen !== undefined ? (req.body.apply_end_screen ? 1 : 0) : current.apply_end_screen;
 
+      let passwordToSave = current.password;
+      if (req.body.new_password && req.body.new_password.trim() !== '') {
+        passwordToSave = await bcrypt.hash(req.body.new_password, 10);
+      }
+
       await db.run(
         `UPDATE users SET
         youtube_api_key = ?,
@@ -47,9 +57,22 @@ export function registerSettingsRoutes(app: Application): void {
         preferred_language = ?,
         selected_theme = ?,
         apply_lipsync = ?,
-        apply_end_screen = ?
-      WHERE id = ?`,
-        [youtube_api_key, sample_cover_base64, avatarToSave, text_position_grid, default_preset_tone, preferred_language, selected_theme, applyLipsyncToSave, applyEndScreenToSave, req.session.userId]
+        apply_end_screen = ?,
+        password = ?
+        WHERE id = ?`,
+        [
+          youtube_api_key,
+          sample_cover_base64,
+          avatarToSave,
+          text_position_grid,
+          default_preset_tone,
+          preferred_language,
+          selected_theme,
+          applyLipsyncToSave,
+          applyEndScreenToSave,
+          passwordToSave,
+          req.session.userId
+        ]
       );
 
       logAudit({

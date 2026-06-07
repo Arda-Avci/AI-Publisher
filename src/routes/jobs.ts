@@ -1,4 +1,4 @@
-import { Application, Request, Response } from 'express';
+import express, { Application, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs-extra';
 import { db } from '../db.js';
@@ -190,7 +190,7 @@ export function registerJobRoutes(app: Application): void {
 
   // POST /start-job/:jobId
   // Manuel kuyruga alma. Sadece status='pending' joblar baslatilabilir.
-  app.post('/start-job/:jobId', mediumLimiter, requireAuth, async (req, res) => {
+  app.post('/start-job/:jobId', mediumLimiter, requireAuth, express.json(), async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
     const userId = req.session.userId;
 
@@ -223,6 +223,13 @@ export function registerJobRoutes(app: Application): void {
         entityId: jobId,
         req
       });
+
+      if (req.body && req.body.master_prompt) {
+        await db.run(
+          "UPDATE video_jobs SET master_prompt = ?, production_notes = ?, transcript_translated = ? WHERE id = ?",
+          [req.body.master_prompt, req.body.production_notes, req.body.transcript_translated, jobId]
+        );
+      }
 
       await db.run("UPDATE video_jobs SET status = 'processing_phase1', current_stage = 'Kuyruğa Eklendi', progress_percent = 5 WHERE id = ?", [jobId]);
 

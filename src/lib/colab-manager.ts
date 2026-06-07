@@ -122,9 +122,9 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
         this.startHealthChecks();
         return { ngrokUrl: envUrl };
       } catch (err: any) {
-        const msg = `Belirtilen COLAB_URL bağlantısı başarısız: ${err.message}`;
-        this.setStatus('error', envUrl, msg);
-        throw new Error(msg);
+        console.warn(`[WARN] Mevcut COLAB_URL bağlantısı başarısız (${err.message}). Otomatik olarak yeni Colab sunucusu başlatılıyor...`);
+        // We do not return here, we let it fall through to doStart()
+        this.state.status = 'starting';
       }
     }
     // If a start is already in progress, return its promise

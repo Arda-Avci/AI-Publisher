@@ -107,7 +107,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       : '';
 
     var startBtn = isPending
-      ? '<button onclick="startJob(' + job.id + ')" class="start-btn">▶ ' + (t.startproject75) + '</button>'
+      ? '<button onclick="window.loadJobIntoForm(' + job.id + ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ Düzenle</button><button onclick="startJob(' + job.id + ')" class="start-btn">▶ Kuyruğa Ekle</button>'
       : '';
 
     // S6: Cancel button — shown for any active job (pending, processing,
@@ -3313,8 +3313,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
       <!-- Main -->
       <main class="app-main">
         <!-- Left: New Project Form -->
-        <div class="animate-in">
+        <div class="animate-in" id="new-project-panel">
           <form id="jobForm" action="/create-job" method="POST" enctype="multipart/form-data" class="glass-card" style="margin-bottom: 1.5rem;">
+            <input type="hidden" id="edit_job_id" value="">
             <div class="section-header">
               <span class="section-title"><span class="section-title-dot"></span>${t.newProject}</span>
             </div>
@@ -3407,7 +3408,29 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
     <script>
       window.i18n = ${JSON.stringify(t)};
+      const queueJobsData = ${JSON.stringify(queueJobs)};
       const trMsg = (tr, en) => '${currentLang}' === 'tr' ? tr : en;
+
+      window.loadJobIntoForm = function(jobId) {
+        const job = queueJobsData.find(j => j.id === jobId);
+        if (!job) return;
+        fillJobForm({
+          masterPrompt: job.master_prompt,
+          productionNotes: job.production_notes,
+          characterFeatures: job.character_features,
+          playlistId: job.playlist_id,
+          transcriptText: job.transcript_translated,
+          hasShorts: job.has_shorts,
+          hasSubtitles: job.has_subtitles,
+          platforms: job.target_platforms ? JSON.parse(job.target_platforms) : []
+        });
+        const ej = document.getElementById('edit_job_id');
+        if(ej) ej.value = job.id;
+        const btn = document.querySelector('#jobForm button[type="submit"]');
+        if(btn) btn.innerHTML = '✨ Düzenlemeyi Kaydet & Kuyruğa Ekle';
+        document.getElementById('new-project-panel').scrollIntoView({behavior:'smooth'});
+        showToast('Proje forma yüklendi. Düzenleyip kaydedebilirsiniz.', 'info');
+      };
 
       function fillJobForm(data) {
         document.querySelector('textarea[name="master_prompt"]').value = data.masterPrompt || '';
@@ -4532,6 +4555,56 @@ export function buildDashboardHTML(params: DashboardParams): string {
         showToast(pubMsg, result.success ? 'success' : 'error');
         if (result.success) setTimeout(() => window.location.reload(), 1500);
       }
+
+      document.getElementById('jobForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const origText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '⏳ İşlem yapılıyor...';
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.platforms = formData.getAll('platforms');
+        data.has_shorts = formData.get('has_shorts') === 'on';
+        data.has_subtitles = formData.get('has_subtitles') === 'on';
+        
+        const editJobInput = document.getElementById('edit_job_id');
+        const editJobId = editJobInput ? editJobInput.value : '';
+
+        try {
+          let res;
+          if (editJobId) {
+            res = await fetch('/start-job/' + editJobId, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                 master_prompt: data.master_prompt,
+                 production_notes: data.production_notes,
+                 transcript_translated: data.transcript_text
+              })
+            });
+          } else {
+            res = await fetch('/differentiate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+            });
+          }
+          const result = await res.json();
+          if (result.success) {
+            window.location.reload();
+          } else {
+            showToast(result.error || 'Hata oluştu', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origText;
+          }
+        } catch (err) {
+          showToast((err && err.message) ? err.message : 'Bağlantı hatası', 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = origText;
+        }
+      });
 
       async function deleteJob(jobId) {
         const res = await fetch('/delete-job/' + jobId, { method: 'POST' });

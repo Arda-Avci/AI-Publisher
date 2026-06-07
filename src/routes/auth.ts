@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { buildLoginHTML } from '../views/login.js';
 import { authLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
+import { encryptUsername } from '../lib/crypto.js';
 
 /**
  * Auth routes: /login GET/POST and /logout GET.
@@ -20,7 +21,8 @@ export function registerAuthRoutes(app: Application): void {
 
   app.post('/login', authLimiter, async (req, res) => {
     const { username, password } = req.body;
-    const user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+    const encryptedUsername = encryptUsername(username);
+    const user = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
     if (user && await bcrypt.compare(password, user.password)) {
       req.session.userId = user.id;
       if (user.preferred_language) req.session.lang = user.preferred_language;

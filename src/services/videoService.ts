@@ -1,16 +1,21 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 
 let pingPathCache: string | null = null;
 
-export async function runFFmpegWithFallback(commands: string[]): Promise<void> {
+export interface FFmpegCommand {
+  cmd: string;
+  args: string[];
+}
+
+export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<void> {
   for (let i = 0; i < commands.length; i++) {
-    const cmd = commands[i];
+    const { cmd, args } = commands[i];
     try {
-      console.log(`[INFO] FFmpeg çalıştırılıyor (Deneme ${i + 1}/${commands.length}): ${cmd}`);
+      console.log(`[INFO] FFmpeg çalıştırılıyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
       await new Promise<void>((resolve, reject) => {
-        exec(cmd, (err, stdout, stderr) => {
+        execFile(cmd, args, (err, stdout, stderr) => {
           if (err) {
             reject(new Error(`Command failed with code ${err.code}. Stderr: ${stderr}`));
           } else {
@@ -34,8 +39,9 @@ export async function ensurePingSound(): Promise<string> {
   await fs.ensureDir(uploadsDir);
   const pingPath = path.join(uploadsDir, 'ping.wav');
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y -f lavfi -i "sine=frequency=880:duration=0.25" -af "afade=t=out:st=0.2:d=0.05" "${pingPath}"`,
+    execFile(
+      'ffmpeg',
+      ['-y', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=0.25', '-af', 'afade=t=out:st=0.2:d=0.05', pingPath],
       (err) => (err ? reject(err) : resolve())
     );
   });
@@ -45,8 +51,9 @@ export async function ensurePingSound(): Promise<string> {
 
 export async function addCalloutPings(videoPath: string, outputPath: string): Promise<void> {
   const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    exec(
-      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`,
+    execFile(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath],
       (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
     );
   });
@@ -70,8 +77,9 @@ export async function addCalloutPings(videoPath: string, outputPath: string): Pr
   ].join(';');
 
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y -i "${videoPath}" -i "${pingPath}" -filter_complex "${filter}" -map 0:v -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest "${outputPath}"`,
+    execFile(
+      'ffmpeg',
+      ['-y', '-i', videoPath, '-i', pingPath, '-filter_complex', filter, '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath],
       (err) => (err ? reject(err) : resolve())
     );
   });
@@ -107,10 +115,11 @@ export async function generateEndScreenImage(
   const finalFilter = `${overlayFilter};[bg]drawtext=text='${ctaText}':fontcolor=white:fontsize=${isVertical ? 64 : 72}:x=(w-text_w)/2:y=${textY}:box=1:boxcolor=red@0.8:boxborderw=20[out]`;
 
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y ${inputs.join(' ')} -filter_complex "${finalFilter}" -map "[out]" -frames:v 1 "${outPath}"`,
-      (err) => (err ? reject(err) : resolve())
-    );
+    const args = ['-y'];
+    // We safely parse inputs: ["-f", "lavfi", "-i", "..."]
+    inputs.forEach(i => args.push(...i.split(' ')));
+    args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath);
+    execFile('ffmpeg', args, (err) => (err ? reject(err) : resolve()));
   });
 }
 
@@ -121,8 +130,9 @@ export async function applyEndScreen(
   isVertical: boolean
 ): Promise<void> {
   const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    exec(
-      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`,
+    execFile(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath],
       (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
     );
   });
@@ -134,8 +144,9 @@ export async function applyEndScreen(
   const endStart = (dur - 5).toFixed(3);
 
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y -i "${videoPath}" -loop 1 -i "${endScreenPath}" -filter_complex "[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0" -c:a copy "${outputPath}"`,
+    execFile(
+      'ffmpeg',
+      ['-y', '-i', videoPath, '-loop', '1', '-i', endScreenPath, '-filter_complex', `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`, '-c:a', 'copy', outputPath],
       (err) => (err ? reject(err) : resolve())
     );
   });
@@ -163,11 +174,15 @@ export async function renderAvatarHelper(avatarBase64: string, outputPath: strin
   const avatarBuffer = Buffer.from(avatarBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
   await fs.writeFile(tempInput, avatarBuffer);
 
-  const cmd = `ffmpeg -y -i "${tempInput}" -vf "scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6" "${outputPath}"`;
-  const cmdFallback = `ffmpeg -y -i "${tempInput}" -vf "scale=200:200" "${outputPath}"`;
+  const cmd = 'ffmpeg';
+  const args = ['-y', '-i', tempInput, '-vf', 'scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6', outputPath];
+  const argsFallback = ['-y', '-i', tempInput, '-vf', 'scale=200:200', outputPath];
   
   try {
-    await runFFmpegWithFallback([cmd, cmdFallback]);
+    await runFFmpegWithFallback([
+      { cmd, args },
+      { cmd, args: argsFallback }
+    ]);
   } finally {
     await fs.remove(tempInput);
   }
@@ -199,11 +214,15 @@ export async function extractReferenceFrame(videoPath: string): Promise<string> 
   const tempOutput = path.join(outputDir, `ref_${Date.now()}.png`);
   
   // Extract frame at 00:00:01
-  const cmd = `ffmpeg -y -ss 00:00:01 -i "${videoPath}" -frames:v 1 -q:v 2 "${tempOutput}"`;
-  const cmdFallback = `ffmpeg -y -i "${videoPath}" -frames:v 1 "${tempOutput}"`;
+  const cmd = 'ffmpeg';
+  const args = ['-y', '-ss', '00:00:01', '-i', videoPath, '-frames:v', '1', '-q:v', '2', tempOutput];
+  const argsFallback = ['-y', '-i', videoPath, '-frames:v', '1', tempOutput];
   
   try {
-    await runFFmpegWithFallback([cmd, cmdFallback]);
+    await runFFmpegWithFallback([
+      { cmd, args },
+      { cmd, args: argsFallback }
+    ]);
     
     if (await fs.pathExists(tempOutput)) {
       const buffer = await fs.readFile(tempOutput);

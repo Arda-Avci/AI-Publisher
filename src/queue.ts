@@ -6,42 +6,20 @@ import { z } from 'zod';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { db } from './db.js';
 import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
+import { RedisMutex } from './lib/redis-mutex.js';
 
-class SimpleMutex {
-  private queue: (() => void)[] = [];
-  private locked = false;
+const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
-  async acquire(): Promise<void> {
-    if (!this.locked) {
-      this.locked = true;
-      return Promise.resolve();
-    }
-    return new Promise(resolve => {
-      this.queue.push(resolve);
-    });
-  }
-
-  release(): void {
-    const next = this.queue.shift();
-    if (next) {
-      next();
-    } else {
-      this.locked = false;
-    }
-  }
-}
-const colabMutex = new SimpleMutex();
-
-async function runFFmpegWithFallback(commands: string[]): Promise<void> {
+async function runFFmpegWithFallback(commands: {cmd: string, args: string[]}[]): Promise<void> {
   for (let i = 0; i < commands.length; i++) {
-    const cmd = commands[i];
+    const {cmd, args} = commands[i];
     try {
-      console.log(`[INFO] FFmpeg çalıştırılıyor (Deneme ${i + 1}/${commands.length}): ${cmd}`);
+      console.log(`[INFO] FFmpeg çalıştırılıyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
       await new Promise<void>((resolve, reject) => {
-        exec(cmd, (err, stdout, stderr) => {
+        execFile(cmd, args, (err, stdout, stderr) => {
           if (err) {
             reject(new Error(`Command failed with code ${err.code}. Stderr: ${stderr}`));
           } else {
@@ -69,10 +47,7 @@ async function ensurePingSound(): Promise<string> {
   const pingPath = path.join(uploadsDir, 'ping.wav');
   // 880Hz, 0.25s, fade out
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y -f lavfi -i "sine=frequency=880:duration=0.25" -af "afade=t=out:st=0.2:d=0.05" "${pingPath}"`,
-      (err) => (err ? reject(err) : resolve())
-    );
+    execFile('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=0.25', '-af', 'afade=t=out:st=0.2:d=0.05', pingPath], (err) => (err ? reject(err) : resolve()));
   });
   pingPathCache = pingPath;
   return pingPath;
@@ -84,10 +59,7 @@ async function ensurePingSound(): Promise<string> {
  */
 async function addCalloutPings(videoPath: string, outputPath: string): Promise<void> {
   const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    exec(
-      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`,
-      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
-    );
+    execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath], (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })));
   });
   const dur = parseFloat(durStr.trim());
   if (isNaN(dur) || dur < 1) throw new Error('Geçersiz video süresi');
@@ -116,10 +88,7 @@ async function addCalloutPings(videoPath: string, outputPath: string): Promise<v
   ].join(';');
 
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y -i "${videoPath}" -i "${pingPath}" -filter_complex "${filter}" -map 0:v -map "[aout]" -c:v copy -c:a aac -b:a 192k -shortest "${outputPath}"`,
-      (err) => (err ? reject(err) : resolve())
-    );
+    execFile('ffmpeg', ['-y', '-i', videoPath, '-i', pingPath, '-filter_complex', filter, '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath], (err) => (err ? reject(err) : resolve()));
   });
 }
 
@@ -166,10 +135,7 @@ async function generateEndScreenImage(
   const finalFilter = `${overlayFilter};[bg]drawtext=text='${ctaText}':fontcolor=white:fontsize=${isVertical ? 64 : 72}:x=(w-text_w)/2:y=${textY}:box=1:boxcolor=red@0.8:boxborderw=20[out]`;
 
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y ${inputs.join(' ')} -filter_complex "${finalFilter}" -map "[out]" -frames:v 1 "${outPath}"`,
-      (err) => (err ? reject(err) : resolve())
-    );
+    const args = ['-y']; inputs.forEach(i => args.push(...i.split(' '))); args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath); execFile('ffmpeg', args, (err) => (err ? reject(err) : resolve()));
   });
 }
 
@@ -184,10 +150,7 @@ async function applyEndScreen(
   isVertical: boolean
 ): Promise<void> {
   const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    exec(
-      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${videoPath}"`,
-      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
-    );
+    execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath], (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })));
   });
   const dur = parseFloat(durStr.trim());
   if (isNaN(dur) || dur < 5) throw new Error('Video 5 saniyeden kısa, end screen uygulanamaz');
@@ -197,10 +160,7 @@ async function applyEndScreen(
   const endStart = (dur - 5).toFixed(3);
 
   await new Promise<void>((resolve, reject) => {
-    exec(
-      `ffmpeg -y -i "${videoPath}" -loop 1 -i "${endScreenPath}" -filter_complex "[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0" -c:a copy "${outputPath}"`,
-      (err) => (err ? reject(err) : resolve())
-    );
+    execFile('ffmpeg', ['-y', '-i', videoPath, '-loop', '1', '-i', endScreenPath, '-filter_complex', `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`, '-c:a', 'copy', outputPath], (err) => (err ? reject(err) : resolve()));
   });
 }
 
@@ -271,7 +231,7 @@ async function renderAvatarHelper(avatarBase64: string, outputPath: string): Pro
   const cmdFallback = `ffmpeg -y -i "${tempInput}" -vf "scale=200:200" "${outputPath}"`;
   
   try {
-    await runFFmpegWithFallback([cmd, cmdFallback]);
+    await runFFmpegWithFallback([{cmd: 'ffmpeg', args: ['-y', '-i', tempInput, '-vf', 'scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6', outputPath]}, {cmd: 'ffmpeg', args: ['-y', '-i', tempInput, '-vf', 'scale=200:200', outputPath]}]);
   } finally {
     await fs.remove(tempInput);
   }
@@ -555,7 +515,18 @@ Karakter Özellikleri: ${job.character_features}
       const cmdDefault = `ffmpeg -y -i "${tV}" -i "${tS}" -i "${tE}" ${vf}-filter_complex "[1:a][2:a]amix=inputs=2:duration=first[a]" -map 0:v -map "[a]" -c:a aac -shortest "${mS}"`;
 
       try {
-        await runFFmpegWithFallback([cmdNVENC, cmdLibx264, cmdDefault]);
+        
+      const vfArr = srtFile ? ['-vf', `subtitles=${escapedSrtPath}:force_style='Alignment=2,FontSize=18,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,Outline=1'`] : [];
+      const baseArgs = ['-y', '-i', tV, '-i', tS, '-i', tE, ...vfArr, '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=first[a]', '-map', '0:v', '-map', '[a]'];
+      const nvencArgs = [...baseArgs, '-c:v', 'h264_nvenc', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', mS];
+      const libx264Args = [...baseArgs, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '23', '-c:a', 'aac', '-shortest', mS];
+      const defArgs = [...baseArgs, '-c:a', 'aac', '-shortest', mS];
+      await runFFmpegWithFallback([
+        { cmd: 'ffmpeg', args: nvencArgs },
+        { cmd: 'ffmpeg', args: libx264Args },
+        { cmd: 'ffmpeg', args: defArgs }
+      ]);
+  
       } finally {
         if (srtFile && fs.existsSync(srtFile)) {
           fs.removeSync(srtFile);
@@ -597,7 +568,7 @@ Karakter Özellikleri: ${job.character_features}
 
     const concatCopy = `ffmpeg -y -f concat -safe 0 -i "${txt}" -c copy "${fPath}"`;
     const concatLib = `ffmpeg -y -f concat -safe 0 -i "${txt}" -c:v libx264 -pix_fmt yuv420p -c:a aac "${fPath}"`;
-    await runFFmpegWithFallback([concatCopy, concatLib]);
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', fPath] }, { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', fPath] }]);
 
     // Temizlik
     fs.removeSync(txt);
@@ -609,10 +580,7 @@ Karakter Özellikleri: ${job.character_features}
     let dur = 0;
     try {
       const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-        exec(
-          `ffprobe -v error -show_entries format=duration -of csv=p=0 "${fPath}"`,
-          (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
-        );
+        execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', fPath], (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })));
       });
       dur = parseFloat(durStr.trim());
       if (isNaN(dur)) dur = 0;
@@ -661,7 +629,7 @@ Karakter Özellikleri: ${job.character_features}
       const ffmpegBlurCmd = `ffmpeg -y -i "${finalHorizontalPath}" -vf "split[original][copy];[copy]scale=1080:1920,boxblur=40[blurred];[original]scale=1080:-1[scaled];[blurred][scaled]overlay=(W-w)/2:(H-h)/2,drawtext=text='👍 BEGEN':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t1},${t1End})',drawtext=text='🔔 Kanalima abone olmayi unutmayin':fontcolor=yellow:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${t2},${t2End})',drawtext=text='🔔 ABONE OL':fontcolor=cyan:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t3},${t3End})'" -c:a copy "${dPath}"`;
 
       try {
-        await runFFmpegWithFallback([ffmpegBlurCmd]);
+        await runFFmpegWithFallback([{ cmd: 'ffmpeg', args: ['-y', '-i', finalHorizontalPath, '-vf', `split[original][copy];[copy]scale=1080:1920,boxblur=40[blurred];[original]scale=1080:-1[scaled];[blurred][scaled]overlay=(W-w)/2:(H-h)/2,drawtext=text='👍 BEGEN':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t1},${t1End})',drawtext=text='🔔 Kanalima abone olmayi unutmayin':fontcolor=yellow:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${t2},${t2End})',drawtext=text='🔔 ABONE OL':fontcolor=cyan:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t3},${t3End})'`, '-c:a', 'copy', dPath] }]);
         console.log(`[INFO] Shorts üretimi tamamlandı: ${dName}`);
 
         try {

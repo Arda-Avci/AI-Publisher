@@ -38,6 +38,11 @@ declare module 'express-session' {
 const app = express();
 const PORT = process.env.PORT || 3016;
 
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.error('[CRITICAL] SESSION_SECRET is not set in production. Security risk!');
+  process.exit(1);
+}
+
 // UTF-8 encoding middleware — tüm response'larda Türkçe karakter desteği
 app.use(utf8Middleware);
 
@@ -45,7 +50,7 @@ app.use(utf8Middleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'gizemli_bir_sir_123',
+  secret: process.env.SESSION_SECRET || 'gizemli_bir_sir_123_development',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 gün
