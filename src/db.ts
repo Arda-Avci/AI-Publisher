@@ -135,7 +135,8 @@ export async function initDatabase() {
       source_video_id TEXT,
       source_video_meta TEXT,
       differentiation_target_lang TEXT,
-      differentiation_duration_mode TEXT,
+      differentiation_duration_mode TEXT DEFAULT 'same',
+      differentiation_layout INTEGER DEFAULT 1,
       transcript TEXT,
       transcript_cleaned TEXT,
       transcript_translated TEXT,
@@ -172,11 +173,14 @@ export async function initDatabase() {
     console.log('[INFO] PostgreSQL Veritabanı hazır.');
   }
 
-  // Schema migration for colab_task_id
+  // Schema migrations
   try {
     await db.exec('ALTER TABLE video_jobs ADD COLUMN colab_task_id TEXT;');
-    console.log('[INFO] colab_task_id sütunu eklendi.');
-  } catch (e: any) {
-    // Sütun zaten varsa hata verir, yoksay
-  }
+  } catch (e: any) {}
+  try {
+    await db.exec("ALTER TABLE video_jobs ADD COLUMN differentiation_duration_mode TEXT DEFAULT 'same';");
+  } catch (e: any) {}
+  try {
+    await db.exec('ALTER TABLE video_jobs ADD COLUMN differentiation_layout INTEGER DEFAULT 1;');
+  } catch (e: any) {}
 }
