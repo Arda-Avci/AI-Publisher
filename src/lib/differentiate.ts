@@ -231,26 +231,13 @@ export async function runPhase1Background(
     }
     const targetLang = rawLang as SupportedLang;
 
-    // Step 2: Download Video & Extract Frame
-    await db.run(
-      "UPDATE video_jobs SET current_stage = 'Video indiriliyor...', progress_percent = 20 WHERE id = ? AND user_id = ?",
-      [jobId, userId]
-    );
-    const videoPath = await downloadYouTubeVideo(videoId);
-    
-    await db.run(
-      "UPDATE video_jobs SET current_stage = 'Referans kare çıkartılıyor...', progress_percent = 35 WHERE id = ? AND user_id = ?",
-      [jobId, userId]
-    );
-    
-    const imageFilename = `ref_${Date.now()}.jpg`;
-    const imagePath = path.join(process.cwd(), 'uploads', imageFilename);
-    const base64Image = await extractReferenceFrame(videoPath);
-    await fs.promises.writeFile(imagePath, Buffer.from(base64Image, 'base64'));
+    // Step 2: Skip Video Download & Reference Frame extraction on Node.js.
+    // Instead of downloading, we use the YouTube thumbnail directly as material_path.
+    const imagePath = job.material_path || '';
 
     // Step 3: fetch transcript
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 45 WHERE id = ? AND user_id = ?",
+      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 40 WHERE id = ? AND user_id = ?",
       [jobId, userId]
     );
     let originalText = '';
@@ -258,13 +245,14 @@ export async function runPhase1Background(
       const transcript = await fetchYouTubeTranscript(videoId);
       originalText = transcript.plainText;
     } catch (err: any) {
-      console.warn(`[WARN] YouTube transcript failed for ${videoId}. Falling back to AI extraction...`, err.message);
+      console.warn(`[WARN] YouTube transcript failed for ${videoId}. Falling back to AI script generation...`, err.message);
       await db.run(
-        "UPDATE video_jobs SET current_stage = 'Sesten transkript üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ? AND user_id = ?",
+        "UPDATE video_jobs SET current_stage = 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ? AND user_id = ?",
         [jobId, userId]
       );
-      const { transcribeVideoAudio } = await import('./audio-transcriber.js');
-      originalText = await transcribeVideoAudio(videoPath);
+      const meta = job.source_video_meta ? JSON.parse(job.source_video_meta) : {};
+      const { generateScriptFromMetadata } = await import('../services/aiService.js');
+      originalText = await generateScriptFromMetadata(meta.title || '', meta.description || '');
     }
 
     // Step 4: clean text

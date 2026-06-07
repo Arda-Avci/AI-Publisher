@@ -77,3 +77,15 @@ Karakter Özellikleri: ${job.character_features}`
   }));
   return result.object;
 }
+
+export async function generateScriptFromMetadata(title: string, description: string): Promise<string> {
+  const result = await withRetry(() => generateObject({
+    model: getAIModel(),
+    schema: z.object({ script: z.string() }),
+    prompt: `Sen profesyonel bir içerik üreticisisin. Bir YouTube videosunun başlığını ve açıklamasını kullanarak, bu videonun muhtemel konuşma/transkript metnini tahmin ederek özgün bir şekilde yeniden yaz.
+Başlık: ${title}
+Açıklama: ${description}
+Yazılacak konuşma metni yaklaşık 150-300 kelime arası, akıcı, bilgilendirici ve sese dökülmeye hazır olmalıdır.`
+  }));
+  return result.object.script;
+}

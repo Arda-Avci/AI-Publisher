@@ -1,5 +1,5 @@
 import { getRabbitChannel, VIDEO_JOBS_QUEUE } from './lib/rabbitmq.js';
-import { 
+import {
   extractReferenceFrame,
   runFFmpegWithFallback,
   addCalloutPings,
@@ -20,6 +20,23 @@ const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 export const clients = new Map<number, any>();
 let isProcessing = false;
 
+// ── LOG YARDIMCILARI ───────────────────────────────────────────────────────────
+function logInfo(msg: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [INFO] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`);
+}
+
+function logError(msg: string, err: any) {
+  const timestamp = new Date().toISOString();
+  const stack = err?.stack ? '\n' + err.stack : '';
+  console.error(`[${timestamp}] [ERROR] ${msg}: ${err?.message || err}${stack}`);
+}
+
+function logWarn(msg: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  console.warn(`[${timestamp}] [WARN] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`);
+}
+
 function broadcast(jobId: number, data: object) {
   const res = clients.get(jobId);
   if (res) {
@@ -33,13 +50,22 @@ export { broadcast };
 
 
 export async function checkQueue() {
-  if (isProcessing) return;
-  const nextJob = await db.get("SELECT * FROM video_jobs WHERE status = 'pending' ORDER BY id ASC");
-  if (!nextJob) return;
+  if (isProcessing) {
+    logInfo('checkQueue: zaten işleniyor, bekleniyor');
+    return;
+  }
+  const nextJob: any = await db.get("SELECT * FROM video_jobs WHERE status = 'pending' ORDER BY id ASC");
+  if (!nextJob) {
+    logInfo('checkQueue: kuyrukta iş yok');
+    return;
+  }
 
+  logInfo('checkQueue: yeni iş bulundu', { jobId: nextJob.id, status: nextJob.status });
   isProcessing = true;
   try {
     await startProduction(nextJob);
+  } catch (err) {
+    logError('checkQueue: startProduction hatası', err);
   } finally {
     isProcessing = false;
     setImmediate(checkQueue);
@@ -48,6 +74,17 @@ export async function checkQueue() {
 
 async function startProduction(job: any) {
   const COLAB_URL = process.env.COLAB_URL;
+  logInfo('═══════════════════════════════════════════════════════════════');
+  logInfo('startProduction BAŞLADI', { jobId: job.id, COLAB_URL });
+  logInfo('Job detay:', {
+    master_prompt: job.master_prompt?.substring(0, 100),
+    production_notes: job.production_notes?.substring(0, 100),
+    character_features: job.character_features?.substring(0, 100),
+    scene_prompts: job.scene_prompts ? 'VAR (' + job.scene_prompts.length + ' chars)' : 'YOK',
+    has_subtitles: job.has_subtitles,
+    material_path: job.material_path
+  });
+
   const finalScenes: string[] = [];
 
   // ── S2.5 Differentiation fast-path ──
@@ -57,20 +94,21 @@ async function startProduction(job: any) {
       const parsed = JSON.parse(job.scene_prompts);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].videoPrompt) {
         preGeneratedScenes = parsed;
-        console.log(`[INFO] İş #${job.id} farklılaştırma hızlı yolu: ${preGeneratedScenes.length} sahne önceden üretildi.`);
+        logInfo('Farklılaştırma hızlı yolu bulundu', { sceneCount: preGeneratedScenes.length });
       }
     } catch (parseErr) {
-      console.warn(`[WARN] scene_prompts JSON parse hatası, normal yola düşülüyor:`, parseErr);
+      logWarn('scene_prompts JSON parse hatası, normal yola düşülüyor', parseErr);
     }
   }
 
   try {
-    console.log(`[INFO] İş başladı: ID=${job.id}`);
+    logInfo('AŞAMA 1: Yönetmen Planlaması başlıyor...');
     await db.run("UPDATE video_jobs SET status = 'processing', current_stage = 'Yönetmen Planlaması', progress_percent = 5 WHERE id = ?", [job.id]);
     broadcast(job.id, { stageKey: 'stageDirectorPlanning', percent: 5 });
 
     let object: { scenes: any[]; marketing: any };
     if (preGeneratedScenes) {
+      logInfo('Pre-generated sahneler kullanılıyor (farklılaştırma)');
       object = {
         scenes: preGeneratedScenes,
         marketing: {
@@ -86,11 +124,25 @@ async function startProduction(job: any) {
         }
       };
     } else {
-      object = await generateStudioScenes(job);
+      logInfo('AI generateStudioScenes çağrılıyor...');
+      try {
+        object = await generateStudioScenes(job);
+        logInfo('AI generateStudioScenes başarılı', { sceneCount: object.scenes.length });
+      } catch (aiErr) {
+        logError('AI generateStudioScenes HATASI', aiErr);
+        logInfo('Job detayları:', {
+          master_prompt: job.master_prompt,
+          production_notes: job.production_notes,
+          character_features: job.character_features,
+          transcript: job.transcript?.substring(0, 200)
+        });
+        throw aiErr;
+      }
     }
 
     const totalScenes = object.scenes.length;
-    const estMin = totalScenes * 4.5 + 2; 
+    const estMin = totalScenes * 4.5 + 2;
+    logInfo('Toplam sahne sayısı:', { totalScenes, estimatedMinutes: estMin }); 
 
     await db.run(
       `UPDATE video_jobs SET
@@ -135,45 +187,57 @@ async function startProduction(job: any) {
     });
 
     // ── KAPAK SENTEZİ ──
+    logInfo('AŞAMA 2: Colab bağlantısı ve kapak sentezi başlıyor...');
     await colabMutex.acquire();
     try {
       // ── Colab auto-start: ensure Colab is up before processing ──
       const colabState = colab.getState();
+      logInfo('Colab durumu:', colabState);
+
       if (colabState.status === 'stopped' || colabState.status === 'error') {
         try {
-          console.log(`[INFO] İş #${job.id} Colab'ı başlatıyor...`);
+          logInfo('Colab başlatılıyor...');
           await db.run("UPDATE video_jobs SET current_stage = 'Colab Sunucusu Başlatılıyor (2-5 dk sürebilir)...' WHERE id = ?", [job.id]);
           broadcast(job.id, { stageKey: 'stageColabStarting', percent: 11 });
-          
+
           await colab.start();
-          console.log(`[INFO] Colab hazır: ${colab.getState().ngrokUrl}`);
+          logInfo('Colab başarıyla başlatıldı', { ngrokUrl: colab.getState().ngrokUrl });
         } catch (colabErr: any) {
-          console.error(`[ERROR] Colab başlatılamadı:`, colabErr);
+          logError('Colab başlatılamadı', colabErr);
           throw new Error('Colab Başlatılamadı: ' + colabErr.message);
         }
+      } else {
+        logInfo('Colab zaten çalışıyor', { ngrokUrl: colabState.ngrokUrl });
       }
-      colab.cancelIdleStop();   // we're using it, don't stop now
+      colab.cancelIdleStop();
 
       try {
-        console.log(`[INFO] Kapak resimleri Colab'da üretiliyor...`);
-      await db.run("UPDATE video_jobs SET current_stage = 'Kapak Fotoğrafı Sentezi', progress_percent = 12 WHERE id = ?", [job.id]);
-      broadcast(job.id, { stageKey: 'stageCoverSynthesis', percent: 12 });
+        logInfo('Kapak resmi üretimi başlıyor...');
+        await db.run("UPDATE video_jobs SET current_stage = 'Kapak Fotoğrafı Sentezi', progress_percent = 12 WHERE id = ?", [job.id]);
+        broadcast(job.id, { stageKey: 'stageCoverSynthesis', percent: 12 });
 
-      await axios.post(`${COLAB_URL}/generate-covers`, {
-        cover_prompt: `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`
-      });
+        const coverPrompt = `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`;
+        logInfo('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
 
-      // Varsayılan olarak kapak 0'ı indir
-      const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}.jpg`);
-      const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/0`, responseType: 'stream' });
-      const wCover = fs.createWriteStream(coverDest);
-      resCover.data.pipe(wCover);
-      await new Promise((r) => wCover.on('finish', r));
+        const coverResponse = await axios.post(`${COLAB_URL}/generate-covers`, {
+          cover_prompt: coverPrompt
+        });
+        logInfo('Cover üretim isteği gönderildi', { status: coverResponse.status });
 
-      await db.run("UPDATE video_jobs SET cover_image_path = ? WHERE id = ?", [coverDest, job.id]);
-    } catch (coverErr) {
-      console.warn(`[WARN] Kapak sentezi sırasında hata, atlanıyor:`, coverErr);
-    }
+        // Varsayılan olarak kapak 0'ı indir
+        const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}.jpg`);
+        logInfo('Kapak indiriliyor...', { url: `${COLAB_URL}/download/cover/0`, dest: coverDest });
+
+        const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/0`, responseType: 'stream' });
+        const wCover = fs.createWriteStream(coverDest);
+        resCover.data.pipe(wCover);
+        await new Promise((r) => wCover.on('finish', r));
+        logInfo('Kapak başarıyla indirildi', { dest: coverDest });
+
+        await db.run("UPDATE video_jobs SET cover_image_path = ? WHERE id = ?", [coverDest, job.id]);
+      } catch (coverErr) {
+        logWarn('Kapak sentezi hatası, atlanıyor', coverErr);
+      }
 
     // Sahneleri teker teker üret
     // ── S3: Kullanıcının Wav2Lip lip-sync tercihini oku ──
@@ -194,14 +258,16 @@ async function startProduction(job: any) {
       });
     };
 
+    logInfo('AŞAMA 3: Sahne üretimi başlıyor', { totalScenes });
     for (const scene of object.scenes) {
+      logInfo(`  ── SAHNE ${scene.sceneNumber}/${totalScenes} başlıyor`);
       // S6: Cancellation check at scene boundary.
       const cancelCheck: any = await db.get(
         'SELECT status FROM video_jobs WHERE id = ?',
         [job.id]
       );
       if (cancelCheck && cancelCheck.status === 'cancelled') {
-        console.log(`[INFO] Is #${job.id} iptal edildi, uretim durduruluyor (sahne ${scene.sceneNumber} oncesi).`);
+        logInfo('İş iptal edildi, üretim durduruluyor');
         break;
       }
 
@@ -211,19 +277,24 @@ async function startProduction(job: any) {
 
       let finalCharacterFeatures = job.character_features;
       let referenceImageBase64 = '';
-      if (!finalCharacterFeatures && job.material_path) {
+      if (!job.source_video_id && !finalCharacterFeatures && job.material_path && !job.material_path.startsWith('http')) {
         try {
           const videoAbsPath = path.join(process.cwd(), job.material_path);
           if (await fs.pathExists(videoAbsPath)) {
              referenceImageBase64 = await extractReferenceFrame(videoAbsPath);
-             console.log(`[INFO] Is #${job.id} - Referans görseli otomatik çıkarıldı.`);
+             logInfo('Yerel referans görseli otomatik çıkarıldı');
           }
         } catch(e) {
-          console.error('[ERROR] Referans görseli çıkarılırken hata:', e);
+          logWarn('Yerel referans görseli çıkarılırken hata', e);
         }
       }
 
-      console.log(`[INFO] Colab'a sahne ${scene.sceneNumber} gönderiliyor (apply_lipsync=${applyLipsync})...`);
+      logInfo('Colab\'a sahne gönderiliyor', {
+        sceneNumber: scene.sceneNumber,
+        apply_lipsync: applyLipsync,
+        videoPrompt: scene.videoPrompt?.substring(0, 80),
+        source_video_id: job.source_video_id
+      });
       const response = await axios.post(`${COLAB_URL}/generate-media`, {
         scene_number: scene.sceneNumber,
         video_prompt: scene.videoPrompt,
@@ -231,31 +302,37 @@ async function startProduction(job: any) {
         sfx_prompt: scene.sfxPrompt,
         character_features: finalCharacterFeatures,
         reference_image_base64: referenceImageBase64,
+        source_video_id: job.source_video_id || '',
         user_image_path: job.material_path,
         apply_lipsync: applyLipsync
       }, { timeout: 0 });
 
       const taskId = response.data?.task_id;
       if (!taskId) {
+        logError('Colab task_id DÖNMEDİ', response.data);
         throw new Error('Colab task_id dönmedi.');
       }
+      logInfo('Colab görevi başlatıldı', { taskId, status: response.data?.status });
 
-      console.log(`[INFO] Colab görevi başlatıldı (Task ID: ${taskId}). Durum sorgulanıyor...`);
+      // Colab task durumunu logla
+      await db.run("UPDATE video_jobs SET colab_task_id = ? WHERE id = ?", [taskId, job.id]);
+
       let taskStatus = 'processing';
       let taskData: any = null;
       let attempt = 0;
+      const taskStartTime = Date.now();
 
       while (taskStatus === 'processing' || taskStatus === 'accepted') {
         attempt++;
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Polling döngüsünde iptal kontrolü
-        const cancelCheck: any = await db.get(
+        const cancelCheck2: any = await db.get(
           'SELECT status FROM video_jobs WHERE id = ?',
           [job.id]
         );
-        if (cancelCheck && cancelCheck.status === 'cancelled') {
-          console.log(`[INFO] Polling sırasında iş #${job.id} iptal edildi.`);
+        if (cancelCheck2 && cancelCheck2.status === 'cancelled') {
+          logInfo('Polling sırasında iş iptal edildi');
           throw new Error('JOB_CANCELLED');
         }
 
@@ -265,19 +342,47 @@ async function startProduction(job: any) {
           });
           taskData = statusRes.data;
           taskStatus = taskData.status || 'processing';
+
+          logInfo(`Colab polling #${attempt}`, {
+            taskId,
+            taskStatus,
+            stage: taskData?.stage,
+            stagePercent: taskData?.stagePercent,
+            message: taskData?.message
+          });
+
+          // S7: Colab sub-stage bilgisini SSE'ye yayınla
+          if (taskData?.stage) {
+            const elapsedSec = (Date.now() - taskStartTime) / 1000;
+            let etaSeconds: number | null = null;
+            if (taskData.stagePercent > 5) {
+              etaSeconds = Math.round((elapsedSec / taskData.stagePercent) * (100 - taskData.stagePercent));
+            }
+            broadcast(job.id, {
+              stageKey: 'stageColabProgress',
+              colabStage: taskData.stage,
+              colabMessage: taskData.message || '',
+              colabPercent: taskData.stagePercent || 0,
+              etaSeconds
+            });
+          }
         } catch (statusErr: any) {
-          console.warn(`[WARN] Colab status check hatası (tekrar denenecek):`, statusErr.message);
-          if (attempt > 60) { // 3 dakika timeout
+          logWarn(`Colab status check hatası (tekrar denenecek)`, { attempt, error: statusErr.message });
+          if (attempt > 60) {
+            logError('Colab timeout (3 dk)', statusErr);
             throw new Error(`Colab sunucusuna erişilemiyor (timeout): ${statusErr.message}`);
           }
         }
       }
 
+      logInfo('Colab görev durumu:', { taskStatus, taskData });
       if (taskStatus === 'error' || taskStatus === 'failed') {
+        logError('Colab işleme hatası', { message: taskData?.message });
         throw new Error(`Colab işleme hatası: ${taskData?.message || 'Bilinmeyen hata'}`);
       }
 
       const hasSubtitle = taskData?.has_subtitle || false;
+      logInfo('Sahne tamamlandı, dosyalar indiriliyor', { hasSubtitle });
 
       const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.sceneNumber}.mp4`);
       const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.sceneNumber}.wav`);
@@ -285,8 +390,11 @@ async function startProduction(job: any) {
       const tSRT = path.join(process.cwd(), 'videolar', `srt_${job.id}_${scene.sceneNumber}.srt`);
       const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber}.mp4`);
 
+      logInfo('Video indiriliyor...', { url: `${COLAB_URL}/download/video` });
       await dl(`${COLAB_URL}/download/video`, tV);
+      logInfo('Speech indiriliyor...', { url: `${COLAB_URL}/download/speech` });
       await dl(`${COLAB_URL}/download/speech`, tS);
+      logInfo('SFX indiriliyor...', { url: `${COLAB_URL}/download/sfx` });
       await dl(`${COLAB_URL}/download/sfx`, tE);
 
       let srtFile = '';
