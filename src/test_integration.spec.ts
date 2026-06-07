@@ -10,6 +10,7 @@ import { registerSettingsRoutes } from '../src/routes/settings.js';
 import { registerJobRoutes } from '../src/routes/jobs.js';
 import { registerOpportunityRoutes } from '../src/routes/opportunity.js';
 import { colab } from '../src/lib/colab-manager.js';
+import { encryptUsername } from '../src/lib/crypto.js';
 import bcrypt from 'bcrypt';
 
 // Mock rate limiters to avoid being blocked in tests
@@ -25,6 +26,37 @@ vi.mock('../src/queue.ts', () => ({
   checkQueue: vi.fn(),
   broadcast: vi.fn(),
   clients: new Map()
+}));
+
+// Mock rabbitmq.ts to avoid connecting to RabbitMQ in tests
+vi.mock('../src/lib/rabbitmq.ts', () => ({
+  initRabbitMQ: vi.fn(),
+  getRabbitChannel: () => ({
+    sendToQueue: vi.fn(),
+    prefetch: vi.fn(),
+    consume: vi.fn(),
+    ack: vi.fn()
+  }),
+  sendToQueue: vi.fn().mockResolvedValue(true),
+  VIDEO_JOBS_QUEUE: 'video_jobs_queue',
+  PUBLISH_JOBS_QUEUE: 'publish_jobs_queue'
+}));
+
+// Mock yt-search to keep search offline and fast
+vi.mock('yt-search', () => ({
+  default: async (query: string) => ({
+    videos: [
+      {
+        videoId: 'dQw4w9WgXcQ',
+        title: 'Rick Astley - Never Gonna Give You Up',
+        thumbnail: 'https://example.com/thumb.jpg',
+        author: { url: 'https://example.com/channel', name: 'RickAstleyVEVO' },
+        views: 1000000000,
+        description: 'Legendary track',
+        ago: '13 years ago'
+      }
+    ]
+  })
 }));
 
 // Mock AI SDK generateObject
@@ -143,10 +175,11 @@ describe('AI-Publisher System Integration Tests', () => {
     await initDatabase();
 
     // Ensure we have a test user 'admin' in db
-    const existing = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
+    const encryptedAdmin = encryptUsername('admin');
+    const existing = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
     if (!existing) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
-      await db.run('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', hashedPassword]);
+      await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedAdmin, hashedPassword]);
     }
   });
 
@@ -202,7 +235,7 @@ describe('AI-Publisher System Integration Tests', () => {
       expect(saveRes.status).toBe(200);
       expect(saveRes.body.success).toBe(true);
 
-      const user = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
+      const user = await db.get('SELECT * FROM users WHERE username = ?', [encryptUsername('admin')]);
       expect(user.youtube_api_key).toBe('AIzaSyTestApiKey123');
       expect(user.selected_theme).toBe('neon-cyan');
       expect(user.preferred_language).toBe('tr');
@@ -337,7 +370,7 @@ describe('AI-Publisher System Integration Tests', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.source).toContain('invidious');
+        expect(res.body.source).toContain('yt-search');
         expect(res.body.videos.length).toBeGreaterThan(0);
         expect(res.body.videos[0].videoId).toBe('dQw4w9WgXcQ');
 

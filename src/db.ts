@@ -12,12 +12,48 @@ const poolConfig: PoolConfig = {
 
 const pool = new Pool(poolConfig);
 
-/**
- * SQLite '?' parametrelerini PostgreSQL '$1, $2, ...' formatına dönüştürür.
- */
 function convertQuery(sql: string): string {
   let counter = 1;
-  return sql.replace(/\?(?=(?:[^']*'[^']*')*[^']*$)/g, () => `$${counter++}`);
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inEscape = false;
+  let result = '';
+
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i];
+
+    if (inEscape) {
+      inEscape = false;
+      result += char;
+      continue;
+    }
+
+    if (char === '\\') {
+      inEscape = true;
+      result += char;
+      continue;
+    }
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      result += char;
+      continue;
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      result += char;
+      continue;
+    }
+
+    if (char === '?' && !inSingleQuote && !inDoubleQuote) {
+      result += `$${counter++}`;
+    } else {
+      result += char;
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -140,7 +176,7 @@ export async function initDatabase() {
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
     const hashedPassword = await bcrypt.hash(adminPass, 10);
     await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedUsername, hashedPassword]);
-    console.log('[INFO] Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com / admin1234!!');
+    console.log('[INFO] Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
   } else {
     console.log('[INFO] PostgreSQL Veritabanı hazır.');
   }

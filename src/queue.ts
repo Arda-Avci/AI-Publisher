@@ -1,214 +1,24 @@
 import { getRabbitChannel, VIDEO_JOBS_QUEUE } from './lib/rabbitmq.js';
-import { extractReferenceFrame } from './services/videoService.js';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
-import { z } from 'zod';
+import { 
+  extractReferenceFrame,
+  runFFmpegWithFallback,
+  addCalloutPings,
+  applyEndScreen,
+  getOrBuildEndScreen
+} from './services/videoService.js';
+import { generateStudioScenes } from './services/aiService.js';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 import { db } from './db.js';
 import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
 import { RedisMutex } from './lib/redis-mutex.js';
 
 const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
-async function runFFmpegWithFallback(commands: {cmd: string, args: string[]}[]): Promise<void> {
-  for (let i = 0; i < commands.length; i++) {
-    const {cmd, args} = commands[i];
-    try {
-      console.log(`[INFO] FFmpeg çalıştırılıyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
-      await new Promise<void>((resolve, reject) => {
-        execFile(cmd, args, (err, stdout, stderr) => {
-          if (err) {
-            reject(new Error(`Command failed with code ${err.code}. Stderr: ${stderr}`));
-          } else {
-            resolve();
-          }
-        });
-      });
-      return;
-    } catch (err: any) {
-      console.warn(`[WARN] FFmpeg deneme ${i + 1} başarısız oldu. Hata: ${err.message}`);
-      if (i === commands.length - 1) {
-        throw err;
-      }
-    }
-  }
-}
-
-// ── S4: Ping sound helpers ──────────────────────────────────────────────────
-let pingPathCache: string | null = null;
-
-async function ensurePingSound(): Promise<string> {
-  if (pingPathCache && await fs.pathExists(pingPathCache)) return pingPathCache;
-  const uploadsDir = path.join(process.cwd(), 'uploads');
-  await fs.ensureDir(uploadsDir);
-  const pingPath = path.join(uploadsDir, 'ping.wav');
-  // 880Hz, 0.25s, fade out
-  await new Promise<void>((resolve, reject) => {
-    execFile('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=0.25', '-af', 'afade=t=out:st=0.2:d=0.05', pingPath], (err) => (err ? reject(err) : resolve()));
-  });
-  pingPathCache = pingPath;
-  return pingPath;
-}
-
-/**
- * Mix 3 short ping sounds (at 30/50/65% of the video) over the original audio.
- * Re-encodes only the audio track; video is copied.
- */
-async function addCalloutPings(videoPath: string, outputPath: string): Promise<void> {
-  const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath], (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })));
-  });
-  const dur = parseFloat(durStr.trim());
-  if (isNaN(dur) || dur < 1) throw new Error('Geçersiz video süresi');
-
-  const pingPath = await ensurePingSound();
-
-  // Ping is 0.25s long; we delay so the *mid* lands at the percentage mark.
-  // We use adelay (in ms) — clamp negatives to 0.
-  const t1 = Math.max(0, dur * 0.30 - 0.125);
-  const t2 = Math.max(0, dur * 0.50 - 0.125);
-  const t3 = Math.max(0, dur * 0.65 - 0.125);
-  const d1 = Math.round(t1 * 1000);
-  const d2 = Math.round(t2 * 1000);
-  const d3 = Math.round(t3 * 1000);
-
-  // If the original has no audio track, generate silence from the video as a base.
-  // amix with inputs=4 + duration=first: first input (the video) is consumed for timing,
-  // its audio is used as the base. If the video has no audio, ffmpeg will use anullsrc.
-  // We use a robust pattern: [0:a]anull[a0] fallback not needed — just amix the original with 3 pings.
-  // If the original has no audio, [0:a] is empty, which is OK with amix (silence).
-  const filter = [
-    `[1:a]adelay=${d1}|${d1}[p1]`,
-    `[1:a]adelay=${d2}|${d2}[p2]`,
-    `[1:a]adelay=${d3}|${d3}[p3]`,
-    `[0:a][p1][p2][p3]amix=inputs=4:duration=first:dropout_transition=0[aout]`
-  ].join(';');
-
-  await new Promise<void>((resolve, reject) => {
-    execFile('ffmpeg', ['-y', '-i', videoPath, '-i', pingPath, '-filter_complex', filter, '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath], (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-// ── S4: End screen helpers ──────────────────────────────────────────────────
-
-/**
- * Generate a single-frame end-screen image at the right aspect ratio.
- * - 1920x1080 for horizontal
- * - 1080x1920 for vertical (Shorts)
- * Cached per-user+aspect; regenerated only when the user's avatar changes.
- */
-async function generateEndScreenImage(
-  avatarBase64: string | null,
-  outPath: string,
-  isVertical: boolean
-): Promise<void> {
-  const w = isVertical ? 1080 : 1920;
-  const h = isVertical ? 1920 : 1080;
-
-  // Background — black canvas
-  const inputs: string[] = [`-f lavfi -i "color=c=black:s=${w}x${h}:d=1"`];
-  let overlayFilter = `[0:v]`;
-
-  if (avatarBase64 && avatarBase64.startsWith('data:image')) {
-    const b64 = avatarBase64.replace(/^data:image\/\w+;base64,/, '');
-    const avatarPath = path.join(process.cwd(), 'uploads', `endscreen_avatar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`);
-    await fs.writeFile(avatarPath, Buffer.from(b64, 'base64'));
-    const avatarSize = 300;
-    const avatarX = `(W-${avatarSize})/2`;
-    const avatarY = isVertical ? `(${h}-${avatarSize})/2-200` : `(${h}-${avatarSize})/2-200`;
-    inputs.push(`-loop 1 -i "${avatarPath}"`);
-    overlayFilter = `[0:v][1:v]overlay=x=${avatarX}:y=${avatarY}[bg]`;
-  } else {
-    overlayFilter = `[0:v]null[bg]`;
-  }
-
-  // Add "Sonraki Videoyu İzleyin" text + mock subscribe button.
-  // We use box=1 with red boxcolor for YouTube-style call-to-action.
-  const textY = isVertical ? '(H/2)+200' : '(H/2)+200';
-  const ctaText = isVertical
-    ? 'SONRAKI VIDEYU IZLEYIN'
-    : 'SONRAKI VIDEYU IZLEYIN';
-
-  const finalFilter = `${overlayFilter};[bg]drawtext=text='${ctaText}':fontcolor=white:fontsize=${isVertical ? 64 : 72}:x=(w-text_w)/2:y=${textY}:box=1:boxcolor=red@0.8:boxborderw=20[out]`;
-
-  await new Promise<void>((resolve, reject) => {
-    const args = ['-y']; inputs.forEach(i => args.push(...i.split(' '))); args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath); execFile('ffmpeg', args, (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-/**
- * Overlay the end-screen image during the last 5 seconds of the video.
- * Re-encodes video + audio copy.
- */
-async function applyEndScreen(
-  videoPath: string,
-  endScreenPath: string,
-  outputPath: string,
-  isVertical: boolean
-): Promise<void> {
-  const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath], (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })));
-  });
-  const dur = parseFloat(durStr.trim());
-  if (isNaN(dur) || dur < 5) throw new Error('Video 5 saniyeden kısa, end screen uygulanamaz');
-
-  const w = isVertical ? 1080 : 1920;
-  const h = isVertical ? 1920 : 1080;
-  const endStart = (dur - 5).toFixed(3);
-
-  await new Promise<void>((resolve, reject) => {
-    execFile('ffmpeg', ['-y', '-i', videoPath, '-loop', '1', '-i', endScreenPath, '-filter_complex', `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`, '-c:a', 'copy', outputPath], (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-/**
- * Cache the end screen image per (userId, aspect) so we don't regenerate
- * the same image on every job. Returns the on-disk path.
- */
-async function getOrBuildEndScreen(
-  userId: number,
-  avatarBase64: string | null,
-  isVertical: boolean
-): Promise<string> {
-  const uploadsDir = path.join(process.cwd(), 'uploads');
-  await fs.ensureDir(uploadsDir);
-  // Cache key: includes a hash of the avatar (or "noavatar") so we
-  // regenerate when the user changes their profile picture.
-  const avatarHash = avatarBase64
-    ? Buffer.from(avatarBase64).toString('base64').slice(-32)
-    : 'noavatar';
-  const aspect = isVertical ? 'vertical' : 'horizontal';
-  const cached = path.join(uploadsDir, `endscreen_${userId}_${aspect}_${avatarHash}.png`);
-  if (await fs.pathExists(cached)) return cached;
-  await generateEndScreenImage(avatarBase64, cached, isVertical);
-  return cached;
-}
-
 export const clients = new Map<number, any>();
 let isProcessing = false;
-
-const StudioSchema = z.object({
-  scenes: z.array(z.object({
-    sceneNumber: z.number(),
-    videoPrompt: z.string(),
-    speechText: z.string(),
-    sfxPrompt: z.string()
-  })),
-  marketing: z.object({
-    ytTitle: z.string(),
-    ytDesc: z.string(),
-    ytTags: z.string(),
-    ttDesc: z.string(),
-    ttTags: z.string(),
-    xDesc: z.string(),
-    xTags: z.string(),
-    metaDesc: z.string(),
-    metaTags: z.string()
-  })
-});
 
 function broadcast(jobId: number, data: object) {
   const res = clients.get(jobId);
@@ -221,41 +31,6 @@ function broadcast(jobId: number, data: object) {
 // push SSE events to the browser without holding the HTTP request open.
 export { broadcast };
 
-// Avatarı daire biçiminde kırpıp cyan (#00FFFF) dairesel çerçeve ekleyen FFmpeg helper fonksiyonu
-async function renderAvatarHelper(avatarBase64: string, outputPath: string): Promise<void> {
-  const tempInput = path.join(process.cwd(), 'videolar', `avatar_temp_${Date.now()}.png`);
-  const avatarBuffer = Buffer.from(avatarBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
-  await fs.writeFile(tempInput, avatarBuffer);
-
-  const cmd = `ffmpeg -y -i "${tempInput}" -vf "scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6" "${outputPath}"`;
-  const cmdFallback = `ffmpeg -y -i "${tempInput}" -vf "scale=200:200" "${outputPath}"`;
-  
-  try {
-    await runFFmpegWithFallback([{cmd: 'ffmpeg', args: ['-y', '-i', tempInput, '-vf', 'scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6', outputPath]}, {cmd: 'ffmpeg', args: ['-y', '-i', tempInput, '-vf', 'scale=200:200', outputPath]}]);
-  } finally {
-    await fs.remove(tempInput);
-  }
-}
-
-// Seçilen grid koordinatına (örn: top-left, center, bottom-right) göre overlay yerleşim X ve Y koordinatlarını dönen helper
-function getGridCoordinates(position: string, videoWidth: number, videoHeight: number, overlayWidth: number, overlayHeight: number): { x: number, y: number } {
-  let x = 20;
-  let y = 20;
-  
-  if (position.includes('right')) {
-    x = videoWidth - overlayWidth - 20;
-  } else if (position.includes('center')) {
-    x = Math.floor((videoWidth - overlayWidth) / 2);
-  }
-  
-  if (position.includes('bottom')) {
-    y = videoHeight - overlayHeight - 20;
-  } else if (position.includes('center')) {
-    y = Math.floor((videoHeight - overlayHeight) / 2);
-  }
-  
-  return { x, y };
-}
 
 export async function checkQueue() {
   if (isProcessing) return;
@@ -311,27 +86,7 @@ async function startProduction(job: any) {
         }
       };
     } else {
-      const generated = await generateObject({
-        model: google('gemini-2.5-flash'),
-        schema: StudioSchema,
-        prompt: `Sen profesyonel bir film yönetmeni ve sosyal medya pazarlama uzmanısın.
-Görevlerin:
-1. Hikayeyi analiz et ve ardışık 6 saniyelik sahnelere böl.
-2. Karakter tasviri ve üretim notlarını dikkate alarak her sahne için detaylı görsel prompt (videoPrompt), konuşma metni (speechText) ve ses efekti (sfxPrompt) tasarla.
-3. Arda Avcı 2026 SEO ve İçerik Standartlarına uygun pazarlama metinleri tasarla.
-   - YouTube Başlık Formatı: '2026: [Vurucu İfade] | [Ana Başlık]' olmalıdır.
-   - İçerik yılı olarak daima 2026 referans alınmalı.
-   - İlk 2 cümlede konunun teknik terimleri geçmelidir.
-   - CTA: İzleyiciyi tartışmaya ve yorum yapmaya iten gizemli sorular içersin.
-   - TikTok, X ve Meta için de viral kancalar ve hashtag'ler oluştur.
-
-Giriş Verileri:
-Master Prompt: ${job.master_prompt}
-Üretim Notları: ${job.production_notes}
-Karakter Özellikleri: ${job.character_features}
-`
-      });
-      object = generated.object;
+      object = await generateStudioScenes(job);
     }
 
     const totalScenes = object.scenes.length;
