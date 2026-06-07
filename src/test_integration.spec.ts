@@ -133,11 +133,14 @@ describe('AI-Publisher System Integration Tests', () => {
             if (url.endsWith('/health')) {
               return { data: { memory: { gpu_total_gb: 15 } } };
             }
+            if (url.includes('/status/')) {
+              return { data: { status: 'success', has_subtitle: true } };
+            }
             return { data: {} };
           },
           post: async (url: string) => {
             if (url.endsWith('/generate-media')) {
-              return { data: { has_subtitle: true } };
+              return { data: { status: 'accepted', task_id: 'mock-task-id' } };
             }
             return { data: {} };
           }

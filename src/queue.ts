@@ -223,7 +223,50 @@ async function startProduction(job: any) {
         user_image_path: job.material_path,
         apply_lipsync: applyLipsync
       }, { timeout: 0 });
-      const hasSubtitle = response.data?.has_subtitle || false;
+
+      const taskId = response.data?.task_id;
+      if (!taskId) {
+        throw new Error('Colab task_id dönmedi.');
+      }
+
+      console.log(`[INFO] Colab görevi başlatıldı (Task ID: ${taskId}). Durum sorgulanıyor...`);
+      let taskStatus = 'processing';
+      let taskData: any = null;
+      let attempt = 0;
+
+      while (taskStatus === 'processing' || taskStatus === 'accepted') {
+        attempt++;
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Polling döngüsünde iptal kontrolü
+        const cancelCheck: any = await db.get(
+          'SELECT status FROM video_jobs WHERE id = ?',
+          [job.id]
+        );
+        if (cancelCheck && cancelCheck.status === 'cancelled') {
+          console.log(`[INFO] Polling sırasında iş #${job.id} iptal edildi.`);
+          throw new Error('JOB_CANCELLED');
+        }
+
+        try {
+          const statusRes = await axios.get(`${COLAB_URL}/status/${taskId}`, {
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+          });
+          taskData = statusRes.data;
+          taskStatus = taskData.status || 'processing';
+        } catch (statusErr: any) {
+          console.warn(`[WARN] Colab status check hatası (tekrar denenecek):`, statusErr.message);
+          if (attempt > 60) { // 3 dakika timeout
+            throw new Error(`Colab sunucusuna erişilemiyor (timeout): ${statusErr.message}`);
+          }
+        }
+      }
+
+      if (taskStatus === 'error' || taskStatus === 'failed') {
+        throw new Error(`Colab işleme hatası: ${taskData?.message || 'Bilinmeyen hata'}`);
+      }
+
+      const hasSubtitle = taskData?.has_subtitle || false;
 
       const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.sceneNumber}.mp4`);
       const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.sceneNumber}.wav`);
