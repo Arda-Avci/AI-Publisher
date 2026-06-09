@@ -13,7 +13,8 @@
     "lint": "eslint src --ext .ts",
     "build": "tsc",
     "setup-ngrok": "node scripts/setup-ngrok.js",
-    "test": "npx vitest run"
+    "test": "npx vitest run",
+    "test:browser": "tsx scripts/run-e2e.ts"
   },
   "keywords": [],
   "author": "",

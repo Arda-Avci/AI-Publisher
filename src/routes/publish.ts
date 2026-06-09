@@ -10,8 +10,10 @@ import {
   uploadToYouTube,
   uploadToTikTok,
   uploadToX,
-  uploadToMeta
+  uploadToMeta,
+  activePublishBrowsers
 } from '../publisher.js';
+import { broadcastProgress } from '../lib/redis.js';
 
 /**
  * Publish route: POST /publish/:id/:platform.
@@ -145,6 +147,76 @@ export function registerPublishRoutes(app: Application): void {
       } catch {
         // response already sent
       }
+    }
+  });
+
+  app.post('/cancel-publish/:id/:platform', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+    const { id, platform } = req.params;
+    const userId = req.session.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'NOT_AUTHENTICATED' });
+    }
+
+    const jobId = typeof id === 'string' ? parseInt(id, 10) : NaN;
+    if (isNaN(jobId) || jobId <= 0) {
+      return res.json({ success: false, error: 'Gecersiz job ID.' });
+    }
+    if (!isPlatform(platform)) {
+      return res.json({ success: false, error: 'Gecersiz platform.' });
+    }
+
+    try {
+      const job: any = await db.get(
+        'SELECT * FROM video_jobs WHERE id = ? AND user_id = ?',
+        [jobId, userId]
+      );
+      if (!job) {
+        return res.json({ success: false, error: 'Bu job bulunamadi veya size ait degil.' });
+      }
+
+      const statusField = STATUS_FIELD_MAP[platform];
+      if (job[statusField] !== 'publishing') {
+        return res.json({ success: false, error: 'Bu paylasim aktif olarak calismiyor, iptal edilemez.' });
+      }
+
+      const key = `${jobId}-${platform}`;
+      const browser = activePublishBrowsers.get(key);
+      if (browser) {
+        await browser.close().catch(() => {});
+        activePublishBrowsers.delete(key);
+        console.log(`[INFO] Aktif ${platform} paylasimi iptal edildi, browser kapatildi: #${jobId}`);
+      }
+
+      await db.run(
+        'UPDATE video_jobs SET ' + statusField + ' = ? WHERE id = ?',
+        ['cancelled', jobId]
+      );
+
+      try {
+        await broadcastProgress(jobId, {
+          event: 'publish-complete',
+          platform,
+          success: false,
+          stage: 'Yayın kullanıcı tarafından iptal edildi',
+          percent: 0
+        });
+      } catch (broadcastErr) {
+        console.warn('[WARN] cancel-publish broadcast failed:', broadcastErr);
+      }
+
+      logAudit({
+        userId,
+        action: 'publish.cancel' as any,
+        entityType: 'video_job',
+        entityId: jobId,
+        req
+      });
+
+      res.json({ success: true, message: 'Yayinlama iptal edildi.' });
+    } catch (err: any) {
+      console.error('[ERROR] /cancel-publish failed:', err);
+      res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
 }

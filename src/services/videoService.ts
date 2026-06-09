@@ -239,3 +239,168 @@ export async function extractReferenceFrame(videoPath: string): Promise<string> 
   }
   return "";
 }
+
+export async function applyVideoDifferentiationFilters(
+  inputPath: string,
+  outputPath: string,
+  isVertical: boolean
+): Promise<void> {
+  const w = isVertical ? 1080 : 1920;
+  const h = isVertical ? 1920 : 1080;
+  const scaleOriginal = isVertical ? '972:-1' : '1728:-1';
+  const filter = [
+    `[0:v]split[orig][bg]`,
+    `[bg]scale=${w}:${h},boxblur=40[blurred]`,
+    `[orig]scale=${scaleOriginal},eq=contrast=1.05:saturation=1.1[scaled]`,
+    `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,vignette=pi/8[outv]`
+  ].join(';');
+
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-filter_complex', filter,
+    '-map', '[outv]',
+    '-map', '0:a?',
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'copy',
+    outputPath
+  ];
+
+  await runFFmpegWithFallback([
+    { cmd: 'ffmpeg', args }
+  ]);
+}
+
+export async function extractReferenceFrameAtTime(videoPath: string, timestampSeconds: number): Promise<string> {
+  const hours = Math.floor(timestampSeconds / 3600);
+  const minutes = Math.floor((timestampSeconds % 3600) / 60);
+  const seconds = Math.floor(timestampSeconds % 60);
+  const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  const outputDir = path.join(process.cwd(), 'videolar');
+  await fs.ensureDir(outputDir);
+  const tempOutput = path.join(outputDir, `ref_${Date.now()}_${Math.floor(Math.random()*1000)}.png`);
+
+  const cmd = 'ffmpeg';
+  const args = ['-y', '-ss', timeStr, '-i', videoPath, '-frames:v', '1', '-q:v', '2', tempOutput];
+  const argsFallback = ['-y', '-i', videoPath, '-frames:v', '1', tempOutput];
+
+  try {
+    await runFFmpegWithFallback([
+      { cmd, args },
+      { cmd, args: argsFallback }
+    ]);
+
+    if (await fs.pathExists(tempOutput)) {
+      const buffer = await fs.readFile(tempOutput);
+      const base64 = buffer.toString('base64');
+      await fs.remove(tempOutput);
+      return `data:image/png;base64,${base64}`;
+    }
+  } catch (err) {
+    console.error('[ERROR] extractReferenceFrameAtTime failed:', err);
+  } finally {
+    if (await fs.pathExists(tempOutput)) {
+      await fs.remove(tempOutput);
+    }
+  }
+  return "";
+}
+
+export async function getVideoDuration(videoPath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    execFile('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'csv=p=0',
+      videoPath
+    ], (err, stdout) => {
+      if (err) return reject(err);
+      const d = parseFloat(stdout.trim());
+      resolve(isNaN(d) ? 0 : d);
+    });
+  });
+}
+
+export async function concatVideosWithCrossfade(
+  videoPaths: string[],
+  outputPath: string,
+  transDur = 1.0
+): Promise<void> {
+  if (videoPaths.length === 0) {
+    throw new Error('concatVideosWithCrossfade: Video listesi bos');
+  }
+  if (videoPaths.length === 1) {
+    await fs.copy(videoPaths[0], outputPath);
+    return;
+  }
+
+  // Get durations of all videos
+  const durations: number[] = [];
+  for (const p of videoPaths) {
+    const d = await getVideoDuration(p);
+    durations.push(d);
+  }
+
+  // Validate durations. If any video is shorter than transDur * 2, fallback to concat demuxer (normal concat)
+  const canXFade = durations.every(d => d > transDur * 2);
+  if (!canXFade) {
+    console.warn('[WARN] Videolar crossfade icin cok kisa, normal concat uygulaniyor.');
+    const txt = path.join(path.dirname(outputPath), `temp_concat_${Date.now()}.txt`);
+    await fs.writeFile(txt, videoPaths.map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'));
+    try {
+      await runFFmpegWithFallback([
+        { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', outputPath] },
+        { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', outputPath] }
+      ]);
+    } finally {
+      await fs.remove(txt);
+    }
+    return;
+  }
+
+  // Construct command arguments
+  const args: string[] = ['-y'];
+  for (const p of videoPaths) {
+    args.push('-i', p);
+  }
+
+  const filterParts: string[] = [];
+  let runningDur = durations[0];
+
+  // Video xfade chain
+  let lastVideoLabel = '0:v';
+  for (let i = 0; i < videoPaths.length - 1; i++) {
+    const nextVideoLabel = `${i + 1}:v`;
+    const outVideoLabel = `v_xfade_${i}`;
+    const offset = runningDur - transDur;
+    filterParts.push(`[${lastVideoLabel}][${nextVideoLabel}]xfade=transition=fade:duration=${transDur}:offset=${offset.toFixed(3)}[${outVideoLabel}]`);
+    lastVideoLabel = outVideoLabel;
+    runningDur = runningDur + durations[i + 1] - transDur;
+  }
+
+  // Audio acrossfade chain
+  let lastAudioLabel = '0:a';
+  for (let i = 0; i < videoPaths.length - 1; i++) {
+    const nextAudioLabel = `${i + 1}:a`;
+    const outAudioLabel = `a_xfade_${i}`;
+    filterParts.push(`[${lastAudioLabel}][${nextAudioLabel}]acrossfade=d=${transDur}[${outAudioLabel}]`);
+    lastAudioLabel = outAudioLabel;
+  }
+
+  const filterComplex = filterParts.join(';');
+  args.push(
+    '-filter_complex', filterComplex,
+    '-map', `[${lastVideoLabel}]`,
+    '-map', `[${lastAudioLabel}]`,
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',
+    outputPath
+  );
+
+  await runFFmpegWithFallback([
+    { cmd: 'ffmpeg', args }
+  ]);
+}

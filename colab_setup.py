@@ -22,7 +22,7 @@ def run_cmd(cmd):
 run_cmd('pip uninstall -y sympy mpmath')
 run_cmd('pip install sympy mpmath --no-cache-dir')
 
-run_cmd('pip install -q flask pyngrok diffusers transformers accelerate imageio imageio-ffmpeg scipy opencv-python-headless coqui-tts sentencepiece "numpy<2"')
+run_cmd('pip install -q flask pyngrok diffusers transformers accelerate imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece')
 
 # ModelScope T2V için ek bağımlılıklar
 run_cmd('pip install -q "decord>=0.6.0" "open_clip_torch"')

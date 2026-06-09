@@ -20,7 +20,8 @@ export function getDashboardScripts(params: {
           productionNotes: job.production_notes,
           characterFeatures: job.character_features,
           playlistId: job.playlist_id,
-          transcriptText: job.transcript_translated,
+          transcriptText: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
+          materialPath: job.material_path,
           hasShorts: job.has_shorts,
           hasSubtitles: job.has_subtitles,
           platforms: job.target_platforms ? JSON.parse(job.target_platforms) : []
@@ -44,6 +45,12 @@ export function getDashboardScripts(params: {
 
         document.querySelector('input[name="has_shorts"]').checked = !!data.hasShorts;
         document.querySelector('input[name="has_subtitles"]').checked = !!data.hasSubtitles;
+
+        const diffLayoutInput = document.querySelector('input[name="differentiation_layout"]');
+        if (diffLayoutInput) diffLayoutInput.checked = data.differentiationLayout !== false;
+
+        const diffDurationInput = document.querySelector('select[name="differentiation_duration_mode"]');
+        if (diffDurationInput) diffDurationInput.value = data.differentiationDurationMode || 'same';
 
         const platforms = data.platforms || [];
         document.querySelectorAll('input[name="platforms"]').forEach(cb => {
@@ -992,6 +999,9 @@ export function getDashboardScripts(params: {
             if (data.stageKey === 'stageSceneGenerating') {
               displayStage = displayStage.replace('{{sceneNumber}}', data.sceneNumber || '?');
             }
+            if (data.stageKey === 'stageColabProgress') {
+              displayStage = displayStage.replace('{{colabMessage}}', data.colabMessage || data.colabStage || '');
+            }
           }
           
           const term = document.getElementById('rabbitmq-terminal');
@@ -1001,7 +1011,9 @@ export function getDashboardScripts(params: {
             const time = new Date().toLocaleTimeString();
             const logLine = document.createElement('div');
             logLine.style.marginBottom = '4px';
-            logLine.textContent = '[' + time + '] [RABBITMQ] Job ' + jobId + ' -> ' + displayStage + ' (' + (data.percent || 0) + '%)';
+            let logText = '[' + time + '] [RABBITMQ] Job ' + jobId + ' -> ' + displayStage + ' (' + (data.percent || 0) + '%)';
+            if (data.colabMessage) logText += ' | ' + data.colabMessage + (data.etaSeconds ? ' [ETA:' + data.etaSeconds + 's]' : '');
+            logLine.textContent = logText;
             termLog.appendChild(logLine);
             term.scrollTop = term.scrollHeight;
           }
@@ -1082,20 +1094,27 @@ export function getDashboardScripts(params: {
                  transcript_translated: data.transcript_text
               })
             });
+            const result = await res.json();
+            if (result.success) {
+              window.location.reload();
+            } else {
+              showToast(result.error || 'Hata oluştu', 'error');
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = origText;
+            }
           } else {
-            res = await fetch('/differentiate', {
+            res = await fetch('/create-job', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(data)
+              body: formData
             });
-          }
-          const result = await res.json();
-          if (result.success) {
-            window.location.reload();
-          } else {
-            showToast(result.error || 'Hata oluştu', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origText;
+            if (res.ok) {
+              window.location.reload();
+            } else {
+              const result = await res.json().catch(() => ({ error: 'Hata oluştu' }));
+              showToast(result.error || 'Hata oluştu', 'error');
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = origText;
+            }
           }
         } catch (err) {
           showToast((err && err.message) ? err.message : 'Bağlantı hatası', 'error');
@@ -1142,6 +1161,23 @@ export function getDashboardScripts(params: {
             window.location.reload();
           } else {
             showToast(result.error || 'Hata oluştu', 'error');
+          }
+        } catch (err) {
+          showToast('Bağlantı hatası', 'error');
+        }
+      }
+
+      async function cancelPublish(jobId, platform) {
+        if (!confirm(platform.toUpperCase() + ' paylaşımını iptal etmek istediğinize emin misiniz?')) return;
+        showToast(platform.toUpperCase() + ' paylaşımı iptal ediliyor...', 'success');
+        try {
+          const res = await fetch('/cancel-publish/' + jobId + '/' + platform, { method: 'POST' });
+          const result = await res.json();
+          if (result.success) {
+            showToast('Paylaşım iptal edildi.', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            showToast('Hata: ' + (result.error || 'unknown'), 'error');
           }
         } catch (err) {
           showToast('Bağlantı hatası', 'error');

@@ -27,10 +27,13 @@ export interface ColabState {
   status: ColabStatus;
   ngrokUrl: string | null;
   gpuMemoryGB: number | null;
+  gpuUsedGB: number | null;
+  gpuUtilizationPct: number | null;
   lastHealthCheck: string | null;
   lastError: string | null;
   startedAt: string | null;
   uptimeSeconds: number | null;
+  runtimeSeconds: number | null;
 }
 
 export interface ColabManager {
@@ -64,9 +67,12 @@ interface InternalState {
   status: ColabStatus;
   ngrokUrl: string | null;
   gpuMemoryGB: number | null;
+  gpuUsedGB: number | null;
+  gpuUtilizationPct: number | null;
   lastHealthCheck: string | null;
   lastError: string | null;
   startedAt: string | null;
+  runtimeSeconds: number | null;
 }
 
 class ColabManagerImpl extends EventEmitter implements ColabManager {
@@ -74,9 +80,12 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     status: 'stopped',
     ngrokUrl: null,
     gpuMemoryGB: null,
+    gpuUsedGB: null,
+    gpuUtilizationPct: null,
     lastHealthCheck: null,
     lastError: null,
-    startedAt: null
+    startedAt: null,
+    runtimeSeconds: null
   };
 
   private proc: ChildProcess | null = null;
@@ -102,7 +111,11 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           this.startHealthChecks();
         })
         .catch((err) => {
-          this.setStatus('error', envUrl, `Belirtilen COLAB_URL bağlantısı başarısız: ${err.message}`);
+          if (err.response) {
+            this.startHealthChecks();
+          } else {
+            this.setStatus('error', envUrl, `Belirtilen COLAB_URL bağlantısı başarısız: ${err.message}`);
+          }
         });
     }
   }
@@ -122,8 +135,11 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
         this.startHealthChecks();
         return { ngrokUrl: envUrl };
       } catch (err: any) {
+        if (err.response) {
+          this.startHealthChecks();
+          return { ngrokUrl: envUrl };
+        }
         console.warn(`[WARN] Mevcut COLAB_URL bağlantısı başarısız (${err.message}). Otomatik olarak yeni Colab sunucusu başlatılıyor...`);
-        // We do not return here, we let it fall through to doStart()
         this.state.status = 'starting';
       }
     }
@@ -157,10 +173,14 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
 
     try {
       // Validate health
-      await axios.get(`${finalUrl}/health`, { 
-        timeout: 8000,
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-      });
+      try {
+        await axios.get(`${finalUrl}/health`, { 
+          timeout: 8000,
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+      } catch (err: any) {
+        if (!err.response) throw err;
+      }
 
       // Valid url, set status
       process.env.COLAB_URL = finalUrl;
@@ -438,23 +458,32 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     const url = this.state.ngrokUrl;
     if (!url) return;
     try {
-      const res = await axios.get(`${url}/health`, { 
+      const res = await axios.get(`${url}/health`, {
         timeout: 10_000,
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
       const mem = res.data?.memory || {};
-      const totalGb = typeof mem.gpu_total_gb === 'number' ? mem.gpu_total_gb : null;
-      this.state.gpuMemoryGB = totalGb;
+      const gpuUtil = res.data?.gpu_utilization || {};
+      const runtime = res.data?.runtime || {};
+
+      this.state.gpuMemoryGB = typeof mem.gpu_total_gb === 'number' ? mem.gpu_total_gb : null;
+      this.state.gpuUsedGB = typeof mem.gpu_used_gb === 'number' ? mem.gpu_used_gb : null;
+      this.state.gpuUtilizationPct = typeof gpuUtil.gpu_pct === 'number' ? gpuUtil.gpu_pct : null;
+      this.state.runtimeSeconds = typeof runtime.uptime_seconds === 'number' ? runtime.uptime_seconds : null;
       this.state.lastHealthCheck = new Date().toISOString();
-      // Healthy — clear any prior error marker
       if (this.state.status === 'running') {
         this.state.lastError = null;
       }
       this.emit('state-change', this.getState());
     } catch (err: any) {
       this.state.lastHealthCheck = new Date().toISOString();
-      // Don't change status to error on a single health check failure — just record it
-      this.state.lastError = `Sağlık kontrolü başarısız: ${err.message}`;
+      if (err.response) {
+        if (this.state.status === 'running') {
+          this.state.lastError = null;
+        }
+      } else {
+        this.state.lastError = `Sağlık kontrolü başarısız: ${err.message}`;
+      }
       this.emit('state-change', this.getState());
     }
   }

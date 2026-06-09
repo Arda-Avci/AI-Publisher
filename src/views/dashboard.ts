@@ -107,11 +107,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       ? '<button onclick="window.loadJobIntoForm(' + job.id + ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ Düzenle</button><button onclick="startJob(' + job.id + ')" class="start-btn">▶ Kuyruğa Ekle</button>'
       : '';
 
-    var cancellableStatuses = ['pending', 'processing', 'processing_phase1', 'awaiting_approval'];
-    var isCancellable = cancellableStatuses.indexOf(job.status) !== -1;
-    var cancelBtn = isCancellable
-      ? '<button onclick="cancelJob(' + job.id + ')" class="cancel-btn">✕ ' + (t.cancel76) + '</button>'
-      : '';
+    var cancelBtn = ''; // Bir job prod için gönderilmediyse gösterilmesine gerek yok
 
     return `
       <div class="job-card" id="job-card-${job.id}">
@@ -133,8 +129,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
         <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
           ${startBtn}
-          ${cancelBtn}
-          ${isFailed ? `<button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_text || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'} })" class="retry-btn">Yeniden Dene</button>` : ''}
+          ${isFailed ? `<button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_translated || job.transcript_cleaned || job.transcript || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'}, differentiationDurationMode: '${job.differentiation_duration_mode || 'same'}', differentiationLayout: ${job.differentiation_layout === 1} })" class="retry-btn">Yeniden Dene</button>` : ''}
           <button onclick="deleteJob('${job.id}')" class="delete-btn">Sil</button>
         </div>
       </div>
@@ -146,6 +141,19 @@ export function buildDashboardHTML(params: DashboardParams): string {
     try {
       platforms = JSON.parse(job.target_platforms || '[]');
     } catch(e) {}
+
+    const ytCancelBtn = job.yt_status === 'publishing'
+      ? `<button onclick="cancelPublish('${job.id}', 'youtube')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+      : '';
+    const ttCancelBtn = job.tt_status === 'publishing'
+      ? `<button onclick="cancelPublish('${job.id}', 'tiktok')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+      : '';
+    const xCancelBtn = job.x_status === 'publishing'
+      ? `<button onclick="cancelPublish('${job.id}', 'x')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+      : '';
+    const metaCancelBtn = job.meta_status === 'publishing'
+      ? `<button onclick="cancelPublish('${job.id}', 'meta')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+      : '';
 
     return `
       <div class="job-card completed-job-card" id="job-card-${job.id}">
@@ -168,33 +176,45 @@ export function buildDashboardHTML(params: DashboardParams): string {
             <input type="text" id="yt_title_${job.id}" value="${job.yt_title || ''}" placeholder="YouTube Başlık">
             <textarea id="yt_desc_${job.id}" placeholder="YouTube Açıklama">${job.yt_desc || ''}</textarea>
             <input type="text" id="yt_tags_${job.id}" value="${job.yt_tags || ''}" placeholder="YouTube Etiketler">
-            <button onclick="publish('${job.id}', 'youtube')" class="pub-btn">YouTube Paylaş (${job.yt_status})</button>
+            <div style="display:flex; align-items:center;">
+              <button onclick="publish('${job.id}', 'youtube')" class="pub-btn" ${job.yt_status === 'publishing' ? 'disabled' : ''}>YouTube Paylaş (${job.yt_status})</button>
+              ${ytCancelBtn}
+            </div>
           </div>
           
           <div class="meta-section">
             <h5>TikTok</h5>
             <textarea id="tt_desc_${job.id}" placeholder="TikTok Açıklama">${job.tt_desc || ''}</textarea>
             <input type="text" id="tt_tags_${job.id}" value="${job.tt_tags || ''}" placeholder="TikTok Etiketler">
-            <button onclick="publish('${job.id}', 'tiktok')" class="pub-btn">TikTok Paylaş (${job.tt_status})</button>
+            <div style="display:flex; align-items:center;">
+              <button onclick="publish('${job.id}', 'tiktok')" class="pub-btn" ${job.tt_status === 'publishing' ? 'disabled' : ''}>TikTok Paylaş (${job.tt_status})</button>
+              ${ttCancelBtn}
+            </div>
           </div>
  
           <div class="meta-section">
             <h5>X (Twitter)</h5>
             <textarea id="x_desc_${job.id}" placeholder="X Açıklama">${job.x_desc || ''}</textarea>
             <input type="text" id="x_tags_${job.id}" value="${job.x_tags || ''}" placeholder="X Etiketler">
-            <button onclick="publish('${job.id}', 'x')" class="pub-btn">X Paylaş (${job.x_status})</button>
+            <div style="display:flex; align-items:center;">
+              <button onclick="publish('${job.id}', 'x')" class="pub-btn" ${job.x_status === 'publishing' ? 'disabled' : ''}>X Paylaş (${job.x_status})</button>
+              ${xCancelBtn}
+            </div>
           </div>
  
           <div class="meta-section">
             <h5>Meta (Reels)</h5>
             <textarea id="meta_desc_${job.id}" placeholder="Meta Açıklama">${job.meta_desc || ''}</textarea>
             <input type="text" id="meta_tags_${job.id}" value="${job.meta_tags || ''}" placeholder="Meta Etiketler">
-            <button onclick="publish('${job.id}', 'meta')" class="pub-btn">Meta Reels Paylaş (${job.meta_status})</button>
+            <div style="display:flex; align-items:center;">
+              <button onclick="publish('${job.id}', 'meta')" class="pub-btn" ${job.meta_status === 'publishing' ? 'disabled' : ''}>Meta Reels Paylaş (${job.meta_status})</button>
+              ${metaCancelBtn}
+            </div>
           </div>
           
           <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
             <button onclick="saveMeta('${job.id}')" class="save-btn">Tüm Metinleri Güncelle & Kaydet</button>
-            <button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_text || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'} })" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
+            <button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_translated || job.transcript_cleaned || job.transcript || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'}, differentiationDurationMode: '${job.differentiation_duration_mode || 'same'}', differentiationLayout: ${job.differentiation_layout === 1} })" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
             <button onclick="deleteJob('${job.id}')" class="delete-btn" style="width: 100%;">Projeyi Sil</button>
           </div>
         </div>
@@ -801,7 +821,19 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     <input type="checkbox" name="has_subtitles" value="1" checked>
                     ${t.hasSubtitles}
                   </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="differentiation_layout" value="1" checked>
+                    ${t.differentiationLayout}
+                  </label>
                 </div>
+              </div>
+              <div>
+                <label class="form-label">${t.differentiationDurationMode}</label>
+                <select name="differentiation_duration_mode" class="form-select">
+                  <option value="same">${t.same}</option>
+                  <option value="shorter">${t.shorter}</option>
+                  <option value="longer">${t.longer}</option>
+                </select>
               </div>
               <div>
                 <label class="form-label">${t.publishPlatforms}</label>

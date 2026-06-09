@@ -186,4 +186,43 @@ export function registerDifferentiationRoutes(app: Application): void {
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
+
+  // POST /approve-translation/:jobId
+  // Phase 2: User approves/edits the translation, and we generate the scene prompts
+  app.post('/approve-translation/:jobId', mediumLimiter, requireAuth, async (req, res) => {
+    const jobId = parseInt(String(req.params.jobId), 10);
+    const userId = req.session.userId;
+    const { editedTranslation } = req.body || {};
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'NOT_AUTHENTICATED' });
+    }
+    if (!jobId || Number.isNaN(jobId)) {
+      return res.status(400).json({ success: false, error: 'INVALID_JOB_ID' });
+    }
+    if (!editedTranslation || typeof editedTranslation !== 'string') {
+      return res.status(400).json({ success: false, error: 'INVALID_TRANSLATION' });
+    }
+
+    try {
+      const result = await differentiateVideoPhase2(jobId, userId, editedTranslation);
+      
+      logAudit({
+        userId,
+        action: 'differentiate.approve',
+        entityType: 'video_job',
+        entityId: jobId,
+        details: { sceneCount: result.sceneCount },
+        req
+      });
+
+      return res.json({
+        success: true,
+        jobId: result.jobId
+      });
+    } catch (err: any) {
+      console.error('[ERROR] /approve-translation failed:', err);
+      return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
+    }
+  });
 }

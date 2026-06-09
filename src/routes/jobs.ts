@@ -33,6 +33,8 @@ export function registerJobRoutes(app: Application): void {
       playlist_id, 
       has_shorts, 
       has_subtitles,
+      differentiation_layout,
+      differentiation_duration_mode,
       material_path_hidden,
       transcript_text 
     } = req.body;
@@ -48,13 +50,15 @@ export function registerJobRoutes(app: Application): void {
     const platformsJson = JSON.stringify(targetPlatforms);
     const hasShorts = has_shorts === '1' ? 1 : 0;
     const hasSubtitles = has_subtitles === '1' ? 1 : 0;
+    const differentiationLayout = differentiation_layout === '1' ? 1 : 0;
+    const differentiationDurationMode = differentiation_duration_mode || 'same';
 
     try {
       const insertResult: any = await db.run(
         `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '']
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode]
       );
 
       const newJobId = Number(insertResult.lastID);
@@ -65,7 +69,7 @@ export function registerJobRoutes(app: Application): void {
         action: 'job.create',
         entityType: 'video_job',
         entityId: newJobId,
-        details: { platforms: targetPlatforms, has_shorts: hasShorts, has_subtitles: hasSubtitles },
+        details: { platforms: targetPlatforms, has_shorts: hasShorts, has_subtitles: hasSubtitles, differentiation_layout: differentiationLayout, differentiation_duration_mode: differentiationDurationMode },
         req
       });
 
@@ -231,7 +235,7 @@ export function registerJobRoutes(app: Application): void {
         );
       }
 
-      await db.run("UPDATE video_jobs SET status = 'processing_phase1', current_stage = 'Kuyruğa Eklendi', progress_percent = 5 WHERE id = ?", [jobId]);
+      await db.run("UPDATE video_jobs SET status = 'pending', current_stage = 'Kuyruğa Eklendi', progress_percent = 5 WHERE id = ?", [jobId]);
 
       await sendToQueue(VIDEO_JOBS_QUEUE, { jobId });
       return res.json({ success: true, message: 'Proje kuyruga eklendi, uretim basliyor.' });

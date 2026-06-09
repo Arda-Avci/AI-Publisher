@@ -4,7 +4,9 @@ import {
   runFFmpegWithFallback,
   addCalloutPings,
   applyEndScreen,
-  getOrBuildEndScreen
+  getOrBuildEndScreen,
+  applyVideoDifferentiationFilters,
+  concatVideosWithCrossfade
 } from './services/videoService.js';
 import { generateStudioScenes } from './services/aiService.js';
 import axios from 'axios';
@@ -461,15 +463,28 @@ async function startProduction(job: any) {
 
     const fName = `film_${job.id}_${Date.now()}.mp4`;
     const fPath = path.join(process.cwd(), 'videolar', fName);
-    const txt = path.join(process.cwd(), 'videolar', `l_${job.id}.txt`);
-    fs.writeFileSync(txt, finalScenes.map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'));
 
-    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', fPath] }, { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', fPath] }]);
+    // Concat with crossfade transition
+    logInfo('Sahneler crossfade gecisleriyle birlestiriliyor...', { finalScenes });
+    await concatVideosWithCrossfade(finalScenes, fPath);
 
     // Temizlik
-    fs.removeSync(txt);
     for (const f of finalScenes) {
-      fs.removeSync(f);
+      try { fs.removeSync(f); } catch {}
+    }
+
+    // S5+: Video özgünleştirme (differentiation) filtrelerini uygula
+    if (job.differentiation_layout === 1) {
+      const differentiatedName = `diff_${fName}`;
+      const differentiatedPath = path.join(process.cwd(), 'videolar', differentiatedName);
+      logInfo('Video özgünleştirme filtreleri uygulanıyor...', { fPath, differentiatedPath });
+      try {
+        await applyVideoDifferentiationFilters(fPath, differentiatedPath, false); // false for horizontal
+        await fs.move(differentiatedPath, fPath, { overwrite: true });
+        logInfo('Video özgünleştirme filtreleri başarıyla uygulandı.');
+      } catch (diffErr) {
+        logWarn('Video özgünleştirme filtreleri uygulanırken hata oluştu:', diffErr);
+      }
     }
 
     // S4: Get the final horizontal video duration for percentage-based timing

@@ -526,23 +526,66 @@ def _generate_media_worker(task_id: str, data: dict):
     }
 
 
+import requests
+
+def _generate_media_worker_with_callback(task_id: str, data: dict):
+    """
+    Geliştirilmiş otonom worker: İşi bitirdiğinde Node.js sunucusuna 
+    dosyaları base64 veya multipart/form-data olarak doğrudan fırlatır.
+    """
+    callback_url = data.get("callback_url") # Node.js sunucunun adresi
+    
+    try:
+        # Mevcut üretim adımlarını tetikle
+        _generate_media_worker(task_id, data)
+        
+        # Görev başarılı bittiyse dosyaları oku ve Node.js'e gönder
+        if TASKS.get(task_id, {}).get("status") == "success" and callback_url:
+            print(f"📤 İpek yolu kuruluyor: Sonuçlar {callback_url} adresine gönderiliyor...")
+            
+            # Node.js Express/FastAPI sunucuna gönderilecek multipart payload
+            files = {}
+            if os.path.exists(LAST_VIDEO_PATH):
+                files['video'] = open(LAST_VIDEO_PATH, 'rb')
+            if os.path.exists(AUDIO_PATH):
+                files['speech'] = open(AUDIO_PATH, 'rb')
+            if os.path.exists(SUBTITLE_PATH):
+                files['subtitle'] = open(SUBTITLE_PATH, 'rb')
+                
+            payload = {
+                "task_id": task_id,
+                "status": "success",
+                "message": "Colab render işlemi başarıyla tamamlandı."
+            }
+            
+            # Backend sunucuna otonom POST atılıyor
+            response = requests.post(callback_url, data=payload, files=files, timeout=120)
+            print(f"📩 Node.js Sunucu Yanıtı: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Otonom callback hatası: {e}")
+        if callback_url:
+            requests.post(callback_url, json={"task_id": task_id, "status": "error", "message": str(e)})
+
+
 @app.route("/generate-media", methods=["POST"])
 def generate_media():
     data = request.get_json(force=True)
     task_id = str(uuid.uuid4())
-    TASKS[task_id] = {"status": "processing"}
+    TASKS[task_id] = {"status": "processing", "stage": "queued", "stagePercent": 0}
     
-    # Asenkron çalışması için thread başlatıyoruz
-    thread = threading.Thread(target=_generate_media_worker, args=(task_id, data))
+    # Yeni callback'li worker'ı thread olarak kaldırıyoruz
+    thread = threading.Thread(target=_generate_media_worker_with_callback, args=(task_id, data))
     thread.start()
     
-    return jsonify({"status": "accepted", "task_id": task_id}), 202
+    return jsonify({"status": "accepted", "task_id": task_id, "message": "İş kuyruğa alındı, bitince sunucunuza post edilecek."}), 202
 
 @app.route("/status/<task_id>", methods=["GET"])
 def task_status(task_id):
     if task_id not in TASKS:
         return jsonify({"status": "error", "message": "Task ID bulunamadı"}), 404
     return jsonify(TASKS[task_id])
+
 
 
 # ── S3: Bağımsız lip-sync endpoint ────────────────────────────────────────────
@@ -729,9 +772,8 @@ def health_check():
         }
     })
 
-# ── BAŞLATMA ──────────────────────────────────────────────────────────────────
+# ── BAŞLATMA (KRİTİK GÜNCELLEME) ──────────────────────────────────────────────
 if __name__ == "__main__":
-    # Ngrok token — env değişkeninden oku (güvenlik: hardcoded olmamalı)
     NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")
     if not NGROK_TOKEN:
         try:
@@ -748,14 +790,11 @@ if __name__ == "__main__":
             f.write(public_url.public_url)
         print("\n" + "-" * 50 + "\n")
     else:
-        print("\n⚠️ NGROK_TOKEN env değişkeni ayarlanmamış — yalnızca localhost:5000 dinleniyor.")
-        print("   Token almak için:  https://dashboard.ngrok.com/get-started/your-authtoken")
-        print("   Kolay kurulum:     Colab hücresinde:")
-        print('                       import os; os.environ["NGROK_TOKEN"] = "BURAYA_TOKEN"')
-        print("   veya yerel bilgisayarda:")
-        print("                       cd AI-Publisher && npm run setup-ngrok\n")
+        print("\n⚠️ NGROK_TOKEN eksik.")
 
     import time as _time_module
     health._start_time = _time_module.time()
-    app.run(port=5000, debug=True, use_reloader=False)
+    
+    # CRITICAL: debug=False ve threaded=True yapılarak Colab/Ngrok kilitlenmeleri önlendi.
+    app.run(port=5000, debug=False, threaded=True, use_reloader=False)
 

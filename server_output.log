@@ -1,0 +1,20 @@
+
+> ai-publisher@1.0.0 dev
+> tsx watch --ignore "videolar/**" --ignore "uploads/**" src/server.ts
+
+◇ injected env (8) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+[INFO] Redis Publisher bağlandı.
+[INFO] Redis Subscriber bağlandı.
+[INFO] PostgreSQL Veritabanı hazır.
+[INFO] RabbitMQ bağlandı ve kuyruklar (video, publish) oluşturuldu.
+[INFO] AI Publisher sunucusu aktif: http://localhost:3016
+[INFO] Garbage Collector başlatıldı. Hedef dizinler: videolar, uploads
+[INFO] RabbitMQ Worker: video_jobs_queue dinleniyor (Prefetch=3)
+[INFO] RabbitMQ Worker: publish_jobs_queue dinleniyor (Prefetch=1)
+[Fallback] yt-search returned 13 videos
+[Fallback] yt-search returned 13 videos
+[INFO] Garbage Collector: 25 adet eski geçici dosya temizlendi.

@@ -53,13 +53,13 @@ export async function startPublishQueueWorker() {
 
     try {
       if (platform === 'youtube') {
-        success = await uploadToYouTube(videoPath, jobData.yt_title || '', jobData.yt_desc || '', jobData.yt_tags || '', jobData.playlist_id);
+        success = await uploadToYouTube(videoPath, jobData.yt_title || '', jobData.yt_desc || '', jobData.yt_tags || '', jobData.playlist_id, jobId);
       } else if (platform === 'tiktok') {
-        success = await uploadToTikTok(videoPath, jobData.tt_desc || '', jobData.tt_tags || '');
+        success = await uploadToTikTok(videoPath, jobData.tt_desc || '', jobData.tt_tags || '', jobId);
       } else if (platform === 'x') {
-        success = await uploadToX(videoPath, jobData.x_desc || '', jobData.x_tags || '');
+        success = await uploadToX(videoPath, jobData.x_desc || '', jobData.x_tags || '', jobId);
       } else if (platform === 'meta') {
-        success = await uploadToMeta(videoPath, jobData.meta_desc || '', jobData.meta_tags || '');
+        success = await uploadToMeta(videoPath, jobData.meta_desc || '', jobData.meta_tags || '', jobId);
       }
 
       await db.run(

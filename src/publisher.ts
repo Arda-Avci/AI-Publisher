@@ -2,6 +2,9 @@ import { chromium, Page, ElementHandle } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
 
+export const activePublishBrowsers = new Map<string, any>();
+
+
 /**
  * Rastgele milisaniye aralığında gecikme sağlar.
  */
@@ -84,7 +87,8 @@ export async function uploadToYouTube(
   title: string, 
   desc: string, 
   tags: string, 
-  playlistIdOrName?: string
+  playlistIdOrName?: string,
+  jobId?: number
 ): Promise<boolean> {
   console.log(`[INFO] YouTube yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_youtube.json';
@@ -95,6 +99,9 @@ export async function uploadToYouTube(
 
   const isHeadless = process.env.HEADLESS !== 'false';
   const browser = await chromium.launch({ headless: isHeadless });
+  if (jobId) {
+    activePublishBrowsers.set(`${jobId}-youtube`, browser);
+  }
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
   try {
@@ -271,12 +278,15 @@ export async function uploadToYouTube(
     console.error(`[ERROR] YouTube Shorts yükleme hatası:`, error);
     return false;
   } finally {
+    if (jobId) {
+      activePublishBrowsers.delete(`${jobId}-youtube`);
+    }
     await browser.close();
   }
 }
 
 
-export async function uploadToTikTok(videoPath: string, desc: string, tags: string): Promise<boolean> {
+export async function uploadToTikTok(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
   console.log(`[INFO] TikTok yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_tiktok.json';
   if (!await fs.pathExists(authFile)) {
@@ -286,6 +296,9 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
 
   const isHeadless = process.env.HEADLESS !== 'false';
   const browser = await chromium.launch({ headless: isHeadless });
+  if (jobId) {
+    activePublishBrowsers.set(`${jobId}-tiktok`, browser);
+  }
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
   try {
@@ -328,11 +341,14 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
     console.error(`[ERROR] TikTok yükleme hatası:`, error);
     return false;
   } finally {
+    if (jobId) {
+      activePublishBrowsers.delete(`${jobId}-tiktok`);
+    }
     await browser.close();
   }
 }
 
-export async function uploadToX(videoPath: string, desc: string, tags: string): Promise<boolean> {
+export async function uploadToX(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
   console.log(`[INFO] X (Twitter) yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_x.json';
   if (!await fs.pathExists(authFile)) {
@@ -342,6 +358,9 @@ export async function uploadToX(videoPath: string, desc: string, tags: string): 
 
   const isHeadless = process.env.HEADLESS !== 'false';
   const browser = await chromium.launch({ headless: isHeadless });
+  if (jobId) {
+    activePublishBrowsers.set(`${jobId}-x`, browser);
+  }
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
   try {
@@ -369,11 +388,14 @@ export async function uploadToX(videoPath: string, desc: string, tags: string): 
     console.error(`[ERROR] X yükleme hatası:`, error);
     return false;
   } finally {
+    if (jobId) {
+      activePublishBrowsers.delete(`${jobId}-x`);
+    }
     await browser.close();
   }
 }
 
-export async function uploadToMeta(videoPath: string, desc: string, tags: string): Promise<boolean> {
+export async function uploadToMeta(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
   console.log(`[INFO] Meta Reels (Facebook/Instagram Creator Studio) yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_meta.json';
   if (!await fs.pathExists(authFile)) {
@@ -383,6 +405,9 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
 
   const isHeadless = process.env.HEADLESS !== 'false';
   const browser = await chromium.launch({ headless: isHeadless });
+  if (jobId) {
+    activePublishBrowsers.set(`${jobId}-meta`, browser);
+  }
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
   try {
@@ -428,6 +453,9 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
     console.error(`[ERROR] Meta Reels yükleme hatası:`, error);
     return false;
   } finally {
+    if (jobId) {
+      activePublishBrowsers.delete(`${jobId}-meta`);
+    }
     await browser.close();
   }
 }
