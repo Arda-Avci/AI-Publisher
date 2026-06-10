@@ -13,17 +13,48 @@ const poolConfig: PoolConfig = {
 const pool = new Pool(poolConfig);
 
 function convertQuery(sql: string): string {
-  // PostgreSQL uses '' for escaping quotes, not \'
-  // So we only track quote state for ' and "
   let counter = 1;
   let inSingleQuote = false;
   let inDoubleQuote = false;
+  let inLineComment = false;
+  let inBlockComment = false;
   let result = '';
 
   for (let i = 0; i < sql.length; i++) {
     const char = sql[i];
+    const nextChar = sql[i + 1] || '';
+    
+    if (inLineComment) {
+      result += char;
+      if (char === '\n') inLineComment = false;
+      continue;
+    }
+    
+    if (inBlockComment) {
+      result += char;
+      if (char === '*' && nextChar === '/') {
+        result += nextChar;
+        inBlockComment = false;
+        i++;
+      }
+      continue;
+    }
+    
+    if (!inSingleQuote && !inDoubleQuote) {
+      if (char === '-' && nextChar === '-') {
+        inLineComment = true;
+        result += char + nextChar;
+        i++;
+        continue;
+      }
+      if (char === '/' && nextChar === '*') {
+        inBlockComment = true;
+        result += char + nextChar;
+        i++;
+        continue;
+      }
+    }
 
-    // Toggle quote state (PostgreSQL escapes quotes by doubling: '' or "")
     if (char === "'" && !inDoubleQuote) {
       inSingleQuote = !inSingleQuote;
       result += char;
@@ -36,7 +67,6 @@ function convertQuery(sql: string): string {
       continue;
     }
 
-    // Replace ? parameter placeholders with $N outside quotes
     if (char === '?' && !inSingleQuote && !inDoubleQuote) {
       result += `$${counter++}`;
     } else {
@@ -65,8 +95,9 @@ export const db = {
   async run(sql: string, params: any[] = []): Promise<{ lastID?: number; changes?: number }> {
     const converted = convertQuery(sql);
     // RETURNING id mantığı postgres'de run sonrası insert ID'yi alabilmek için
-    const isInsert = converted.trim().toUpperCase().startsWith('INSERT');
-    const finalSql = isInsert && !converted.toUpperCase().includes('RETURNING') 
+    const isInsert = /^\\s*(?:WITH\\s+.*?)?INSERT\\s+INTO\\s+/i.test(converted);
+    const hasReturning = /\\bRETURNING\\b/i.test(converted);
+    const finalSql = isInsert && !hasReturning 
       ? converted + ' RETURNING id' 
       : converted;
 
@@ -174,13 +205,7 @@ export async function initDatabase() {
   }
 
   // Schema migrations
-  try {
-    await db.exec('ALTER TABLE video_jobs ADD COLUMN colab_task_id TEXT;');
-  } catch (e: any) {}
-  try {
-    await db.exec("ALTER TABLE video_jobs ADD COLUMN differentiation_duration_mode TEXT DEFAULT 'same';");
-  } catch (e: any) {}
-  try {
-    await db.exec('ALTER TABLE video_jobs ADD COLUMN differentiation_layout INTEGER DEFAULT 1;');
-  } catch (e: any) {}
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS colab_task_id TEXT;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_duration_mode TEXT DEFAULT 'same';");
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_layout INTEGER DEFAULT 1;');
 }

@@ -59,12 +59,8 @@ app.use(i18nMiddleware);
 app.use(themeMiddleware);
 
 // Uploads ve videolar dizinlerini statik olarak sun
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
-  setHeaders: (res) => res.setHeader('Content-Type', 'text/html; charset=utf-8')
-}));
-app.use('/videolar', express.static(path.join(process.cwd(), 'videolar'), {
-  setHeaders: (res) => res.setHeader('Content-Type', 'text/html; charset=utf-8')
-}));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/videolar', express.static(path.join(process.cwd(), 'videolar')));
 
 // Register all routes
 registerAuthRoutes(app);
