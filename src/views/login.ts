@@ -52,8 +52,8 @@ export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, l
         position: fixed;
         inset: 0;
         background:
-          radial-gradient(at 0% 0%, hsla(var(--primary), 0.12) 0%, transparent 50%),
-          radial-gradient(at 100% 100%, hsla(var(--primary), 0.08) 0%, transparent 50%);
+          radial-gradient(at 0% 0%, hsl(var() / ) 0%, transparent 50%),
+          radial-gradient(at 100% 100%, hsl(var() / ) 0%, transparent 50%);
         pointer-events: none;
         z-index: 0;
       }
@@ -70,10 +70,10 @@ export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, l
       .container {
         position: relative;
         z-index: 2;
-        background: hsla(var(--background), 0.7);
+        background: hsl(var() / );
         backdrop-filter: blur(24px) saturate(180%);
         -webkit-backdrop-filter: blur(24px) saturate(180%);
-        border: 1px solid hsla(var(--border), 0.5);
+        border: 1px solid hsl(var() / );
         padding: 40px;
         border-radius: var(--radius-2xl);
         width: 360px;
@@ -88,7 +88,7 @@ export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, l
       }
       .container:hover {
         box-shadow: 0 12px 32px -8px hsla(0 0% 0% / 0.18);
-        border-color: hsla(var(--primary), 0.3);
+        border-color: hsl(var() / );
       }
       h1 {
         font-family: var(--font-display);
@@ -122,8 +122,8 @@ export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, l
         width: 100%;
         padding: 12px 14px;
         border-radius: var(--radius-md);
-        border: 1px solid hsla(var(--border), 0.6);
-        background: hsla(var(--background), 0.5);
+        border: 1px solid hsl(var() / );
+        background: hsl(var() / );
         color: hsl(var(--foreground));
         font-family: var(--font-body);
         font-size: 0.875rem;
@@ -134,8 +134,8 @@ export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, l
       }
       input:focus {
         border-color: hsl(var(--primary));
-        background: hsla(var(--background), 0.8);
-        box-shadow: 0 0 0 3px hsla(var(--primary), 0.12);
+        background: hsl(var() / );
+        box-shadow: 0 0 0 3px hsl(var() / );
       }
       input::placeholder {
         color: hsl(var(--muted-foreground));

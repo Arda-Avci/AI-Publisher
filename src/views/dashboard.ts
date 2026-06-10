@@ -109,6 +109,23 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
     var cancelBtn = ''; // Bir job prod için gönderilmediyse gösterilmesine gerek yok
 
+    let targetPlatforms = [];
+    try { targetPlatforms = JSON.parse(job.target_platforms || '[]'); } catch(e) {}
+    
+    const jobDataJson = JSON.stringify({
+      masterPrompt: job.master_prompt || '',
+      productionNotes: job.production_notes || '',
+      characterFeatures: job.character_features || '',
+      transcriptText: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
+      playlistId: job.playlist_id || '',
+      materialPath: job.material_path || '',
+      hasShorts: job.has_shorts === 1,
+      hasSubtitles: job.has_subtitles === 1,
+      platforms: targetPlatforms,
+      differentiationDurationMode: job.differentiation_duration_mode || 'same',
+      differentiationLayout: job.differentiation_layout === 1
+    }).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+
     return `
       <div class="job-card" id="job-card-${job.id}">
         <div class="job-header">
@@ -129,7 +146,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
         <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
           ${startBtn}
-          ${isFailed ? `<button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_translated || job.transcript_cleaned || job.transcript || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'}, differentiationDurationMode: '${job.differentiation_duration_mode || 'same'}', differentiationLayout: ${job.differentiation_layout === 1} })" class="retry-btn">Yeniden Dene</button>` : ''}
+          ${isFailed ? `<button onclick="fillJobForm(${jobDataJson})" class="retry-btn">Yeniden Dene</button>` : ''}
           <button onclick="deleteJob('${job.id}')" class="delete-btn">Sil</button>
         </div>
       </div>
@@ -154,6 +171,20 @@ export function buildDashboardHTML(params: DashboardParams): string {
     const metaCancelBtn = job.meta_status === 'publishing'
       ? `<button onclick="cancelPublish('${job.id}', 'meta')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
       : '';
+
+    const jobDataJson = JSON.stringify({
+      masterPrompt: job.master_prompt || '',
+      productionNotes: job.production_notes || '',
+      characterFeatures: job.character_features || '',
+      transcriptText: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
+      playlistId: job.playlist_id || '',
+      materialPath: job.material_path || '',
+      hasShorts: job.has_shorts === 1,
+      hasSubtitles: job.has_subtitles === 1,
+      platforms: platforms,
+      differentiationDurationMode: job.differentiation_duration_mode || 'same',
+      differentiationLayout: job.differentiation_layout === 1
+    }).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
 
     return `
       <div class="job-card completed-job-card" id="job-card-${job.id}">
@@ -214,7 +245,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           
           <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
             <button onclick="saveMeta('${job.id}')" class="save-btn">Tüm Metinleri Güncelle & Kaydet</button>
-            <button onclick="fillJobForm({ masterPrompt: '${job.master_prompt.replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', productionNotes: '${(job.production_notes || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', characterFeatures: '${(job.character_features || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', transcriptText: '${(job.transcript_translated || job.transcript_cleaned || job.transcript || '').replace(/'/g, "\\'").replace(/\\n/g, "\\\\n").replace(/\\r/g, "")}', playlistId: '${(job.playlist_id || '').replace(/'/g, "\\'")}', materialPath: '${(job.material_path || '').replace(/'/g, "\\'")}', hasShorts: ${job.has_shorts === 1}, hasSubtitles: ${job.has_subtitles === 1}, platforms: ${job.target_platforms || '[]'}, differentiationDurationMode: '${job.differentiation_duration_mode || 'same'}', differentiationLayout: ${job.differentiation_layout === 1} })" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
+            <button onclick="fillJobForm(${jobDataJson})" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
             <button onclick="deleteJob('${job.id}')" class="delete-btn" style="width: 100%;">Projeyi Sil</button>
           </div>
         </div>

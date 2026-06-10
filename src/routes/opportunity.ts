@@ -221,7 +221,12 @@ async function fetchFromYouTubeAPI(
  */
 async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchResult> {
   try {
-    const r = await yts(rawQ);
+    const opts: any = { query: rawQ };
+    if (_langs && _langs.length > 0) {
+      opts.hl = _langs[0];
+      opts.gl = _langs[0] === 'en' ? 'US' : _langs[0].toUpperCase();
+    }
+    const r = await yts(opts);
     const videos: VideoResult[] = r.videos.slice(0, 20).map((v: any) => {
       const views = v.views || 0;
       const score = Math.min(15, Math.round((views / 1000) * 10) / 10);

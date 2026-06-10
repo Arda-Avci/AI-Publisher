@@ -384,8 +384,7 @@ export function getDashboardScripts(params: {
             const ytUrl = 'https://www.youtube.com/watch?v=' + encodeURIComponent(v.videoId);
             return '<div class="opp-video-card" data-vid="' + safeVid + '" ' +
                 'onmouseenter="oppShowPreview(event, ' + idx + ')" ' +
-                'onmouseleave="oppHidePreview()" ' +
-                'onmousemove="oppMovePreview(event)">' +
+                'onmouseleave="oppHidePreview()">' +
               '<div class="opp-card-thumb"><img loading="lazy" src="' + safeThumb + '" alt=""></div>' +
               '<div class="opp-card-title-2">' + safeTitle + '</div>' +
               '<div class="opp-card-channel">' +
@@ -403,7 +402,7 @@ export function getDashboardScripts(params: {
               '<button type="button" class="opp-differentiate-btn" onclick="openDifferentiateModal(window.__oppVideos[' + idx + '])">✨ Özgünleştir</button>' +
             '</div>';
           }).join('');
-
+ 
           window.__oppVideos = videos;
         } catch (err) {
           if (list) list.innerHTML =
@@ -414,7 +413,7 @@ export function getDashboardScripts(params: {
           if (meta) meta.textContent = '';
         }
       }
-
+ 
       function oppToggleDesc(btn) {
         const body = btn.nextElementSibling;
         if (!body) return;
@@ -422,9 +421,11 @@ export function getDashboardScripts(params: {
         body.style.display = open ? 'none' : 'block';
         btn.textContent = (open ? '▾ Açıklama' : '▴ Kapat');
       }
-
+ 
       function oppShowPreview(e, idx) {
         if (oppHoverTimer) clearTimeout(oppHoverTimer);
+        const target = e.target || e.srcElement;
+        const card = target ? target.closest('.opp-video-card') : null;
         oppHoverTimer = setTimeout(() => {
           const tip = document.getElementById('opp-hover-preview');
           const v = (window.__oppVideos || [])[idx];
@@ -435,26 +436,30 @@ export function getDashboardScripts(params: {
             '<div class="hp-title">' + escapeHTML(v.title) + '</div>' +
             '<div class="hp-desc">' + escapeHTML((v.description || '').slice(0, 320)) + '</div>';
           tip.style.display = 'block';
-          oppMovePreview(e);
+          
+          if (card) {
+            const rect = card.getBoundingClientRect();
+            const pad = 8;
+            const w = tip.offsetWidth || 320;
+            const h = tip.offsetHeight || 220;
+            
+            // Pop-up'ı doğrudan videonun (kartın) üzerine yerleştiriyoruz (X: ortalanmış, Y: kartın tam üst kenarı)
+            let x = rect.left + (rect.width - w) / 2;
+            let y = rect.top;
+            
+            if (x + w + pad > window.innerWidth) x = window.innerWidth - w - pad;
+            if (x < pad) x = pad;
+            if (y + h + pad > window.innerHeight) y = window.innerHeight - h - pad;
+            if (y < pad) y = pad;
+            
+            tip.style.left = x + 'px';
+            tip.style.top = y + 'px';
+          }
+          
           requestAnimationFrame(() => tip.classList.add('visible'));
         }, 500);
       }
-
-      function oppMovePreview(e) {
-        const tip = document.getElementById('opp-hover-preview');
-        if (!tip || tip.style.display === 'none') return;
-        const pad = 16;
-        const w = tip.offsetWidth || 320;
-        const h = tip.offsetHeight || 220;
-        let x = e.clientX - (w / 2);
-        let y = e.clientY - h - pad;
-        if (x + w + pad > window.innerWidth) x = window.innerWidth - w - pad;
-        if (x < pad) x = pad;
-        if (y < pad) y = e.clientY + pad;
-        tip.style.left = x + 'px';
-        tip.style.top = y + 'px';
-      }
-
+ 
       function oppHidePreview() {
         if (oppHoverTimer) { clearTimeout(oppHoverTimer); oppHoverTimer = null; }
         const tip = document.getElementById('opp-hover-preview');
@@ -539,7 +544,7 @@ export function getDashboardScripts(params: {
         const submit = document.getElementById('diff-submit-btn');
         if (submit) {
           submit.disabled = false;
-          submit.innerHTML = '✨ Özgünleştir & Çevir';
+          submit.innerHTML = '✨ Özgünleştir & Üretimi Başlat';
         }
 
         const step1 = document.getElementById('diff-step1');
@@ -616,18 +621,22 @@ export function getDashboardScripts(params: {
             showToast('Hata: ' + (data.error || 'unknown'), 'error');
             if (submit) {
               submit.disabled = false;
-              submit.innerHTML = '✨ Özgünleştir & Çevir';
+              submit.innerHTML = '✨ Özgünleştir & Üretimi Başlat';
             }
             return;
           }
 
-          oppDiffPendingJobId = data.jobId;
-          pollDifferentiationStatus(data.jobId, submit);
+          closeModal('differentiateModal');
+          closeModal('opportunityModal');
+          showToast(trMsg('Üretim otonom olarak sıraya alındı!', 'Production started autonomously!'), 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
         } catch (err) {
           showToast('Hata: ' + (err && err.message ? err.message : err), 'error');
           if (submit) {
             submit.disabled = false;
-            submit.innerHTML = '✨ Özgünleştir & Çevir';
+            submit.innerHTML = '✨ Özgünleştir & Üretimi Başlat';
           }
         } finally {
           oppDiffSubmitting = false;

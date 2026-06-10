@@ -80,7 +80,7 @@ app.use(errorHandler);
 async function startServer() {
   await initDatabase();
   await initRabbitMQ();
-  app.listen(PORT, () => {
+  app.listen(Number(PORT), '127.0.0.1', () => {
     console.log(`[INFO] AI Publisher sunucusu aktif: http://localhost:${PORT}`);
     startGarbageCollector();
     startVideoQueueWorker();

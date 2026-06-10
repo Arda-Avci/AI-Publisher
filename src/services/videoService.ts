@@ -9,23 +9,55 @@ export interface FFmpegCommand {
   args: string[];
 }
 
+import { Worker } from 'worker_threads';
+import { fileURLToPath } from 'url';
+
+let __dirnameStr = __dirname;
+
 export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<void> {
+  const workerPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.ts');
+  const isTsNode = (process as any)[Symbol.for('ts-node.register.instance')] || process.env.TS_NODE_DEV;
+
   for (let i = 0; i < commands.length; i++) {
     const { cmd, args } = commands[i];
     try {
-      console.log(`[INFO] FFmpeg çalıştırılıyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
+      console.log(`[INFO] FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
+      
       await new Promise<void>((resolve, reject) => {
-        execFile(cmd, args, (err, stdout, stderr) => {
-          if (err) {
-            reject(new Error(`Command failed with code ${err.code}. Stderr: ${stderr}`));
-          } else {
+        let workerArgs = { workerData: { cmd, args, timeoutMs: 30000 } };
+        let workerScript = workerPath;
+
+        // If running in ts-node or similar dev environment, we might need to load TS files differently
+        if (isTsNode || workerPath.endsWith('.ts')) {
+          workerScript = `
+            require('ts-node').register();
+            require('${workerPath.replace(/\\/g, '\\\\')}');
+          `;
+          workerArgs = { eval: true, workerData: { cmd, args, timeoutMs: 30000 } } as any;
+        }
+
+        const worker = new Worker(workerScript, workerArgs);
+
+        worker.on('message', (msg) => {
+          if (msg.status === 'success') {
             resolve();
+          } else if (msg.status === 'timeout_fallback') {
+            reject(new Error(msg.error));
+          } else {
+            reject(new Error(msg.error || 'Unknown worker error'));
+          }
+        });
+
+        worker.on('error', reject);
+        worker.on('exit', (code) => {
+          if (code !== 0) {
+            reject(new Error(`Worker stopped with exit code ${code}`));
           }
         });
       });
       return;
     } catch (err: any) {
-      console.warn(`[WARN] FFmpeg deneme ${i + 1} başarısız oldu. Hata: ${err.message}`);
+      console.warn(`[WARN] FFmpeg Coworker deneme ${i + 1} başarısız oldu. Hata: ${err.message}`);
       if (i === commands.length - 1) {
         throw err;
       }
@@ -306,6 +338,18 @@ export async function extractReferenceFrameAtTime(videoPath: string, timestampSe
     }
   }
   return "";
+}
+
+export async function extractLastFrame(videoPath: string): Promise<string> {
+  try {
+    const dur = await getVideoDuration(videoPath);
+    // Extract 0.15 seconds before the end to avoid EOF issues
+    const targetTime = Math.max(0, dur - 0.15);
+    return await extractReferenceFrameAtTime(videoPath, targetTime);
+  } catch (err) {
+    console.error('[ERROR] extractLastFrame failed, using default fallback:', err);
+    return await extractReferenceFrame(videoPath);
+  }
 }
 
 export async function getVideoDuration(videoPath: string): Promise<number> {

@@ -21,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.82",
     "@ai-sdk/google": "^3.0.80",
     "@ai-sdk/openai": "^3.0.68",
     "ai": "^6.0.193",
@@ -48,6 +49,8 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@types/supertest": "^7.2.0",
     "@types/yt-search": "^2.10.3",
     "supertest": "^7.2.2",

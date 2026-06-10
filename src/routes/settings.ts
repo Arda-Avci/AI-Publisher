@@ -19,6 +19,19 @@ export function registerSettingsRoutes(app: Application): void {
     res.json({ success: true, user });
   });
 
+  app.post('/api/v1/set-language', (req, res) => {
+    const { lang } = req.body;
+    if (lang === 'tr' || lang === 'en') {
+      req.session.lang = lang;
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ success: false });
+        res.json({ success: true });
+      });
+    } else {
+      res.status(400).json({ success: false, error: 'Invalid language' });
+    }
+  });
+
   app.post('/save-settings', mediumLimiter, requireAuth, async (req, res) => {
     try {
       // Mevcut kullanıcıyı çek

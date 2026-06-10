@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
+import { sendToQueue, VIDEO_JOBS_QUEUE } from '../lib/rabbitmq.js';
 import {
   createDifferentiationJob,
   runPhase1Background,
@@ -60,12 +61,8 @@ export function registerDifferentiationRoutes(app: Application): void {
         userId
       );
 
-      // Kick off the background work — DO NOT await
-      setImmediate(() => {
-        runPhase1Background(created.jobId, userId).catch((err) => {
-          console.error('[differentiate-video] background error:', err);
-        });
-      });
+      // Queue the job immediately to RabbitMQ
+      await sendToQueue(VIDEO_JOBS_QUEUE, { jobId: created.jobId });
 
       logAudit({
         userId,

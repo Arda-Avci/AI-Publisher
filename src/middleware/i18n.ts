@@ -18,10 +18,10 @@ let enMessages: Record<string, string> | null = null;
 
 function loadTranslations() {
   if (!trMessages) {
-    trMessages = fs.readJsonSync(path.join(process.cwd(), 'src', 'messages', 'tr.json'));
+    trMessages = fs.readJsonSync(path.join(process.cwd(), 'src', 'locales', 'tr.json'));
   }
   if (!enMessages) {
-    enMessages = fs.readJsonSync(path.join(process.cwd(), 'src', 'messages', 'en.json'));
+    enMessages = fs.readJsonSync(path.join(process.cwd(), 'src', 'locales', 'en.json'));
   }
 }
 
@@ -32,9 +32,11 @@ export async function i18nMiddleware(req: Request, res: Response, next: NextFunc
     console.error('[ERROR] Translation files could not be loaded:', err);
   }
 
-  let lang: 'tr' | 'en' = 'tr';
+  // Varsayılan dili seans üzerinden al, yoksa 'tr' olsun
+  let lang: 'tr' | 'en' = req.session?.lang || 'tr';
+  
   req.lang = lang;
-  req.t = trMessages || {};
+  req.t = lang === 'tr' ? (trMessages || {}) : (enMessages || {});
   res.locals.t = req.t;
   res.locals.lang = req.lang;
 

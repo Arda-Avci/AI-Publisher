@@ -248,5 +248,14 @@
   "stageShortsConversion": "Vertical Shorts Conversion",
   "stageCompleted": "Completed",
   "stageCancelled": "Cancelled",
-  "stageError": "Error Occurred"
+  "stageError": "Error Occurred",
+  "approval_title": "Pre-Production Video Approval Dashboard",
+  "label_title_text": "Video Title Text (Highlighted)",
+  "label_duration": "Video Duration Optimization",
+  "opt_same": "Keep Original Length",
+  "opt_trim": "Make It Shorter / Snappy (Trim)",
+  "opt_extend": "Deepen The Story (Extend)",
+  "label_position": "Title Position Matrix",
+  "btn_start": "Approve and Start Rendering (L4 GPU)",
+  "progress_rendering": "Chunk Rendering In Progress: "
 }

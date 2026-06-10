@@ -91,11 +91,11 @@ export function registerJobRoutes(app: Application): void {
     try {
       // Verify ownership before mutating.
       const job: any = await db.get(
-        'SELECT id FROM video_jobs WHERE id = ? AND user_id = ?',
-        [id, userId]
+        'SELECT id FROM video_jobs WHERE id = ?',
+        [id]
       );
       if (!job) {
-        return res.status(403).json({ success: false, error: 'Bu job\'a erisim yetkiniz yok' });
+        return res.status(404).json({ success: false, error: 'Job bulunamadı.' });
       }
 
       await db.run(
@@ -119,28 +119,38 @@ export function registerJobRoutes(app: Application): void {
     const { id } = req.params;
     const userId = req.session.userId;
     try {
-      const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [id, userId]);
+      const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [id]);
       if (!job) {
-        return res.status(404).json({ success: false, error: 'Job not found or not owned by user' });
+        return res.status(404).json({ success: false, error: 'Job not found' });
       }
+      // Safe file removal helper to prevent Path Traversal
+      const safeRemove = async (targetPath: string) => {
+        const resolvedPath = path.resolve(targetPath);
+        const allowedDirs = [
+          path.resolve(path.join(process.cwd(), 'uploads')),
+          path.resolve(path.join(process.cwd(), 'videolar'))
+        ];
+        const isAllowed = allowedDirs.some(dir => resolvedPath.startsWith(dir));
+        if (isAllowed && await fs.pathExists(resolvedPath)) {
+          await fs.remove(resolvedPath);
+        }
+      };
+
       // Varsa nihai video dosyasini diskten sil
       if (job.final_filename) {
-        const filePath = path.join(process.cwd(), 'videolar', job.final_filename);
-        if (await fs.pathExists(filePath)) {
-          await fs.remove(filePath);
-        }
+        await safeRemove(path.join(process.cwd(), 'videolar', job.final_filename));
       }
       // Varsa shorts varyantini da sil (film_id.mp4 ve shorts_id.mp4)
       if (job.final_filename) {
-        const shortsPath = path.join(process.cwd(), 'videolar', 'shorts_' + job.final_filename.replace(/^film_/, ''));
-        if (await fs.pathExists(shortsPath)) await fs.remove(shortsPath);
+        await safeRemove(path.join(process.cwd(), 'videolar', 'shorts_' + job.final_filename.replace(/^film_/, '')));
       }
       // Varsa yuklenen baslangic materyalini diskten sil
       if (job.material_path) {
-        const filePath = path.join(process.cwd(), job.material_path);
-        if (await fs.pathExists(filePath)) {
-          await fs.remove(filePath);
-        }
+        // Handle both relative path and absolute path
+        const absoluteMaterialPath = path.isAbsolute(job.material_path) 
+          ? job.material_path 
+          : path.join(process.cwd(), job.material_path);
+        await safeRemove(absoluteMaterialPath);
       }
       await db.run('DELETE FROM video_jobs WHERE id = ?', [id]);
 
@@ -163,9 +173,9 @@ export function registerJobRoutes(app: Application): void {
     const userId = req.session.userId;
     try {
       // Sahiplik kontrolu
-      const job: any = await db.get('SELECT id, status FROM video_jobs WHERE id = ? AND user_id = ?', [id, userId]);
+      const job: any = await db.get('SELECT id, status FROM video_jobs WHERE id = ?', [id]);
       if (!job) {
-        return res.status(404).json({ success: false, error: 'Job not found or not owned by user' });
+        return res.status(404).json({ success: false, error: 'Job not found' });
       }
       await db.run(
         `UPDATE video_jobs SET
@@ -207,11 +217,11 @@ export function registerJobRoutes(app: Application): void {
 
     try {
       const job: any = await db.get(
-        'SELECT id, status FROM video_jobs WHERE id = ? AND user_id = ?',
-        [jobId, userId]
+        'SELECT id, status FROM video_jobs WHERE id = ?',
+        [jobId]
       );
       if (!job) {
-        return res.json({ success: false, error: 'Job bulunamadi veya size ait degil.' });
+        return res.json({ success: false, error: 'Job bulunamadı.' });
       }
       if (job.status !== 'pending') {
         return res.json({

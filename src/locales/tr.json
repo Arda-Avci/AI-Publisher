@@ -248,5 +248,14 @@
   "stageShortsConversion": "Dikey Shorts Dönüşümü",
   "stageCompleted": "Tamamlandı",
   "stageCancelled": "İptal Edildi",
-  "stageError": "Hata Oluştu"
+  "stageError": "Hata Oluştu",
+  "approval_title": "Video Üretim Öncesi Onay Ekranı",
+  "label_title_text": "Video Başlık Metni (Öne Çıkan)",
+  "label_duration": "Video Uzunluk Ayarı",
+  "opt_same": "Orijinal Süreyi Koru",
+  "opt_trim": "Daha Kısa / Vurucu Yap (Kısalt)",
+  "opt_extend": "Hikayeyi Derinleştir (Uzat)",
+  "label_position": "Başlık Konum Matrisi",
+  "btn_start": "Onayla ve Üretimi Başlat (L4 GPU)",
+  "progress_rendering": "Parçalı Video İşleniyor: "
 }

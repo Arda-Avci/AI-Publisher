@@ -94,9 +94,8 @@ export const db = {
 
   async run(sql: string, params: any[] = []): Promise<{ lastID?: number; changes?: number }> {
     const converted = convertQuery(sql);
-    // RETURNING id mantığı postgres'de run sonrası insert ID'yi alabilmek için
-    const isInsert = /^\\s*(?:WITH\\s+.*?)?INSERT\\s+INTO\\s+/i.test(converted);
-    const hasReturning = /\\bRETURNING\\b/i.test(converted);
+    const isInsert = /^\s*(?:WITH\s+.*?)?INSERT\s+INTO\s+/i.test(converted);
+    const hasReturning = /\bRETURNING\b/i.test(converted);
     const finalSql = isInsert && !hasReturning 
       ? converted + ' RETURNING id' 
       : converted;

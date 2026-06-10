@@ -1,4 +1,5 @@
 import { getRabbitChannel, VIDEO_JOBS_QUEUE } from './lib/rabbitmq.js';
+import { checkZenModelsHealth } from './lib/ai-provider.js';
 import {
   extractReferenceFrame,
   runFFmpegWithFallback,
@@ -6,7 +7,8 @@ import {
   applyEndScreen,
   getOrBuildEndScreen,
   applyVideoDifferentiationFilters,
-  concatVideosWithCrossfade
+  concatVideosWithCrossfade,
+  extractLastFrame
 } from './services/videoService.js';
 import { generateStudioScenes } from './services/aiService.js';
 import axios from 'axios';
@@ -16,10 +18,13 @@ import { execFile } from 'child_process';
 import { db } from './db.js';
 import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
 import { RedisMutex } from './lib/redis-mutex.js';
+import { runDifferentiationPipeline } from './lib/differentiate.js';
 
 const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
-export const clients = new Map<number, any>();
+import { broadcastProgress } from './lib/redis.js';
+
+export const clients = new Map<number, any>(); // Deprecated, use broadcastProgress
 let isProcessing = false;
 
 // ── LOG YARDIMCILARI ───────────────────────────────────────────────────────────
@@ -40,10 +45,7 @@ function logWarn(msg: string, data?: any) {
 }
 
 function broadcast(jobId: number, data: object) {
-  const res = clients.get(jobId);
-  if (res) {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  }
+  broadcastProgress(jobId, data).catch(err => console.error('[queue broadcast] err:', err));
 }
 
 // S6: export broadcast so background tasks (e.g. publish uploads) can
@@ -75,6 +77,13 @@ export async function checkQueue() {
 }
 
 async function startProduction(job: any) {
+  // İş başında Zen modellerinin sağlığını bir kere test edip, hata alanları geçici olarak skip edelim.
+  try {
+    await checkZenModelsHealth();
+  } catch (err) {
+    console.warn('[WARN] Zen health check during job start failed:', err);
+  }
+
   const COLAB_URL = process.env.COLAB_URL;
   logInfo('═══════════════════════════════════════════════════════════════');
   logInfo('startProduction BAŞLADI', { jobId: job.id, COLAB_URL });
@@ -88,6 +97,23 @@ async function startProduction(job: any) {
   });
 
   const finalScenes: string[] = [];
+
+  // ── Otonom Fırsat Hunisi İş Akışı (Metin Çeviri ve Özgünleştirme) ──
+  if (job.source_video_id && !job.scene_prompts) {
+    logInfo('Fırsatlar Hunisi otonom iş akışı başlatılıyor...', { jobId: job.id });
+    try {
+      await runDifferentiationPipeline(job.id, job.user_id);
+      // Reload job data
+      job = await db.get("SELECT * FROM video_jobs WHERE id = ?", [job.id]);
+      if (job.status === 'awaiting_approval') {
+        logInfo('Fırsatlar Hunisi otonom iş akışı Phase 1 tamamlandı. Awaiting approval. startProduction sonlandırılıyor.', { jobId: job.id });
+        return;
+      }
+    } catch (diffErr) {
+      logError('Fırsatlar Hunisi otonom iş akışı HATA verdi:', diffErr);
+      throw diffErr;
+    }
+  }
 
   // ── S2.5 Differentiation fast-path ──
   let preGeneratedScenes: { sceneNumber: number; videoPrompt: string; speechText: string; sfxPrompt: string }[] | null = null;
@@ -206,7 +232,10 @@ async function startProduction(job: any) {
           logInfo('Colab başarıyla başlatıldı', { ngrokUrl: colab.getState().ngrokUrl });
         } catch (colabErr: any) {
           logError('Colab başlatılamadı', colabErr);
-          throw new Error('Colab Başlatılamadı: ' + colabErr.message);
+          const errorMsg = "Colab Sunucusu Hazır Değil. Lütfen Google Colab notebook'unuzu çalıştırın ve oluşturulan Ngrok URL'sini Ayarlar panelinden güncelleyin.";
+          await db.run("UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?", [errorMsg, job.id]);
+          broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
+          throw new Error('COLAB_NOT_READY');
         }
       } else {
         logInfo('Colab zaten çalışıyor', { ngrokUrl: colabState.ngrokUrl });
@@ -279,15 +308,48 @@ async function startProduction(job: any) {
 
       let finalCharacterFeatures = job.character_features;
       let referenceImageBase64 = '';
-      if (!job.source_video_id && !finalCharacterFeatures && job.material_path && !job.material_path.startsWith('http')) {
-        try {
-          const videoAbsPath = path.join(process.cwd(), job.material_path);
-          if (await fs.pathExists(videoAbsPath)) {
-             referenceImageBase64 = await extractReferenceFrame(videoAbsPath);
-             logInfo('Yerel referans görseli otomatik çıkarıldı');
+      let sendSourceVideoId = '';
+
+      if (scene.sceneNumber === 1) {
+        sendSourceVideoId = job.source_video_id || '';
+        if (!sendSourceVideoId && job.material_path) {
+          if (job.material_path.startsWith('http')) {
+            try {
+              const resImg = await axios.get(job.material_path, { responseType: 'arraybuffer' });
+              referenceImageBase64 = `data:image/jpeg;base64,${Buffer.from(resImg.data).toString('base64')}`;
+              logInfo('Thumbnail indirilip base64 yapıldı.');
+            } catch (err) {
+              logWarn('Thumbnail indirilip base64 yapılamadı:', err);
+            }
+          } else {
+            try {
+              const fileAbsPath = path.join(process.cwd(), job.material_path);
+              if (await fs.pathExists(fileAbsPath)) {
+                if (job.material_path.endsWith('.mp4') || job.material_path.endsWith('.mkv')) {
+                  referenceImageBase64 = await extractReferenceFrame(fileAbsPath);
+                  logInfo('Yerel referans videosundan ilk kare base64 olarak çıkarıldı.');
+                } else {
+                  const buffer = await fs.readFile(fileAbsPath);
+                  referenceImageBase64 = `data:image/png;base64,${buffer.toString('base64')}`;
+                  logInfo('Yerel referans görselinden base64 çıkarıldı.');
+                }
+              }
+            } catch (e) {
+              logWarn('Yerel referans görseli okunurken hata:', e);
+            }
           }
-        } catch(e) {
-          logWarn('Yerel referans görseli çıkarılırken hata', e);
+        }
+      } else {
+        // sceneNumber > 1: autoregressive continuation from previous generated scene video
+        sendSourceVideoId = ''; // Force CogVideo to use the continuation frame
+        try {
+          const prevVideoPath = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber - 1}.mp4`);
+          if (await fs.pathExists(prevVideoPath)) {
+            referenceImageBase64 = await extractLastFrame(prevVideoPath);
+            logInfo(`[INFO] Devam videosu için önceki sahnenin (${scene.sceneNumber - 1}) son karesi çıkartıldı.`);
+          }
+        } catch (e) {
+          logWarn(`[WARN] Önceki sahnenin son karesi çıkartılamadı:`, e);
         }
       }
 
@@ -295,7 +357,7 @@ async function startProduction(job: any) {
         sceneNumber: scene.sceneNumber,
         apply_lipsync: applyLipsync,
         videoPrompt: scene.videoPrompt?.substring(0, 80),
-        source_video_id: job.source_video_id
+        source_video_id: sendSourceVideoId
       });
       const response = await axios.post(`${COLAB_URL}/generate-media`, {
         scene_number: scene.sceneNumber,
@@ -304,9 +366,10 @@ async function startProduction(job: any) {
         sfx_prompt: scene.sfxPrompt,
         character_features: finalCharacterFeatures,
         reference_image_base64: referenceImageBase64,
-        source_video_id: job.source_video_id || '',
+        source_video_id: sendSourceVideoId,
         user_image_path: job.material_path,
-        apply_lipsync: applyLipsync
+        apply_lipsync: applyLipsync,
+        callback_url: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/v1/video/callback` : 'http://localhost:3010/api/v1/video/callback'
       }, { timeout: 0 });
 
       const taskId = response.data?.task_id;
