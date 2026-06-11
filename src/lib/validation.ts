@@ -71,6 +71,14 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
     }
   }
 
+  // production_template: optional, string, enum: cinematic, dynamic, simple
+  if (body.production_template) {
+    const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar'];
+    if (typeof body.production_template !== 'string' || !validTemplates.includes(body.production_template)) {
+      errors.push({ field: 'production_template', message: 'Geçersiz üretim şablonu.' });
+    }
+  }
+
   return {
     valid: errors.length === 0,
     errors

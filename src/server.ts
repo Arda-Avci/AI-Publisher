@@ -26,6 +26,9 @@ import { registerSettingsRoutes } from './routes/settings.js';
 import { registerOpportunityRoutes } from './routes/opportunity.js';
 import { registerDifferentiationRoutes } from './routes/differentiation.js';
 import { registerColabRoutes } from './routes/colab.js';
+import { registerEditorRoutes } from './routes/editor.js';
+import { registerCreditRoutes } from './routes/credits.js';
+import { registerLocalesRoutes } from './routes/locales.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -106,6 +109,9 @@ registerSettingsRoutes(app);
 registerOpportunityRoutes(app);
 registerDifferentiationRoutes(app);
 registerColabRoutes(app);
+registerEditorRoutes(app);
+registerCreditRoutes(app);
+registerLocalesRoutes(app);
 
 // Global error handler (last)
 app.use(errorHandler);

@@ -43,4 +43,12 @@ export interface VideoJob {
   colab_task_id?: string;
   tts_provider?: string;
   tts_voice?: string;
+  model_type?: string;
+  production_template?: string;
+  brand_kit_enabled?: number;
+  dubbing_lang?: string;
+  kinetic_subtitles?: number;
+  viral_score?: number;
+  auto_sfx_placement?: number;
+  audio_ducking?: number;
 }

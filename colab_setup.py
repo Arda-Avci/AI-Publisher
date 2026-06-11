@@ -59,7 +59,7 @@ packages_to_check = [
     ("yt_dlp", "import yt_dlp"),
     ("face_recognition", "import face_recognition"),
     ("decord", "import decord"),
-    ("TTS", "from TTS.api import TTS"),
+    ("rembg", "import rembg"),
     ("pyrubberband", "import pyrubberband"),
     ("gfpgan", "import gfpgan"),
     ("realesrgan", "import realesrgan"),
@@ -108,11 +108,8 @@ if not already_installed:
     # Üst sınır yok — monkey patch (ModuleProxy) 4.47+ import_utils değişikliklerini yönetir
     run_cmd("pip install --prefer-binary --no-cache-dir --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
 
-    # Coqui TTS ve sistem ses paketleri (XTTS-v2 için)
-    # torchcodec, PyTorch 2.9+ için TTS'in ihtiyaç duyduğu ses kodek kütüphanesi
-    run_cmd('apt-get install -y espeak-ng espeak')
-    run_cmd('pip install --prefer-binary --no-cache-dir coqui-tts')
-    run_cmd('pip install --prefer-binary --no-cache-dir torchcodec')
+    # Arka plan temizleme (rembg)
+    run_cmd('pip install --prefer-binary --no-cache-dir rembg')
 
     # ModelScope T2V ek paketler
     run_cmd('pip install --prefer-binary --no-cache-dir "decord>=0.6.0" "open_clip_torch"')

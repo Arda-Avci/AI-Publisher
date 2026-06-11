@@ -133,201 +133,212 @@ def flush_memory():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
-# ── 1. VİDEO ÜRETİMİ (CogVideoX-5b - Premium 6sn) ───────────────────────────────
-def generate_video_image_5b_lazy(prompt: str, image_path: str, task_id: str = None, video_model: str = "CogVideoX-5b-I2V") -> list:
+# ── 1. VİDEO ÜRETİMİ (Lazy Loading - Wan 2.1, LTX 2, Hunyuan, CogVideo) ─────────
+def generate_video_image_lazy(prompt: str, image_path: str, task_id: str = None, video_model: str = "CogVideoX-5b-I2V") -> list:
     """
-    CogVideoX Image-to-Video ile görselden video üretir. (2b veya 5b)
+    Seçilen model ile görselden video üretir.
     """
-    from diffusers import CogVideoXImageToVideoPipeline
     from diffusers.utils import load_image
-    import inspect
     
-    model_name = "THUDM/CogVideoX-5b-I2V"
-    if video_model == "CogVideoX-2b-I2V":
-        model_name = "THUDM/CogVideoX-2b-I2V"
-        
     flush_memory()
-    print(f"🎬 Görselden Video motoru ({model_name}) belleğe yükleniyor...")
-    pipe = CogVideoXImageToVideoPipeline.from_pretrained(
-        model_name,
-        torch_dtype=torch.float16
-    )
+    print(f"🎬 Görselden Video motoru ({video_model}) belleğe yükleniyor...")
     
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
     print(f"💾 Tespit Edilen GPU VRAM: {vram_gb:.2f} GB")
     
-    if vram_gb >= 18.0:
-        print("⚡ Güçlü GPU algılandı. Model tamamen GPU'ya (.to cuda) yükleniyor (Maksimum Hız)...")
-        pipe.to("cuda")
-        pipe.vae.enable_tiling() # VAE decoding OOM önleme
-    else:
-        print("🐢 Bellek koruması için CPU Offloading ve VAE Tiling etkinleştiriliyor...")
-        pipe.enable_model_cpu_offload()
-        pipe.vae.enable_tiling()
-
-    # Callback kurulumu: CogVideoX adımlarını CLI/SSE progress'e yansıtma
-    import time as _time
-    inference_start_time = _time.time()
-    sig = inspect.signature(pipe.__call__)
-    callback_kwargs = {}
-    if task_id:
-        def callback_old(step, timestep, latents):
-            pct = 15 + int((step / 30) * 15)
-            elapsed = _time.time() - inference_start_time
-            steps_done = step + 1
-            steps_left = 30 - steps_done
-            eta_sec = int((elapsed / steps_done) * steps_left) if steps_done > 0 else 520
-            _update_task(task_id, stagePercent=pct, message=f"Video üretiliyor (CogVideoX-5b)... Adım {step}/30", etaSeconds=eta_sec)
-            time.sleep(0.01) # GIL'i serbest bırakır
-            
-        def callback_new(pipe_obj, step, timestep, callback_kwargs_param):
-            pct = 15 + int((step / 30) * 15)
-            elapsed = _time.time() - inference_start_time
-            steps_done = step + 1
-            steps_left = 30 - steps_done
-            eta_sec = int((elapsed / steps_done) * steps_left) if steps_done > 0 else 520
-            _update_task(task_id, stagePercent=pct, message=f"Video üretiliyor (CogVideoX-5b)... Adım {step}/30", etaSeconds=eta_sec)
-            time.sleep(0.01) # GIL'i serbest bırakır
-            return callback_kwargs_param
-
-        if "callback_on_step_end" in sig.parameters:
-            callback_kwargs["callback_on_step_end"] = callback_new
-        elif "callback" in sig.parameters:
-            callback_kwargs["callback"] = callback_old
-            callback_kwargs["callback_steps"] = 1
-
-    print("🎬 Görselden Video üretimi başlatıldı...")
+    pipe = None
     try:
+        if "wan" in video_model.lower():
+            from diffusers import WanAnimatePipeline
+            print("Wan 2.1 I2V yükleniyor...")
+            pipe = WanAnimatePipeline.from_pretrained(
+                "Wan-AI/Wan2.1-I2V-14B-480P",
+                torch_dtype=torch.bfloat16
+            )
+        elif "ltx" in video_model.lower():
+            from diffusers import LTXImageToVideoPipeline
+            print("LTX-Video I2V yükleniyor...")
+            pipe = LTXImageToVideoPipeline.from_pretrained(
+                "Lightricks/LTX-Video",
+                torch_dtype=torch.bfloat16
+            )
+        elif "hunyuan" in video_model.lower():
+            from diffusers import HunyuanVideoPipeline
+            print("Hunyuan Video I2V yükleniyor...")
+            pipe = HunyuanVideoPipeline.from_pretrained(
+                "hunyuanvideo-community/HunyuanVideo",
+                torch_dtype=torch.bfloat16
+            )
+        else:
+            from diffusers import CogVideoXImageToVideoPipeline
+            model_name = "THUDM/CogVideoX-2b-I2V" if "2b" in video_model.lower() else "THUDM/CogVideoX-5b-I2V"
+            print(f"CogVideoX I2V ({model_name}) yükleniyor...")
+            pipe = CogVideoXImageToVideoPipeline.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16
+            )
+            
+        if vram_gb >= 18.0:
+            print("⚡ Güçlü GPU algılandı. Model GPU'ya yükleniyor...")
+            pipe.to("cuda")
+            if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+                pipe.vae.enable_tiling()
+        else:
+            print("🐢 Bellek koruması için CPU Offloading etkinleştiriliyor...")
+            pipe.enable_model_cpu_offload()
+            if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+                pipe.vae.enable_tiling()
+                
         init_image = load_image(image_path)
         with torch.inference_mode():
-            output = pipe(
-                prompt=prompt,
-                image=init_image,
-                num_frames=49,           # 6 saniye @8fps
-                num_inference_steps=30,
-                **callback_kwargs
-            )
-        frames = output.frames[0]
+            if "wan" in video_model.lower():
+                output = pipe(
+                    prompt=prompt,
+                    image=init_image,
+                    num_frames=81,
+                    num_inference_steps=30
+                )
+            elif "ltx" in video_model.lower():
+                output = pipe(
+                    image=init_image,
+                    prompt=prompt,
+                    num_frames=65,
+                    num_inference_steps=25
+                )
+            elif "hunyuan" in video_model.lower():
+                output = pipe(
+                    prompt=prompt,
+                    num_frames=65,
+                    num_inference_steps=25
+                )
+            else:
+                output = pipe(
+                    prompt=prompt,
+                    image=init_image,
+                    num_frames=49,
+                    num_inference_steps=30
+                )
+            frames = output.frames[0]
+            
     except torch.cuda.OutOfMemoryError as exc:
         print(f"❌ GPU OOM: {exc}")
-        if 'pipe' in locals():
+        if pipe is not None:
             del pipe
         flush_memory()
         raise RuntimeError("GPU OOM hatası oluştu.") from exc
     except Exception as exc:
         print(f"❌ Video üretim hatası: {exc}")
-        if 'pipe' in locals():
+        if pipe is not None:
             del pipe
         flush_memory()
         raise
     finally:
-        if 'pipe' in locals():
+        if pipe is not None:
             del pipe
         flush_memory()
+        
     return frames
 
-def generate_video_text_5b_lazy(prompt: str, task_id: str = None, video_model: str = "CogVideoX-5b") -> list:
+def generate_video_text_lazy(prompt: str, task_id: str = None, video_model: str = "CogVideoX-5b") -> list:
     """
-    CogVideoX Text-to-Video ile metinden video üretir. (2b veya 5b)
+    Seçilen model ile metinden video üretir.
     """
-    from diffusers import CogVideoXPipeline
-    import inspect
-    
-    model_name = "THUDM/CogVideoX-5b"
-    if video_model == "CogVideoX-2b":
-        model_name = "THUDM/CogVideoX-2b"
-        
     flush_memory()
-    print(f"🎬 Metinden Video motoru ({model_name}) belleğe yükleniyor...")
-    pipe = CogVideoXPipeline.from_pretrained(
-        model_name,
-        torch_dtype=torch.float16
-    )
+    print(f"🎬 Metinden Video motoru ({video_model}) belleğe yükleniyor...")
     
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
     print(f"💾 Tespit Edilen GPU VRAM: {vram_gb:.2f} GB")
     
-    if vram_gb >= 18.0:
-        print("⚡ Güçlü GPU algılandı. Model tamamen GPU'ya (.to cuda) yükleniyor (Maksimum Hız)...")
-        pipe.to("cuda")
-        pipe.vae.enable_tiling() # VAE decoding OOM önleme
-    else:
-        print("🐢 Bellek koruması için CPU Offloading ve VAE Tiling etkinleştiriliyor...")
-        pipe.enable_model_cpu_offload()
-        pipe.vae.enable_tiling()
-
-    # Callback kurulumu: CogVideoX adımlarını CLI/SSE progress'e yansıtma
-    import time as _time
-    inference_start_time = _time.time()
-    sig = inspect.signature(pipe.__call__)
-    callback_kwargs = {}
-    if task_id:
-        def callback_old(step, timestep, latents):
-            pct = 15 + int((step / 30) * 15)
-            elapsed = _time.time() - inference_start_time
-            steps_done = step + 1
-            steps_left = 30 - steps_done
-            eta_sec = int((elapsed / steps_done) * steps_left) if steps_done > 0 else 520
-            _update_task(task_id, stagePercent=pct, message=f"Video üretiliyor (CogVideoX-5b)... Adım {step}/30", etaSeconds=eta_sec)
-            time.sleep(0.01) # GIL'i serbest bırakır
-            
-        def callback_new(pipe_obj, step, timestep, callback_kwargs_param):
-            pct = 15 + int((step / 30) * 15)
-            elapsed = _time.time() - inference_start_time
-            steps_done = step + 1
-            steps_left = 30 - steps_done
-            eta_sec = int((elapsed / steps_done) * steps_left) if steps_done > 0 else 520
-            _update_task(task_id, stagePercent=pct, message=f"Video üretiliyor (CogVideoX-5b)... Adım {step}/30", etaSeconds=eta_sec)
-            time.sleep(0.01) # GIL'i serbest bırakır
-            return callback_kwargs_param
-
-        if "callback_on_step_end" in sig.parameters:
-            callback_kwargs["callback_on_step_end"] = callback_new
-        elif "callback" in sig.parameters:
-            callback_kwargs["callback"] = callback_old
-            callback_kwargs["callback_steps"] = 1
-
-    print("🎬 Metinden Video üretimi başlatıldı...")
+    pipe = None
     try:
-        with torch.inference_mode():
-            output = pipe(
-                prompt=prompt,
-                num_frames=49,           # 6 saniye @8fps
-                num_inference_steps=30,
-                **callback_kwargs
+        if "wan" in video_model.lower():
+            from diffusers import WanAnimatePipeline
+            print("Wan 2.1 T2V yükleniyor...")
+            pipe = WanAnimatePipeline.from_pretrained(
+                "Wan-AI/Wan2.1-T2V-1.3B",
+                torch_dtype=torch.bfloat16
             )
-        frames = output.frames[0]
+        elif "ltx" in video_model.lower():
+            from diffusers import LTXPipeline
+            print("LTX-Video T2V yükleniyor...")
+            pipe = LTXPipeline.from_pretrained(
+                "Lightricks/LTX-Video",
+                torch_dtype=torch.bfloat16
+            )
+        elif "hunyuan" in video_model.lower():
+            from diffusers import HunyuanVideoPipeline
+            print("Hunyuan Video T2V yükleniyor...")
+            pipe = HunyuanVideoPipeline.from_pretrained(
+                "hunyuanvideo-community/HunyuanVideo",
+                torch_dtype=torch.bfloat16
+            )
+        else:
+            from diffusers import CogVideoXPipeline
+            model_name = "THUDM/CogVideoX-2b" if "2b" in video_model.lower() else "THUDM/CogVideoX-5b"
+            print(f"CogVideoX T2V ({model_name}) yükleniyor...")
+            pipe = CogVideoXPipeline.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16
+            )
+            
+        if vram_gb >= 18.0:
+            print("⚡ Güçlü GPU algılandı. Model GPU'ya yükleniyor...")
+            pipe.to("cuda")
+            if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+                pipe.vae.enable_tiling()
+        else:
+            print("🐢 Bellek koruması için CPU Offloading etkinleştiriliyor...")
+            pipe.enable_model_cpu_offload()
+            if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+                pipe.vae.enable_tiling()
+                
+        with torch.inference_mode():
+            if "wan" in video_model.lower():
+                output = pipe(
+                    prompt=prompt,
+                    num_frames=81,
+                    num_inference_steps=30
+                )
+            elif "ltx" in video_model.lower():
+                output = pipe(
+                    prompt=prompt,
+                    num_frames=65,
+                    num_inference_steps=25
+                )
+            elif "hunyuan" in video_model.lower():
+                output = pipe(
+                    prompt=prompt,
+                    num_frames=65,
+                    num_inference_steps=25
+                )
+            else:
+                output = pipe(
+                    prompt=prompt,
+                    num_frames=49,
+                    num_inference_steps=30
+                )
+            frames = output.frames[0]
+            
     except torch.cuda.OutOfMemoryError as exc:
         print(f"❌ GPU OOM: {exc}")
-        if 'pipe' in locals():
+        if pipe is not None:
             del pipe
         flush_memory()
         raise RuntimeError("GPU OOM hatası oluştu.") from exc
     except Exception as exc:
         print(f"❌ Video üretim hatası: {exc}")
-        if 'pipe' in locals():
+        if pipe is not None:
             del pipe
         flush_memory()
         raise
     finally:
-        if 'pipe' in locals():
+        if pipe is not None:
             del pipe
         flush_memory()
+        
     return frames
 
-# ── 2. TTS ───────────────────────────────────────────────────────────────────
-_tts_model = None
-
-def get_tts():
-    global _tts_model
-    if _tts_model is None:
-        from TTS.api import TTS
-        print("🎙️ XTTS modeli belleğe yükleniyor...")
-        _tts_model = TTS(
-            model_name="tts_models/multilingual/multi-dataset/xtts_v2",
-            gpu=True
-        )
-    return _tts_model
+# ── 2. TTS (Edge & OpenAI) ────────────────────────────────────────────────────
 
 # ── 2a. RUBBERBAND SES ESNETME (Auto-Synced-Translated-Dubs) ────────────────
 def stretch_audio_to_duration(input_path, output_path, target_duration_sec):
@@ -374,30 +385,64 @@ def generate_tts_edge(text, output_path, voice="tr-TR-EmelNeural"):
     return output_path
 
 
-def synthesize_speech(text, output_path, provider="xtts", target_duration_sec=None, **kwargs):
+TTS_MODEL = None
+
+def load_tts_model():
+    global TTS_MODEL
+    if TTS_MODEL is None:
+        from TTS.api import TTS
+        import torch
+        print("🎙️ XTTS-v2 modeli GPU'ya yükleniyor...")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        TTS_MODEL = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+    return TTS_MODEL
+
+def synthesize_speech(text, output_path, provider="edge", target_duration_sec=None, **kwargs):
     """
     Çoklu TTS sağlayıcı desteği ile konuşma sentezler + 2-pass rubberband.
-    provider: "xtts" (varsayılan), "openai", "edge"
+    provider: "edge" (varsayılan), "openai", "xtts"
     """
-    if provider == "xtts":
-        tts = get_tts()
-        speaker_wav = kwargs.get("speaker_wav", "/content/karakter.wav")
-        speaker = kwargs.get("speaker", "Claribel Dervla")
-        language = kwargs.get("language", "tr")
-
-        if os.path.exists(speaker_wav):
-            tts.tts_to_file(text=text, speaker_wav=speaker_wav, language=language, file_path=output_path)
-        else:
-            tts.tts_to_file(text=text, speaker=speaker, language=language, file_path=output_path)
-
-    elif provider == "openai":
+    if provider == "openai" and OPENAI_AVAILABLE:
         generate_tts_openai(text, output_path, voice=kwargs.get("voice", "alloy"))
+    elif provider == "xtts":
+        try:
+            print("🎙️ XTTS-v2 ile sentezleme yapılıyor...")
+            model = load_tts_model()
+            speaker_wav = kwargs.get("speaker_wav", "/content/karakter.wav")
+            ref_audio_b64 = kwargs.get("reference_audio_base64", "")
+            temp_ref_path = None
+            if ref_audio_b64:
+                import tempfile
+                temp_ref = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                clean_b64 = ref_audio_b64.split("base64,")[-1]
+                temp_ref.write(base64.b64decode(clean_b64))
+                temp_ref.close()
+                speaker_wav = temp_ref.name
+                temp_ref_path = temp_ref.name
 
-    elif provider == "edge":
-        generate_tts_edge(text, output_path, voice=kwargs.get("voice", "tr-TR-EmelNeural"))
+            lang = kwargs.get("language", "tr")
+            if not os.path.exists(speaker_wav):
+                voice_name = kwargs.get("voice", "Claribel Dervla")
+                print(f"🎙️ Referans ses bulunamadı, varsayılan ses ile sentezleniyor: {voice_name}")
+                model.tts_to_file(text=text, speaker=voice_name, language=lang, file_path=output_path)
+            else:
+                print(f"🎙️ Referans ses üzerinden klonlama yapılıyor: {speaker_wav}")
+                model.tts_to_file(text=text, speaker_wav=speaker_wav, language=lang, file_path=output_path)
 
+            if temp_ref_path and os.path.exists(temp_ref_path):
+                os.unlink(temp_ref_path)
+        except Exception as e:
+            print(f"[ERROR] XTTS sentezleme hatası, Edge-TTS fallback tetikleniyor: {e}")
+            voice = kwargs.get("voice", "tr-TR-EmelNeural")
+            if not voice or voice == "Claribel Dervla":
+                voice = "tr-TR-EmelNeural"
+            generate_tts_edge(text, output_path, voice=voice)
     else:
-        raise ValueError(f"Bilinmeyen TTS sağlayıcısı: {provider}")
+        # provider == "edge" veya fallback
+        voice = kwargs.get("voice", "tr-TR-EmelNeural")
+        if not voice or voice == "Claribel Dervla":
+            voice = "tr-TR-EmelNeural"
+        generate_tts_edge(text, output_path, voice=voice)
 
     # 2-pass: Hedef süre varsa rubberband ile esnet
     if target_duration_sec and RUBBERBAND_AVAILABLE:
@@ -681,17 +726,22 @@ def _generate_media_worker(task_id: str, data: dict):
     # 1. Video
     _update_task(task_id, status="processing", stage="video_generation", stagePercent=15, message=f"Video üretiliyor ({video_model})...", etaSeconds=520)
     try:
-        # Görselden video için model seçimi
-        i2v_model = "CogVideoX-5b-I2V"
-        if "2b" in video_model.lower():
-            i2v_model = "CogVideoX-2b-I2V"
-            
         if image_path and os.path.exists(image_path):
-            print(f"Using CogVideoX-I2V ({i2v_model}) with init_image: {image_path}")
-            frames = generate_video_image_5b_lazy(final_prompt, image_path, task_id, i2v_model)
+            i2v_model = video_model
+            if "cogvideox" in video_model.lower() and "i2v" not in video_model.lower():
+                i2v_model = video_model + "-I2V"
+            elif "wan" in video_model.lower() and "i2v" not in video_model.lower():
+                i2v_model = "Wan2.1-I2V-14B"
+            elif "ltx" in video_model.lower() and "i2v" not in video_model.lower():
+                i2v_model = "LTX-Video-I2V"
+            elif "hunyuan" in video_model.lower() and "i2v" not in video_model.lower():
+                i2v_model = "HunyuanVideo-I2V"
+                
+            print(f"Using I2V model ({i2v_model}) with init_image: {image_path}")
+            frames = generate_video_image_lazy(final_prompt, image_path, task_id, i2v_model)
         else:
-            print(f"Using CogVideoX Text-to-Video ({video_model})...")
-            frames = generate_video_text_5b_lazy(final_prompt, task_id, video_model)
+            print(f"Using T2V model ({video_model})...")
+            frames = generate_video_text_lazy(final_prompt, task_id, video_model)
     except Exception as exc:
         TASKS[task_id] = {"status": "error", "message": str(exc)}
         return
@@ -920,6 +970,143 @@ def download_subtitle():
         return jsonify({"error": "Altyazı dosyası bulunamadı"}), 404
     return send_file(SUBTITLE_PATH, mimetype="text/plain", download_name="subtitle.srt")
 
+# ── RESİM EDİTÖRÜ ENTEGRASYONLARI (Odysseus Esintili) ──────────────────────────
+
+@app.route("/remove-background", methods=["POST"])
+def remove_background():
+    """rembg kütüphanesini kullanarak görselin arka planını temizler."""
+    if "image" not in request.files:
+        return jsonify({"error": "Görsel dosyası ('image') gönderilmedi"}), 400
+    
+    file = request.files["image"]
+    input_data = file.read()
+    
+    try:
+        import rembg
+        print("✂️ rembg ile arka plan temizleniyor...")
+        output_data = rembg.remove(input_data)
+        
+        import io
+        return send_file(
+            io.BytesIO(output_data),
+            mimetype="image/png",
+            as_attachment=True,
+            download_name="removed_bg.png"
+        )
+    except Exception as e:
+        print(f"❌ Arka plan silme hatası: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/inpaint-image", methods=["POST"])
+def inpaint_image():
+    """Stable Diffusion Inpaint modelini kullanarak maskelenmiş alanı prompta göre düzenler."""
+    if "image" not in request.files or "mask" not in request.files:
+        return jsonify({"error": "Görsel ('image') ve maske ('mask') dosyaları zorunludur"}), 400
+    
+    prompt = request.form.get("prompt", "")
+    if not prompt:
+        return jsonify({"error": "Prompt parametresi zorunludur"}), 400
+        
+    image_file = request.files["image"]
+    mask_file = request.files["mask"]
+    
+    image_path = "/content/inpaint_temp_img.png"
+    mask_path = "/content/inpaint_temp_mask.png"
+    output_path = "/content/inpaint_output.png"
+    
+    image_file.save(image_path)
+    mask_file.save(mask_path)
+    
+    flush_memory()
+    pipe = None
+    try:
+        from diffusers import StableDiffusionInpaintPipeline
+        from diffusers.utils import load_image
+        import torch
+        
+        print("🎨 SD Inpaint modeli (stable-diffusion-inpainting) belleğe yükleniyor...")
+        pipe = StableDiffusionInpaintPipeline.from_pretrained(
+            "runwayml/stable-diffusion-inpainting",
+            torch_dtype=torch.float16
+        )
+        pipe.to("cuda")
+        
+        init_image = load_image(image_path).convert("RGB")
+        mask_image = load_image(mask_path).convert("RGB")
+        
+        print(f"🎨 Inpaint işlemi yapılıyor, prompt: {prompt}")
+        with torch.inference_mode():
+            image = pipe(
+                prompt=prompt,
+                image=init_image,
+                mask_image=mask_image,
+                num_inference_steps=25
+            ).images[0]
+            
+        image.save(output_path)
+        return send_file(output_path, mimetype="image/png")
+    except Exception as e:
+        print(f"❌ Inpaint hatası: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if pipe is not None:
+            del pipe
+        flush_memory()
+
+@app.route("/generate-image", methods=["POST"])
+def generate_image_route():
+    """Flux veya DreamShaper kullanarak sıfırdan referans görsel / kapak üretir."""
+    data = request.get_json(force=True) or {}
+    prompt = data.get("prompt", "")
+    model_type = data.get("model_type", "dreamshaper") # dreamshaper veya flux
+    
+    if not prompt:
+        return jsonify({"error": "Prompt parametresi zorunludur"}), 400
+        
+    output_path = "/content/generated_anchor.png"
+    flush_memory()
+    pipe = None
+    
+    try:
+        import torch
+        if model_type == "flux":
+            from diffusers import FluxPipeline
+            print("🎨 Flux.1-schnell modeli belleğe yükleniyor...")
+            pipe = FluxPipeline.from_pretrained(
+                "black-forest-labs/FLUX.1-schnell",
+                torch_dtype=torch.bfloat16
+            )
+            pipe.enable_model_cpu_offload()
+            print("🎨 Flux ile görsel üretiliyor...")
+            with torch.inference_mode():
+                image = pipe(
+                    prompt=prompt,
+                    guidance_scale=0.0,
+                    num_inference_steps=4,
+                    max_sequence_length=256
+                ).images[0]
+        else:
+            from diffusers import StableDiffusionPipeline
+            print("🎨 DreamShaper 8 modeli belleğe yükleniyor...")
+            pipe = StableDiffusionPipeline.from_pretrained(
+                "Lykon/dreamshaper-8",
+                torch_dtype=torch.float16
+            )
+            pipe.to("cuda")
+            print("🎨 DreamShaper ile görsel üretiliyor...")
+            with torch.inference_mode():
+                image = pipe(prompt=prompt, num_inference_steps=20).images[0]
+                
+        image.save(output_path)
+        return send_file(output_path, mimetype="image/png")
+    except Exception as e:
+        print(f"❌ Görsel üretim hatası: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if pipe is not None:
+            del pipe
+        flush_memory()
+
 @app.route("/verify-libs", methods=["GET"])
 def verify_libs():
     report = {}
@@ -943,12 +1130,12 @@ def verify_libs():
         report["diffusers"] = {"status": "error", "message": str(e)}
         success = False
 
-    # 3. Coqui TTS (coqui-tts)
+    # 3. Rembg (Arka Plan Temizleme)
     try:
-        from TTS.api import TTS
-        report["tts"] = {"status": "ok"}
+        import rembg
+        report["rembg"] = {"status": "ok"}
     except Exception as e:
-        report["tts"] = {"status": "error", "message": str(e)}
+        report["rembg"] = {"status": "error", "message": str(e)}
         success = False
 
     # 4. AudioLDM2 (SFX)
@@ -1157,6 +1344,173 @@ def download_cover(index):
     if not os.path.exists(path):
         return jsonify({"error": "Kapak görseli bulunamadı"}), 404
     return send_file(path, mimetype="image/jpeg")
+
+# ── B-ROLL ÜRETİMİ (Pexels / Pixabay + AI Video Fallback) ──────────────────────
+@app.route("/generate-broll", methods=["POST"])
+def generate_broll():
+    data = request.json
+    prompt = data.get("prompt", "")
+    scene_number = data.get("scene_number", 1)
+    duration = data.get("duration", 6)
+    job_id = data.get("job_id", 1)
+
+    print(f"🎥 B-roll üretiliyor. Prompt: {prompt}")
+
+    pexels_key = os.environ.get("PEXELS_API_KEY", "")
+    broll_path = f"/content/broll_{job_id}_{scene_number}.mp4"
+
+    if pexels_key:
+        try:
+            headers = {"Authorization": pexels_key}
+            url = f"https://api.pexels.com/videos/search?query={prompt}&per_page=5"
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200:
+                videos = res.json().get("videos", [])
+                if videos:
+                    video_files = videos[0].get("video_files", [])
+                    mp4_files = [f for f in video_files if f.get("file_type") == "video/mp4"]
+                    if mp4_files:
+                        download_url = mp4_files[0].get("link")
+                        print(f"📥 Telifsiz Pexels videosu indiriliyor: {download_url}")
+                        video_data = requests.get(download_url, timeout=30).content
+                        with open(broll_path, "wb") as f:
+                            f.write(video_data)
+                        
+                        temp_cut = f"/content/broll_cut_{job_id}_{scene_number}.mp4"
+                        import subprocess
+                        subprocess.run([
+                            "ffmpeg", "-y", "-i", broll_path, 
+                            "-t", str(duration), "-c:v", "libx264", 
+                            "-pix_fmt", "yuv420p", "-an", temp_cut
+                        ])
+                        if os.path.exists(temp_cut):
+                            os.rename(temp_cut, broll_path)
+                        return jsonify({"status": "success", "source": "pexels", "download_url": f"/download/broll/{job_id}/{scene_number}"})
+        except Exception as e:
+            print(f"⚠️ Pexels video indirme hatası, AI fallback: {e}")
+
+    # AI Fallback (LTX-Video ile görselden/metinden video)
+    try:
+        print("🤖 AI Fallback ile video üretiliyor...")
+        black_img_path = "/content/black.jpg"
+        if not os.path.exists(black_img_path):
+            black_img = np.zeros((1920, 1080, 3), dtype=np.uint8)
+            cv2.imwrite(black_img_path, black_img)
+        
+        video_frames = generate_video_image_lazy(prompt, black_img_path, video_model="LTX-Video")
+        from diffusers.utils import export_to_video
+        export_to_video(video_frames, broll_path, fps=8)
+        return jsonify({"status": "success", "source": "ai", "download_url": f"/download/broll/{job_id}/{scene_number}"})
+    except Exception as ai_e:
+        print(f"❌ AI Fallback video üretimi hatası: {ai_e}")
+        try:
+            black_img_path = "/content/black.jpg"
+            if not os.path.exists(black_img_path):
+                black_img = np.zeros((1920, 1080, 3), dtype=np.uint8)
+                cv2.imwrite(black_img_path, black_img)
+            import subprocess
+            subprocess.run([
+                "ffmpeg", "-y", "-loop", "1", "-i", black_img_path, 
+                "-t", str(duration), "-c:v", "libx264", 
+                "-pix_fmt", "yuv420p", broll_path
+            ])
+            return jsonify({"status": "success", "source": "static_fallback", "download_url": f"/download/broll/{job_id}/{scene_number}"})
+        except Exception as f_e:
+            return jsonify({"status": "error", "message": str(f_e)}), 500
+
+# ── DUBLAJ VE YERELLEŞTİRME (XTTS v2 + Lip Sync v2) ───────────────────────────
+@app.route("/localize-dubbing", methods=["POST"])
+def localize_dubbing():
+    data = request.json
+    speech_text = data.get("speech_text", "")
+    target_lang = data.get("target_lang", "en")
+    job_id = data.get("job_id", 1)
+    scene_number = data.get("scene_number", 1)
+    ref_audio_b64 = data.get("reference_audio_base64", "")
+    speaker_wav = data.get("speaker_wav", "/content/karakter.wav")
+
+    print(f"🎙️ Dublaj yerelleştirmesi başlıyor. Dil: {target_lang}")
+
+    out_audio_path = f"/content/localized_speech_{job_id}_{scene_number}.wav"
+    
+    temp_ref_path = None
+    if ref_audio_b64:
+        try:
+            import tempfile
+            temp_ref = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+            clean_b64 = ref_audio_b64.split("base64,")[-1]
+            temp_ref.write(base64.b64decode(clean_b64))
+            temp_ref.close()
+            speaker_wav = temp_ref.name
+            temp_ref_path = temp_ref.name
+        except Exception as e:
+            print(f"[WARN] Base64 referans ses çözülemedi: {e}")
+
+    try:
+        model = load_tts_model()
+        if speaker_wav and os.path.exists(speaker_wav):
+            print(f"🎙️ Dublaj için referans ses üzerinden klonlama yapılıyor: {speaker_wav}")
+            model.tts_to_file(text=speech_text, speaker_wav=speaker_wav, language=target_lang, file_path=out_audio_path)
+        else:
+            print("🎙️ Referans ses bulunamadı, varsayılan ses ile dublaj sentezleniyor.")
+            model.tts_to_file(text=speech_text, speaker="Claribel Dervla", language=target_lang, file_path=out_audio_path)
+    except Exception as tts_e:
+        print(f"❌ XTTS dublaj sentezleme hatası: {tts_e}")
+        try:
+            print("🎙️ XTTS dublaj sentezi başarısız, Edge-TTS fallback deneniyor...")
+            voice_map = {"en": "en-US-AriaNeural", "tr": "tr-TR-EmelNeural", "es": "es-ES-ElviraNeural", "de": "de-DE-KatjaNeural", "fr": "fr-FR-DeniseNeural"}
+            fallback_voice = voice_map.get(target_lang, "en-US-AriaNeural")
+            generate_tts_edge(speech_text, out_audio_path, voice=fallback_voice)
+        except Exception as fallback_e:
+            return jsonify({"status": "error", "message": f"TTS Dubbing fallback failed: {fallback_e}"}), 500
+    finally:
+        if temp_ref_path and os.path.exists(temp_ref_path):
+            try: os.unlink(temp_ref_path)
+            except: pass
+
+    out_video_path = f"/content/localized_video_{job_id}_{scene_number}.mp4"
+    try:
+        local_video_path = f"/content/ms_{job_id}_{scene_number}.mp4"
+        if not os.path.exists(local_video_path) and os.path.exists(LAST_VIDEO_PATH):
+            local_video_path = LAST_VIDEO_PATH
+        
+        # apply_lipsync fonksiyonu colab_server.py başlangıcında tanımlıdır.
+        apply_lipsync(local_video_path, out_audio_path, out_video_path)
+    except Exception as lip_e:
+        print(f"⚠️ Lip-sync dublaj hatası: {lip_e}")
+        import subprocess
+        subprocess.run([
+            "ffmpeg", "-y", "-i", local_video_path, "-i", out_audio_path,
+            "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
+            "-shortest", out_video_path
+        ])
+
+    return jsonify({
+        "status": "success",
+        "video_url": f"/download/localized/video/{job_id}/{scene_number}",
+        "audio_url": f"/download/localized/audio/{job_id}/{scene_number}"
+    })
+
+@app.route("/download/broll/<int:job_id>/<int:scene_number>", methods=["GET"])
+def download_broll_file(job_id, scene_number):
+    path = f"/content/broll_{job_id}_{scene_number}.mp4"
+    if not os.path.exists(path):
+        return jsonify({"error": "B-roll bulunamadı"}), 404
+    return send_file(path, mimetype="video/mp4")
+
+@app.route("/download/localized/video/<int:job_id>/<int:scene_number>", methods=["GET"])
+def download_localized_video(job_id, scene_number):
+    path = f"/content/localized_video_{job_id}_{scene_number}.mp4"
+    if not os.path.exists(path):
+        return jsonify({"error": "Localized video bulunamadı"}), 404
+    return send_file(path, mimetype="video/mp4")
+
+@app.route("/download/localized/audio/<int:job_id>/<int:scene_number>", methods=["GET"])
+def download_localized_audio(job_id, scene_number):
+    path = f"/content/localized_speech_{job_id}_{scene_number}.wav"
+    if not os.path.exists(path):
+        return jsonify({"error": "Localized audio bulunamadı"}), 404
+    return send_file(path, mimetype="audio/wav")
 
 # ── HEALTH CHECK ──────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])

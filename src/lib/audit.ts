@@ -30,7 +30,8 @@ export type AuditAction =
   | 'colab.start'
   | 'colab.stop'
   | 'colab.connect'
-  | 'job.select_cover';
+  | 'job.select_cover'
+  | 'scene.regenerate';
 
 export interface AuditEntry {
   userId: number | null | undefined;

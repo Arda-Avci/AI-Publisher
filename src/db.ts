@@ -122,12 +122,16 @@ export async function initDatabase() {
       youtube_api_key TEXT,
       sample_cover_base64 TEXT,
       personal_avatar_base64 TEXT,
+      personal_voice_base64 TEXT,
       text_position_grid TEXT,
       default_preset_tone TEXT,
       preferred_language TEXT DEFAULT 'tr',
       selected_theme TEXT DEFAULT 'default',
       apply_lipsync INTEGER DEFAULT 1,
-      apply_end_screen INTEGER DEFAULT 1
+      apply_endscreen INTEGER DEFAULT 1,
+      credits INTEGER DEFAULT 100,
+      monthly_credit_limit INTEGER DEFAULT 100,
+      credit_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     
     CREATE TABLE IF NOT EXISTS video_jobs (
@@ -172,7 +176,8 @@ export async function initDatabase() {
       transcript_cleaned TEXT,
       transcript_translated TEXT,
       scene_prompts TEXT,
-      colab_task_id TEXT
+      colab_task_id TEXT,
+      production_template TEXT DEFAULT 'cinematic'
     );
 
     CREATE TABLE IF NOT EXISTS audit_log (
@@ -211,4 +216,53 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS cover_images TEXT;');
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_provider TEXT DEFAULT 'xtts';");
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_voice TEXT DEFAULT 'Claribel Dervla';");
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS model_type TEXT DEFAULT 'CogVideoX-5b';");
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS production_template TEXT DEFAULT 'cinematic';");
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS brand_kit_enabled INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_lang TEXT;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS viral_score INTEGER;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_sfx_placement INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS audio_ducking INTEGER DEFAULT 0;');
+
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 100;');
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_credit_limit INTEGER DEFAULT 100;');
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_logo_base64 TEXT;');
+  await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_primary_color TEXT DEFAULT '#00F2FE';");
+  await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_secondary_color TEXT DEFAULT '#9B51E0';");
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_font_path TEXT;');
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS personal_voice_base64 TEXT;');
+
+  // credit_transactions tablosu kurulumu
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS credit_transactions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      amount INTEGER NOT NULL,
+      transaction_type VARCHAR(50) NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_credit_tr_user ON credit_transactions(user_id);
+  `);
+
+  // video_scenes tablosu kurulumu
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS video_scenes (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER REFERENCES video_jobs(id) ON DELETE CASCADE,
+      scene_number INTEGER NOT NULL,
+      video_prompt TEXT NOT NULL,
+      speech_text TEXT,
+      sfx_prompt TEXT,
+      camera_motion VARCHAR(50) DEFAULT 'none',
+      image_path TEXT,
+      mask_path TEXT,
+      video_path TEXT,
+      audio_path TEXT,
+      status VARCHAR(20) DEFAULT 'pending',
+      sort_order INTEGER NOT NULL
+    );
+  `);
 }

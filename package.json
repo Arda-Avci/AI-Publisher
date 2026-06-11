@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch --ignore \"videolar/**\" --ignore \"uploads/**\" src/server.ts",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "tsx watch --ignore \"videolar/**\" --ignore \"uploads/**\" src/server.ts",
+    "dev:frontend": "npm --prefix client run dev",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run test",
@@ -55,6 +57,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/supertest": "^7.2.0",
     "@types/yt-search": "^2.10.3",
+    "concurrently": "^10.0.3",
     "eslint": "^10.4.1",
     "supertest": "^7.2.2",
     "tsx": "^4.22.4",

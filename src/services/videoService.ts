@@ -448,3 +448,281 @@ export async function concatVideosWithCrossfade(
     { cmd: 'ffmpeg', args }
   ]);
 }
+
+// ── YENİ: Akıllı Ses ve Müzik Ördekleme Filtresi (Smart Audio Ducking) ──
+export async function applySmartAudioDucking(
+  videoPath: string,
+  speechAudioPath: string,
+  bgMusicPath: string,
+  outputPath: string
+): Promise<void> {
+  // sidechaincompress filtresi ile konuşma sesi geldiğinde arka plan müziğinin sesini kısıyoruz.
+  // [2:a] = bgMusicPath, [1:a] = speechAudioPath (anlatıcı)
+  // threshold=0.15: Konuşma eşiği. ratio=3.0: Kısma oranı.
+  const filter = [
+    `[2:a]volume=0.20[bg]`, // Müziği baştan biraz kıs
+    `[bg][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`,
+    `[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`
+  ].join(';');
+
+  const args = [
+    '-y',
+    '-i', videoPath,
+    '-i', speechAudioPath,
+    '-i', bgMusicPath,
+    '-filter_complex', filter,
+    '-map', '0:v',
+    '-map', '[aout]',
+    '-c:v', 'copy',
+    '-c:a', 'aac',
+    '-shortest',
+    outputPath
+  ];
+
+  await runFFmpegWithFallback([
+    { cmd: 'ffmpeg', args }
+  ]);
+}
+
+// Helper: SRT zaman formatını saniyeye çevir
+function parseSrtTimeToSeconds(srtTime: string): number {
+  const parts = srtTime.split(':');
+  const secsParts = parts[2].split(',');
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const s = parseInt(secsParts[0], 10);
+  const ms = parseInt(secsParts[1], 10);
+  return h * 3600 + m * 60 + s + ms / 1000;
+}
+
+// Helper: Saniyeyi ASS zaman formatına çevir
+function formatSecondsToAssTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 100);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+}
+
+// Helper: SRT dosyasını Alex Hormozi stili kinetik ASS dosyasına dönüştür
+export async function convertSrtToKineticAss(
+  srtPath: string,
+  assPath: string,
+  primaryColor = '#00F2FE', // Neon Cyan
+  secondaryColor = '#FFFFFF', // Beyaz
+  fontName = 'Arial'
+): Promise<void> {
+  const content = await fs.readFile(srtPath, 'utf-8');
+  const blocks = content.split(/\r?\n\r?\n/);
+  const events: string[] = [];
+
+  const hexToAssColor = (hex: string): string => {
+    let cleaned = hex.replace('#', '');
+    if (cleaned.length === 6) {
+      const r = cleaned.substring(0, 2);
+      const g = cleaned.substring(2, 4);
+      const b = cleaned.substring(4, 6);
+      return `&H00${b}${g}${r}&`; // ASS formatı AABBGGRR (Blue Green Red)
+    }
+    return '&H00FFFFFF&';
+  };
+
+  const assPrimary = hexToAssColor(primaryColor);
+  const assSecondary = hexToAssColor(secondaryColor);
+
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 3) continue;
+    const timeLine = lines[1];
+    const textLines = lines.slice(2).join(' ').trim();
+    if (!timeLine || !timeLine.includes('-->')) continue;
+
+    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
+    const startSec = parseSrtTimeToSeconds(startStr);
+    const endSec = parseSrtTimeToSeconds(endStr);
+    const totalDuration = endSec - startSec;
+
+    const words = textLines.split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) continue;
+
+    const wordDuration = totalDuration / words.length;
+
+    for (let i = 0; i < words.length; i++) {
+      const wStart = startSec + i * wordDuration;
+      const wEnd = wStart + wordDuration;
+
+      const textParts = words.map((w, idx) => {
+        if (idx === i) {
+          // Aktif kelimeyi büyüt ve primary renkte yap
+          return `{\\fscx125\\fscy125\\c${assPrimary}\\b1}${w}{\\r}`;
+        } else {
+          // Diğer kelimeleri normal boyutta ve secondary renkte yap
+          return `{\\c${assSecondary}\\b0}${w}`;
+        }
+      });
+
+      const startAss = formatSecondsToAssTime(wStart);
+      const endAss = formatSecondsToAssTime(wEnd);
+      events.push(`Dialogue: 0,${startAss},${endAss},Default,,0,0,0,,${textParts.join(' ')}`);
+    }
+  }
+
+  const assHeader = `[Script Info]
+Title: Kinetic Subtitles
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,${fontName},42,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,10,10,120,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+`;
+
+  await fs.writeFile(assPath, assHeader + events.join('\n'), 'utf-8');
+}
+
+// ── YENİ: Kinetik Altyazı Gömme Filtresi ──
+export async function applyKineticSubtitles(
+  videoPath: string,
+  srtPath: string,
+  outputPath: string,
+  primaryColor?: string,
+  secondaryColor?: string,
+  fontPath?: string
+): Promise<void> {
+  const assPath = videoPath.replace('.mp4', '_kinetic.ass');
+  const fontName = fontPath ? path.basename(fontPath, path.extname(fontPath)) : 'Arial';
+
+  await convertSrtToKineticAss(srtPath, assPath, primaryColor, secondaryColor, fontName);
+
+  // FFmpeg ass filtresi ile altyazıyı videoya gömüyoruz
+  const assFilterPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+  const args = [
+    '-y',
+    '-i', videoPath,
+    '-vf', `ass=${assFilterPath}`,
+    '-c:a', 'copy',
+    outputPath
+  ];
+
+  try {
+    await runFFmpegWithFallback([
+      { cmd: 'ffmpeg', args }
+    ]);
+  } finally {
+    if (await fs.pathExists(assPath)) {
+      await fs.remove(assPath);
+    }
+  }
+}
+
+// ── YENİ: Marka Kiti Logo Overlay Filtresi ──
+export async function applyBrandKit(
+  videoPath: string,
+  logoBase64: string,
+  positionGrid: string, // örn: 'top_right', 'bottom_left'
+  outputPath: string
+): Promise<void> {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  await fs.ensureDir(uploadsDir);
+  const logoPath = path.join(uploadsDir, `brand_logo_temp_${Date.now()}.png`);
+  
+  const b64 = logoBase64.replace(/^data:image\/\w+;base64,/, '');
+  await fs.writeFile(logoPath, Buffer.from(b64, 'base64'));
+
+  // Video boyutlarını ffprobe ile alalım
+  const { stdout: dims } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+    execFile(
+      'ffprobe',
+      ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath],
+      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
+    );
+  });
+
+  const [vW, vH] = dims.trim().split('x').map(Number);
+  const logoW = Math.round(vW * 0.15); // Logonun genişliği videonun %15'i kadar olsun
+
+  // Konumlandırma koordinatları
+  let overlayX = 'W-w-20';
+  let overlayY = '20';
+
+  if (positionGrid === 'top_left') {
+    overlayX = '20';
+    overlayY = '20';
+  } else if (positionGrid === 'top_center') {
+    overlayX = '(W-w)/2';
+    overlayY = '20';
+  } else if (positionGrid === 'bottom_left') {
+    overlayX = '20';
+    overlayY = 'H-h-20';
+  } else if (positionGrid === 'bottom_right') {
+    overlayX = 'W-w-20';
+    overlayY = 'H-h-20';
+  } else if (positionGrid === 'bottom_center') {
+    overlayX = '(W-w)/2';
+    overlayY = 'H-h-20';
+  }
+
+  const filter = `[1:v]scale=${logoW}:-1[logo];[0:v][logo]overlay=x=${overlayX}:y=${overlayY}`;
+
+  const args = [
+    '-y',
+    '-i', videoPath,
+    '-i', logoPath,
+    '-filter_complex', filter,
+    '-map', '0:a?',
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'copy',
+    outputPath
+  ];
+
+  try {
+    await runFFmpegWithFallback([
+      { cmd: 'ffmpeg', args }
+    ]);
+  } finally {
+    if (await fs.pathExists(logoPath)) {
+      await fs.remove(logoPath);
+    }
+  }
+}
+
+// ── YENİ: Spatial Audio (Uzamsal Ses) Pan Miksaj Filtresi ──
+export async function applySpatialAudioMix(
+  videoPath: string,
+  sfxPath: string,
+  positionX: number, // -1 (tam sol) ile +1 (tam sağ) arası
+  outputPath: string
+): Promise<void> {
+  // Stereo panner formülü: sol kanal katsayısı ve sağ kanal katsayısı
+  const panLeft = ((1 - positionX) / 2).toFixed(2);
+  const panRight = ((1 + positionX) / 2).toFixed(2);
+
+  // [1:a] ses efektini panleyip ana sesle [0:a] karıştırıyoruz
+  // Not: Bazı ses efektleri mono olabilir, pan filtresi bunu stereo pan'e çevirir.
+  const filter = [
+    `[1:a]pan=stereo|c0=${panLeft}*c0|c1=${panRight}*c0[sfx_panned]`,
+    `[0:a][sfx_panned]amix=inputs=2:duration=first:dropout_transition=0[aout]`
+  ].join(';');
+
+  const args = [
+    '-y',
+    '-i', videoPath,
+    '-i', sfxPath,
+    '-filter_complex', filter,
+    '-map', '0:v',
+    '-map', '[aout]',
+    '-c:v', 'copy',
+    '-c:a', 'aac',
+    outputPath
+  ];
+
+  await runFFmpegWithFallback([
+    { cmd: 'ffmpeg', args }
+  ]);
+}
+

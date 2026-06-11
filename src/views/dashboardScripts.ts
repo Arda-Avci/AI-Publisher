@@ -1031,6 +1031,26 @@ export function getDashboardScripts(params: {
             document.getElementById('setting_avatar_base64').value = data.user.personal_avatar_base64;
             document.getElementById('avatar_preview').innerHTML = '<img src="' + data.user.personal_avatar_base64 + '" style="max-width:80px;border-radius:50%;border:2px solid hsl(var(--primary));margin-top:0.5rem;">';
           }
+          // Brand kit loading
+          const primaryColorEl = document.getElementById('setting_brand_primary_color');
+          if (primaryColorEl) primaryColorEl.value = data.user.brand_primary_color || '#00F2FE';
+          const secondaryColorEl = document.getElementById('setting_brand_secondary_color');
+          if (secondaryColorEl) secondaryColorEl.value = data.user.brand_secondary_color || '#9B51E0';
+          const fontPathEl = document.getElementById('setting_brand_font_path');
+          if (fontPathEl) fontPathEl.value = data.user.brand_font_path || '';
+          if (data.user.brand_logo_base64) {
+            const logoInput = document.getElementById('setting_brand_logo_base64');
+            if (logoInput) logoInput.value = data.user.brand_logo_base64;
+            const logoPreview = document.getElementById('brand_logo_preview');
+            if (logoPreview) logoPreview.innerHTML = '<img src="' + data.user.brand_logo_base64 + '" style="max-width:80px;border-radius:4px;border:2px solid hsl(var(--primary));margin-top:0.5rem;">';
+          }
+          // Personal voice loading
+          if (data.user.personal_voice_base64) {
+            const voiceInput = document.getElementById('setting_personal_voice_base64');
+            if (voiceInput) voiceInput.value = data.user.personal_voice_base64;
+            const voicePreview = document.getElementById('personal_voice_preview');
+            if (voicePreview) voicePreview.innerHTML = '🎵 Ses dosyası yüklü (' + Math.round(data.user.personal_voice_base64.length * 0.75 / 1024) + ' KB)';
+          }
         }
       }
 
@@ -1051,8 +1071,28 @@ export function getDashboardScripts(params: {
         const applyLipsync = lipsyncEl ? (lipsyncEl.checked ? 1 : 0) : 1;
         const endScreenEl = document.getElementById('setting_apply_end_screen');
         const applyEndScreen = endScreenEl ? (endScreenEl.checked ? 1 : 0) : 1;
-        const payload = { youtube_api_key: key, text_position_grid: grid, default_preset_tone: tone, apply_lipsync: applyLipsync, apply_end_screen: applyEndScreen };
+
+        // Brand kit values
+        const primaryColor = document.getElementById('setting_brand_primary_color')?.value || '#00F2FE';
+        const secondaryColor = document.getElementById('setting_brand_secondary_color')?.value || '#FFFFFF';
+        const fontPath = document.getElementById('setting_brand_font_path')?.value || '';
+        const brandLogo = document.getElementById('setting_brand_logo_base64')?.value || '';
+        const personalVoice = document.getElementById('setting_personal_voice_base64')?.value || '';
+
+        const payload = { 
+          youtube_api_key: key, 
+          text_position_grid: grid, 
+          default_preset_tone: tone, 
+          apply_lipsync: applyLipsync, 
+          apply_end_screen: applyEndScreen,
+          brand_primary_color: primaryColor,
+          brand_secondary_color: secondaryColor,
+          brand_font_path: fontPath,
+          brand_logo_base64: brandLogo,
+          personal_voice_base64: personalVoice
+        };
         if (avatar) payload.personal_avatar_base64 = avatar;
+        
         const res = await fetch('/save-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1067,6 +1107,46 @@ export function getDashboardScripts(params: {
         }
       }
 
+      async function analyzeViralScore(jobId) {
+        const btn = document.getElementById('viral-btn-' + jobId);
+        const resultDiv = document.getElementById('viral_score_result_' + jobId);
+        if (!btn || !resultDiv) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin">⏳</span> AI Viralite Analizi Yapılıyor...';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<div style="opacity:0.6;font-family:\'JetBrains Mono\',monospace;">Kapak ve ilk 3 saniyelik kanca inceleniyor...</div>';
+
+        try {
+          const res = await fetch('/api/v1/jobs/' + jobId + '/viral-score', { method: 'POST' });
+          const data = await res.json();
+          if (data.success && data.analysis) {
+            const { score, hookQuality, pacingFeedback, visualAppeal, suggestions } = data.analysis;
+            resultDiv.innerHTML = 
+              '<div style="font-weight:bold; color:hsl(var(--primary)); margin-bottom:8px; font-size: 1rem;">🔥 Analiz Tamamlandı (Skor: ' + score + '/100)</div>' +
+              '<div style="margin-bottom:6px;"><strong>Kanca Kalitesi:</strong> ' + hookQuality + '</div>' +
+              '<div style="margin-bottom:6px;"><strong>Tempo Değerlendirmesi:</strong> ' + pacingFeedback + '</div>' +
+              '<div style="margin-bottom:6px;"><strong>Görsel Çekicilik:</strong> ' + visualAppeal + '</div>' +
+              '<div style="margin-top:8px; font-weight:600;">💡 İyileştirme Tavsiyeleri:</div>' +
+              '<ul style="margin-top:4px; padding-left:16px; list-style-type:disc; line-height: 1.4;">' +
+                suggestions.map(s => '<li>' + s + '</li>').join('') +
+              '</ul>';
+            btn.innerHTML = '📈 AI Viralite Analizini Yenile';
+            btn.disabled = false;
+          } else {
+            showToast('Viralite analizi hatası.', 'error');
+            resultDiv.style.display = 'none';
+            btn.disabled = false;
+            btn.innerHTML = '📈 AI Viralite Analizi Yap';
+          }
+        } catch (err) {
+          showToast('Bağlantı hatası.', 'error');
+          resultDiv.style.display = 'none';
+          btn.disabled = false;
+          btn.innerHTML = '📈 AI Viralite Analizi Yap';
+        }
+      }
+
       function encodeImageFileAsURL(element, type) {
         const file = element.files[0];
         if (!file) return;
@@ -1075,6 +1155,18 @@ export function getDashboardScripts(params: {
           document.getElementById('setting_' + type + '_base64').value = reader.result;
           const preview = document.getElementById(type + '_preview');
           if (preview) preview.innerHTML = '<img src="' + reader.result + '" style="max-width:80px;border-radius:50%;border:2px solid hsl(var(--primary));margin-top:0.5rem;">';
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function encodeAudioFileAsURL(element) {
+        const file = element.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = function() {
+          document.getElementById('setting_personal_voice_base64').value = reader.result;
+          const preview = document.getElementById('personal_voice_preview');
+          if (preview) preview.innerHTML = '🎵 Ses dosyası başarıyla yüklendi ve kodlandı (' + Math.round(file.size / 1024) + ' KB)';
         };
         reader.readAsDataURL(file);
       }

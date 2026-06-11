@@ -52,6 +52,13 @@ export function registerSettingsRoutes(app: Application): void {
       const preferred_language = req.body.preferred_language !== undefined ? req.body.preferred_language : current.preferred_language;
       const selected_theme = req.body.selected_theme !== undefined ? req.body.selected_theme : current.selected_theme;
 
+      // Brand Kit Fields
+      const brand_logo_base64 = req.body.brand_logo_base64 !== undefined ? req.body.brand_logo_base64 : current.brand_logo_base64;
+      const brand_primary_color = req.body.brand_primary_color !== undefined ? req.body.brand_primary_color : current.brand_primary_color;
+      const brand_secondary_color = req.body.brand_secondary_color !== undefined ? req.body.brand_secondary_color : current.brand_secondary_color;
+      const brand_font_path = req.body.brand_font_path !== undefined ? req.body.brand_font_path : current.brand_font_path;
+      const personal_voice_base64 = req.body.personal_voice_base64 !== undefined ? req.body.personal_voice_base64 : current.personal_voice_base64;
+
       const applyLipsyncToSave = req.body.apply_lipsync !== undefined ? (req.body.apply_lipsync ? 1 : 0) : current.apply_lipsync;
       const applyEndScreenToSave = req.body.apply_end_screen !== undefined ? (req.body.apply_end_screen ? 1 : 0) : current.apply_end_screen;
 
@@ -71,7 +78,12 @@ export function registerSettingsRoutes(app: Application): void {
         selected_theme = ?,
         apply_lipsync = ?,
         apply_end_screen = ?,
-        password = ?
+        password = ?,
+        brand_logo_base64 = ?,
+        brand_primary_color = ?,
+        brand_secondary_color = ?,
+        brand_font_path = ?,
+        personal_voice_base64 = ?
         WHERE id = ?`,
         [
           youtube_api_key,
@@ -84,6 +96,11 @@ export function registerSettingsRoutes(app: Application): void {
           applyLipsyncToSave,
           applyEndScreenToSave,
           passwordToSave,
+          brand_logo_base64,
+          brand_primary_color,
+          brand_secondary_color,
+          brand_font_path,
+          personal_voice_base64,
           req.session.userId
         ]
       );

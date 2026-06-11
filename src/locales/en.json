@@ -257,5 +257,21 @@
   "opt_extend": "Deepen The Story (Extend)",
   "label_position": "Title Position Matrix",
   "btn_start": "Approve and Start Rendering (L4 GPU)",
-  "progress_rendering": "Chunk Rendering In Progress: "
+  "progress_rendering": "Chunk Rendering In Progress: ",
+  "userCredits": "Your Credits: {{credits}} / {{limit}}",
+  "insufficientCredits": "Insufficient Credits",
+  "creditHistory": "Recent Transactions",
+  "creditResetDate": "Renewal: {{date}}",
+  "creditUsage": "Credit Usage",
+  "creditRefund": "Credit Refund",
+  "creditGrant": "Monthly Grant",
+  "productionTemplate": "Production Template / Video Style",
+  "templateCinematic": "Cinematic Visual Feast (Hunyuan AI)",
+  "templateDynamic": "Dynamic Social Media (Wan 2.1 AI)",
+  "templateSimple": "Fast & Simple Render (LTX AI)",
+  "templatePixar": "Pixar 3D Cartoon / Animation (Wan 2.1)",
+  "templateCinematicDesc": "Runs the Hunyuan AI model asynchronously for ultra-detailed visual quality, artistic camera movements, and cinematic depth.",
+  "templateDynamicDesc": "Triggers the Wan 2.1 AI model asynchronously for dynamic, lively movements and a balanced duration/quality ratio.",
+  "templateSimpleDesc": "Deploys the LTX AI model for fast render times, social media shorts drafts, and simple scene transitions.",
+  "templatePixarDesc": "Runs the Wan 2.1 model with autonomous prompt styling for high-quality Pixar-style 3D animations and cartoon videos."
 }

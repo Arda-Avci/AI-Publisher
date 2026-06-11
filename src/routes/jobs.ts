@@ -9,6 +9,7 @@ import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
 import { logAudit } from '../lib/audit.js';
 import { validateCreateJob, validateSaveMeta } from '../lib/validation.js';
+import { CreditService } from '../services/creditService.js';
 
 /**
  * Job lifecycle routes:
@@ -44,7 +45,8 @@ export function registerJobRoutes(app: Application): void {
       material_path_hidden,
       transcript_text,
       tts_provider,
-      tts_voice
+      tts_voice,
+      production_template
     } = req.body;
     let materialPath = '';
     if (req.file) {
@@ -64,11 +66,13 @@ export function registerJobRoutes(app: Application): void {
     try {
       const finalTtsProvider = tts_provider || 'xtts';
       const finalTtsVoice = tts_voice || (finalTtsProvider === 'openai' ? 'alloy' : 'Claribel Dervla');
+      const finalProductionTemplate = production_template || 'cinematic';
+      
       const insertResult: any = await db.run(
         `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode, finalTtsProvider, finalTtsVoice]
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode, finalTtsProvider, finalTtsVoice, finalProductionTemplate]
       );
 
       const newJobId = Number(insertResult.lastID);
@@ -232,7 +236,7 @@ export function registerJobRoutes(app: Application): void {
 
     try {
       const job: any = await db.get(
-        'SELECT id, status FROM video_jobs WHERE id = ?',
+        'SELECT id, status, total_scenes, differentiation_layout FROM video_jobs WHERE id = ?',
         [jobId]
       );
       if (!job) {
@@ -242,6 +246,21 @@ export function registerJobRoutes(app: Application): void {
         return res.json({
           success: false,
           error: "Job '" + job.status + "' durumunda, baslatilamaz. Sadece 'pending' durumundaki joblar baslatilabilir."
+        });
+      }
+
+      // Kredi ön-kontrolü
+      const userCredits = await CreditService.getUserCredits(userId);
+      const totalScenes = job.total_scenes || 1;
+      let estimatedRequiredCredits = totalScenes * 10 + 5;
+      if (job.differentiation_layout === 1) {
+        estimatedRequiredCredits += 15;
+      }
+      
+      if (userCredits.credits < estimatedRequiredCredits) {
+        return res.json({ 
+          success: false, 
+          error: `Yetersiz Kredi! Bu işlem için en az ${estimatedRequiredCredits} kredi gerekiyor. Mevcut Krediniz: ${userCredits.credits}` 
         });
       }
 
@@ -381,4 +400,233 @@ export function registerJobRoutes(app: Application): void {
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
+
+  // ── TIMELINE SCENE ROTASI: GET /api/v1/jobs/:jobId/scenes ──
+  app.get('/api/v1/jobs/:jobId/scenes', requireAuth, async (req, res) => {
+    const jobId = parseInt(req.params.jobId as string, 10);
+    try {
+      const scenes = await db.all('SELECT * FROM video_scenes WHERE job_id = ? ORDER BY sort_order ASC', [jobId]);
+      res.json({ success: true, scenes });
+    } catch (err: any) {
+      console.error('[ERROR] GET /api/v1/jobs/:jobId/scenes failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── TIMELINE SCENE ROTASI: POST /api/v1/jobs/:jobId/scenes (Toplu Güncelleme) ──
+  app.post('/api/v1/jobs/:jobId/scenes', mediumLimiter, requireAuth, express.json(), async (req, res) => {
+    const jobId = parseInt(req.params.jobId as string, 10);
+    const { scenes } = req.body;
+
+    if (!Array.isArray(scenes)) {
+      return res.status(400).json({ success: false, error: 'scenes bir dizi olmalıdır.' });
+    }
+
+    try {
+      // Sahiplik kontrolü
+      const jobExists = await db.get('SELECT id FROM video_jobs WHERE id = ?', [jobId]);
+      if (!jobExists) {
+        return res.status(404).json({ success: false, error: 'Job bulunamadı.' });
+      }
+
+      // Her sahneyi güncelle veya ekle
+      for (const scene of scenes) {
+        const { id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, sort_order } = scene;
+        if (id) {
+          // Güncelleme
+          await db.run(
+            `UPDATE video_scenes SET
+              scene_number = ?,
+              video_prompt = ?,
+              speech_text = ?,
+              sfx_prompt = ?,
+              camera_motion = ?,
+              sort_order = ?
+             WHERE id = ? AND job_id = ?`,
+            [scene_number, video_prompt, speech_text || '', sfx_prompt || '', camera_motion || 'none', sort_order, id, jobId]
+          );
+        } else {
+          // Yeni ekleme
+          await db.run(
+            `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+            [jobId, scene_number, video_prompt, speech_text || '', sfx_prompt || '', camera_motion || 'none', sort_order]
+          );
+        }
+      }
+
+      // DB'deki sahne sayısı ile video_jobs tablosundaki total_scenes kolonunu eşitle
+      const countRes = await db.get('SELECT COUNT(*) as count FROM video_scenes WHERE job_id = ?', [jobId]);
+      const actualCount = countRes?.count || 0;
+      await db.run('UPDATE video_jobs SET total_scenes = ? WHERE id = ?', [actualCount, jobId]);
+
+      res.json({ success: true, message: 'Timeline sahneleri kaydedildi.' });
+    } catch (err: any) {
+      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── TIMELINE SCENE ROTASI: POST /api/v1/jobs/:jobId/scenes/add (Yeni Sahne Ekle) ──
+  app.post('/api/v1/jobs/:jobId/scenes/add', mediumLimiter, requireAuth, async (req, res) => {
+    const jobId = parseInt(req.params.jobId as string, 10);
+    try {
+      const countRes = await db.get('SELECT COUNT(*) as count FROM video_scenes WHERE job_id = ?', [jobId]);
+      const nextNumber = (countRes?.count || 0) + 1;
+
+      const result = await db.run(
+        `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order)
+         VALUES (?, ?, 'New cinematic scene description', '', '', 'none', 'pending', ?)`,
+        [jobId, nextNumber, nextNumber]
+      );
+
+      await db.run('UPDATE video_jobs SET total_scenes = ? WHERE id = ?', [nextNumber, jobId]);
+
+      res.json({ success: true, sceneId: result.lastID, sceneNumber: nextNumber });
+    } catch (err: any) {
+      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes/add failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── TIMELINE SCENE ROTASI: POST /api/v1/jobs/:jobId/scenes/:sceneId/delete (Sahne Sil) ──
+  app.post('/api/v1/jobs/:jobId/scenes/:sceneId/delete', mediumLimiter, requireAuth, async (req, res) => {
+    const jobId = parseInt(req.params.jobId as string, 10);
+    const sceneId = parseInt(req.params.sceneId as string, 10);
+    try {
+      const scene = await db.get('SELECT * FROM video_scenes WHERE id = ? AND job_id = ?', [sceneId, jobId]);
+      if (!scene) {
+        return res.status(404).json({ success: false, error: 'Sahne bulunamadı.' });
+      }
+
+      // Silinen sahnenin yerel video/resim dosyalarını da diskten temizle
+      const safeRemove = async (filepath: string) => {
+        if (filepath && !filepath.startsWith('http')) {
+          const absPath = path.join(process.cwd(), filepath);
+          if (await fs.pathExists(absPath)) {
+            await fs.remove(absPath);
+          }
+        }
+      };
+      await safeRemove(scene.image_path);
+      await safeRemove(scene.video_path);
+      await safeRemove(scene.audio_path);
+
+      // Veritabanından sil
+      await db.run('DELETE FROM video_scenes WHERE id = ? AND job_id = ?', [sceneId, jobId]);
+
+      // Kalan sahnelerin scene_number ve sort_order değerlerini yeniden numaralandır
+      const remainingScenes = await db.all('SELECT id FROM video_scenes WHERE job_id = ? ORDER BY sort_order ASC', [jobId]);
+      for (let i = 0; i < remainingScenes.length; i++) {
+        await db.run(
+          'UPDATE video_scenes SET scene_number = ?, sort_order = ? WHERE id = ?',
+          [i + 1, i + 1, remainingScenes[i].id]
+        );
+      }
+
+      await db.run('UPDATE video_jobs SET total_scenes = ? WHERE id = ?', [remainingScenes.length, jobId]);
+
+      res.json({ success: true, message: 'Sahne silindi ve kalan sahneler yeniden sıralandı.' });
+    } catch (err: any) {
+      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes/:sceneId/delete failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── TIMELINE SCENE ROTASI: POST /api/v1/jobs/:jobId/scenes/:sceneId/regenerate (Tek Sahne Yenileme) ──
+  app.post('/api/v1/jobs/:jobId/scenes/:sceneId/regenerate', mediumLimiter, requireAuth, async (req, res) => {
+    const jobId = parseInt(req.params.jobId as string, 10);
+    const sceneId = parseInt(req.params.sceneId as string, 10);
+    const userId = req.session.userId;
+    try {
+      const scene = await db.get('SELECT * FROM video_scenes WHERE id = ? AND job_id = ?', [sceneId, jobId]);
+      if (!scene) {
+        return res.status(404).json({ success: false, error: 'Sahne bulunamadı.' });
+      }
+
+      // Sahne durumunu pending yap, eski video/audio yollarını sıfırla ki yeniden üretebilelim
+      // Disk dosyalarını da sil
+      const safeRemove = async (filepath: string) => {
+        if (filepath && !filepath.startsWith('http')) {
+          const absPath = path.join(process.cwd(), filepath);
+          if (await fs.pathExists(absPath)) {
+            await fs.remove(absPath);
+          }
+        }
+      };
+      await safeRemove(scene.video_path);
+      await safeRemove(scene.audio_path);
+
+      await db.run(
+        `UPDATE video_scenes SET
+          status = 'pending',
+          video_path = NULL,
+          audio_path = NULL
+         WHERE id = ?`,
+        [sceneId]
+      );
+
+      // İşin durumunu da güncelle
+      await db.run(
+        `UPDATE video_jobs SET
+          status = 'pending',
+          current_stage = 'Kuyrukta (Tek Sahne Yenileniyor)',
+          progress_percent = 5
+         WHERE id = ?`,
+        [jobId]
+      );
+
+      logAudit({
+        userId,
+        action: 'scene.regenerate',
+        entityType: 'video_scene',
+        entityId: sceneId,
+        details: { jobId, sceneNumber: scene.scene_number },
+        req
+      });
+
+      // Kuyruğa işi tekrar at
+      await sendToQueue(VIDEO_JOBS_QUEUE, { jobId });
+
+      res.json({ success: true, message: `Sahne #${scene.scene_number} yeniden üretim kuyruğuna eklendi.` });
+    } catch (err: any) {
+      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes/:sceneId/regenerate failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── YENİ: AI Viralite Skoru Analiz Rotası ──
+  app.post('/api/v1/jobs/:jobId/viral-score', requireAuth, async (req, res) => {
+    const jobId = parseInt(String(req.params.jobId), 10);
+    const userId = req.session.userId;
+    try {
+      const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Proje bulunamadı.' });
+      }
+      
+      let hookFrameBase64 = '';
+      if (job.final_filename) {
+        const videoAbsPath = path.join(process.cwd(), 'videolar', job.final_filename);
+        if (await fs.pathExists(videoAbsPath)) {
+          const { extractReferenceFrameAtTime } = await import('../services/videoService.js');
+          hookFrameBase64 = await extractReferenceFrameAtTime(videoAbsPath, 1.5);
+        }
+      }
+
+      const { predictViralScore } = await import('../services/aiService.js');
+      const analysis = await predictViralScore(job.cover_image_path || '', hookFrameBase64);
+
+      await db.run('UPDATE video_jobs SET viral_score = ? WHERE id = ?', [analysis.score, jobId]);
+
+      res.json({
+        success: true,
+        analysis
+      });
+    } catch (err: any) {
+      console.error('[ERROR] predictViralScore failed:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 }
+

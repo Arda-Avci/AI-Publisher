@@ -15,7 +15,8 @@
 - [x] Google Colab Jupyter notebook dosyasındaki `/content/colab_setup.py` ezilme hatasının `/content/colab_server.py` şeklinde düzeltilmesi, `git clone 128` hatasını aşmak için `rm -rf` zorla temizleme adımı ve `colab_setup.py`'ın ana kernel'i çökertmesini engellemek için `subprocess.run` üzerinden çalıştırılmasıyla güncellenip git'e push edilmesi.
 - [x] Özel repolara erişim için `GITHUB_TOKEN` entegrasyonu ve alt sürecin SIGKILL ile sonlanması durumunda ana kernel'i otomatik tetikleyen `try-except` CalledProcessError yönetimi notebook'a eklendi.
 - [x] `colab_setup.py` pip quiet kurulum bayraklarının kaldırılması ve notebook'a canlı log akışı için `subprocess.Popen` sarmalayıcısının entegrasyonu.
-
+- [x] `colab_setup.py` alt sürecinin kendini öldürmesi sonucu oluşan `CalledProcessError` hatasını önlemek için `sys.exit(100)` çıkış kodu kullanımı ve notebook'un bu çıkış koduna göre ana kernel'i yeniden başlatması.
+- [x] Notebook hücresinin en üstüne `GITHUB_TOKEN` ve `NGROK_TOKEN` form alanlarının eklenip çevre değişkenleri ile alt sürece aktarılarak kilitlenmelerin önlenmesi.
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı
 - [x] SQLite Veritabanı Mimarisi (`src/db.ts`) genişletilmiş ayar/playlist sütunları.
@@ -26,13 +27,15 @@
 - [x] Playwright Sosyal Medya Yayın Motoru (`src/publisher.ts` - YouTube Playlist entegreli).
 - [x] Fırsatlar Hunisi horizontal scroll ve profil ayarları dashboard tasarımı (`src/server.ts`).
 - [x] D-Note premium tema ve i18n (çoklu dil) desteğinin modüler olarak entegrasyonu (JSON dosyaları, `themes.ts` modülü, `i18n` ve `theme` middleware katmanları ile).
-- [x] Gemini API çağrıları için 429 hatalarına karşı `withRetry` (Exponential Backoff) entegrasyonu (`src/lib/ai-utils.ts`).
+- [x] Gemini API çağrıları için 429 hatersına karşı `withRetry` (Exponential Backoff) entegrasyonu (`src/lib/ai-utils.ts`).
 - [x] Kuyruk (`src/queue.ts`) yapısında bellek tabanlı (`isProcessing`) kilit yerine SQL atomic update kilidi.
 - [x] Frontend (`dashboard.ts`) Job Progress SSE bağlantısı için koptuğunda yeniden bağlanma (`onerror`) yeteneği.
 - [x] Minimax M3 alternatif AI model entegrasyonu (`src/lib/ai-provider.ts`, `@ai-sdk/openai`).
 - [x] Fırsatlar Hunisi → Dashboard "Yeni Proje" formu otomatik prompt aktarımı (Özgünleştirme onayı sonrası `fillJobForm()` ile form doldurma).
 - [x] Fırsat kartlarına "📝 Prompt Olarak Kullan" kısa yol butonu eklenmesi.
 - [x] Tema uyumsuzluklarının CSS `hsla` fonksiyon formatındaki geçersiz sözdizimi hatalarının giderilmesi.
+- [x] `video_scenes` tablosunu destekleyen, sahnelerin asenkron kuyruk durumunu yöneten ve tekil sahne yeniden üretme (`regenerate`), ekleme, silme, sıralama işlemlerini yöneten API rotalarını (`src/routes/jobs.ts`) entegre et.
+- [x] Kamera hareket şablonlarının (Zoom in/out, Pan Left/Right, Breathing) prompt mühendisliğiyle VRAM harcamadan asenkron video kuyruğunda (`src/queue.ts`) işlenmesi ve tamamlanan sahnelerin atlanması mantığını tamamla.
 
 ## 🧪 Test & Doğrulama
 - [x] SQLite ve iş akışının entegrasyon testlerini yaz ve Vitest ile doğrula (`src/test_integration.spec.ts`).
@@ -163,6 +166,34 @@
 - [x] Sıfır bağımlılıklı request body validation modülünün (`src/lib/validation.ts`) oluşturulması ve `/create-job` ile `/save-meta/:id` rotalarına entegre edilmesi.
 - [x] Session cookie ayarlarının `httpOnly: true`, `secure: production` ve `sameSite: lax` ile sıkılaştırılması.
 
+## 💰 SaaS Kredilendirme Sistemi ve Dinamik i18n Entegrasyonu (Yeni)
+- [x] `users` tablosuna `credits`, `monthly_credit_limit` ve `credit_reset_date` kolonlarının eklenmesi.
+- [x] Kredi harcama işlemlerinin ve loglarının tutulacağı `credit_transactions` tablosunun ve transaction loglama mekanizmasının kurulması.
+- [x] Video sentezleme, kapak sentezi ve video özgünleştirme işlemlerinde kredi düşüşü kontrolü ve hata/iptal durumlarında kredi iade (`refundCredits`) mekanizmasının entegrasyonu.
+- [x] `/api/v1/user/credits` kredi API ucunun ve `/api/v1/locales` dinamik locales servisinin kodlanması.
+- [x] `App.tsx` içindeki hardcoded metinlerin temizlenmesi, locales fetch edilerek dinamik i18n yapısına geçiş.
+- [x] Arayüze modern glassmorphic Kredi Göstergesinin eklenmesi ve yetersiz kredi durumunda form kilitlenmesi.
+- [x] Vitest birim testlerinin (`src/test_credits.spec.ts`) yazılması ve doğrulanması.
+
+## 🛠️ Otomatik Model Seçimi ve Wan 2.1 Entegrasyonu (v4.7)
+- [x] `VideoJob` arayüzüne `production_template` alanının eklenmesi (`src/types/job.ts`).
+- [x] `startProduction` kuyruk işleyicisine `production_template` değerine göre dinamik model tipi belirleme mantığının yazılması (cinematic -> HunyuanVideo, dynamic -> Wan 2.1, simple -> LTX-Video) (`src/queue.ts`).
+- [x] Dil dosyalarına (`tr.json`, `en.json`) şablon isimleri ve dinamik açıklamalarının eklenmesi (`src/locales/`).
+- [x] Frontend `App.tsx` dosyasından `modelType` state'inin temizlenerek yerine `productionTemplate` state'inin getirilmesi ve formda `production_template` parametresinin gönderilmesi (`client/src/App.tsx`).
+- [x] Frontend form arayüzünün modern şablon seçici kartlar ve dinamik i18n açıklamalarıyla yenilenmesi.
+- [x] Backend Express dashboard şablonunun (`src/views/dashboard.ts`) HTML formuna production_template seçicisinin ve dinamik JS ipucunun yerleştirilmesi.
+- [x] AI Video Üretim Stüdyosu 2026 Vizyon Belgesinin oluşturulması (`video_studyo_vizyon_2026.md`).
+
+## 🧹 Otonom Temizlik, Erken Polling Çıkışı ve Ses Klonlama Entegrasyonu (v4.8)
+- [x] Sahne 1 üretimi bittiğinde `job.material_path` dosyasını diskten erkenden asenkron olarak silen yapının kurulması (`src/queue.ts`).
+- [x] Polling döngüsünde callback ile push edilen dosyaların disk kontrolünün yapılması ve early exit (erken çıkış) sağlanması (`src/queue.ts`).
+- [x] Google Colab katmanına dinamik XTTS-v2 ses klonlama (voice cloning) desteğinin getirilmesi (`colab_server.py`).
+- [x] Node.js `users` tablosuna `personal_voice_base64` kolonu ve migration eklenmesi (`src/db.ts`).
+- [x] Ayarlar paneline ve dashboard scripts'e referans ses yükleme (Audio file-to-base64 encoder) desteğinin eklenmesi (`src/views/dashboard.ts`, `dashboardScripts.ts`, `src/routes/settings.ts`).
+- [x] İş kuyruğu post payload'ına `reference_audio_base64` parametresinin eklenerek Colab'a gönderilmesi (`src/queue.ts`).
+- [x] Projenin tüm kurulum gereksinimlerini içeren `KURULUM_VE_GEREKSINIMLER.md` kılavuzunun oluşturulması ve `README.md` ile `CLAUDE.md` dosyalarının güncellenmesi.
+- [x] Vitest entegrasyon testlerinin (18/18) sıfır hata ile geçmesinin doğrulanması.
+
 ## 🔮 Gelecek Konsepti (Roadmap): "Top Yuvarlak AI" Talk-Show (Sportoto Entegrasyonu)
 - [ ] **Pixar Animasyon Estetiği:** Karakterler pürüzsüz gözlere ve dinamik mimiklere sahip Pixar modelinde olacak (Wav2Lip/Magiclight kusursuzluğu için).
 - [ ] **Çoklu Ajan Kadrosu (Multimodal):**
@@ -171,3 +202,4 @@
   - **Eski Futbolcu (Claude):** Saha içi stres, derbi psikolojisi ve tribün baskısı yorumları.
   - **Kumarbaz (DeepSeek):** Oran hareketleri ve Kelly Kriteri ile gizli "Value" (değerli) bahis anomalileri.
   - **DataScout (Siber Keşif Subayı):** Uydu hava durumu, sakatlık matrisleri ve istihbarat android'i.
+- [ ] **Grup Sohbetinden Video (Sportoto Entegrasyonu):** Odysseus'taki personalar gibi grup sohbeti mantığıyla her karakter metni için ayrı ses/video üretilip kronolojik montajlanacak. (En son aşamada detaylı konuşulacaktır).

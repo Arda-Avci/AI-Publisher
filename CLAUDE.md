@@ -57,7 +57,10 @@ Handled via middleware `src/middleware/i18n.ts` using locales `src/messages/tr.j
 users: id SERIAL PRIMARY KEY, username TEXT UNIQUE, password TEXT, youtube_api_key TEXT,
        sample_cover_base64 TEXT, personal_avatar_base64 TEXT, text_position_grid TEXT,
        default_preset_tone TEXT, preferred_language TEXT DEFAULT 'tr', selected_theme TEXT,
-       apply_lipsync INTEGER DEFAULT 1, apply_end_screen INTEGER DEFAULT 1
+       apply_lipsync INTEGER DEFAULT 1, apply_end_screen INTEGER DEFAULT 1,
+       credits INTEGER DEFAULT 100, monthly_credit_limit INTEGER DEFAULT 100,
+       credit_reset_date TIMESTAMP, brand_logo_base64 TEXT, brand_primary_color TEXT DEFAULT '#00F2FE',
+       brand_secondary_color TEXT DEFAULT '#9B51E0', brand_font_path TEXT, personal_voice_base64 TEXT
 
 video_jobs: id SERIAL PRIMARY KEY, user_id INTEGER, master_prompt TEXT, production_notes TEXT,
              character_features TEXT, material_path TEXT, estimated_minutes REAL, total_scenes INTEGER,
@@ -69,7 +72,10 @@ video_jobs: id SERIAL PRIMARY KEY, user_id INTEGER, master_prompt TEXT, producti
              has_shorts INTEGER DEFAULT 1, has_subtitles INTEGER DEFAULT 1, source_video_id TEXT,
              source_video_meta TEXT, differentiation_target_lang TEXT, differentiation_duration_mode TEXT,
              transcript TEXT, transcript_cleaned TEXT, transcript_translated TEXT, scene_prompts TEXT,
-             colab_task_id TEXT
+             colab_task_id TEXT, tts_provider TEXT DEFAULT 'xtts', tts_voice TEXT DEFAULT 'Claribel Dervla',
+             model_type TEXT DEFAULT 'CogVideoX-5b', production_template TEXT DEFAULT 'cinematic',
+             brand_kit_enabled INTEGER DEFAULT 0, dubbing_lang TEXT, kinetic_subtitles INTEGER DEFAULT 0,
+             viral_score INTEGER, auto_sfx_placement INTEGER DEFAULT 0, audio_ducking INTEGER DEFAULT 0
 
 audit_log: id SERIAL PRIMARY KEY, user_id INTEGER, action TEXT NOT NULL, entity_type TEXT,
            entity_id INTEGER, details TEXT, ip_address TEXT, user_agent TEXT, created_at TIMESTAMP

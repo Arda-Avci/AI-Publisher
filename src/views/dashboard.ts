@@ -272,6 +272,15 @@ export function buildDashboardHTML(params: DashboardParams): string {
           </video>
         </div>
 
+        ${job.viral_score !== null && job.viral_score !== undefined ? `
+          <div style="background: rgba(0, 242, 254, 0.1); border: 1px solid #00F2FE; padding: 10px; border-radius: 8px; margin-top: 15px; font-weight: bold; color: #00F2FE; display: flex; align-items: center; gap: 8px;">
+            🔥 AI Viralite Skoru: ${job.viral_score} / 100
+          </div>
+        ` : ''}
+
+        <button onclick="analyzeViralScore('${job.id}')" class="pub-btn" id="viral-btn-${job.id}" style="background: linear-gradient(135deg, #FF007F, #7F00FF); margin-top:10px; width: 100%;">📈 AI Viralite Analizi Yap</button>
+        <div id="viral_score_result_${job.id}" style="margin-top: 10px; display:none; background:hsla(var(--border), 0.15); border: 1px solid hsla(var(--border), 0.3); padding:12px; border-radius:8px; font-size:0.85rem;"></div>
+
         ${coverSelectorHTML}
         
         <div class="marketing-meta">
@@ -793,6 +802,50 @@ export function buildDashboardHTML(params: DashboardParams): string {
                 </label>
               </div>
  
+              <div class="settings-section">
+                <div class="settings-section-header">
+                  <h3>Marka Kimliği (Brand Kit)</h3>
+                  <p>Videolarda kullanılacak marka logosu, altyazı renkleri ve yazı tipini belirleyin.</p>
+                </div>
+                <div class="form-grid-2" style="margin-bottom:0.75rem;">
+                  <div>
+                    <label class="form-label" style="font-size:0.75rem;opacity:0.8;">Marka Logosu</label>
+                    <input type="file" class="form-input" id="setting_brand_logo_file" accept="image/*" onchange="encodeImageFileAsURL(this, 'brand_logo')" style="margin-bottom:0.35rem;">
+                    <input type="hidden" id="setting_brand_logo_base64">
+                    <div id="brand_logo_preview"></div>
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size:0.75rem;opacity:0.8;">Birincil Renk (Neon)</label>
+                    <input type="color" class="form-input" id="setting_brand_primary_color" value="#00F2FE" style="height:38px;padding:2px;cursor:pointer;">
+                  </div>
+                </div>
+                <div class="form-grid-2">
+                  <div>
+                    <label class="form-label" style="font-size:0.75rem;opacity:0.8;">İkincil Renk</label>
+                    <input type="color" class="form-input" id="setting_brand_secondary_color" value="#9B51E0" style="height:38px;padding:2px;cursor:pointer;">
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size:0.75rem;opacity:0.8;">Yazı Tipi Dosya Yolu / Adı</label>
+                    <input type="text" class="form-input" id="setting_brand_font_path" placeholder="Arial veya C:/Windows/Fonts/arial.ttf">
+                  </div>
+                </div>
+              </div>
+ 
+              <div class="settings-section" style="margin-top: 1.25rem;">
+                <div class="settings-section-header">
+                  <h3>Ses Klonlama (Voice Cloning)</h3>
+                  <p>Kendi sesinizi klonlayarak özel işlerinizde ses sentezlemek için kısa bir ses kaydı (MP3/WAV) yükleyin.</p>
+                </div>
+                <div class="form-grid-1">
+                  <div>
+                    <label class="form-label" style="font-size:0.75rem;opacity:0.8;">Referans Ses Dosyası</label>
+                    <input type="file" class="form-input" id="setting_personal_voice_file" accept="audio/*" onchange="encodeAudioFileAsURL(this)" style="margin-bottom:0.35rem;">
+                    <input type="hidden" id="setting_personal_voice_base64">
+                    <div id="personal_voice_preview" style="margin-top: 0.5rem; font-size: 0.75rem; color: hsl(var(--primary));"></div>
+                  </div>
+                </div>
+              </div>
+
               <button onclick="saveSettings()" class="btn-primary mt-2">${t.saveSettings}</button>
             </div>
           </div>
@@ -932,6 +985,22 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     <input type="checkbox" name="differentiation_layout" value="1" checked>
                     ${t.differentiationLayout}
                   </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="brand_kit_enabled" value="1">
+                    💼 Marka Kiti Aktif
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="kinetic_subtitles" value="1">
+                    ✨ Kinetik Altyazı
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="auto_sfx_placement" value="1">
+                    🔊 Uzamsal Ses
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="audio_ducking" value="1">
+                    🎵 Ses Ördekleme
+                  </label>
                 </div>
               </div>
               <div>
@@ -941,6 +1010,24 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <option value="shorter">${t.shorter}</option>
                   <option value="longer">${t.longer}</option>
                 </select>
+              </div>
+              <div>
+                <label class="form-label">${t.productionTemplate}</label>
+                <select name="production_template" class="form-select" onchange="
+                  const hints = {
+                    cinematic: '${escapeHtml(t.templateCinematicDesc)}',
+                    dynamic: '${escapeHtml(t.templateDynamicDesc)}',
+                    simple: '${escapeHtml(t.templateSimpleDesc)}',
+                    pixar: '${escapeHtml(t.templatePixarDesc || 'Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır.')}'
+                  };
+                  document.getElementById('template-hint').innerText = hints[this.value];
+                ">
+                  <option value="cinematic" selected>${t.templateCinematic}</option>
+                  <option value="dynamic">${t.templateDynamic}</option>
+                  <option value="simple">${t.templateSimple}</option>
+                  <option value="pixar">${t.templatePixar || 'Pixar 3D Çizgi Film / Animasyon (Wan 2.1)'}</option>
+                </select>
+                <small style="opacity:0.6;font-size:0.65rem;display:block;margin-top:4px;" id="template-hint">${t.templateCinematicDesc}</small>
               </div>
               <div class="form-grid-2">
                 <div>

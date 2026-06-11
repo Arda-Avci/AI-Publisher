@@ -257,5 +257,21 @@
   "opt_extend": "Hikayeyi Derinleştir (Uzat)",
   "label_position": "Başlık Konum Matrisi",
   "btn_start": "Onayla ve Üretimi Başlat (L4 GPU)",
-  "progress_rendering": "Parçalı Video İşleniyor: "
+  "progress_rendering": "Parçalı Video İşleniyor: ",
+  "userCredits": "Krediniz: {{credits}} / {{limit}}",
+  "insufficientCredits": "Yetersiz Kredi",
+  "creditHistory": "Son Kredi Hareketleri",
+  "creditResetDate": "Yenilenme: {{date}}",
+  "creditUsage": "Kredi Harcaması",
+  "creditRefund": "Kredi İadesi",
+  "creditGrant": "Aylık Tanımlama",
+  "productionTemplate": "Üretim Şablonu / Video Stili",
+  "templateCinematic": "Sinematik Görsel Şölen (Hunyuan AI)",
+  "templateDynamic": "Dinamik Sosyal Medya (Wan 2.1 AI)",
+  "templateSimple": "Hızlı & Basit Render (LTX AI)",
+  "templatePixar": "Pixar 3D Çizgi Film / Animasyon (Wan 2.1)",
+  "templateCinematicDesc": "Ultra detaylı görsel kalite, sanatsal kamera hareketleri ve sinematik derinlik için Hunyuan AI modelini asenkron olarak çalıştırır.",
+  "templateDynamicDesc": "Dinamik, canlı hareketler ve dengeli süre/kalite oranı için Wan 2.1 AI modelini asenkron olarak tetikler.",
+  "templateSimpleDesc": "Hızlı render süreleri, sosyal medya shorts taslakları ve basit sahne geçişleri için LTX AI modelini devreye sokar.",
+  "templatePixarDesc": "Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır."
 }

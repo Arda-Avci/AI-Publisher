@@ -8,9 +8,12 @@ import {
   getOrBuildEndScreen,
   applyVideoDifferentiationFilters,
   concatVideosWithCrossfade,
-  extractLastFrame
+  extractLastFrame,
+  convertSrtToKineticAss
 } from './services/videoService.js';
+import { VideoJob } from './types/job.js';
 import { generateStudioScenes } from './services/aiService.js';
+import { CreditService } from './services/creditService.js';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -20,7 +23,6 @@ import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
 import { RedisMutex } from './lib/redis-mutex.js';
 import { runDifferentiationPipeline } from './lib/differentiate.js';
 import { Logger } from './lib/logger.js';
-import { VideoJob } from './types/job.js';
 
 const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
@@ -62,6 +64,9 @@ export async function checkQueue() {
 }
 
 async function startProduction(job: VideoJob) {
+  let requiredCredits = 0;
+  let hasDeducted = false;
+
   // İş başında Zen modellerinin sağlığını bir kere test edip, hata alanları geçici olarak skip edelim.
   // Not: Ana kuyruk işleme akışını tıkamamak için asenkron (non-blocking) olarak arka planda çalıştırıyoruz.
   checkZenModelsHealth().catch(err => {
@@ -117,88 +122,148 @@ async function startProduction(job: VideoJob) {
   }
 
   try {
-    Logger.info('AŞAMA 1: Yönetmen Planlaması başlıyor...');
+    Logger.info('AŞAMA 1: Yönetmen Planlaması ve Sahneler Hazırlanıyor...');
     await db.run("UPDATE video_jobs SET status = 'processing', current_stage = 'Yönetmen Planlaması', progress_percent = 5 WHERE id = ?", [job.id]);
     broadcast(job.id, { stageKey: 'stageDirectorPlanning', percent: 5 });
 
-    let object: { scenes: any[]; marketing: any };
-    if (preGeneratedScenes) {
-      Logger.info('Pre-generated sahneler kullanılıyor (farklılaştırma)');
+    let dbScenes = await db.all('SELECT * FROM video_scenes WHERE job_id = ? ORDER BY sort_order ASC', [job.id]);
+    let totalScenes = dbScenes.length;
+    let estMin = totalScenes * 4.5 + 2;
+    let object: any = null;
+
+    if (dbScenes.length === 0) {
+      if (preGeneratedScenes) {
+        Logger.info('Pre-generated sahneler kullanılıyor (farklılaştırma)');
+        object = {
+          scenes: preGeneratedScenes,
+          marketing: {
+            ytTitle: (job.master_prompt || 'Video').slice(0, 80),
+            ytDesc: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
+            ytTags: '',
+            ttDesc: '',
+            ttTags: '',
+            xDesc: '',
+            xTags: '',
+            metaDesc: '',
+            metaTags: ''
+          }
+        };
+      } else {
+        Logger.info('AI generateStudioScenes çağrılıyor...');
+        try {
+          object = await generateStudioScenes(job);
+          Logger.info('AI generateStudioScenes başarılı', { sceneCount: object.scenes.length });
+        } catch (aiErr) {
+          Logger.error('AI generateStudioScenes HATASI', aiErr);
+          Logger.info('Job detayları:', {
+            master_prompt: job.master_prompt,
+            production_notes: job.production_notes,
+            character_features: job.character_features,
+            transcript: job.transcript?.substring(0, 200)
+          });
+          throw aiErr;
+        }
+      }
+
+      totalScenes = object.scenes.length;
+      estMin = totalScenes * 4.5 + 2;
+      Logger.info('Toplam sahne sayısı (yeni):', { totalScenes, estimatedMinutes: estMin });
+
+      await db.run(
+        `UPDATE video_jobs SET
+          total_scenes = ?,
+          estimated_minutes = ?,
+          yt_title = ?,
+          yt_desc = ?,
+          yt_tags = ?,
+          tt_desc = ?,
+          tt_tags = ?,
+          x_desc = ?,
+          x_tags = ?,
+          meta_desc = ?,
+          meta_tags = ?
+        WHERE id = ?`,
+        [
+          totalScenes,
+          estMin,
+          object.marketing.ytTitle,
+          object.marketing.ytDesc,
+          object.marketing.ytTags,
+          object.marketing.ttDesc,
+          object.marketing.ttTags,
+          object.marketing.xDesc,
+          object.marketing.xTags,
+          object.marketing.metaDesc,
+          object.marketing.metaTags,
+          job.id
+        ]
+      );
+
+      // Sahneleri db'ye insert et
+      for (const scene of object.scenes) {
+        await db.run(
+          `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+          [job.id, scene.sceneNumber, scene.videoPrompt, scene.speechText, scene.sfxPrompt, scene.cameraMotion || 'none', scene.sceneNumber]
+        );
+      }
+
+      dbScenes = await db.all('SELECT * FROM video_scenes WHERE job_id = ? ORDER BY sort_order ASC', [job.id]);
+    } else {
+      Logger.info('Mevcut timeline sahneleri kullanılıyor', { sceneCount: totalScenes });
       object = {
-        scenes: preGeneratedScenes,
+        scenes: dbScenes.map(s => ({
+          sceneNumber: s.scene_number,
+          videoPrompt: s.video_prompt,
+          speechText: s.speech_text,
+          sfxPrompt: s.sfx_prompt,
+          cameraMotion: s.camera_motion
+        })),
         marketing: {
-          ytTitle: (job.master_prompt || 'Video').slice(0, 80),
-          ytDesc: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
-          ytTags: '',
-          ttDesc: '',
-          ttTags: '',
-          xDesc: '',
-          xTags: '',
-          metaDesc: '',
-          metaTags: ''
+          ytTitle: job.yt_title || '',
+          ytDesc: job.yt_desc || '',
+          ytTags: job.yt_tags || '',
+          ttDesc: job.tt_desc || '',
+          ttTags: job.tt_tags || '',
+          xDesc: job.x_desc || '',
+          xTags: job.x_tags || '',
+          metaDesc: job.meta_desc || '',
+          metaTags: job.meta_tags || ''
         }
       };
-    } else {
-      Logger.info('AI generateStudioScenes çağrılıyor...');
-      try {
-        object = await generateStudioScenes(job);
-        Logger.info('AI generateStudioScenes başarılı', { sceneCount: object.scenes.length });
-      } catch (aiErr) {
-        Logger.error('AI generateStudioScenes HATASI', aiErr);
-        Logger.info('Job detayları:', {
-          master_prompt: job.master_prompt,
-          production_notes: job.production_notes,
-          character_features: job.character_features,
-          transcript: job.transcript?.substring(0, 200)
-        });
-        throw aiErr;
-      }
     }
 
-    const totalScenes = object.scenes.length;
-    const estMin = totalScenes * 4.5 + 2;
-    Logger.info('Toplam sahne sayısı:', { totalScenes, estimatedMinutes: estMin }); 
+    // ── Kredi Düşme İşlemi ──
+    requiredCredits = totalScenes * 10 + 5;
+    if (job.differentiation_layout === 1) {
+      requiredCredits += 15;
+    }
 
-    await db.run(
-      `UPDATE video_jobs SET
-        total_scenes = ?,
-        estimated_minutes = ?,
-        yt_title = ?,
-        yt_desc = ?,
-        yt_tags = ?,
-        tt_desc = ?,
-        tt_tags = ?,
-        x_desc = ?,
-        x_tags = ?,
-        meta_desc = ?,
-        meta_tags = ?
-      WHERE id = ?`,
-      [
-        totalScenes,
-        estMin,
-        object.marketing.ytTitle,
-        object.marketing.ytDesc,
-        object.marketing.ytTags,
-        object.marketing.ttDesc,
-        object.marketing.ttTags,
-        object.marketing.xDesc,
-        object.marketing.xTags,
-        object.marketing.metaDesc,
-        object.marketing.metaTags,
-        job.id
-      ]
+    const hasEnoughCredits = await CreditService.checkAndDeductCredits(
+      job.user_id,
+      requiredCredits,
+      'usage',
+      `Video Projesi #${job.id} üretimi (Sahneler: ${totalScenes})`
     );
+
+    if (!hasEnoughCredits) {
+      const errorMsg = 'Yetersiz Kredi! Projeyi başlatmak için krediniz yetersiz.';
+      await db.run("UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?", [errorMsg, job.id]);
+      broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
+      throw new Error('INSUFFICIENT_CREDITS');
+    }
+    hasDeducted = true;
 
     broadcast(job.id, {
       stageKey: 'stageScenesPreparing',
       percent: 10,
       totalScenes,
       estimatedMinutes: estMin,
-      ytTitle: object.marketing.ytTitle,
-      ytDesc: object.marketing.ytDesc,
-      ytTags: object.marketing.ytTags,
-      ttDesc: object.marketing.ttDesc,
-      ttTags: object.marketing.ttTags
+      ytTitle: job.yt_title || '',
+      ytDesc: job.yt_desc || '',
+      ytTags: job.yt_tags || '',
+      ttDesc: job.tt_desc || '',
+      ttTags: job.tt_tags || ''
     });
 
     // ── KAPAK SENTEZİ ──
@@ -310,25 +375,35 @@ async function startProduction(job: VideoJob) {
     // Sahneleri teker teker üret
     // ── S3: Kullanıcının Wav2Lip lip-sync tercihini oku ──
     const userSettings: any = await db.get(
-      'SELECT apply_lipsync FROM users WHERE id = ?',
+      'SELECT apply_lipsync, personal_voice_base64 FROM users WHERE id = ?',
       [job.user_id]
     );
     const applyLipsync = userSettings?.apply_lipsync === 1;
 
     // Helper: download a file from URL to dest path
     const dl = async (url: string, dest: string) => {
-      const res = await axios({ method: 'GET', url, responseType: 'stream' });
+      const res = await axios({ method: 'GET', url, responseType: 'stream', timeout: 120000 });
       const w = fs.createWriteStream(dest);
       res.data.pipe(w);
       return new Promise((resolve, reject) => {
-        w.on('finish', resolve);
-        w.on('error', reject);
+        const timeout = setTimeout(() => {
+          w.destroy();
+          reject(new Error('Download stream timeout'));
+        }, 120000);
+        w.on('finish', () => {
+          clearTimeout(timeout);
+          resolve(null);
+        });
+        w.on('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
       });
     };
 
     Logger.info('AŞAMA 3: Sahne üretimi başlıyor', { totalScenes });
-    for (const scene of object.scenes) {
-      Logger.info(`  ── SAHNE ${scene.sceneNumber}/${totalScenes} başlıyor`);
+    for (const scene of dbScenes) {
+      Logger.info(`  ── SAHNE ${scene.scene_number}/${totalScenes} başlıyor`);
       // S6: Cancellation check at scene boundary.
       const cancelCheck: { status: string } | undefined = await db.get(
         'SELECT status FROM video_jobs WHERE id = ?',
@@ -339,15 +414,40 @@ async function startProduction(job: VideoJob) {
         break;
       }
 
-      const pct = Math.floor((scene.sceneNumber / totalScenes) * 75) + 15;
-      await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = ? WHERE id = ?", [`Sahne ${scene.sceneNumber} İşleniyor`, pct, job.id]);
-      broadcast(job.id, { stageKey: 'stageSceneGenerating', sceneNumber: scene.sceneNumber, percent: pct, completedScenes: scene.sceneNumber - 1 });
+      const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.scene_number}.mp4`);
+
+      // Eğer sahne zaten tamamlanmışsa ve diskte videosu varsa direkt ekle, üretimi atla
+      if (scene.status === 'completed' && await fs.pathExists(mS)) {
+        Logger.info(`[INFO] Sahne ${scene.scene_number} zaten tamamlanmış, üretimi atlanıyor.`, { mS });
+        finalScenes.push(mS);
+        await db.run("UPDATE video_jobs SET completed_scenes = ? WHERE id = ?", [scene.scene_number, job.id]);
+        continue;
+      }
+
+      const pct = Math.floor((scene.scene_number / totalScenes) * 75) + 15;
+      await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = ? WHERE id = ?", [`Sahne ${scene.scene_number} İşleniyor`, pct, job.id]);
+      broadcast(job.id, { stageKey: 'stageSceneGenerating', sceneNumber: scene.scene_number, percent: pct, completedScenes: scene.scene_number - 1 });
+
+      // Kamera hareketini prompta ekleyelim (VRAM harcamayan prompt engineering metodu)
+      let customPrompt = scene.video_prompt;
+      if (scene.camera_motion && scene.camera_motion !== 'none') {
+        const motionPrompts: Record<string, string> = {
+          zoom_in: ', camera zooming in slowly, cinematic zoom, forward motion',
+          zoom_out: ', camera zooming out slowly, cinematic zoom-out, pulling back',
+          pan_left: ', panning left slowly, camera moving left',
+          pan_right: ', panning right slowly, camera moving right',
+          breathing: ', subtle camera breathing motion, slow organic camera handheld movement'
+        };
+        const motionSuffix = motionPrompts[scene.camera_motion] || '';
+        customPrompt = customPrompt + motionSuffix;
+      }
 
       const finalCharacterFeatures = job.character_features;
+      const finalPrompt = finalCharacterFeatures ? `${finalCharacterFeatures}, ${customPrompt}` : customPrompt;
       let referenceImageBase64 = '';
       let sendSourceVideoId = '';
 
-      if (scene.sceneNumber === 1) {
+      if (scene.scene_number === 1) {
         sendSourceVideoId = job.source_video_id || '';
         if (!sendSourceVideoId && job.material_path) {
           if (job.material_path.startsWith('http')) {
@@ -377,43 +477,57 @@ async function startProduction(job: VideoJob) {
           }
         }
       } else {
-        // sceneNumber > 1: autoregressive continuation from previous generated scene video
+        // scene_number > 1: autoregressive continuation from previous generated scene video
         sendSourceVideoId = ''; // Force CogVideo to use the continuation frame
         try {
-          const prevVideoPath = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber - 1}.mp4`);
+          const prevVideoPath = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.scene_number - 1}.mp4`);
           if (await fs.pathExists(prevVideoPath)) {
             referenceImageBase64 = await extractLastFrame(prevVideoPath);
-            Logger.info(`[INFO] Devam videosu için önceki sahnenin (${scene.sceneNumber - 1}) son karesi çıkartıldı.`);
+            Logger.info(`[INFO] Devam videosu için önceki sahnenin (${scene.scene_number - 1}) son karesi çıkartıldı.`);
           }
         } catch (e) {
           Logger.warn(`[WARN] Önceki sahnenin son karesi çıkartılamadı:`, e);
         }
       }
 
+      let modelType = 'CogVideoX-2b';
+      if (job.production_template === 'cinematic') {
+        modelType = 'HunyuanVideo';
+      } else if (job.production_template === 'dynamic' || job.production_template === 'pixar') {
+        modelType = 'Wan2.1';
+      } else if (job.production_template === 'simple') {
+        modelType = 'LTX-Video';
+      } else if (job.model_type) {
+        modelType = job.model_type;
+      }
+
       Logger.info('Colab\'a sahne gönderiliyor', {
-        sceneNumber: scene.sceneNumber,
+        sceneNumber: scene.scene_number,
         apply_lipsync: applyLipsync,
-        videoPrompt: scene.videoPrompt?.substring(0, 80),
-        source_video_id: sendSourceVideoId
+        videoPrompt: finalPrompt?.substring(0, 80),
+        source_video_id: sendSourceVideoId,
+        videoModel: modelType
       });
+
       const response = await axios.post(`${COLAB_URL}/generate-media`, {
-        scene_number: scene.sceneNumber,
-        video_prompt: scene.videoPrompt,
-        speech_text: scene.speechText,
-        sfx_prompt: scene.sfxPrompt,
-        character_features: finalCharacterFeatures,
+        scene_number: scene.scene_number,
+        video_prompt: finalPrompt,
+        speech_text: scene.speech_text,
+        sfx_prompt: scene.sfx_prompt,
+        character_features: '',
         reference_image_base64: referenceImageBase64,
         source_video_id: sendSourceVideoId,
         user_image_path: job.material_path,
         apply_lipsync: applyLipsync,
         job_id: job.id,
-        video_model: 'CogVideoX-2b',
+        video_model: modelType,
         tts_provider: job.tts_provider || 'xtts',
         tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
+        reference_audio_base64: userSettings?.personal_voice_base64 || '',
         callback_url: process.env.PUBLIC_URL 
           ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
           : `http://localhost:3010/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-      }, { timeout: 0 });
+      }, { timeout: 600000 });
 
       const taskId = response.data?.task_id;
       if (!taskId) {
@@ -421,6 +535,11 @@ async function startProduction(job: VideoJob) {
         throw new Error('Colab task_id dönmedi.');
       }
       Logger.info('Colab görevi başlatıldı', { taskId, status: response.data?.status });
+
+      const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.scene_number}.mp4`);
+      const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.scene_number}.wav`);
+      const tE = path.join(process.cwd(), 'videolar', `te_${job.id}_${scene.scene_number}.wav`);
+      const tSRT = path.join(process.cwd(), 'videolar', `srt_${job.id}_${scene.scene_number}.srt`);
 
       // Colab task durumunu logla
       await db.run("UPDATE video_jobs SET colab_task_id = ? WHERE id = ?", [taskId, job.id]);
@@ -434,6 +553,23 @@ async function startProduction(job: VideoJob) {
       while (taskStatus === 'processing' || taskStatus === 'accepted') {
         attempt++;
         await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Erken çıkış (Early Exit) kontrolü: Eğer callback tüm dosyaları diskimize push ettiyse polling beklemeyelim
+        try {
+          const isVideoDone = await fs.pathExists(tV);
+          const isSpeechDone = await fs.pathExists(tS);
+          const isSfxDone = await fs.pathExists(tE);
+          const isSubtitleDone = job.has_subtitles === 0 || !applyLipsync || await fs.pathExists(tSRT);
+
+          if (isVideoDone && isSpeechDone && isSfxDone && isSubtitleDone) {
+            Logger.info(`[Early Exit] Sahne ${scene.scene_number} dosyalari callback ile diskte algilandi, polling sonlandiriliyor.`, { jobId: job.id });
+            taskStatus = 'success';
+            taskData = { status: 'success', has_subtitle: await fs.pathExists(tSRT) };
+            break;
+          }
+        } catch (checkErr) {
+          Logger.warn('Erken polling cikis kontrolü hatasi:', checkErr);
+        }
 
         // Colab kilitlenme/timeout önlemi (Dinamik zaman aşımı)
         const totalElapsedMs = Date.now() - taskStartTime;
@@ -511,12 +647,6 @@ async function startProduction(job: VideoJob) {
       const hasSubtitle = taskData?.has_subtitle || false;
       Logger.info('Sahne tamamlandı, dosyalar indiriliyor', { hasSubtitle });
 
-      const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.sceneNumber}.mp4`);
-      const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.sceneNumber}.wav`);
-      const tE = path.join(process.cwd(), 'videolar', `te_${job.id}_${scene.sceneNumber}.wav`);
-      const tSRT = path.join(process.cwd(), 'videolar', `srt_${job.id}_${scene.sceneNumber}.srt`);
-      const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber}.mp4`);
-
       if (!await fs.pathExists(tV)) {
         Logger.info('Video indiriliyor...', { url: `${COLAB_URL}/download/video` });
         await dl(`${COLAB_URL}/download/video`, tV);
@@ -554,27 +684,105 @@ async function startProduction(job: VideoJob) {
         }
       }
 
-      if (!srtFile && scene.speechText && job.has_subtitles !== 0) {
-        srtFile = path.join(process.cwd(), 'videolar', `s_${job.id}_${scene.sceneNumber}.srt`);
-        fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speechText}`);
+      if (!srtFile && scene.speech_text && job.has_subtitles !== 0) {
+        srtFile = path.join(process.cwd(), 'videolar', `s_${job.id}_${scene.scene_number}.srt`);
+        fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`);
       }
 
-      try {
+      const user = await db.get('SELECT brand_logo_base64, brand_primary_color, brand_secondary_color, brand_font_path, text_position_grid FROM users WHERE id = ?', [job.user_id]);
 
-      const vfArr = srtFile ? ['-vf', `subtitles=${srtFile.replace(/\\/g, '/').replace(/:/g, '\\:')}:force_style='Alignment=2,FontSize=18,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,Outline=1'`] : [];
-      const baseArgs = ['-y', '-i', tV, '-i', tS, '-i', tE, ...vfArr, '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=first[a]', '-map', '0:v', '-map', '[a]'];
-      const nvencArgs = [...baseArgs, '-c:v', 'h264_nvenc', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', mS];
-      const libx264Args = [...baseArgs, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '23', '-c:a', 'aac', '-shortest', mS];
-      const defArgs = [...baseArgs, '-c:a', 'aac', '-shortest', mS];
-      await runFFmpegWithFallback([
-        { cmd: 'ffmpeg', args: nvencArgs },
-        { cmd: 'ffmpeg', args: libx264Args },
-        { cmd: 'ffmpeg', args: defArgs }
-      ]);
-  
+      let finalSubtitleFile = srtFile;
+      let tempAssFile = '';
+      if (job.kinetic_subtitles === 1 && srtFile) {
+        tempAssFile = srtFile.replace('.srt', '_kinetic.ass');
+        const primaryColor = user?.brand_primary_color || '#00F2FE';
+        const secondaryColor = user?.brand_secondary_color || '#FFFFFF';
+        const fontName = user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial';
+        try {
+          await convertSrtToKineticAss(srtFile, tempAssFile, primaryColor, secondaryColor, fontName);
+          finalSubtitleFile = tempAssFile;
+        } catch (assErr) {
+          Logger.warn('Kinetik altyazı ASS dosyasına dönüştürülemedi:', assErr);
+          finalSubtitleFile = srtFile;
+        }
+      }
+
+      let tempLogoFile = '';
+      try {
+        const filterComplexParts: string[] = [];
+        const inputArgs = ['-y', '-i', tV, '-i', tS, '-i', tE];
+        
+        let videoInput = '[0:v]';
+        
+        if (finalSubtitleFile) {
+          const assFilterPath = finalSubtitleFile.replace(/\\/g, '/').replace(/:/g, '\\:');
+          const subFilter = finalSubtitleFile.endsWith('.ass') ? `ass=${assFilterPath}` : `subtitles=${assFilterPath}`;
+          filterComplexParts.push(`${videoInput}${subFilter}[v_sub]`);
+          videoInput = '[v_sub]';
+        }
+
+        if (job.brand_kit_enabled === 1 && user?.brand_logo_base64) {
+          const uploadsDir = path.join(process.cwd(), 'uploads');
+          await fs.ensureDir(uploadsDir);
+          tempLogoFile = path.join(uploadsDir, `brand_logo_q_${job.id}_${scene.scene_number}_${Date.now()}.png`);
+          const b64 = user.brand_logo_base64.replace(/^data:image\/\w+;base64,/, '');
+          await fs.writeFile(tempLogoFile, Buffer.from(b64, 'base64'));
+
+          inputArgs.push('-i', tempLogoFile);
+          
+          const logoW = 160;
+          filterComplexParts.push(`[3:v]scale=${logoW}:-1[logo]`);
+          
+          let overlayX = 'W-w-20';
+          let overlayY = '20';
+          const positionGrid = user.text_position_grid || 'top_right';
+          if (positionGrid === 'top_left') { overlayX = '20'; overlayY = '20'; }
+          else if (positionGrid === 'top_center') { overlayX = '(W-w)/2'; overlayY = '20'; }
+          else if (positionGrid === 'bottom_left') { overlayX = '20'; overlayY = 'H-h-20'; }
+          else if (positionGrid === 'bottom_right') { overlayX = 'W-w-20'; overlayY = 'H-h-20'; }
+          else if (positionGrid === 'bottom_center') { overlayX = '(W-w)/2'; overlayY = 'H-h-20'; }
+
+          filterComplexParts.push(`${videoInput}[logo]overlay=x=${overlayX}:y=${overlayY}[v_logo]`);
+          videoInput = '[v_logo]';
+        }
+
+        let sfxSource = '[2:a]';
+        if (job.auto_sfx_placement === 1) {
+          const positionX = scene.scene_number % 2 === 0 ? 0.5 : -0.5;
+          const panLeft = ((1 - positionX) / 2).toFixed(2);
+          const panRight = ((1 + positionX) / 2).toFixed(2);
+          filterComplexParts.push(`[2:a]pan=stereo|c0=${panLeft}*c0|c1=${panRight}*c0[sfx_panned]`);
+          sfxSource = '[sfx_panned]';
+        }
+
+        if (job.audio_ducking === 1) {
+          filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
+          filterComplexParts.push(`[sfx_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`);
+          filterComplexParts.push(`[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`);
+        } else {
+          filterComplexParts.push(`[1:a]${sfxSource}amix=inputs=2:duration=first[aout]`);
+        }
+
+        const filterComplexStr = filterComplexParts.join(';');
+        const baseArgs = [...inputArgs, '-filter_complex', filterComplexStr, '-map', videoInput, '-map', '[aout]'];
+        const nvencArgs = [...baseArgs, '-c:v', 'h264_nvenc', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', mS];
+        const libx264Args = [...baseArgs, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '23', '-c:a', 'aac', '-shortest', mS];
+        const defArgs = [...baseArgs, '-c:a', 'aac', '-shortest', mS];
+
+        await runFFmpegWithFallback([
+          { cmd: 'ffmpeg', args: nvencArgs },
+          { cmd: 'ffmpeg', args: libx264Args },
+          { cmd: 'ffmpeg', args: defArgs }
+        ]);
       } finally {
         if (srtFile && fs.existsSync(srtFile)) {
           fs.removeSync(srtFile);
+        }
+        if (tempAssFile && fs.existsSync(tempAssFile)) {
+          fs.removeSync(tempAssFile);
+        }
+        if (tempLogoFile && fs.existsSync(tempLogoFile)) {
+          fs.removeSync(tempLogoFile);
         }
       }
 
@@ -582,8 +790,57 @@ async function startProduction(job: VideoJob) {
       await fs.remove(tS);
       await fs.remove(tE);
 
+      // Üretilen videodan önizleme karesi çıkar
+      let relativeImagePath: string | null = null;
+      try {
+        const frameBase64 = await extractReferenceFrame(mS);
+        if (frameBase64) {
+          const imgBuffer = Buffer.from(frameBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+          const previewImgPath = path.join(process.cwd(), 'uploads', `scene_${job.id}_${scene.scene_number}_init.jpg`);
+          await fs.writeFile(previewImgPath, imgBuffer);
+          relativeImagePath = `/uploads/scene_${job.id}_${scene.scene_number}_init.jpg`;
+          Logger.info('Sahne önizleme resmi kaydedildi:', previewImgPath);
+        }
+      } catch (previewErr) {
+        Logger.warn('Önizleme resmi çıkarılamadı:', previewErr);
+      }
+
+      const relativeVideoPath = `/videolar/ms_${job.id}_${scene.scene_number}.mp4`;
+      const relativeAudioPath = `/videolar/ts_${job.id}_${scene.scene_number}.wav`;
+
+      // Sahne durumunu completed yap ve yolları db'ye yaz
+      await db.run(
+        `UPDATE video_scenes SET
+          status = 'completed',
+          image_path = ?,
+          video_path = ?,
+          audio_path = ?
+         WHERE id = ?`,
+        [
+          relativeImagePath,
+          relativeVideoPath,
+          relativeAudioPath,
+          scene.id
+        ]
+      );
+
       finalScenes.push(mS);
-      await db.run("UPDATE video_jobs SET completed_scenes = ? WHERE id = ?", [scene.sceneNumber, job.id]);
+      await db.run("UPDATE video_jobs SET completed_scenes = ? WHERE id = ?", [scene.scene_number, job.id]);
+
+      // Sahne 1 başarıyla tamamlandığında yüklenen materyali erkenden sil
+      if (scene.scene_number === 1 && job.material_path) {
+        try {
+          const resolvedMaterial = path.isAbsolute(job.material_path)
+            ? job.material_path
+            : path.join(process.cwd(), job.material_path);
+          if (await fs.pathExists(resolvedMaterial)) {
+            await fs.remove(resolvedMaterial);
+            Logger.info(`[INFO] Sahne 1 tamamlandigi icin yuklenen materyal erken temizlendi: ${resolvedMaterial}`);
+          }
+        } catch (e) {
+          Logger.warn('Sahne 1 bitiminde yuklenen materyal temizlenirken hata:', e);
+        }
+      }
     }
     } finally {
       colabMutex.release();
@@ -727,6 +984,14 @@ async function startProduction(job: VideoJob) {
     Logger.info(`İş başarıyla tamamlandı: ID=${job.id}`);
 
   } catch (error) {
+    if (hasDeducted && requiredCredits > 0) {
+      await CreditService.refundCredits(
+        job.user_id,
+        requiredCredits,
+        `Proje #${job.id} başarısız/iptal olduğu için iade edilen kredi`
+      );
+    }
+
     if (error && (error as any).message === 'JOB_CANCELLED') {
       Logger.info(`Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);
       broadcast(job.id, { stageKey: 'stageCancelled', percent: 0 });
@@ -736,6 +1001,21 @@ async function startProduction(job: VideoJob) {
     await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata Oluştu' WHERE id = ?", [job.id]);
     broadcast(job.id, { stageKey: 'stageError', percent: 0 });
   } finally {
+    // Yüklenen materyal dosyasını (resim/video vb.) iş bittiği (veya hata verdiği) anda diskten temizle
+    if (job.material_path) {
+      try {
+        const resolvedMaterial = path.isAbsolute(job.material_path)
+          ? job.material_path
+          : path.join(process.cwd(), job.material_path);
+        if (await fs.pathExists(resolvedMaterial)) {
+          await fs.remove(resolvedMaterial);
+          Logger.info(`[INFO] Yüklenen materyal temizlendi: ${resolvedMaterial}`);
+        }
+      } catch (e) {
+        Logger.warn('Yüklenen materyal temizlenirken hata:', e);
+      }
+    }
+
     // Check if any jobs remain in queue. If not, stop Colab immediately.
     try {
       const remaining = await db.get(
