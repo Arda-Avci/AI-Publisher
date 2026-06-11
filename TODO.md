@@ -12,7 +12,7 @@
 - [x] Colab sunucusunda kütüphane import doğruluğunu test eden `/verify-libs` endpoint'inin sunulması ve mükerrer `/health` rotasının temizlenmesi.
 - [x] `colab_server.py` başlatılırken oluşan `NameError: name 'health' is not defined` hatasını main bloğundaki `health._start_time` satırını temizleyerek giderme.
 - [x] `colab_setup.py` ve `colab_server.py` dosyalarının her zaman git reposundaki en son dağıtımdan (git clone/pull yöntemiyle önbelleksiz) indirilmesi mantığının kurulması, Google_Colab_AI_Publisher.ipynb defterinin sıfırdan yazılarak git'e push edilmesi ve Colab entegrasyonunun tamamlanması.
-- [x] Google Colab Jupyter notebook dosyasındaki `/content/colab_setup.py` ezilme hatasının `/content/colab_server.py` şeklinde düzeltilmesi ve git'e push edilmesi.
+- [x] Google Colab Jupyter notebook dosyasındaki `/content/colab_setup.py` ezilme hatasının `/content/colab_server.py` şeklinde düzeltilmesi ve `git clone 128` hatasını aşmak için `rm -rf` zorla temizleme adımıyla güncellenip git'e push edilmesi.
 
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı
