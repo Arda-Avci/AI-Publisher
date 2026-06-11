@@ -13,6 +13,7 @@
 - [x] `colab_server.py` başlatılırken oluşan `NameError: name 'health' is not defined` hatasını main bloğundaki `health._start_time` satırını temizleyerek giderme.
 - [x] `colab_setup.py` ve `colab_server.py` dosyalarının her zaman git reposundaki en son dağıtımdan (git clone/pull yöntemiyle önbelleksiz) indirilmesi mantığının kurulması, Google_Colab_AI_Publisher.ipynb defterinin sıfırdan yazılarak git'e push edilmesi ve Colab entegrasyonunun tamamlanması.
 - [x] Google Colab Jupyter notebook dosyasındaki `/content/colab_setup.py` ezilme hatasının `/content/colab_server.py` şeklinde düzeltilmesi, `git clone 128` hatasını aşmak için `rm -rf` zorla temizleme adımı ve `colab_setup.py`'ın ana kernel'i çökertmesini engellemek için `subprocess.run` üzerinden çalıştırılmasıyla güncellenip git'e push edilmesi.
+- [x] Özel repolara erişim için `GITHUB_TOKEN` entegrasyonu ve alt sürecin SIGKILL ile sonlanması durumunda ana kernel'i otomatik tetikleyen `try-except` CalledProcessError yönetimi notebook'a eklendi.
 
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı
