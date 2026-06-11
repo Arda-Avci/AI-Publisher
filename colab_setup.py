@@ -192,18 +192,23 @@ else:
         NGROK_TOKEN = input("Lütfen Ngrok Auth Token'ınızı girin: ").strip()
 
     if not os.path.exists("colab_server.py"):
-        print("\n⚠️  colab_server.py bulunamadı!")
-        print("👉 Lütfen bilgisayarınızdaki 'colab_server.py' dosyasını seçip yükleyin:\n")
+        print("\n[INFO] colab_server.py bulunamadı. GitHub'dan indiriliyor...")
         try:
-            from google.colab import files
-            uploaded = files.upload()
-            if "colab_server.py" not in uploaded:
-                print("❌ colab_server.py dosyası yüklenmedi! Başlatma iptal edildi.")
+            import urllib.request
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_server.py", "colab_server.py")
+            print("[OK] colab_server.py GitHub'dan başarıyla indirildi!")
+        except Exception as dl_e:
+            print(f"[WARN] GitHub'dan otomatik indirilemedi: {dl_e}")
+            print("👉 Lütfen bilgisayarınızdaki 'colab_server.py' dosyasını seçip yükleyin:\n")
+            try:
+                from google.colab import files
+                uploaded = files.upload()
+                if "colab_server.py" not in uploaded:
+                    print("❌ colab_server.py dosyası yüklenmedi! Başlatma iptal edildi.")
+                    sys.exit(1)
+            except Exception as e:
+                print(f"❌ Dosya yükleme arayüzü açılamadı: {e}")
                 sys.exit(1)
-        except Exception as e:
-            print(f"❌ Dosya yükleme arayüzü açılamadı: {e}")
-            print("👉 Lütfen sol paneldeki klasör simgesine tıklayıp 'colab_server.py' dosyasını sürükleyip bırakın.")
-            sys.exit(1)
 
     print("[INFO] Eski ngrok süreçleri temizleniyor...")
     try:
