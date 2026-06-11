@@ -59,7 +59,12 @@ packages_to_check = [
     ("yt_dlp", "import yt_dlp"),
     ("face_recognition", "import face_recognition"),
     ("decord", "import decord"),
-    ("TTS", "from TTS.api import TTS")
+    ("TTS", "from TTS.api import TTS"),
+    ("pyrubberband", "import pyrubberband"),
+    ("gfpgan", "import gfpgan"),
+    ("realesrgan", "import realesrgan"),
+    ("basicsr", "import basicsr"),
+    ("edge-tts", "import edge_tts")
 ]
 
 print("[INFO] Bağımlılıklar kontrol ediliyor...")
