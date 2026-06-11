@@ -109,40 +109,40 @@ if not already_installed:
     # Ana ML kütüphaneleri ve Flask, pyngrok sürüm sabitlemeleriyle
     # transformers >=4.47 (coqui-tts, isin_mps_friendly fonksiyonunu ister)
     # Üst sınır yok — monkey patch (ModuleProxy) 4.47+ import_utils değişikliklerini yönetir
-    run_cmd("pip install -q --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
+    run_cmd("pip install --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
 
     # Coqui TTS ve sistem ses paketleri (XTTS-v2 için)
     # torchcodec, PyTorch 2.9+ için TTS'in ihtiyaç duyduğu ses kodek kütüphanesi
     run_cmd('apt-get install -y espeak-ng espeak')
-    run_cmd('pip install -q coqui-tts')
-    run_cmd('pip install -q torchcodec')
+    run_cmd('pip install coqui-tts')
+    run_cmd('pip install torchcodec')
 
     # ModelScope T2V ek paketler
-    run_cmd('pip install -q "decord>=0.6.0" "open_clip_torch"')
+    run_cmd('pip install "decord>=0.6.0" "open_clip_torch"')
 
     # Wav2Lip Repo
     if not os.path.exists('Wav2Lip'):
-        run_cmd('git clone -q https://github.com/Rudrabha/Wav2Lip.git')
+        run_cmd('git clone https://github.com/Rudrabha/Wav2Lip.git')
 
     # Wav2Lip & Face detection paketleri
-    run_cmd('pip install -q face_recognition_models')
-    run_cmd('pip install -q face_recognition opencv-python-headless librosa')
+    run_cmd('pip install face_recognition_models')
+    run_cmd('pip install face_recognition opencv-python-headless librosa')
 
     # Altyazı çıkarıcı (faster-whisper)
-    run_cmd('pip install -q faster-whisper')
+    run_cmd('pip install faster-whisper')
 
     # Video indirici (yt-dlp) — colab_server.py ve özgünleştirme için
-    run_cmd('pip install -q yt-dlp')
+    run_cmd('pip install yt-dlp')
 
     # Rubberband ses senkronizasyonu (Auto-Synced-Translated-Dubs)
-    run_cmd('pip install -q pyrubberband soundfile')
+    run_cmd('pip install pyrubberband soundfile')
     run_cmd('apt-get install -y rubberband-cli rubberband-ladspa')
 
     # Alternatif TTS sağlayıcıları (Lobe Chat / OpenAI / Edge)
-    run_cmd('pip install -q openai edge-tts')
+    run_cmd('pip install openai edge-tts')
 
     # GFPGAN + RealESRGAN yüz düzeltme ve upscale (stable-diffusion-webui)
-    run_cmd('pip install -q gfpgan realesrgan basicsr')
+    run_cmd('pip install gfpgan realesrgan basicsr')
 
     # Wav2Lip checkpoint (~400MB) indirme zinciri
     WAV2LIP_CKPT_SOURCES = [
