@@ -103,46 +103,43 @@ if not already_installed:
     run_cmd('pip uninstall -y sympy mpmath')
     run_cmd('pip install sympy mpmath --no-cache-dir')
 
-    # NOT: Colab base imajında PyTorch 2.9+ yüklü; downgrade kalıcı olmuyor.
-    # PyTorch olduğu gibi bırakılır, torchcodec ayrıca kurulur.
-
     # Ana ML kütüphaneleri ve Flask, pyngrok sürüm sabitlemeleriyle
     # transformers >=4.47 (coqui-tts, isin_mps_friendly fonksiyonunu ister)
     # Üst sınır yok — monkey patch (ModuleProxy) 4.47+ import_utils değişikliklerini yönetir
-    run_cmd("pip install --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
+    run_cmd("pip install --prefer-binary --no-cache-dir --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
 
     # Coqui TTS ve sistem ses paketleri (XTTS-v2 için)
     # torchcodec, PyTorch 2.9+ için TTS'in ihtiyaç duyduğu ses kodek kütüphanesi
     run_cmd('apt-get install -y espeak-ng espeak')
-    run_cmd('pip install coqui-tts')
-    run_cmd('pip install torchcodec')
+    run_cmd('pip install --prefer-binary --no-cache-dir coqui-tts')
+    run_cmd('pip install --prefer-binary --no-cache-dir torchcodec')
 
     # ModelScope T2V ek paketler
-    run_cmd('pip install "decord>=0.6.0" "open_clip_torch"')
+    run_cmd('pip install --prefer-binary --no-cache-dir "decord>=0.6.0" "open_clip_torch"')
 
     # Wav2Lip Repo
     if not os.path.exists('Wav2Lip'):
         run_cmd('git clone https://github.com/Rudrabha/Wav2Lip.git')
 
     # Wav2Lip & Face detection paketleri
-    run_cmd('pip install face_recognition_models')
-    run_cmd('pip install face_recognition opencv-python-headless librosa')
+    run_cmd('pip install --prefer-binary --no-cache-dir face_recognition_models')
+    run_cmd('pip install --prefer-binary --no-cache-dir face_recognition opencv-python-headless librosa')
 
     # Altyazı çıkarıcı (faster-whisper)
-    run_cmd('pip install faster-whisper')
+    run_cmd('pip install --prefer-binary --no-cache-dir faster-whisper')
 
     # Video indirici (yt-dlp) — colab_server.py ve özgünleştirme için
-    run_cmd('pip install yt-dlp')
+    run_cmd('pip install --prefer-binary --no-cache-dir yt-dlp')
 
     # Rubberband ses senkronizasyonu (Auto-Synced-Translated-Dubs)
-    run_cmd('pip install pyrubberband soundfile')
+    run_cmd('pip install --prefer-binary --no-cache-dir pyrubberband soundfile')
     run_cmd('apt-get install -y rubberband-cli rubberband-ladspa')
 
     # Alternatif TTS sağlayıcıları (Lobe Chat / OpenAI / Edge)
-    run_cmd('pip install openai edge-tts')
+    run_cmd('pip install --prefer-binary --no-cache-dir openai edge-tts')
 
     # GFPGAN + RealESRGAN yüz düzeltme ve upscale (stable-diffusion-webui)
-    run_cmd('pip install gfpgan realesrgan basicsr')
+    run_cmd('pip install --prefer-binary --no-cache-dir gfpgan realesrgan basicsr')
 
     # Wav2Lip checkpoint (~400MB) indirme zinciri
     WAV2LIP_CKPT_SOURCES = [
@@ -169,11 +166,8 @@ if not already_installed:
     # Opsiyonel GAN varyantı
     run_cmd('wget -q --show-progress -O /content/Wav2Lip/checkpoints/wav2lip_gan.pth "https://huggingface.co/Nekochu/Wav2Lip/resolve/main/wav2lip_gan.pth"')
 
-
-
     print("\n" + "="*60)
     print("⚠️  ÖNEMLİ: Kurulum tamamlandı!")
-
     print("PyTorch ve SymPy kütüphanelerinin çakışmaması ve belleğin yenilenmesi için:")
     print("👉 Python oturumu (kernel) otomatik olarak YENİDEN BAŞLATILIYOR...")
     print("👉 Yeniden başlatma tamamlandıktan sonra, lütfen bu hücreyi TEKRAR ÇALIŞTIRIN.")
@@ -229,7 +223,6 @@ else:
                     sys.exit(1)
             else:
                 print("[INFO] Mevcut yerel colab_server.py dosyası kullanılacak.")
-
 
     print("[INFO] Eski ngrok süreçleri temizleniyor...")
     try:
