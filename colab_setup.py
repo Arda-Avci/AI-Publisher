@@ -179,7 +179,7 @@ if not already_installed:
     print("👉 Yeniden başlatma tamamlandıktan sonra, lütfen bu hücreyi TEKRAR ÇALIŞTIRIN.")
     print("="*60 + "\n")
     time.sleep(2)
-    os.kill(os.getpid(), 9)
+    sys.exit(100)
 
 else:
     print("[OK] Bağımlılıklar hazır. Sunucu başlatılıyor...")
@@ -193,8 +193,12 @@ else:
             pass
 
     if not NGROK_TOKEN or NGROK_TOKEN == "BURAYA_NGROK_TOKEN_GELECEK":
-        print("\n🔑 NGROK_TOKEN bulunamadı.")
-        NGROK_TOKEN = input("Lütfen Ngrok Auth Token'ınızı girin: ").strip()
+        if sys.stdin.isatty():
+            print("\n🔑 NGROK_TOKEN bulunamadı.")
+            NGROK_TOKEN = input("Lütfen Ngrok Auth Token'ınızı girin: ").strip()
+        else:
+            print("\n❌ NGROK_TOKEN bulunamadı ve etkileşimsiz ortamda çalışılıyor. Lütfen çevre değişkeni veya userdata Secrets üzerinden NGROK_TOKEN tanımlayın.")
+            sys.exit(1)
 
     print("\n[INFO] colab_server.py güncelleniyor...")
     repo_server_path = "/content/AI-Publisher/colab_server.py"
