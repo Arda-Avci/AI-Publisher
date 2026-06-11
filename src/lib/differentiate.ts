@@ -215,14 +215,14 @@ export async function runPhase1Background(
   try {
     // Step 1: indicate transcript fetch starting
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 10 WHERE id = ? AND user_id = ?",
-      [jobId, userId]
+      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 10 WHERE id = ?",
+      [jobId]
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Transcript', percent: 10, stage: 'Transkript çekiliyor...' });
 
     const job: any = await db.get(
-      'SELECT * FROM video_jobs WHERE id = ? AND user_id = ?',
-      [jobId, userId]
+      'SELECT * FROM video_jobs WHERE id = ?',
+      [jobId]
     );
     if (!job) {
       throw new Error('Job bulunamadı');
@@ -241,8 +241,8 @@ export async function runPhase1Background(
 
     // Step 3: fetch transcript
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 40 WHERE id = ? AND user_id = ?",
-      [jobId, userId]
+      "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 40 WHERE id = ?",
+      [jobId]
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Transcript', percent: 40, stage: 'Transkript çekiliyor...' });
     let originalText = '';
@@ -252,8 +252,8 @@ export async function runPhase1Background(
     } catch (err: any) {
       console.warn(`[WARN] YouTube transcript failed for ${videoId}. Falling back to AI script generation...`, err.message);
       await db.run(
-        "UPDATE video_jobs SET current_stage = 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ? AND user_id = ?",
-        [jobId, userId]
+        "UPDATE video_jobs SET current_stage = 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ?",
+        [jobId]
       );
       await broadcastProgress(jobId, { stageKey: 'phase1AI', percent: 50, stage: 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...' });
       const meta = job.source_video_meta ? JSON.parse(job.source_video_meta) : {};
@@ -263,24 +263,24 @@ export async function runPhase1Background(
 
     // Step 4: clean text
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Metin temizleniyor...', progress_percent = 60, transcript = ? WHERE id = ? AND user_id = ?",
-      [originalText, jobId, userId]
+      "UPDATE video_jobs SET current_stage = 'Metin temizleniyor...', progress_percent = 60, transcript = ? WHERE id = ?",
+      [originalText, jobId]
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Clean', percent: 60, stage: 'Metin temizleniyor...' });
     const cleanedText = await cleanText(originalText);
 
     // Step 5: translate
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Çeviri yapılıyor...', progress_percent = 75, transcript_cleaned = ? WHERE id = ? AND user_id = ?",
-      [cleanedText, jobId, userId]
+      "UPDATE video_jobs SET current_stage = 'Çeviri yapılıyor...', progress_percent = 75, transcript_cleaned = ? WHERE id = ?",
+      [cleanedText, jobId]
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Translate', percent: 75, stage: 'Çeviri yapılıyor...' });
     const translatedText = await translateText(cleanedText || originalText, targetLang);
 
     // Step 6: generate scene prompts directly
     await db.run(
-      "UPDATE video_jobs SET current_stage = 'Promptlar üretiliyor...', progress_percent = 90 WHERE id = ? AND user_id = ?",
-      [jobId, userId]
+      "UPDATE video_jobs SET current_stage = 'Promptlar üretiliyor...', progress_percent = 90 WHERE id = ?",
+      [jobId]
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Prompts', percent: 90, stage: 'Promptlar üretiliyor...' });
     
@@ -306,8 +306,8 @@ export async function runPhase1Background(
         scene_prompts = ?,
         master_prompt = ?,
         material_path = ?
-       WHERE id = ? AND user_id = ?`,
-      [translatedText, productionNotesPreview, scenesJson, firstScenePrompt, imagePath, jobId, userId]
+       WHERE id = ?`,
+      [translatedText, productionNotesPreview, scenesJson, firstScenePrompt, imagePath, jobId]
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Done', percent: 100, stage: 'Onaylandı — Manuel başlatma bekleniyor', status: 'pending' });
 
@@ -321,8 +321,8 @@ export async function runPhase1Background(
           status = 'failed',
           current_stage = ?,
           progress_percent = 0
-        WHERE id = ? AND user_id = ?`,
-        ['Hata: ' + errorMsg, jobId, userId]
+        WHERE id = ?`,
+        ['Hata: ' + errorMsg, jobId]
       );
       await broadcastProgress(jobId, { stageKey: 'stageError', percent: 0, stage: 'Hata: ' + errorMsg, status: 'failed' });
     } catch (innerErr: any) {
@@ -399,10 +399,10 @@ export async function differentiateVideoPhase2(
 
   // 1. Verify ownership + status
   const job: any = await db.get(
-    'SELECT * FROM video_jobs WHERE id = ? AND user_id = ?',
-    [jobId, userId]
+    'SELECT * FROM video_jobs WHERE id = ?',
+    [jobId]
   );
-  if (!job) throw new Error('Job bulunamadı veya size ait değil');
+  if (!job) throw new Error('Job bulunamadı');
   if (job.status !== 'awaiting_approval') {
     throw new Error("Job '" + job.status + "' durumunda, onay beklemiyor");
   }

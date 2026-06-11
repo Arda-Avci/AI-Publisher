@@ -32,6 +32,7 @@ export async function cleanText(raw: string): Promise<string> {
   const { text } = await withFallbackAndRetry((model) => generateText({
     model,
     maxTokens: 1500,
+    abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
     prompt:
       'Görevin: Bir YouTube videosunun ham transkriptini temizlemek ve kusursuzlaştırmaktır. ' +
       'Yazım hatalarını düzelt, dolgu kelimelerini at. Fikrin özüne ve iskeletine %100 sadık kal. ' +
@@ -68,6 +69,7 @@ export async function translateText(text: string, targetLang: SupportedLang): Pr
   const { text: out } = await withFallbackAndRetry((model) => generateText({
     model,
     maxTokens: 1500,
+    abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
     prompt:
       'Translate the following text to ' + LANG_NAMES[targetLang] + ' (' + targetLang + '). ' +
       'ÖNEMLİ KURAL: Orijinal metin akademik, resmi veya soğuk olsa bile, sen bunu her zaman ' +
@@ -106,6 +108,7 @@ export async function translateTitleAndDesc(
         title: z.string(),
         desc: z.string()
       }),
+      abortSignal: AbortSignal.timeout(30000), // 30 saniye zaman aşımı
       prompt
     } as any), getAIModelChain()) as any;
     return object;
@@ -153,6 +156,7 @@ export async function rewriteTranscript(
   const { text } = await withFallbackAndRetry((model) => generateText({
     model,
     maxTokens: 1500,
+    abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
     prompt
   } as any), getAIModelChain());
   return text.trim();
@@ -218,6 +222,7 @@ export async function generateScenePrompts(
     model,
     maxTokens: 2000,
     schema: SceneSchema,
+    abortSignal: AbortSignal.timeout(60000), // Sahneler için 60 saniye zaman aşımı
     prompt:
       'Based on this content, generate 3-5 video scenes. Each scene has: ' +
       'videoPrompt (for AI video gen, English, cinematic), ' +

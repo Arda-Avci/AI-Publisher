@@ -996,9 +996,14 @@ export function getDashboardScripts(params: {
         setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 2500);
       }
 
-      const activeJobs = ${JSON.stringify(queueJobs.map(j => j.id))};
-      activeJobs.forEach(jobId => {
-        const es = new EventSource('/progress/' + jobId);
+      window.trackedJobs = new Set();
+
+      window.trackJobProgress = function(jobId) {
+        if (window.trackedJobs.has(jobId)) return;
+        window.trackedJobs.add(jobId);
+
+        const es = new EventSource('/progress/' + jobId + '?ngrok-skip-browser-warning=true');
+        
         es.onmessage = function(event) {
           const data = JSON.parse(event.data);
           
@@ -1017,10 +1022,16 @@ export function getDashboardScripts(params: {
           const termLog = document.getElementById('rabbitmq-log-content');
           if (term && termLog && displayStage) {
             term.style.display = 'block';
+            const placeholder = document.getElementById('rabbitmq-placeholder');
+            if (placeholder) placeholder.remove();
             const time = new Date().toLocaleTimeString();
             const logLine = document.createElement('div');
             logLine.style.marginBottom = '4px';
-            let logText = '[' + time + '] [RABBITMQ] Job ' + jobId + ' -> ' + displayStage + ' (' + (data.percent || 0) + '%)';
+            let pctVal = data.percent || 0;
+            if (data.stageKey === 'stageColabProgress' && data.colabPercent !== undefined) {
+              pctVal = data.colabPercent;
+            }
+            let logText = '[' + time + '] [RABBITMQ] Job ' + jobId + ' -> ' + displayStage + ' (' + pctVal + '%)';
             if (data.colabMessage) logText += ' | ' + data.colabMessage + (data.etaSeconds ? ' [ETA:' + data.etaSeconds + 's]' : '');
             logLine.textContent = logText;
             termLog.appendChild(logLine);
@@ -1030,13 +1041,21 @@ export function getDashboardScripts(params: {
           const card = document.getElementById('job-card-' + jobId);
           if (!card) return;
           const badge = card.querySelector('.status-badge');
-          if (badge && displayStage) { badge.textContent = displayStage + ' (' + (data.percent || 0) + '%)'; badge.className = 'status-badge status-processing'; }
+          if (badge && displayStage) {
+            let badgePct = data.percent || 0;
+            if (data.stageKey === 'stageColabProgress' && data.colabPercent !== undefined) {
+              badgePct = data.colabPercent;
+            }
+            badge.textContent = displayStage + ' (' + badgePct + '%)';
+            badge.className = 'status-badge status-processing';
+          }
           const fill = document.getElementById('progress-fill-' + jobId);
           if (fill && data.percent !== undefined) fill.style.width = data.percent + '%';
           const msg = document.getElementById('status-msg-' + jobId);
           if (msg && data.est_min !== undefined) msg.textContent = 'Tahmini: ' + data.est_min + ' dk';
           if (data.stageKey === 'stageCompleted' || data.stageKey === 'stageError' || data.stageKey === 'stageCancelled' || displayStage === 'Tamamlandı' || displayStage === 'Hata Oluştu') {
             es.close();
+            window.trackedJobs.delete(jobId);
             if (data.finalFilename) {
               const a = document.createElement('a'); a.href = '/videolar/' + data.finalFilename; a.download = data.finalFilename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
             }
@@ -1044,9 +1063,23 @@ export function getDashboardScripts(params: {
           }
           if (data.stage === 'Hata Verdi' || data.stage === 'Error') {
             es.close();
+            window.trackedJobs.delete(jobId);
             setTimeout(() => window.location.reload(), 2000);
           }
         };
+
+        es.onerror = function() {
+          es.close();
+          window.trackedJobs.delete(jobId);
+          setTimeout(() => {
+            window.trackJobProgress(jobId);
+          }, 5000);
+        };
+      };
+
+      const activeJobs = ${JSON.stringify(queueJobs.filter(j => j.status === 'pending' || j.status === 'processing' || j.status === 'processing_phase1').map(j => j.id))};
+      activeJobs.forEach(jobId => {
+        window.trackJobProgress(jobId);
       });
 
       async function saveMeta(jobId) {
@@ -1289,7 +1322,7 @@ export function getDashboardScripts(params: {
           void pollColabStatus();
           return;
         }
-        const es = new EventSource('/colab-status-stream');
+        const es = new EventSource('/colab-status-stream?ngrok-skip-browser-warning=true');
         colabEventSource = es;
         es.onmessage = (e) => {
           try {
@@ -1349,6 +1382,33 @@ export function getDashboardScripts(params: {
             showToast('Durdurma sinyali gönderildi.', 'success');
           } else {
             showToast('Hata: ' + (data.error || 'unknown'), 'error');
+          }
+        } catch (err) {
+          showToast('Bağlantı hatası.', 'error');
+        }
+      }
+
+      async function selectCover(jobId, coverIndex, element) {
+        try {
+          const res = await fetch('/select-cover', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId: parseInt(jobId, 10), coverIndex })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast(trMsg('Kapak resmi başarıyla güncellendi.', 'Cover image updated successfully.'), 'success');
+            const container = element.parentElement;
+            container.querySelectorAll('.cover-option-card').forEach((card, idx) => {
+              card.classList.toggle('active', idx === coverIndex);
+              card.style.borderColor = idx === coverIndex ? 'hsl(var(--primary))' : 'hsla(var(--border), 0.3)';
+              const label = card.querySelector('div');
+              if (label) {
+                label.textContent = idx === coverIndex ? trMsg('✓ Seçili Kapak', '✓ Selected Cover') : trMsg('Kapak Alternatif ', 'Cover Alternative ') + (idx + 1);
+              }
+            });
+          } else {
+            showToast(data.error || 'Kapak güncellenemedi.', 'error');
           }
         } catch (err) {
           showToast('Bağlantı hatası.', 'error');

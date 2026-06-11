@@ -133,6 +133,9 @@ describe('AI-Publisher System Integration Tests', () => {
             if (url.endsWith('/health')) {
               return { data: { memory: { gpu_total_gb: 15 } } };
             }
+            if (url.endsWith('/verify-libs')) {
+              return { data: { success: true, report: { torch: { status: 'ok' } } } };
+            }
             if (url.includes('/status/')) {
               return { data: { status: 'success', has_subtitle: true } };
             }
@@ -219,6 +222,12 @@ describe('AI-Publisher System Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(colab.getState().status).toBe('stopped');
+    });
+
+    it('should verify colab libraries via colab manager', async () => {
+      const result = await colab.verifyLibraries();
+      expect(result.success).toBe(true);
+      expect(result.report).toBeDefined();
     });
 
     it('should save settings in db', async () => {

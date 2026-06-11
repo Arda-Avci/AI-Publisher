@@ -56,6 +56,7 @@ export async function themeMiddleware(req: Request, res: Response, next: NextFun
   if (req.session && (req.session as any).userId && req.query.theme) {
     try {
       await db.run('UPDATE users SET selected_theme = ? WHERE id = ?', [themeId, (req.session as any).userId]);
+      await new Promise<void>((r) => req.session!.save(() => r()));
     } catch (err) {
       // Ignored
     }

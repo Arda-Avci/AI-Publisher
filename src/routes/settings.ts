@@ -88,6 +88,28 @@ export function registerSettingsRoutes(app: Application): void {
         ]
       );
 
+      // Session synchronization
+      if (req.body.selected_theme !== undefined) {
+        (req.session as any).theme = req.body.selected_theme;
+      }
+      if (req.body.theme_mode !== undefined) {
+        (req.session as any).isDark = req.body.theme_mode === 'dark';
+      }
+      if (req.body.preferred_language !== undefined) {
+        (req.session as any).lang = req.body.preferred_language;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('[ERROR] Session save failed in save-settings:', err);
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+
       logAudit({
         userId: req.session.userId,
         action: 'settings.save',

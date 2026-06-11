@@ -35,7 +35,8 @@ export function registerDashboardRoutes(app: Application): void {
       user,
       queueJobs,
       completedJobs,
-      themeStyles: res.locals.themeStyles
+      themeStyles: res.locals.themeStyles,
+      isDark: res.locals.isDark
     });
 
     res.send(html);

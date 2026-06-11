@@ -160,6 +160,7 @@ export async function initDatabase() {
       meta_status TEXT DEFAULT 'not_selected',
       playlist_id TEXT,
       cover_image_path TEXT,
+      cover_images TEXT,
       has_shorts INTEGER DEFAULT 1,
       has_subtitles INTEGER DEFAULT 1,
       source_video_id TEXT,
@@ -207,4 +208,7 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS colab_task_id TEXT;');
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_duration_mode TEXT DEFAULT 'same';");
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_layout INTEGER DEFAULT 1;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS cover_images TEXT;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_provider TEXT DEFAULT 'xtts';");
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_voice TEXT DEFAULT 'Claribel Dervla';");
 }

@@ -13,10 +13,11 @@ export interface DashboardParams {
   queueJobs: any[];
   completedJobs: any[];
   themeStyles: string;
+  isDark: boolean;
 }
 
 export function buildDashboardHTML(params: DashboardParams): string {
-  const { currentLang, currentTheme, t, user, queueJobs, completedJobs, themeStyles } = params;
+  const { currentLang, currentTheme, t, user, queueJobs, completedJobs, themeStyles, isDark } = params;
 
   const HELP_PAGES_DATA = [
     {
@@ -107,7 +108,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
       ? '<button onclick="window.loadJobIntoForm(' + job.id + ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ Düzenle</button><button onclick="startJob(' + job.id + ')" class="start-btn">▶ Kuyruğa Ekle</button>'
       : '';
 
-    var cancelBtn = ''; // Bir job prod için gönderilmediyse gösterilmesine gerek yok
+    var cancelBtn = (isProcessing || isPending || isProcessingPhase1 || isAwaitingApproval)
+      ? '<button onclick="cancelJob(' + job.id + ')" class="delete-btn" style="background: hsla(0, 70%, 50%, 0.15); color: hsl(0, 70%, 60%); border-color: hsla(0, 70%, 50%, 0.4); margin-right: 5px;">✕ ' + (t.cancel76 || 'İptal Et') + '</button>'
+      : '';
 
     let targetPlatforms = [];
     try { targetPlatforms = JSON.parse(job.target_platforms || '[]'); } catch(e) {}
@@ -186,6 +189,62 @@ export function buildDashboardHTML(params: DashboardParams): string {
       differentiationLayout: job.differentiation_layout === 1
     }).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
 
+    let coverSelectorHTML = '';
+    if (job.cover_images) {
+      try {
+        const coverList = JSON.parse(job.cover_images);
+        if (Array.isArray(coverList) && coverList.length > 0) {
+          const selectedCoverName = job.cover_image_path ? job.cover_image_path.split(/[\\/]/).pop() : '';
+          const coverOptions = coverList.map((cPath, idx) => {
+            const cName = cPath.split('/').pop();
+            const isSelected = cName === selectedCoverName;
+            const activeClass = isSelected ? 'active' : '';
+            return `
+              <div class="cover-option-card ${activeClass}" onclick="selectCover('${job.id}', ${idx}, this)" style="
+                position: relative;
+                cursor: pointer;
+                border: 2px solid ${isSelected ? 'hsl(var(--primary))' : 'hsla(var(--border), 0.3)'};
+                border-radius: 0.5rem;
+                overflow: hidden;
+                transition: all 0.2s;
+                aspect-ratio: 16/9;
+                background: hsl(var(--card));
+              ">
+                <img src="${cPath}" style="width: 100%; height: 100%; object-fit: cover;" alt="Kapak ${idx}">
+                <div style="
+                  position: absolute;
+                  bottom: 0; left: 0; right: 0;
+                  background: rgba(0,0,0,0.6);
+                  color: #fff;
+                  font-size: 0.65rem;
+                  padding: 2px 6px;
+                  text-align: center;
+                  font-family: 'JetBrains Mono', monospace;
+                ">
+                  ${isSelected ? '✓ Seçili Kapak' : `Kapak Alternatif ${idx + 1}`}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          coverSelectorHTML = `
+            <div class="cover-selector-section" style="margin-bottom: 1.5rem; margin-top: 1rem;">
+              <h5 style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">🖼️ Kapak Fotoğrafı Seçimi</h5>
+              <div class="cover-options-grid" style="
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+              ">
+                ${coverOptions}
+              </div>
+            </div>
+          `;
+        }
+      } catch (e) {
+        console.warn('Cover images JSON parse hatası:', e);
+      }
+    }
+
     return `
       <div class="job-card completed-job-card" id="job-card-${job.id}">
         <div class="job-header">
@@ -199,6 +258,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
             <source src="/videolar/${job.final_filename}" type="video/mp4">
           </video>
         </div>
+
+        ${coverSelectorHTML}
         
         <div class="marketing-meta">
           <h4>Yapay Zekâ Pazarlama & SEO Detayları (2026 Standartları)</h4>
@@ -255,7 +316,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
   const dashboardHTML = `
   <!DOCTYPE html>
-  <html lang="${currentLang}">
+  <html lang="${currentLang}" class="theme-${currentTheme} ${isDark ? 'dark' : ''}">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -878,9 +939,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <button type="submit" class="btn-primary">
                 ▶ ${t.addToQueue}
               </button>
-              <div id="rabbitmq-terminal" class="glass-card" style="margin-top:1.5rem; background:#000; padding:1rem; border-radius:8px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#0f0; max-height:200px; overflow-y:auto; display:none; border: 1px solid #333;">
+              <div id="rabbitmq-terminal" class="glass-card" style="margin-top:1.5rem; background:#000; padding:1rem; border-radius:8px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#0f0; max-height:200px; overflow-y:auto; display:block; border: 1px solid #333;">
                 <div style="color:#666; margin-bottom:0.5rem; text-transform:uppercase; font-size:0.65rem; border-bottom:1px solid #333; padding-bottom:0.25rem;">RabbitMQ Queue Stream</div>
-                <div id="rabbitmq-log-content"></div>
+                <div id="rabbitmq-log-content">
+                  <div style="color: #666; font-style: italic;" id="rabbitmq-placeholder">[SYSTEM] RabbitMQ Queue Stream dinleniyor. Bekleyen aktif işlem yok...</div>
+                </div>
               </div>
             </div>
           </form>

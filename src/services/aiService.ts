@@ -39,10 +39,14 @@ export const MarketingSchema = z.object({
 
 export async function generateMarketingCopy(transcript: string) {
   const models = getAIModelChain();
-  const result = await withFallbackAndRetry((model) => generateObject({
-    model,
-    schema: MarketingSchema,
-    prompt: `Sen profesyonel bir sosyal medya pazarlama uzmanısın.
+  const result = await withFallbackAndRetry((model) => {
+    const isMinimax = model.modelId && model.modelId.includes('MiniMax');
+    const system = isMinimax 
+      ? "Respond only with the requested JSON. No explanations."
+      : undefined;
+    const prompt = isMinimax
+      ? `Generate marketing copy in Turkish in JSON format based on this transcript: ${transcript}`
+      : `Sen profesyonel bir sosyal medya pazarlama uzmanısın.
 Bu video "Fırsatlar Hunisi" üzerinden özgünleştirilmiştir ve senaryosu aşağıdadır:
 ${transcript}
 
@@ -51,8 +55,16 @@ Görevlerin:
    - YouTube Başlık Formatı: '2026: [Vurucu İfade] | [Ana Başlık]' olmalıdır.
    - İlk 2 cümlede konunun teknik terimleri geçmelidir.
    - CTA: İzleyiciyi tartışmaya ve yorum yapmaya iten gizemli sorular içersin.
-   - TikTok, X ve Meta için de viral kancalar ve hashtag'ler oluştur.`
-  }), models);
+   - TikTok, X ve Meta için de viral kancalar ve hashtag'ler oluştur.`;
+
+    return generateObject({
+      model,
+      schema: MarketingSchema,
+      system,
+      abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
+      prompt
+    });
+  }, models);
   return result.object;
 }
 
@@ -62,10 +74,18 @@ export async function generateStudioScenes(job: any) {
   // Eğer iş akışında transkript varsa (Phase 1 yapılmışsa) ana referans metnimiz budur.
   const transcriptText = job.transcript_translated || job.transcript_cleaned || job.transcript || 'Bilinmiyor';
 
-  const result = await withFallbackAndRetry((model) => generateObject({
-    model,
-    schema: StudioSchema,
-    prompt: `Sen profesyonel bir film yönetmeni ve sosyal medya pazarlama uzmanısın.
+  const result = await withFallbackAndRetry((model) => {
+    const isMinimax = model.modelId && model.modelId.includes('MiniMax');
+    const system = isMinimax 
+      ? "Respond only with the requested JSON. No explanations."
+      : undefined;
+    const prompt = isMinimax
+      ? `Generate scenes and marketing data in Turkish in JSON format using these details:
+Topic: ${job.master_prompt}
+Notes: ${job.production_notes}
+Character: ${job.character_features}
+Transcript: ${transcriptText}`
+      : `Sen profesyonel bir film yönetmeni ve sosyal medya pazarlama uzmanısın.
 Görevlerin:
 1. Hikayeyi analiz et ve ardışık 6 saniyelik sahnelere böl. Konu başlığında geçen "100 Video", "50 Gün" gibi rakamları KESİNLİKLE oluşturulacak sahne sayısı olarak algılama. Sahne sayısını konunun ve metnin doğal anlatım akışına göre belirle.
 2. Karakter tasviri ve üretim notlarını dikkate alarak her sahne için detaylı görsel prompt (videoPrompt), konuşma metni (speechText) ve ses efekti (sfxPrompt) tasarla.
@@ -80,20 +100,42 @@ Giriş Verileri:
 Videonun Konusu / Başlığı: ${job.master_prompt}
 Üretim Notları: ${job.production_notes}
 Karakter Özellikleri: ${job.character_features}
-Referans Metin / Transkript: ${transcriptText}`
-  }), models);
+Referans Metin / Transkript: ${transcriptText}`;
+
+    return generateObject({
+      model,
+      schema: StudioSchema,
+      system,
+      abortSignal: AbortSignal.timeout(60000), // Sahneler için 60 saniye zaman aşımı
+      prompt
+    });
+  }, models);
   return result.object;
 }
 
 export async function generateScriptFromMetadata(title: string, description: string): Promise<string> {
   const models = getAIModelChain();
-  const result = await withFallbackAndRetry((model) => generateObject({
-    model,
-    schema: z.object({ script: z.string() }),
-    prompt: `Sen profesyonel bir içerik üreticisisin. Bir YouTube videosunun başlığını ve açıklamasını kullanarak, bu videonun muhtemel konuşma/transkript metnini tahmin ederek özgün bir şekilde yeniden yaz.
+  const result = await withFallbackAndRetry((model) => {
+    const isMinimax = model.modelId && model.modelId.includes('MiniMax');
+    const system = isMinimax 
+      ? "Respond only with the requested JSON. No explanations."
+      : undefined;
+    const prompt = isMinimax
+      ? `Estimate and generate the video script in Turkish in JSON format based on:
+Title: ${title}
+Description: ${description}`
+      : `Sen profesyonel bir içerik üreticisisin. Bir YouTube videosunun başlığını ve açıklamasını kullanarak, bu videonun muhtemel konuşma/transkript metnini tahmin ederek özgün bir şekilde yeniden yaz.
 Başlık: ${title}
 Açıklama: ${description}
-Yazılacak konuşma metni yaklaşık 150-300 kelime arası, akıcı, bilgilendirici ve sese dökülmeye hazır olmalıdır.`
-  }), models);
+Yazılacak konuşma metni yaklaşık 150-300 kelime arası, akıcı, bilgilendirici ve sese dökülmeye hazır olmalıdır.`;
+
+    return generateObject({
+      model,
+      schema: z.object({ script: z.string() }),
+      system,
+      abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
+      prompt
+    });
+  }, models);
   return result.object.script;
 }

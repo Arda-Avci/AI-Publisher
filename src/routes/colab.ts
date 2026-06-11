@@ -15,25 +15,68 @@ export function registerColabRoutes(app: Application): void {
   app.post('/api/v1/video/callback', upload.fields([
     { name: 'video', maxCount: 1 },
     { name: 'speech', maxCount: 1 },
-    { name: 'subtitle', maxCount: 1 }
-  ]), (req: Request, res: Response) => {
-    const { task_id, status, message } = req.body;
+    { name: 'subtitle', maxCount: 1 },
+    { name: 'sfx', maxCount: 1 },
+    { name: 'cover_0', maxCount: 1 },
+    { name: 'cover_1', maxCount: 1 },
+    { name: 'cover_2', maxCount: 1 }
+  ]), async (req: Request, res: Response) => {
+    const { task_id, job_id, scene_number, status, type, message } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     if (status === 'error') {
-      console.error(`❌ Colab'den hata raporu geldi: ${message}`);
+      console.error(`❌ Colab'den hata raporu geldi: [Type: ${type || 'video'}] ${message}`);
       return res.status(200).json({ received: true });
     }
 
-    // Artık bitmiş dosyalar sunucunda! FFmpeg ile birleştirip Playwright'a paslayabilirsin.
-    const videoPath = files['video']?.[0]?.path;
-    const subtitlePath = files['subtitle']?.[0]?.path || null;
+    try {
+      const fs = await import('fs-extra');
+      const path = await import('path');
 
-    console.log(`✅ Video rendering bitti! Task: ${task_id}, Dosya: ${videoPath}`);
-    
-    // Burada senin RabbitMQ veya otomasyon pipeline'ını tetikle
-    // ...
-    
+      if (type === 'covers' || (!type && files['cover_0'])) {
+        console.log(`✅ Kapak tasarımları callback ile geldi! Job: ${job_id}`);
+        for (let i = 0; i < 3; i++) {
+          const fileField = `cover_${i}`;
+          const file = files[fileField]?.[0];
+          if (file) {
+            const dest = path.join(process.cwd(), 'uploads', `cover_${job_id}_${i}.jpg`);
+            await fs.move(file.path, dest, { overwrite: true });
+            console.log(`💾 Kapak ${i} kaydedildi: ${dest}`);
+          }
+        }
+      } else {
+        const videoFile = files['video']?.[0];
+        const speechFile = files['speech']?.[0];
+        const subtitleFile = files['subtitle']?.[0];
+        const sfxFile = files['sfx']?.[0];
+
+        console.log(`✅ Sahne medyaları callback ile geldi! Job: ${job_id}, Scene: ${scene_number}`);
+
+        if (videoFile) {
+          const destV = path.join(process.cwd(), 'videolar', `tv_${job_id}_${scene_number}.mp4`);
+          await fs.move(videoFile.path, destV, { overwrite: true });
+          console.log(`💾 Video kaydedildi: ${destV}`);
+        }
+        if (speechFile) {
+          const destS = path.join(process.cwd(), 'videolar', `ts_${job_id}_${scene_number}.wav`);
+          await fs.move(speechFile.path, destS, { overwrite: true });
+          console.log(`💾 Konuşma kaydedildi: ${destS}`);
+        }
+        if (sfxFile) {
+          const destE = path.join(process.cwd(), 'videolar', `te_${job_id}_${scene_number}.wav`);
+          await fs.move(sfxFile.path, destE, { overwrite: true });
+          console.log(`💾 SFX kaydedildi: ${destE}`);
+        }
+        if (subtitleFile) {
+          const destSRT = path.join(process.cwd(), 'videolar', `srt_${job_id}_${scene_number}.srt`);
+          await fs.move(subtitleFile.path, destSRT, { overwrite: true });
+          console.log(`💾 Altyazı kaydedildi: ${destSRT}`);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Callback dosyalarını kaydederken hata:', err);
+    }
+
     res.status(200).json({ received: true });
   });
 
@@ -45,9 +88,11 @@ export function registerColabRoutes(app: Application): void {
   // S4: SSE stream for push-based colab status updates (replaces 15s polling)
   app.get('/colab-status-stream', sseLimiter, requireAuth, (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.setHeader('Connection', 'keep-alive');
-    // Disable proxy buffering for nginx-style reverse proxies
+    // Disable proxy buffering for nginx/ngrok reverse proxies
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders?.();
 

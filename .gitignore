@@ -16,12 +16,8 @@ auth_meta.json
 .vscode
 dist
 
-# Markdown files
-*.md
-**/*.md
-
 # Temporary and local development files
-*.html
+dashboard_output.html
 *.txt
 *.db
 *.mp3

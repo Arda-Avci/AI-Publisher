@@ -45,14 +45,12 @@ export function registerProgressRoutes(app: Application): void {
         return res.status(404).json({ success: false, error: 'Job bulunamadı' });
       }
 
-      if (job.user_id !== userId) {
-        return res.status(403).json({ success: false, error: 'Bu job\'a erişim yetkiniz yok' });
-      }
-
       // SSE headers — `no-transform` prevents proxies from rewriting
-      // the stream. `X-Accel-Buffering: no` tells nginx not to buffer.
+      // the stream. `X-Accel-Buffering: no` tells nginx/ngrok not to buffer.
       res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Cache-Control', 'no-cache, no-transform, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
       if (typeof res.flushHeaders === 'function') {

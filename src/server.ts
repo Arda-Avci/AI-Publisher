@@ -80,6 +80,15 @@ app.use(errorHandler);
 async function startServer() {
   await initDatabase();
   await initRabbitMQ();
+
+  // Ngrok tünelini başlat (varsa token ile)
+  try {
+    const { startNgrokTunnel } = await import('./lib/ngrok-tunnel.js');
+    await startNgrokTunnel(Number(PORT));
+  } catch (err: any) {
+    console.warn('[WARN] Node.js ngrok tüneli başlatılamadı:', err.message);
+  }
+
   app.listen(Number(PORT), '127.0.0.1', () => {
     console.log(`[INFO] AI Publisher sunucusu aktif: http://localhost:${PORT}`);
     startGarbageCollector();

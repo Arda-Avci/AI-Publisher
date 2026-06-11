@@ -44,6 +44,7 @@ export interface ColabManager {
   scheduleIdleStop(delayMs?: number): void;
   cancelIdleStop(): void;
   isHealthy(): boolean;
+  verifyLibraries(): Promise<{ success: boolean; report?: any; error?: string }>;
   on(event: 'state-change', listener: (state: ColabState) => void): this;
   off(event: 'state-change', listener: (state: ColabState) => void): this;
 }
@@ -416,6 +417,31 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       (this.state.lastHealthCheck === null ||
         Date.now() - new Date(this.state.lastHealthCheck).getTime() < 2 * HEALTH_CHECK_INTERVAL_MS)
     );
+  }
+
+  async verifyLibraries(): Promise<{ success: boolean; report?: any; error?: string }> {
+    const url = this.state.ngrokUrl || process.env.COLAB_URL;
+    if (!url) {
+      return { success: false, error: 'COLAB_URL bulunamadı veya sunucu çalışmıyor.' };
+    }
+    try {
+      const res = await axios.get(`${url}/verify-libs`, {
+        timeout: 15000,
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
+      return {
+        success: res.data?.success === true,
+        report: res.data?.report
+      };
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message;
+      const report = err.response?.data?.report;
+      return {
+        success: false,
+        error: `Colab kütüphane doğrulaması başarısız: ${errMsg}`,
+        report
+      };
+    }
   }
 
   // ── PRIVATE HELPERS ───────────────────────────────────────────────────────

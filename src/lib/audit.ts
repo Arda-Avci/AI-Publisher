@@ -29,7 +29,8 @@ export type AuditAction =
   | 'settings.save'
   | 'colab.start'
   | 'colab.stop'
-  | 'colab.connect';
+  | 'colab.connect'
+  | 'job.select_cover';
 
 export interface AuditEntry {
   userId: number | null | undefined;

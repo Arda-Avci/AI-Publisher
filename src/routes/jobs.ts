@@ -36,7 +36,9 @@ export function registerJobRoutes(app: Application): void {
       differentiation_layout,
       differentiation_duration_mode,
       material_path_hidden,
-      transcript_text 
+      transcript_text,
+      tts_provider,
+      tts_voice
     } = req.body;
     let materialPath = '';
     if (req.file) {
@@ -54,11 +56,13 @@ export function registerJobRoutes(app: Application): void {
     const differentiationDurationMode = differentiation_duration_mode || 'same';
 
     try {
+      const finalTtsProvider = tts_provider || 'xtts';
+      const finalTtsVoice = tts_voice || (finalTtsProvider === 'openai' ? 'alloy' : 'Claribel Dervla');
       const insertResult: any = await db.run(
         `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode]
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode, finalTtsProvider, finalTtsVoice]
       );
 
       const newJobId = Number(insertResult.lastID);
@@ -322,6 +326,47 @@ export function registerJobRoutes(app: Application): void {
       res.json({ success: true, message: 'Job iptal edildi.' });
     } catch (err: any) {
       console.error('[ERROR] /cancel-job failed:', err);
+      res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
+    }
+  });
+
+  // POST /select-cover
+  app.post('/select-cover', mediumLimiter, requireAuth, async (req, res) => {
+    const { jobId, coverIndex } = req.body;
+    const userId = req.session.userId;
+
+    if (!jobId || coverIndex === undefined) {
+      return res.status(400).json({ success: false, error: 'Eksik parametreler.' });
+    }
+
+    try {
+      const job: any = await db.get('SELECT cover_images FROM video_jobs WHERE id = ?', [jobId]);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job bulunamadı.' });
+      }
+
+      const images = job.cover_images ? JSON.parse(job.cover_images) : [];
+      if (!Array.isArray(images) || coverIndex < 0 || coverIndex >= images.length) {
+        return res.status(400).json({ success: false, error: 'Geçersiz kapak indeksi.' });
+      }
+
+      const selectedRelativePath = images[coverIndex];
+      const selectedAbsPath = path.join(process.cwd(), selectedRelativePath);
+
+      await db.run('UPDATE video_jobs SET cover_image_path = ? WHERE id = ?', [selectedAbsPath, jobId]);
+
+      logAudit({
+        userId,
+        action: 'job.select_cover',
+        entityType: 'video_job',
+        entityId: jobId,
+        details: { coverIndex, selectedRelativePath },
+        req
+      });
+
+      res.json({ success: true, coverImagePath: selectedRelativePath });
+    } catch (err: any) {
+      console.error('[ERROR] /select-cover failed:', err);
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });

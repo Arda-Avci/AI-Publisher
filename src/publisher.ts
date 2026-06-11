@@ -97,6 +97,20 @@ export async function uploadToYouTube(
     return false;
   }
 
+  let coverImagePath = '';
+  if (jobId) {
+    try {
+      const { db } = await import('./db.js');
+      const job: any = await db.get('SELECT cover_image_path FROM video_jobs WHERE id = ?', [jobId]);
+      if (job && job.cover_image_path && await fs.pathExists(job.cover_image_path)) {
+        coverImagePath = job.cover_image_path;
+        console.log(`[INFO] YouTube için özel kapak resmi saptandı: ${coverImagePath}`);
+      }
+    } catch (dbErr) {
+      console.warn('[WARN] YouTube kapak resmi sorgulanırken hata oluştu:', dbErr);
+    }
+  }
+
   const isHeadless = process.env.HEADLESS !== 'false';
   const browser = await chromium.launch({ headless: isHeadless });
   if (jobId) {
@@ -136,6 +150,32 @@ export async function uploadToYouTube(
 
       if (titleBoxes.length > 1) {
         await humanType(page, titleBoxes[1], `${desc}\n\n${tags}`);
+      }
+    }
+
+    // Özel Kapak Resmi (Thumbnail) Yükleme Adımı
+    if (coverImagePath) {
+      try {
+        console.log(`[INFO] Kapak resmi yükleniyor...`);
+        const thumbInput = await page.$('ytcp-thumbnails-compact input[type="file"], input#file-loader');
+        if (thumbInput) {
+          await thumbInput.setInputFiles(path.resolve(coverImagePath));
+          console.log(`[INFO] Kapak resmi input ile yüklendi.`);
+        } else {
+          const selectThumbBtn = await page.$('#select-thumbnail-button, [aria-label*="küçük resim", i], [aria-label*="thumbnail", i]');
+          if (selectThumbBtn) {
+            const thumbChooserPromise = page.waitForEvent('filechooser');
+            await humanClick(page, selectThumbBtn);
+            const thumbChooser = await thumbChooserPromise;
+            await thumbChooser.setFiles(path.resolve(coverImagePath));
+            console.log(`[INFO] Kapak resmi filechooser ile yüklendi.`);
+          } else {
+            console.warn('[WARN] Kapak yükleme butonu veya inputu bulunamadı, bu adım atlanıyor.');
+          }
+        }
+        await randomDelay(2000, 4000);
+      } catch (thumbErr) {
+        console.warn(`[WARN] Kapak resmi yüklenirken hata oluştu (atlatılıyor):`, thumbErr);
       }
     }
 

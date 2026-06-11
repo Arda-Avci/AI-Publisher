@@ -1,4 +1,4 @@
-import { getRabbitChannel, VIDEO_JOBS_QUEUE } from './lib/rabbitmq.js';
+import { getRabbitChannel, VIDEO_JOBS_QUEUE, registerReconnectCallback } from './lib/rabbitmq.js';
 import { checkZenModelsHealth } from './lib/ai-provider.js';
 import {
   extractReferenceFrame,
@@ -78,11 +78,10 @@ export async function checkQueue() {
 
 async function startProduction(job: any) {
   // İş başında Zen modellerinin sağlığını bir kere test edip, hata alanları geçici olarak skip edelim.
-  try {
-    await checkZenModelsHealth();
-  } catch (err) {
+  // Not: Ana kuyruk işleme akışını tıkamamak için asenkron (non-blocking) olarak arka planda çalıştırıyoruz.
+  checkZenModelsHealth().catch(err => {
     console.warn('[WARN] Zen health check during job start failed:', err);
-  }
+  });
 
   const COLAB_URL = process.env.COLAB_URL;
   logInfo('═══════════════════════════════════════════════════════════════');
@@ -242,6 +241,30 @@ async function startProduction(job: any) {
       }
       colab.cancelIdleStop();
 
+      // ── Dry-Run: Colab Kütüphane ve Bağımlılık Doğrulaması ──
+      logInfo('Colab kütüphaneleri doğrulanıyor...');
+      await db.run("UPDATE video_jobs SET current_stage = 'Colab Kütüphaneleri Doğrulanıyor...', progress_percent = 11 WHERE id = ?", [job.id]);
+      broadcast(job.id, { stageKey: 'stageColabProgress', colabStage: 'verification', colabMessage: 'Kütüphaneler doğrulanıyor...', colabPercent: 50, percent: 11 });
+
+      const libCheck = await colab.verifyLibraries();
+      if (!libCheck.success) {
+        logError('Colab kütüphane doğrulaması başarısız:', new Error(libCheck.error));
+        let errorMsg = `Colab kütüphane doğrulaması başarısız. Lütfen Colab bağımlılıklarının doğru yüklendiğinden emin olun.`;
+        if (libCheck.report) {
+          const failedLibs = Object.entries(libCheck.report)
+            .filter(([_, status]: any) => status.status === 'error')
+            .map(([lib, status]: any) => `${lib} (${status.message})`)
+            .join(', ');
+          if (failedLibs) {
+            errorMsg = `Eksik/Hatalı Colab Kütüphaneleri: ${failedLibs}`;
+          }
+        }
+        await db.run("UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?", [errorMsg, job.id]);
+        broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
+        throw new Error('COLAB_LIBRARIES_FAILED');
+      }
+      logInfo('Colab kütüphaneleri başarıyla doğrulandı.');
+
       try {
         logInfo('Kapak resmi üretimi başlıyor...');
         await db.run("UPDATE video_jobs SET current_stage = 'Kapak Fotoğrafı Sentezi', progress_percent = 12 WHERE id = ?", [job.id]);
@@ -251,21 +274,45 @@ async function startProduction(job: any) {
         logInfo('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
 
         const coverResponse = await axios.post(`${COLAB_URL}/generate-covers`, {
-          cover_prompt: coverPrompt
+          cover_prompt: coverPrompt,
+          job_id: job.id,
+          callback_url: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/v1/video/callback` : 'http://localhost:3010/api/v1/video/callback'
         });
         logInfo('Cover üretim isteği gönderildi', { status: coverResponse.status });
 
-        // Varsayılan olarak kapak 0'ı indir
-        const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}.jpg`);
-        logInfo('Kapak indiriliyor...', { url: `${COLAB_URL}/download/cover/0`, dest: coverDest });
+        // 3 kapağı da indir ve yerel sunucuya kaydet
+        const coverPaths: string[] = [];
+        for (let i = 0; i < 3; i++) {
+          const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
+          if (await fs.pathExists(coverDest)) {
+            logInfo(`Kapak ${i} lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.`, { dest: coverDest });
+            coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
+            continue;
+          }
+          logInfo(`Kapak ${i} indiriliyor...`, { url: `${COLAB_URL}/download/cover/${i}`, dest: coverDest });
+          try {
+            const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/${i}`, responseType: 'stream' });
+            const wCover = fs.createWriteStream(coverDest);
+            resCover.data.pipe(wCover);
+            await new Promise((resolve, reject) => {
+              wCover.on('finish', resolve);
+              wCover.on('error', reject);
+            });
+            coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
+            logInfo(`Kapak ${i} başarıyla indirildi`, { dest: coverDest });
+          } catch (dlErr) {
+            logWarn(`Kapak ${i} indirilirken hata oluştu:`, dlErr);
+          }
+        }
 
-        const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/0`, responseType: 'stream' });
-        const wCover = fs.createWriteStream(coverDest);
-        resCover.data.pipe(wCover);
-        await new Promise((r) => wCover.on('finish', r));
-        logInfo('Kapak başarıyla indirildi', { dest: coverDest });
+        const defaultCoverAbsPath = coverPaths.length > 0 
+          ? path.join(process.cwd(), 'uploads', `cover_${job.id}_0.jpg`)
+          : '';
 
-        await db.run("UPDATE video_jobs SET cover_image_path = ? WHERE id = ?", [coverDest, job.id]);
+        await db.run(
+          "UPDATE video_jobs SET cover_image_path = ?, cover_images = ? WHERE id = ?", 
+          [defaultCoverAbsPath, JSON.stringify(coverPaths), job.id]
+        );
       } catch (coverErr) {
         logWarn('Kapak sentezi hatası, atlanıyor', coverErr);
       }
@@ -369,6 +416,10 @@ async function startProduction(job: any) {
         source_video_id: sendSourceVideoId,
         user_image_path: job.material_path,
         apply_lipsync: applyLipsync,
+        job_id: job.id,
+        video_model: 'CogVideoX-2b',
+        tts_provider: job.tts_provider || 'xtts',
+        tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
         callback_url: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/v1/video/callback` : 'http://localhost:3010/api/v1/video/callback'
       }, { timeout: 0 });
 
@@ -386,10 +437,18 @@ async function startProduction(job: any) {
       let taskData: any = null;
       let attempt = 0;
       const taskStartTime = Date.now();
+      let dynamicTimeoutMs = 720000; // Başlangıçta varsayılan 12 dakika
 
       while (taskStatus === 'processing' || taskStatus === 'accepted') {
         attempt++;
         await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Colab kilitlenme/timeout önlemi (Dinamik zaman aşımı)
+        const totalElapsedMs = Date.now() - taskStartTime;
+        if (totalElapsedMs > dynamicTimeoutMs) {
+          logError(`Colab render işlemi zaman aşımına uğradı (${Math.round(dynamicTimeoutMs / 1000)} sn)`, new Error('COLAB_RENDER_TIMEOUT'));
+          throw new Error(`Colab video üretimi zaman aşımı sınırını (${Math.round(dynamicTimeoutMs / 1000)} sn) aştı.`);
+        }
 
         // Polling döngüsünde iptal kontrolü
         const cancelCheck2: any = await db.get(
@@ -403,7 +462,8 @@ async function startProduction(job: any) {
 
         try {
           const statusRes = await axios.get(`${COLAB_URL}/status/${taskId}`, {
-            headers: { 'ngrok-skip-browser-warning': 'true' }
+            headers: { 'ngrok-skip-browser-warning': 'true' },
+            timeout: 10000
           });
           taskData = statusRes.data;
           taskStatus = taskData.status || 'processing';
@@ -413,14 +473,23 @@ async function startProduction(job: any) {
             taskStatus,
             stage: taskData?.stage,
             stagePercent: taskData?.stagePercent,
-            message: taskData?.message
+            message: taskData?.message,
+            etaSeconds: taskData?.etaSeconds
           });
+
+          // Dinamik watchdog zaman aşımı güncellemesi
+          if (taskData && typeof taskData.etaSeconds === 'number') {
+            dynamicTimeoutMs = totalElapsedMs + (taskData.etaSeconds * 1000) + 180000; // geçen süre + kalan süre + 3 dk güvenlik payı
+            logInfo(`Watchdog zaman aşımı güncellendi: ${Math.round(dynamicTimeoutMs / 1000)} sn (Colab ETA: ${taskData.etaSeconds} sn)`);
+          }
 
           // S7: Colab sub-stage bilgisini SSE'ye yayınla
           if (taskData?.stage) {
-            const elapsedSec = (Date.now() - taskStartTime) / 1000;
             let etaSeconds: number | null = null;
-            if (taskData.stagePercent > 5) {
+            if (taskData && typeof taskData.etaSeconds === 'number') {
+              etaSeconds = taskData.etaSeconds;
+            } else if (taskData.stagePercent > 5) {
+              const elapsedSec = (Date.now() - taskStartTime) / 1000;
               etaSeconds = Math.round((elapsedSec / taskData.stagePercent) * (100 - taskData.stagePercent));
             }
             broadcast(job.id, {
@@ -428,6 +497,7 @@ async function startProduction(job: any) {
               colabStage: taskData.stage,
               colabMessage: taskData.message || '',
               colabPercent: taskData.stagePercent || 0,
+              percent: pct,
               etaSeconds
             });
           }
@@ -455,20 +525,40 @@ async function startProduction(job: any) {
       const tSRT = path.join(process.cwd(), 'videolar', `srt_${job.id}_${scene.sceneNumber}.srt`);
       const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber}.mp4`);
 
-      logInfo('Video indiriliyor...', { url: `${COLAB_URL}/download/video` });
-      await dl(`${COLAB_URL}/download/video`, tV);
-      logInfo('Speech indiriliyor...', { url: `${COLAB_URL}/download/speech` });
-      await dl(`${COLAB_URL}/download/speech`, tS);
-      logInfo('SFX indiriliyor...', { url: `${COLAB_URL}/download/sfx` });
-      await dl(`${COLAB_URL}/download/sfx`, tE);
+      if (!await fs.pathExists(tV)) {
+        logInfo('Video indiriliyor...', { url: `${COLAB_URL}/download/video` });
+        await dl(`${COLAB_URL}/download/video`, tV);
+      } else {
+        logInfo('Video lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tV });
+      }
+
+      if (!await fs.pathExists(tS)) {
+        logInfo('Speech indiriliyor...', { url: `${COLAB_URL}/download/speech` });
+        await dl(`${COLAB_URL}/download/speech`, tS);
+      } else {
+        logInfo('Speech lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tS });
+      }
+
+      if (!await fs.pathExists(tE)) {
+        logInfo('SFX indiriliyor...', { url: `${COLAB_URL}/download/sfx` });
+        await dl(`${COLAB_URL}/download/sfx`, tE);
+      } else {
+        logInfo('SFX lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tE });
+      }
 
       let srtFile = '';
       if (hasSubtitle && job.has_subtitles !== 0) {
-        try {
-          await dl(`${COLAB_URL}/download/subtitle`, tSRT);
+        if (await fs.pathExists(tSRT)) {
+          logInfo('Altyazı lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tSRT });
           srtFile = tSRT;
-        } catch (srtErr) {
-          console.warn(`[WARN] Altyazı indirilemedi:`, srtErr);
+        } else {
+          try {
+            logInfo('Altyazı indiriliyor...', { url: `${COLAB_URL}/download/subtitle` });
+            await dl(`${COLAB_URL}/download/subtitle`, tSRT);
+            srtFile = tSRT;
+          } catch (srtErr) {
+            console.warn(`[WARN] Altyazı indirilemedi:`, srtErr);
+          }
         }
       }
 
@@ -674,52 +764,61 @@ async function startProduction(job: any) {
 
 
 export async function startVideoQueueWorker() {
-  const channel = getRabbitChannel();
-  await channel.prefetch(3);
-
-  console.log(`[INFO] RabbitMQ Worker: ${VIDEO_JOBS_QUEUE} dinleniyor (Prefetch=3)`);
-
-  channel.consume(VIDEO_JOBS_QUEUE, async (msg: any) => {
-    if (!msg) return;
-
-    let payload: { jobId: number };
+  const setupWorker = async () => {
     try {
-      payload = JSON.parse(msg.content.toString());
-    } catch (e) {
-      console.error('[ERROR] Kuyruktan geçersiz mesaj geldi:', msg.content.toString());
-      channel.ack(msg);
-      return;
+      const channel = getRabbitChannel();
+      await channel.prefetch(3);
+
+      console.log(`[INFO] RabbitMQ Worker: ${VIDEO_JOBS_QUEUE} dinleniyor (Prefetch=3)`);
+
+      channel.consume(VIDEO_JOBS_QUEUE, async (msg: any) => {
+        if (!msg) return;
+
+        let payload: { jobId: number };
+        try {
+          payload = JSON.parse(msg.content.toString());
+        } catch (e) {
+          console.error('[ERROR] Kuyruktan geçersiz mesaj geldi:', msg.content.toString());
+          channel.ack(msg);
+          return;
+        }
+
+        try {
+          const job = await db.get("SELECT * FROM video_jobs WHERE id = ?", [payload.jobId]);
+          if (!job) {
+            console.warn(`[WARN] İş #${payload.jobId} veritabanında bulunamadı. Atlanıyor.`);
+            channel.ack(msg);
+            return;
+          }
+
+          if (job.status === 'cancelled') {
+            console.log(`[INFO] İş #${payload.jobId} önceden iptal edilmiş. İşlenmeden geçiliyor.`);
+            channel.ack(msg);
+            return;
+          }
+
+          await startProduction(job);
+
+          channel.ack(msg);
+        } catch (error: any) {
+          console.error(`[ERROR] İş #${payload.jobId} işlenirken hata:`, error);
+          
+          if (error && error.message === 'JOB_CANCELLED') {
+             console.log(`[INFO] İş #${payload.jobId} iptal edildi. Kuyruktan çıkarılıyor.`);
+             channel.ack(msg);
+             return;
+          }
+
+          await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata: ' || ? WHERE id = ?", [error.message, payload.jobId]);
+          broadcast(payload.jobId, { stageKey: 'stageError', percent: 0 });
+          channel.ack(msg);
+        }
+      });
+    } catch (err: any) {
+      console.error('[ERROR] Video queue worker setup failed (will retry on reconnect):', err.message);
     }
+  };
 
-    try {
-      const job = await db.get("SELECT * FROM video_jobs WHERE id = ?", [payload.jobId]);
-      if (!job) {
-        console.warn(`[WARN] İş #${payload.jobId} veritabanında bulunamadı. Atlanıyor.`);
-        channel.ack(msg);
-        return;
-      }
-
-      if (job.status === 'cancelled') {
-        console.log(`[INFO] İş #${payload.jobId} önceden iptal edilmiş. İşlenmeden geçiliyor.`);
-        channel.ack(msg);
-        return;
-      }
-
-      await startProduction(job);
-
-      channel.ack(msg);
-    } catch (error: any) {
-      console.error(`[ERROR] İş #${payload.jobId} işlenirken hata:`, error);
-      
-      if (error && error.message === 'JOB_CANCELLED') {
-         console.log(`[INFO] İş #${payload.jobId} iptal edildi. Kuyruktan çıkarılıyor.`);
-         channel.ack(msg);
-         return;
-      }
-
-      await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata: ' || ? WHERE id = ?", [error.message, payload.jobId]);
-      broadcast(payload.jobId, { stageKey: 'stageError', percent: 0 });
-      channel.ack(msg);
-    }
-  });
+  registerReconnectCallback(setupWorker);
+  await setupWorker();
 }
