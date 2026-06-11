@@ -16,7 +16,6 @@ dist
 
 # Temporary and local development files
 dashboard_output.html
-*.txt
 *.db
 *.mp3
 *.png
@@ -24,3 +23,11 @@ dashboard_output.html
 new_keys.json
 scratch/
 Wav2Lip/
+
+# Ignore all text and markdown files
+*.txt
+*.md
+*.log
+.env*
+**/server*.log
+
