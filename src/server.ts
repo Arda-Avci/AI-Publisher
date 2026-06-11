@@ -4,12 +4,15 @@ dotenv.config();
 import express from 'express';
 import session from 'express-session';
 import path from 'path';
+import crypto from 'crypto';
 import { initDatabase } from './db.js';
 import { startVideoQueueWorker } from './queue.js';
 import { startGarbageCollector } from './lib/cleanup.js';
 import { initRabbitMQ } from './lib/rabbitmq.js';
 import { startPublishQueueWorker } from './lib/publish-queue.js';
 import { i18nMiddleware } from './middleware/i18n.js';
+import { Logger } from './lib/logger.js';
+import { csrfMiddleware } from './middleware/csrf.js';
 
 import { themeMiddleware } from './middleware/theme.js';
 import { utf8Middleware } from './middleware/utf8.js';
@@ -31,6 +34,7 @@ declare module 'express-session' {
     lang?: 'tr' | 'en';
     theme?: string;
     isDark?: boolean;
+    csrfToken?: string;
   }
 }
 
@@ -39,12 +43,36 @@ const app = express();
 const PORT = process.env.PORT || 3016;
 
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
-  console.error('[CRITICAL] SESSION_SECRET is not set in production. Security risk!');
+  Logger.error('SESSION_SECRET is not set in production. Security risk!');
   process.exit(1);
 }
 
 // UTF-8 encoding middleware — tüm response'larda Türkçe karakter desteği
 app.use(utf8Middleware);
+
+// HTTP Security Headers (Clickjacking, MIME-Sniffing & CSP with Dynamic Nonce)
+app.use((req, res, next) => {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  res.locals.cspNonce = nonce;
+
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+
+  res.setHeader(
+    'Content-Security-Policy',
+    `default-src 'self'; ` +
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ` +
+    `font-src 'self' https://fonts.gstatic.com; ` +
+    `img-src 'self' data: https: blob:; ` +
+    `media-src 'self' https: blob: http:; ` +
+    `connect-src 'self' wss: ws: https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
+    `frame-src 'self'; ` +
+    `frame-ancestors 'self'`
+  );
+  next();
+});
 
 // Middleware'ler
 app.use(express.json({ limit: '10mb' }));
@@ -53,8 +81,14 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'gizemli_bir_sir_123_development',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 gün
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 1 gün
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  }
 }));
+app.use(csrfMiddleware);
 app.use(i18nMiddleware);
 app.use(themeMiddleware);
 
@@ -86,11 +120,11 @@ async function startServer() {
     const { startNgrokTunnel } = await import('./lib/ngrok-tunnel.js');
     await startNgrokTunnel(Number(PORT));
   } catch (err: any) {
-    console.warn('[WARN] Node.js ngrok tüneli başlatılamadı:', err.message);
+    Logger.warn('Node.js ngrok tüneli başlatılamadı:', err);
   }
 
   app.listen(Number(PORT), '127.0.0.1', () => {
-    console.log(`[INFO] AI Publisher sunucusu aktif: http://localhost:${PORT}`);
+    Logger.info(`AI Publisher sunucusu aktif: http://localhost:${PORT}`);
     startGarbageCollector();
     startVideoQueueWorker();
     startPublishQueueWorker();

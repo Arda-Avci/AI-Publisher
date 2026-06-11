@@ -10,6 +10,7 @@
 - [x] Stable Diffusion 1.5 (`DreamShaper 8`) ile 3 alternatif kapak üretme endpoint'i ve lazy loading bellek optimizasyonu entegrasyonu.
 - [x] Colab sunucu başlatma betiğindeki (`colab_setup.py`) `UnsupportedOperation: fileno` hatasını log dosyası yönlendirmesiyle giderme, çalışmayan Wav2Lip/GAN indirme linklerini güncel Hugging Face adresleriyle güncelleme, SymPy çakışmasını önlemek için oturum yeniden başlatma uyarısı eklemek, `colab_server.py`'a Colab Secrets üzerinden `NGROK_TOKEN` desteği ekleme, Ngrok URL'ini otomatik olarak hücre çıktısına yazdırma, bekleme süresini 30 saniyeye çıkarma, hata durumunda logları ekrana basma, Python 3.12 uyumluluğu için `coqui-tts` geçişi yapma, mükerrer `git clone` hatalarını giderme, eksik `colab_server.py` için otomatik dosya yükleme istemi (files.upload) tetikleme, unbuffered (-u) loglama sağlama, PyTorch 2.9+ `torchcodec` bağımlılık hatasını önlemek için PyTorch sürümünü stabil 2.5.1 sürümüne düşürme ve gereksiz `colab_install.py` dosyasını silme.
 - [x] Colab sunucusunda kütüphane import doğruluğunu test eden `/verify-libs` endpoint'inin sunulması ve mükerrer `/health` rotasının temizlenmesi.
+- [x] `colab_server.py` başlatılırken oluşan `NameError: name 'health' is not defined` hatasını main bloğundaki `health._start_time` satırını temizleyerek giderme.
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı
 - [x] SQLite Veritabanı Mimarisi (`src/db.ts`) genişletilmiş ayar/playlist sütunları.
@@ -141,6 +142,21 @@
 - [x] `src/routes/jobs.ts`: `/create-job` `tts_provider` / `tts_voice` alanlarını kabul edip DB'ye yazıyor.
 - [x] `src/queue.ts`: Colab payload'ına `tts_provider` / `tts_voice` parametreleri eklendi.
 - [x] `dashboard_direct.html`: TTS sağlayıcı dropdown + ses adı inputu + `ttsVoiceHint()` JS fonksiyonu eklendi.
+
+## 🛠️ Teknik Borç Temizliği ve Standartlaştırma
+- [x] Node.js backend seviyeli merkezi loglama modülünün (`src/lib/logger.ts`) kurulması ve tüm modüllerin (`queue.ts`, `publisher.ts`, `server.ts`, `ngrok-tunnel.ts`) güncellenmesi.
+- [x] İş kuyruğu ve veritabanı sorgularında tip güvenliğinin artırılması için `VideoJob` arayüzünün (`src/types/job.ts`) oluşturulması ve gevşek tip kullanımlarının temizlenmesi.
+- [x] Localtunnel bağlantısının beklenmedik kopma durumları için `ngrok-tunnel.ts` içinde auto-recovery/otomatik yeniden başlatma mekanizmasının kurulması.
+- [x] TypeScript doğruluğunun (`tsc --noEmit`) ve Vitest entegrasyon testlerinin (14/14) başarıyla tamamlanması.
+
+## 🔒 İstemci ve Sunucu (Backend) Güvenlik Sıkılaştırmaları
+- [x] Web arayüzünde (dashboard) olası XSS açıklarını önlemek için kullanıcı girdilerinin (`master_prompt`, `yt_title` vb.) `escapeHtml` fonksiyonu ile sanitize edilerek basılması.
+- [x] Clickjacking ve MIME-sniffing saldırılarını engellemek amacıyla Express web sunucusuna HTTP Güvenlik Başlıklarının (`X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff` vb.) entegre edilmesi.
+- [x] CSRF koruma middleware'inin (`src/middleware/csrf.ts`) ve form/fetch interceptor entegrasyonlarının tamamlanması.
+- [x] `Content-Security-Policy` (CSP) yanıt başlıklarının dynamic script nonce ile ayarlanması.
+- [x] Colab callback webhook `/api/v1/video/callback` endpoint'inin query token PSK kontrolüyle güvenli hale getirilmesi.
+- [x] Sıfır bağımlılıklı request body validation modülünün (`src/lib/validation.ts`) oluşturulması ve `/create-job` ile `/save-meta/:id` rotalarına entegre edilmesi.
+- [x] Session cookie ayarlarının `httpOnly: true`, `secure: production` ve `sameSite: lax` ile sıkılaştırılması.
 
 ## 🔮 Gelecek Konsepti (Roadmap): "Top Yuvarlak AI" Talk-Show (Sportoto Entegrasyonu)
 - [ ] **Pixar Animasyon Estetiği:** Karakterler pürüzsüz gözlere ve dinamik mimiklere sahip Pixar modelinde olacak (Wav2Lip/Magiclight kusursuzluğu için).

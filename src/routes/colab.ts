@@ -22,6 +22,14 @@ export function registerColabRoutes(app: Application): void {
     { name: 'cover_2', maxCount: 1 }
   ]), async (req: Request, res: Response) => {
     const { task_id, job_id, scene_number, status, type, message } = req.body;
+    const { token } = req.query;
+    const expectedToken = process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026';
+
+    if (token !== expectedToken) {
+      console.warn(`[WARN] Yetkisiz callback isteği reddedildi!`);
+      return res.status(403).json({ success: false, error: 'Unauthorized callback token' });
+    }
+
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     if (status === 'error') {

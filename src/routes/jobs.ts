@@ -8,6 +8,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
 import { logAudit } from '../lib/audit.js';
+import { validateCreateJob, validateSaveMeta } from '../lib/validation.js';
 
 /**
  * Job lifecycle routes:
@@ -25,6 +26,11 @@ import { logAudit } from '../lib/audit.js';
 export function registerJobRoutes(app: Application): void {
   // Is Ekleme
   app.post('/create-job', heavyLimiter, requireAuth, upload.single('material'), async (req: any, res) => {
+    const validation = validateCreateJob(req.body);
+    if (!validation.valid) {
+      return res.status(400).json({ success: false, errors: validation.errors });
+    }
+
     const { 
       master_prompt, 
       production_notes, 
@@ -88,6 +94,11 @@ export function registerJobRoutes(app: Application): void {
 
   // Meta veri guncelleme rotasi
   app.post('/save-meta/:id', mediumLimiter, requireAuth, async (req, res) => {
+    const validation = validateSaveMeta(req.body);
+    if (!validation.valid) {
+      return res.status(400).json({ success: false, errors: validation.errors });
+    }
+
     const { id } = req.params;
     const userId = req.session.userId;
     const { yt_title, yt_desc, yt_tags, tt_desc, tt_tags, x_desc, x_tags, meta_desc, meta_tags } = req.body;

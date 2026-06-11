@@ -4,7 +4,7 @@
  */
 
 // Giriş Sayfası HTML — dil parametreye göre dinamik
-export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, lang: 'tr' | 'en' = 'tr') => `
+export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, lang: 'tr' | 'en' = 'tr', csrfToken: string = '') => `
 <!DOCTYPE html>
 <html lang="${lang}">
 <head>
@@ -184,6 +184,7 @@ export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, l
   <div class="container">
     <h1>AI <span>Publisher</span></h1>
     <form action="/login" method="POST">
+      <input type="hidden" name="csrfToken" value="${csrfToken}">
       <div class="input-group">
         <label>${t.usernameLabel}</label>
         <input type="text" name="username" required placeholder="admin">

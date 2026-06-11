@@ -1,6 +1,8 @@
 import { chromium, Page, ElementHandle } from 'playwright';
 import path from 'path';
 import fs from 'fs-extra';
+import { Logger } from './lib/logger.js';
+import { VideoJob } from './types/job.js';
 
 export const activePublishBrowsers = new Map<string, any>();
 
@@ -90,10 +92,10 @@ export async function uploadToYouTube(
   playlistIdOrName?: string,
   jobId?: number
 ): Promise<boolean> {
-  console.log(`[INFO] YouTube yükleme başlatılıyor: ${videoPath}`);
+  Logger.info(`YouTube yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_youtube.json';
   if (!await fs.pathExists(authFile)) {
-    console.error(`[ERROR] YouTube yetkilendirme dosyası bulunamadı: ${authFile}`);
+    Logger.error(`YouTube yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
 
@@ -101,13 +103,13 @@ export async function uploadToYouTube(
   if (jobId) {
     try {
       const { db } = await import('./db.js');
-      const job: any = await db.get('SELECT cover_image_path FROM video_jobs WHERE id = ?', [jobId]);
+      const job: VideoJob | undefined = await db.get('SELECT cover_image_path FROM video_jobs WHERE id = ?', [jobId]);
       if (job && job.cover_image_path && await fs.pathExists(job.cover_image_path)) {
         coverImagePath = job.cover_image_path;
-        console.log(`[INFO] YouTube için özel kapak resmi saptandı: ${coverImagePath}`);
+        Logger.info(`YouTube için özel kapak resmi saptandı: ${coverImagePath}`);
       }
     } catch (dbErr) {
-      console.warn('[WARN] YouTube kapak resmi sorgulanırken hata oluştu:', dbErr);
+      Logger.warn('YouTube kapak resmi sorgulanırken hata oluştu:', dbErr);
     }
   }
 
@@ -156,11 +158,11 @@ export async function uploadToYouTube(
     // Özel Kapak Resmi (Thumbnail) Yükleme Adımı
     if (coverImagePath) {
       try {
-        console.log(`[INFO] Kapak resmi yükleniyor...`);
+        Logger.info('Kapak resmi yükleniyor...');
         const thumbInput = await page.$('ytcp-thumbnails-compact input[type="file"], input#file-loader');
         if (thumbInput) {
           await thumbInput.setInputFiles(path.resolve(coverImagePath));
-          console.log(`[INFO] Kapak resmi input ile yüklendi.`);
+          Logger.info('Kapak resmi input ile yüklendi.');
         } else {
           const selectThumbBtn = await page.$('#select-thumbnail-button, [aria-label*="küçük resim", i], [aria-label*="thumbnail", i]');
           if (selectThumbBtn) {
@@ -168,28 +170,28 @@ export async function uploadToYouTube(
             await humanClick(page, selectThumbBtn);
             const thumbChooser = await thumbChooserPromise;
             await thumbChooser.setFiles(path.resolve(coverImagePath));
-            console.log(`[INFO] Kapak resmi filechooser ile yüklendi.`);
+            Logger.info('Kapak resmi filechooser ile yüklendi.');
           } else {
-            console.warn('[WARN] Kapak yükleme butonu veya inputu bulunamadı, bu adım atlanıyor.');
+            Logger.warn('Kapak yükleme butonu veya inputu bulunamadı, bu adım atlanıyor.');
           }
         }
         await randomDelay(2000, 4000);
       } catch (thumbErr) {
-        console.warn(`[WARN] Kapak resmi yüklenirken hata oluştu (atlatılıyor):`, thumbErr);
+        Logger.warn('Kapak resmi yüklenirken hata oluştu (atlatılıyor):', thumbErr);
       }
     }
 
     // Oynatma Listesi (Playlist) Seçimi — playlistIdOrName aslında bir playlist ADI
     if (playlistIdOrName) {
       try {
-        console.log(`[INFO] Oynatma listesi seçimi başlatılıyor: ${playlistIdOrName}`);
+        Logger.info(`Oynatma listesi seçimi başlatılıyor: ${playlistIdOrName}`);
         // Open the playlist section. Selector may change with YouTube Studio UI updates.
         const playlistSelect = await page.waitForSelector(
           '.row-value-container.style-scope.ytcp-video-metadata-editor-playlists',
           { state: 'visible', timeout: 10_000 }
         ).catch(() => null);
         if (!playlistSelect) {
-          console.warn('[WARN] Playlist alanı bulunamadı — UI değişmiş olabilir, atlanıyor.');
+          Logger.warn('Playlist alanı bulunamadı — UI değişmiş olabilir, atlanıyor.');
         } else {
           await humanClick(page, playlistSelect);
           await randomDelay(1000, 2000);
@@ -228,10 +230,10 @@ export async function uploadToYouTube(
           const existingEl = existingCheckbox.asElement();
           if (existingEl) {
             await humanClick(page, existingEl);
-            console.log(`[INFO] Mevcut playlist seçildi: ${playlistIdOrName}`);
+            Logger.info(`Mevcut playlist seçildi: ${playlistIdOrName}`);
           } else {
             // Playlist bulunamadı — yenisini oluştur
-            console.log(`[INFO] Oynatma listesi bulunamadı. Yeni oluşturuluyor: ${playlistIdOrName}`);
+            Logger.info(`Oynatma listesi bulunamadı. Yeni oluşturuluyor: ${playlistIdOrName}`);
             const newBtnSelectors = [
               'div.create-playlist-button',
               'button:has-text("Yeni oynatma listesi")',
@@ -286,7 +288,7 @@ export async function uploadToYouTube(
         }
       } catch (playlistErr) {
         // Defensive: never fail the whole upload on a playlist error
-        console.warn(`[WARN] Oynatma listesi seçilirken bir hata oluştu:`, playlistErr);
+        Logger.warn('Oynatma listesi seçilirken bir hata oluştu:', playlistErr);
       }
     }
 
@@ -312,10 +314,10 @@ export async function uploadToYouTube(
     await humanClick(page, '#done-button');
 
     await randomDelay(8000, 12000);
-    console.log('[INFO] YouTube Shorts başarıyla yüklendi.');
+    Logger.info('YouTube Shorts başarıyla yüklendi.');
     return true;
   } catch (error) {
-    console.error(`[ERROR] YouTube Shorts yükleme hatası:`, error);
+    Logger.error('YouTube Shorts yükleme hatası:', error);
     return false;
   } finally {
     if (jobId) {
@@ -327,10 +329,10 @@ export async function uploadToYouTube(
 
 
 export async function uploadToTikTok(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
-  console.log(`[INFO] TikTok yükleme başlatılıyor: ${videoPath}`);
+  Logger.info(`TikTok yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_tiktok.json';
   if (!await fs.pathExists(authFile)) {
-    console.error(`[ERROR] TikTok yetkilendirme dosyası bulunamadı: ${authFile}`);
+    Logger.error(`TikTok yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
 
@@ -345,7 +347,7 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
     await page.goto('https://www.tiktok.com/creator-center/upload?lang=tr-TR', { waitUntil: 'networkidle' });
     
     // Iframe veya direkt dosya seçiciyi bekle
-    let uploadInput = await page.$('input[type="file"]');
+    const uploadInput = await page.$('input[type="file"]');
     if (!uploadInput) {
       const iframeElement = await page.waitForSelector('iframe[src*="upload"]', { state: 'visible', timeout: 30000 });
       const frame = await iframeElement.contentFrame();
@@ -375,10 +377,10 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
 
     // Gönderilme onayını bildiren modal veya yönlendirmeyi en fazla 15 saniye bekleyelim
     await page.waitForSelector('text="Paylaşıldı", text="Shared", text="Video yüklendi", text="Video uploaded", text="Manage your posts"', { timeout: 15000 }).catch(() => null);
-    console.log('[INFO] TikTok videosu başarıyla yüklendi.');
+    Logger.info('TikTok videosu başarıyla yüklendi.');
     return true;
   } catch (error) {
-    console.error(`[ERROR] TikTok yükleme hatası:`, error);
+    Logger.error('TikTok yükleme hatası:', error);
     return false;
   } finally {
     if (jobId) {
@@ -389,10 +391,10 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
 }
 
 export async function uploadToX(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
-  console.log(`[INFO] X (Twitter) yükleme başlatılıyor: ${videoPath}`);
+  Logger.info(`X (Twitter) yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_x.json';
   if (!await fs.pathExists(authFile)) {
-    console.error(`[ERROR] X yetkilendirme dosyası bulunamadı: ${authFile}`);
+    Logger.error(`X yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
 
@@ -422,10 +424,10 @@ export async function uploadToX(videoPath: string, desc: string, tags: string, j
 
     // Tweet butonunun kaybolmasını (tweet'in gönderildiğini) en fazla 15 saniye bekleyelim
     await page.waitForSelector('[data-testid="tweetButton"]', { state: 'detached', timeout: 15000 }).catch(() => null);
-    console.log('[INFO] X videosu başarıyla yüklendi.');
+    Logger.info('X videosu başarıyla yüklendi.');
     return true;
   } catch (error) {
-    console.error(`[ERROR] X yükleme hatası:`, error);
+    Logger.error('X yükleme hatası:', error);
     return false;
   } finally {
     if (jobId) {
@@ -436,10 +438,10 @@ export async function uploadToX(videoPath: string, desc: string, tags: string, j
 }
 
 export async function uploadToMeta(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
-  console.log(`[INFO] Meta Reels (Facebook/Instagram Creator Studio) yükleme başlatılıyor: ${videoPath}`);
+  Logger.info(`Meta Reels (Facebook/Instagram Creator Studio) yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_meta.json';
   if (!await fs.pathExists(authFile)) {
-    console.error(`[ERROR] Meta yetkilendirme dosyası bulunamadı: ${authFile}`);
+    Logger.error(`Meta yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
 
@@ -487,10 +489,10 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
     await humanClick(page, shareBtnSelector);
 
     await randomDelay(8000, 12000);
-    console.log('[INFO] Meta Reels videosu başarıyla yüklendi.');
+    Logger.info('Meta Reels videosu başarıyla yüklendi.');
     return true;
   } catch (error) {
-    console.error(`[ERROR] Meta Reels yükleme hatası:`, error);
+    Logger.error('Meta Reels yükleme hatası:', error);
     return false;
   } finally {
     if (jobId) {
@@ -499,3 +501,4 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
     await browser.close();
   }
 }
+

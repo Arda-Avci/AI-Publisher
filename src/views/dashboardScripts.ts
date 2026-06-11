@@ -4,10 +4,85 @@ export function getDashboardScripts(params: {
   currentLang: string;
   currentTheme: string;
   HELP_PAGES_DATA: any[];
+  csrfToken?: string;
+  cspNonce?: string;
 }): string {
-  const { t, queueJobs, currentLang, currentTheme, HELP_PAGES_DATA } = params;
+  const { t, queueJobs, currentLang, currentTheme, HELP_PAGES_DATA, csrfToken, cspNonce } = params;
   return `
-    <script>
+    <script nonce="${cspNonce || ''}">
+      window.csrfToken = "${csrfToken || ''}";
+
+      // CSP Bypass for Inline Event Handlers via MutationObserver
+      (function() {
+        const inlineEvents = ['click', 'change', 'keyup', 'keydown', 'submit', 'mouseenter', 'mouseleave', 'input'];
+        
+        function bindElementEvents(el) {
+          if (el.nodeType !== 1) return;
+          inlineEvents.forEach(eventName => {
+            const attrName = 'on' + eventName;
+            if (el.hasAttribute(attrName)) {
+              const handlerStr = el.getAttribute(attrName);
+              el.removeAttribute(attrName);
+              
+              el.addEventListener(eventName, function(event) {
+                try {
+                  const fn = new Function('event', handlerStr);
+                  fn.call(el, event);
+                } catch (err) {
+                  console.error('CSP inline handler error (' + attrName + '):', err);
+                }
+              });
+            }
+          });
+        }
+
+        function processNode(node) {
+          if (node.nodeType !== 1) return;
+          bindElementEvents(node);
+          const children = node.querySelectorAll('*');
+          children.forEach(bindElementEvents);
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => {
+            processNode(document.body);
+            startObserving();
+          });
+        } else {
+          processNode(document.body);
+          startObserving();
+        }
+
+        function startObserving() {
+          const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+              mutation.addedNodes.forEach(node => {
+                processNode(node);
+              });
+            });
+          });
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+        }
+      })();
+
+      // Global fetch interceptor to append CSRF token
+      const originalFetch = window.fetch;
+      window.fetch = function(url, options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        if (window.csrfToken) {
+          if (options.headers instanceof Headers) {
+            options.headers.set('X-CSRF-Token', window.csrfToken);
+          } else {
+            options.headers['X-CSRF-Token'] = window.csrfToken;
+          }
+        }
+        return originalFetch(url, options);
+      };
+
       window.i18n = ${JSON.stringify(t)};
       const queueJobsData = ${JSON.stringify(queueJobs)};
       const trMsg = (tr, en) => '${currentLang}' === 'tr' ? tr : en;
@@ -88,6 +163,22 @@ export function getDashboardScripts(params: {
       function closeAllModals() {
         document.querySelectorAll('.app-modal').forEach(m => m.style.display = 'none');
         document.getElementById('modalBackdrop').style.display = 'none';
+      }
+
+      function ttsVoiceHint(provider) {
+        const hint = document.getElementById('tts-voice-hint');
+        const input = document.getElementById('tts-voice-input');
+        const defaults = { xtts: 'Claribel Dervla', openai: 'alloy', edge: 'tr-TR-EmelNeural' };
+        const hints = {
+          xtts: 'XTTS: Claribel Dervla / herhangi bir ses adı',
+          openai: 'OpenAI: alloy, echo, fable, nova, shimmer',
+          edge: 'Edge: tr-TR-EmelNeural, tr-TR-AhmetNeural, en-US-JennyNeural'
+        };
+        input.placeholder = defaults[provider] || 'Claribel Dervla';
+        if (!input.value || input.value === defaults.xtts || input.value === 'alloy' || input.value === 'tr-TR-EmelNeural') {
+          input.value = defaults[provider] || 'Claribel Dervla';
+        }
+        hint.textContent = hints[provider] || hints.xtts;
       }
 
       function switchSettingsTab(el) {

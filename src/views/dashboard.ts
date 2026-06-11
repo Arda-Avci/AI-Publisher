@@ -5,6 +5,16 @@
 import { getDashboardStyles } from './dashboardStyles.js';
 import { getDashboardScripts } from './dashboardScripts.js';
 
+export function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export interface DashboardParams {
   currentLang: 'tr' | 'en';
   currentTheme: string;
@@ -14,10 +24,12 @@ export interface DashboardParams {
   completedJobs: any[];
   themeStyles: string;
   isDark: boolean;
+  csrfToken?: string;
+  cspNonce?: string;
 }
 
 export function buildDashboardHTML(params: DashboardParams): string {
-  const { currentLang, currentTheme, t, user, queueJobs, completedJobs, themeStyles, isDark } = params;
+  const { currentLang, currentTheme, t, user, queueJobs, completedJobs, themeStyles, isDark, csrfToken, cspNonce } = params;
 
   const HELP_PAGES_DATA = [
     {
@@ -60,6 +72,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <li><strong>Production Notes:</strong> Specify camera angles, atmosphere, and music style.</li>
           <li><strong>Character Description:</strong> Enter physical attributes for character consistency (e.g., 'blue-eyed, brunette cyberpunk agent').</li>
           <li><strong>Reference Image:</strong> Select an image to be used as the starting frame of Scene 1.</li>
+          <li><strong>Wav2Lip Lip-Sync:</strong> Enable lip-sync to synchronize face movements with synthesized audio.</li>
         </ol>`
     },
     {
@@ -87,7 +100,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
     }
   ];
 
-  let queueCardsHTML = queueJobs.map(job => {
+  const queueCardsHTML = queueJobs.map(job => {
     const isProcessing = job.status === 'processing';
     const isFailed = job.status === 'failed';
     const isPending = job.status === 'pending';
@@ -115,7 +128,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
     let targetPlatforms = [];
     try { targetPlatforms = JSON.parse(job.target_platforms || '[]'); } catch(e) {}
     
-    const jobDataJson = JSON.stringify({
+    const jobDataJson = escapeHtml(JSON.stringify({
       masterPrompt: job.master_prompt || '',
       productionNotes: job.production_notes || '',
       characterFeatures: job.character_features || '',
@@ -127,18 +140,18 @@ export function buildDashboardHTML(params: DashboardParams): string {
       platforms: targetPlatforms,
       differentiationDurationMode: job.differentiation_duration_mode || 'same',
       differentiationLayout: job.differentiation_layout === 1
-    }).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    }));
 
     return `
       <div class="job-card" id="job-card-${job.id}">
         <div class="job-header">
           <h3>${t.project} #${job.id}</h3>
-          <span class="status-badge status-${job.status}">${job.current_stage} (${job.progress_percent}%)</span>
+          <span class="status-badge status-${job.status}">${escapeHtml(job.current_stage || '')} (${job.progress_percent}%)</span>
         </div>
         ${approvalBadge ? '<div style="margin-bottom:0.5rem;">' + approvalBadge + '</div>' : ''}
         ${phase1Badge ? '<div style="margin-bottom:0.5rem;">' + phase1Badge + '</div>' : ''}
         ${failedBadge ? '<div style="margin-bottom:0.5rem;">' + failedBadge + '</div>' : ''}
-        <p class="prompt"><strong>Prompt:</strong> ${job.master_prompt}</p>
+        <p class="prompt"><strong>Prompt:</strong> ${escapeHtml(job.master_prompt || '')}</p>
 
         ${isProcessing ? `
           <div class="progress-bar-container">
@@ -149,14 +162,14 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
         <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
           ${startBtn}
-          ${isFailed ? `<button onclick="fillJobForm(${jobDataJson})" class="retry-btn">Yeniden Dene</button>` : ''}
+          ${isFailed ? `<button onclick="fillJobForm('${jobDataJson}')" class="retry-btn">Yeniden Dene</button>` : ''}
           <button onclick="deleteJob('${job.id}')" class="delete-btn">Sil</button>
         </div>
       </div>
     `;
   }).join('');
 
-  let completedCardsHTML = completedJobs.map(job => {
+  const completedCardsHTML = completedJobs.map(job => {
     let platforms = [];
     try {
       platforms = JSON.parse(job.target_platforms || '[]');
@@ -175,7 +188,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       ? `<button onclick="cancelPublish('${job.id}', 'meta')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
       : '';
 
-    const jobDataJson = JSON.stringify({
+    const jobDataJson = escapeHtml(JSON.stringify({
       masterPrompt: job.master_prompt || '',
       productionNotes: job.production_notes || '',
       characterFeatures: job.character_features || '',
@@ -187,7 +200,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       platforms: platforms,
       differentiationDurationMode: job.differentiation_duration_mode || 'same',
       differentiationLayout: job.differentiation_layout === 1
-    }).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    }));
 
     let coverSelectorHTML = '';
     if (job.cover_images) {
@@ -251,7 +264,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <h3>Proje #${job.id}</h3>
           <span class="status-badge status-${job.status}">Tamamlandı</span>
         </div>
-        <p class="prompt"><strong>Prompt:</strong> ${job.master_prompt}</p>
+        <p class="prompt"><strong>Prompt:</strong> ${escapeHtml(job.master_prompt || '')}</p>
         
         <div class="video-container">
           <video controls width="100%">
@@ -265,9 +278,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <h4>Yapay Zekâ Pazarlama & SEO Detayları (2026 Standartları)</h4>
           <div class="meta-section">
             <h5>YouTube Shorts</h5>
-            <input type="text" id="yt_title_${job.id}" value="${job.yt_title || ''}" placeholder="YouTube Başlık">
-            <textarea id="yt_desc_${job.id}" placeholder="YouTube Açıklama">${job.yt_desc || ''}</textarea>
-            <input type="text" id="yt_tags_${job.id}" value="${job.yt_tags || ''}" placeholder="YouTube Etiketler">
+            <input type="text" id="yt_title_${job.id}" value="${escapeHtml(job.yt_title || '')}" placeholder="YouTube Başlık">
+            <textarea id="yt_desc_${job.id}" placeholder="YouTube Açıklama">${escapeHtml(job.yt_desc || '')}</textarea>
+            <input type="text" id="yt_tags_${job.id}" value="${escapeHtml(job.yt_tags || '')}" placeholder="YouTube Etiketler">
             <div style="display:flex; align-items:center;">
               <button onclick="publish('${job.id}', 'youtube')" class="pub-btn" ${job.yt_status === 'publishing' ? 'disabled' : ''}>YouTube Paylaş (${job.yt_status})</button>
               ${ytCancelBtn}
@@ -276,8 +289,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
           
           <div class="meta-section">
             <h5>TikTok</h5>
-            <textarea id="tt_desc_${job.id}" placeholder="TikTok Açıklama">${job.tt_desc || ''}</textarea>
-            <input type="text" id="tt_tags_${job.id}" value="${job.tt_tags || ''}" placeholder="TikTok Etiketler">
+            <textarea id="tt_desc_${job.id}" placeholder="TikTok Açıklama">${escapeHtml(job.tt_desc || '')}</textarea>
+            <input type="text" id="tt_tags_${job.id}" value="${escapeHtml(job.tt_tags || '')}" placeholder="TikTok Etiketler">
             <div style="display:flex; align-items:center;">
               <button onclick="publish('${job.id}', 'tiktok')" class="pub-btn" ${job.tt_status === 'publishing' ? 'disabled' : ''}>TikTok Paylaş (${job.tt_status})</button>
               ${ttCancelBtn}
@@ -286,8 +299,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
  
           <div class="meta-section">
             <h5>X (Twitter)</h5>
-            <textarea id="x_desc_${job.id}" placeholder="X Açıklama">${job.x_desc || ''}</textarea>
-            <input type="text" id="x_tags_${job.id}" value="${job.x_tags || ''}" placeholder="X Etiketler">
+            <textarea id="x_desc_${job.id}" placeholder="X Açıklama">${escapeHtml(job.x_desc || '')}</textarea>
+            <input type="text" id="x_tags_${job.id}" value="${escapeHtml(job.x_tags || '')}" placeholder="X Etiketler">
             <div style="display:flex; align-items:center;">
               <button onclick="publish('${job.id}', 'x')" class="pub-btn" ${job.x_status === 'publishing' ? 'disabled' : ''}>X Paylaş (${job.x_status})</button>
               ${xCancelBtn}
@@ -296,8 +309,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
  
           <div class="meta-section">
             <h5>Meta (Reels)</h5>
-            <textarea id="meta_desc_${job.id}" placeholder="Meta Açıklama">${job.meta_desc || ''}</textarea>
-            <input type="text" id="meta_tags_${job.id}" value="${job.meta_tags || ''}" placeholder="Meta Etiketler">
+            <textarea id="meta_desc_${job.id}" placeholder="Meta Açıklama">${escapeHtml(job.meta_desc || '')}</textarea>
+            <input type="text" id="meta_tags_${job.id}" value="${escapeHtml(job.meta_tags || '')}" placeholder="Meta Etiketler">
             <div style="display:flex; align-items:center;">
               <button onclick="publish('${job.id}', 'meta')" class="pub-btn" ${job.meta_status === 'publishing' ? 'disabled' : ''}>Meta Reels Paylaş (${job.meta_status})</button>
               ${metaCancelBtn}
@@ -306,7 +319,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           
           <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
             <button onclick="saveMeta('${job.id}')" class="save-btn">Tüm Metinleri Güncelle & Kaydet</button>
-            <button onclick="fillJobForm(${jobDataJson})" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
+            <button onclick="fillJobForm('${jobDataJson}')" class="retry-btn" style="width: 100%;">Yeniden Dene</button>
             <button onclick="deleteJob('${job.id}')" class="delete-btn" style="width: 100%;">Projeyi Sil</button>
           </div>
         </div>
@@ -320,6 +333,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="${csrfToken || ''}">
     <title>AI Publisher — ${t.title}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -871,6 +885,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       <main class="app-main">
         <div class="animate-in" id="new-project-panel">
           <form id="jobForm" action="/create-job" method="POST" enctype="multipart/form-data" class="glass-card" style="margin-bottom: 1.5rem;">
+            <input type="hidden" name="csrfToken" value="${csrfToken || ''}">
             <input type="hidden" id="edit_job_id" value="">
             <div class="section-header">
               <span class="section-title"><span class="section-title-dot"></span>${t.newProject}</span>
@@ -927,6 +942,21 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <option value="longer">${t.longer}</option>
                 </select>
               </div>
+              <div class="form-grid-2">
+                <div>
+                  <label class="form-label">TTS Sağlayıcı</label>
+                  <select name="tts_provider" class="form-input" onchange="ttsVoiceHint(this.value)">
+                    <option value="xtts">🎙️ XTTS-v2 (Coqui, ses klonlama)</option>
+                    <option value="openai">🤖 OpenAI TTS (API anahtarı gerekli)</option>
+                    <option value="edge">🌐 Edge Speech (ücretsiz, API gerekmez)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">TTS Ses</label>
+                  <input type="text" name="tts_voice" class="form-input" id="tts-voice-input" value="Claribel Dervla" placeholder="Claribel Dervla">
+                  <small style="opacity:0.6;font-size:0.65rem;" id="tts-voice-hint">XTTS: Claribel Dervla / OpenAI: alloy,echo,fable,nova,shimmer / Edge: tr-TR-EmelNeural</small>
+                </div>
+              </div>
               <div>
                 <label class="form-label">${t.publishPlatforms}</label>
                 <div class="checkbox-grid">
@@ -972,7 +1002,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
         </div>
       </main>
     </div>
-    ${getDashboardScripts({ t, queueJobs, currentLang, currentTheme, HELP_PAGES_DATA })}
+    ${getDashboardScripts({ t, queueJobs, currentLang, currentTheme, HELP_PAGES_DATA, csrfToken, cspNonce })}
   </body>
   </html>
   `;

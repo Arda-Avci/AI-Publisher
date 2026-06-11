@@ -19,6 +19,8 @@ import { db } from './db.js';
 import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
 import { RedisMutex } from './lib/redis-mutex.js';
 import { runDifferentiationPipeline } from './lib/differentiate.js';
+import { Logger } from './lib/logger.js';
+import { VideoJob } from './types/job.js';
 
 const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
@@ -27,25 +29,8 @@ import { broadcastProgress } from './lib/redis.js';
 export const clients = new Map<number, any>(); // Deprecated, use broadcastProgress
 let isProcessing = false;
 
-// ── LOG YARDIMCILARI ───────────────────────────────────────────────────────────
-function logInfo(msg: string, data?: any) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [INFO] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`);
-}
-
-function logError(msg: string, err: any) {
-  const timestamp = new Date().toISOString();
-  const stack = err?.stack ? '\n' + err.stack : '';
-  console.error(`[${timestamp}] [ERROR] ${msg}: ${err?.message || err}${stack}`);
-}
-
-function logWarn(msg: string, data?: any) {
-  const timestamp = new Date().toISOString();
-  console.warn(`[${timestamp}] [WARN] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`);
-}
-
 function broadcast(jobId: number, data: object) {
-  broadcastProgress(jobId, data).catch(err => console.error('[queue broadcast] err:', err));
+  broadcastProgress(jobId, data).catch(err => Logger.error('[queue broadcast] err:', err));
 }
 
 // S6: export broadcast so background tasks (e.g. publish uploads) can
@@ -55,38 +40,38 @@ export { broadcast };
 
 export async function checkQueue() {
   if (isProcessing) {
-    logInfo('checkQueue: zaten işleniyor, bekleniyor');
+    Logger.info('checkQueue: zaten işleniyor, bekleniyor');
     return;
   }
-  const nextJob: any = await db.get("SELECT * FROM video_jobs WHERE status = 'pending' ORDER BY id ASC");
+  const nextJob: VideoJob | undefined = await db.get("SELECT * FROM video_jobs WHERE status = 'pending' ORDER BY id ASC");
   if (!nextJob) {
-    logInfo('checkQueue: kuyrukta iş yok');
+    Logger.info('checkQueue: kuyrukta iş yok');
     return;
   }
 
-  logInfo('checkQueue: yeni iş bulundu', { jobId: nextJob.id, status: nextJob.status });
+  Logger.info('checkQueue: yeni iş bulundu', { jobId: nextJob.id, status: nextJob.status });
   isProcessing = true;
   try {
     await startProduction(nextJob);
   } catch (err) {
-    logError('checkQueue: startProduction hatası', err);
+    Logger.error('checkQueue: startProduction hatası', err);
   } finally {
     isProcessing = false;
     setImmediate(checkQueue);
   }
 }
 
-async function startProduction(job: any) {
+async function startProduction(job: VideoJob) {
   // İş başında Zen modellerinin sağlığını bir kere test edip, hata alanları geçici olarak skip edelim.
   // Not: Ana kuyruk işleme akışını tıkamamak için asenkron (non-blocking) olarak arka planda çalıştırıyoruz.
   checkZenModelsHealth().catch(err => {
-    console.warn('[WARN] Zen health check during job start failed:', err);
+    Logger.warn('Zen health check during job start failed:', err);
   });
 
   const COLAB_URL = process.env.COLAB_URL;
-  logInfo('═══════════════════════════════════════════════════════════════');
-  logInfo('startProduction BAŞLADI', { jobId: job.id, COLAB_URL });
-  logInfo('Job detay:', {
+  Logger.info('═══════════════════════════════════════════════════════════════');
+  Logger.info('startProduction BAŞLADI', { jobId: job.id, COLAB_URL });
+  Logger.info('Job detay:', {
     master_prompt: job.master_prompt?.substring(0, 100),
     production_notes: job.production_notes?.substring(0, 100),
     character_features: job.character_features?.substring(0, 100),
@@ -99,17 +84,20 @@ async function startProduction(job: any) {
 
   // ── Otonom Fırsat Hunisi İş Akışı (Metin Çeviri ve Özgünleştirme) ──
   if (job.source_video_id && !job.scene_prompts) {
-    logInfo('Fırsatlar Hunisi otonom iş akışı başlatılıyor...', { jobId: job.id });
+    Logger.info('Fırsatlar Hunisi otonom iş akışı başlatılıyor...', { jobId: job.id });
     try {
       await runDifferentiationPipeline(job.id, job.user_id);
       // Reload job data
-      job = await db.get("SELECT * FROM video_jobs WHERE id = ?", [job.id]);
+      const updatedJob = await db.get("SELECT * FROM video_jobs WHERE id = ?", [job.id]);
+      if (updatedJob) {
+        job = updatedJob;
+      }
       if (job.status === 'awaiting_approval') {
-        logInfo('Fırsatlar Hunisi otonom iş akışı Phase 1 tamamlandı. Awaiting approval. startProduction sonlandırılıyor.', { jobId: job.id });
+        Logger.info('Fırsatlar Hunisi otonom iş akışı Phase 1 tamamlandı. Awaiting approval. startProduction sonlandırılıyor.', { jobId: job.id });
         return;
       }
     } catch (diffErr) {
-      logError('Fırsatlar Hunisi otonom iş akışı HATA verdi:', diffErr);
+      Logger.error('Fırsatlar Hunisi otonom iş akışı HATA verdi:', diffErr);
       throw diffErr;
     }
   }
@@ -121,21 +109,21 @@ async function startProduction(job: any) {
       const parsed = JSON.parse(job.scene_prompts);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].videoPrompt) {
         preGeneratedScenes = parsed;
-        logInfo('Farklılaştırma hızlı yolu bulundu', { sceneCount: preGeneratedScenes.length });
+        Logger.info('Farklılaştırma hızlı yolu bulundu', { sceneCount: preGeneratedScenes.length });
       }
     } catch (parseErr) {
-      logWarn('scene_prompts JSON parse hatası, normal yola düşülüyor', parseErr);
+      Logger.warn('scene_prompts JSON parse hatası, normal yola düşülüyor', parseErr);
     }
   }
 
   try {
-    logInfo('AŞAMA 1: Yönetmen Planlaması başlıyor...');
+    Logger.info('AŞAMA 1: Yönetmen Planlaması başlıyor...');
     await db.run("UPDATE video_jobs SET status = 'processing', current_stage = 'Yönetmen Planlaması', progress_percent = 5 WHERE id = ?", [job.id]);
     broadcast(job.id, { stageKey: 'stageDirectorPlanning', percent: 5 });
 
     let object: { scenes: any[]; marketing: any };
     if (preGeneratedScenes) {
-      logInfo('Pre-generated sahneler kullanılıyor (farklılaştırma)');
+      Logger.info('Pre-generated sahneler kullanılıyor (farklılaştırma)');
       object = {
         scenes: preGeneratedScenes,
         marketing: {
@@ -151,13 +139,13 @@ async function startProduction(job: any) {
         }
       };
     } else {
-      logInfo('AI generateStudioScenes çağrılıyor...');
+      Logger.info('AI generateStudioScenes çağrılıyor...');
       try {
         object = await generateStudioScenes(job);
-        logInfo('AI generateStudioScenes başarılı', { sceneCount: object.scenes.length });
+        Logger.info('AI generateStudioScenes başarılı', { sceneCount: object.scenes.length });
       } catch (aiErr) {
-        logError('AI generateStudioScenes HATASI', aiErr);
-        logInfo('Job detayları:', {
+        Logger.error('AI generateStudioScenes HATASI', aiErr);
+        Logger.info('Job detayları:', {
           master_prompt: job.master_prompt,
           production_notes: job.production_notes,
           character_features: job.character_features,
@@ -169,7 +157,7 @@ async function startProduction(job: any) {
 
     const totalScenes = object.scenes.length;
     const estMin = totalScenes * 4.5 + 2;
-    logInfo('Toplam sahne sayısı:', { totalScenes, estimatedMinutes: estMin }); 
+    Logger.info('Toplam sahne sayısı:', { totalScenes, estimatedMinutes: estMin }); 
 
     await db.run(
       `UPDATE video_jobs SET
@@ -214,41 +202,41 @@ async function startProduction(job: any) {
     });
 
     // ── KAPAK SENTEZİ ──
-    logInfo('AŞAMA 2: Colab bağlantısı ve kapak sentezi başlıyor...');
+    Logger.info('AŞAMA 2: Colab bağlantısı ve kapak sentezi başlıyor...');
     await colabMutex.acquire();
     try {
       // ── Colab auto-start: ensure Colab is up before processing ──
       const colabState = colab.getState();
-      logInfo('Colab durumu:', colabState);
+      Logger.info('Colab durumu:', colabState);
 
       if (colabState.status === 'stopped' || colabState.status === 'error') {
         try {
-          logInfo('Colab başlatılıyor...');
+          Logger.info('Colab başlatılıyor...');
           await db.run("UPDATE video_jobs SET current_stage = 'Colab Sunucusu Başlatılıyor (2-5 dk sürebilir)...' WHERE id = ?", [job.id]);
           broadcast(job.id, { stageKey: 'stageColabStarting', percent: 11 });
 
           await colab.start();
-          logInfo('Colab başarıyla başlatıldı', { ngrokUrl: colab.getState().ngrokUrl });
+          Logger.info('Colab başarıyla başlatıldı', { ngrokUrl: colab.getState().ngrokUrl });
         } catch (colabErr: any) {
-          logError('Colab başlatılamadı', colabErr);
+          Logger.error('Colab başlatılamadı', colabErr);
           const errorMsg = "Colab Sunucusu Hazır Değil. Lütfen Google Colab notebook'unuzu çalıştırın ve oluşturulan Ngrok URL'sini Ayarlar panelinden güncelleyin.";
           await db.run("UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?", [errorMsg, job.id]);
           broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
           throw new Error('COLAB_NOT_READY');
         }
       } else {
-        logInfo('Colab zaten çalışıyor', { ngrokUrl: colabState.ngrokUrl });
+        Logger.info('Colab zaten çalışıyor', { ngrokUrl: colabState.ngrokUrl });
       }
       colab.cancelIdleStop();
 
       // ── Dry-Run: Colab Kütüphane ve Bağımlılık Doğrulaması ──
-      logInfo('Colab kütüphaneleri doğrulanıyor...');
+      Logger.info('Colab kütüphaneleri doğrulanıyor...');
       await db.run("UPDATE video_jobs SET current_stage = 'Colab Kütüphaneleri Doğrulanıyor...', progress_percent = 11 WHERE id = ?", [job.id]);
       broadcast(job.id, { stageKey: 'stageColabProgress', colabStage: 'verification', colabMessage: 'Kütüphaneler doğrulanıyor...', colabPercent: 50, percent: 11 });
 
       const libCheck = await colab.verifyLibraries();
       if (!libCheck.success) {
-        logError('Colab kütüphane doğrulaması başarısız:', new Error(libCheck.error));
+        Logger.error('Colab kütüphane doğrulaması başarısız:', new Error(libCheck.error));
         let errorMsg = `Colab kütüphane doğrulaması başarısız. Lütfen Colab bağımlılıklarının doğru yüklendiğinden emin olun.`;
         if (libCheck.report) {
           const failedLibs = Object.entries(libCheck.report)
@@ -263,33 +251,35 @@ async function startProduction(job: any) {
         broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
         throw new Error('COLAB_LIBRARIES_FAILED');
       }
-      logInfo('Colab kütüphaneleri başarıyla doğrulandı.');
+      Logger.info('Colab kütüphaneleri başarıyla doğrulandı.');
 
       try {
-        logInfo('Kapak resmi üretimi başlıyor...');
+        Logger.info('Kapak resmi üretimi başlıyor...');
         await db.run("UPDATE video_jobs SET current_stage = 'Kapak Fotoğrafı Sentezi', progress_percent = 12 WHERE id = ?", [job.id]);
         broadcast(job.id, { stageKey: 'stageCoverSynthesis', percent: 12 });
 
         const coverPrompt = `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`;
-        logInfo('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
+        Logger.info('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
 
         const coverResponse = await axios.post(`${COLAB_URL}/generate-covers`, {
           cover_prompt: coverPrompt,
           job_id: job.id,
-          callback_url: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/v1/video/callback` : 'http://localhost:3010/api/v1/video/callback'
+          callback_url: process.env.PUBLIC_URL 
+            ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
+            : `http://localhost:3010/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
         });
-        logInfo('Cover üretim isteği gönderildi', { status: coverResponse.status });
+        Logger.info('Cover üretim isteği gönderildi', { status: coverResponse.status });
 
         // 3 kapağı da indir ve yerel sunucuya kaydet
         const coverPaths: string[] = [];
         for (let i = 0; i < 3; i++) {
           const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
           if (await fs.pathExists(coverDest)) {
-            logInfo(`Kapak ${i} lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.`, { dest: coverDest });
+            Logger.info(`Kapak ${i} lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.`, { dest: coverDest });
             coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
             continue;
           }
-          logInfo(`Kapak ${i} indiriliyor...`, { url: `${COLAB_URL}/download/cover/${i}`, dest: coverDest });
+          Logger.info(`Kapak ${i} indiriliyor...`, { url: `${COLAB_URL}/download/cover/${i}`, dest: coverDest });
           try {
             const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/${i}`, responseType: 'stream' });
             const wCover = fs.createWriteStream(coverDest);
@@ -299,9 +289,9 @@ async function startProduction(job: any) {
               wCover.on('error', reject);
             });
             coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
-            logInfo(`Kapak ${i} başarıyla indirildi`, { dest: coverDest });
+            Logger.info(`Kapak ${i} başarıyla indirildi`, { dest: coverDest });
           } catch (dlErr) {
-            logWarn(`Kapak ${i} indirilirken hata oluştu:`, dlErr);
+            Logger.warn(`Kapak ${i} indirilirken hata oluştu:`, dlErr);
           }
         }
 
@@ -314,7 +304,7 @@ async function startProduction(job: any) {
           [defaultCoverAbsPath, JSON.stringify(coverPaths), job.id]
         );
       } catch (coverErr) {
-        logWarn('Kapak sentezi hatası, atlanıyor', coverErr);
+        Logger.warn('Kapak sentezi hatası, atlanıyor', coverErr);
       }
 
     // Sahneleri teker teker üret
@@ -336,16 +326,16 @@ async function startProduction(job: any) {
       });
     };
 
-    logInfo('AŞAMA 3: Sahne üretimi başlıyor', { totalScenes });
+    Logger.info('AŞAMA 3: Sahne üretimi başlıyor', { totalScenes });
     for (const scene of object.scenes) {
-      logInfo(`  ── SAHNE ${scene.sceneNumber}/${totalScenes} başlıyor`);
+      Logger.info(`  ── SAHNE ${scene.sceneNumber}/${totalScenes} başlıyor`);
       // S6: Cancellation check at scene boundary.
-      const cancelCheck: any = await db.get(
+      const cancelCheck: { status: string } | undefined = await db.get(
         'SELECT status FROM video_jobs WHERE id = ?',
         [job.id]
       );
       if (cancelCheck && cancelCheck.status === 'cancelled') {
-        logInfo('İş iptal edildi, üretim durduruluyor');
+        Logger.info('İş iptal edildi, üretim durduruluyor');
         break;
       }
 
@@ -353,7 +343,7 @@ async function startProduction(job: any) {
       await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = ? WHERE id = ?", [`Sahne ${scene.sceneNumber} İşleniyor`, pct, job.id]);
       broadcast(job.id, { stageKey: 'stageSceneGenerating', sceneNumber: scene.sceneNumber, percent: pct, completedScenes: scene.sceneNumber - 1 });
 
-      let finalCharacterFeatures = job.character_features;
+      const finalCharacterFeatures = job.character_features;
       let referenceImageBase64 = '';
       let sendSourceVideoId = '';
 
@@ -364,9 +354,9 @@ async function startProduction(job: any) {
             try {
               const resImg = await axios.get(job.material_path, { responseType: 'arraybuffer' });
               referenceImageBase64 = `data:image/jpeg;base64,${Buffer.from(resImg.data).toString('base64')}`;
-              logInfo('Thumbnail indirilip base64 yapıldı.');
+              Logger.info('Thumbnail indirilip base64 yapıldı.');
             } catch (err) {
-              logWarn('Thumbnail indirilip base64 yapılamadı:', err);
+              Logger.warn('Thumbnail indirilip base64 yapılamadı:', err);
             }
           } else {
             try {
@@ -374,15 +364,15 @@ async function startProduction(job: any) {
               if (await fs.pathExists(fileAbsPath)) {
                 if (job.material_path.endsWith('.mp4') || job.material_path.endsWith('.mkv')) {
                   referenceImageBase64 = await extractReferenceFrame(fileAbsPath);
-                  logInfo('Yerel referans videosundan ilk kare base64 olarak çıkarıldı.');
+                  Logger.info('Yerel referans videosundan ilk kare base64 olarak çıkarıldı.');
                 } else {
                   const buffer = await fs.readFile(fileAbsPath);
                   referenceImageBase64 = `data:image/png;base64,${buffer.toString('base64')}`;
-                  logInfo('Yerel referans görselinden base64 çıkarıldı.');
+                  Logger.info('Yerel referans görselinden base64 çıkarıldı.');
                 }
               }
             } catch (e) {
-              logWarn('Yerel referans görseli okunurken hata:', e);
+              Logger.warn('Yerel referans görseli okunurken hata:', e);
             }
           }
         }
@@ -393,14 +383,14 @@ async function startProduction(job: any) {
           const prevVideoPath = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber - 1}.mp4`);
           if (await fs.pathExists(prevVideoPath)) {
             referenceImageBase64 = await extractLastFrame(prevVideoPath);
-            logInfo(`[INFO] Devam videosu için önceki sahnenin (${scene.sceneNumber - 1}) son karesi çıkartıldı.`);
+            Logger.info(`[INFO] Devam videosu için önceki sahnenin (${scene.sceneNumber - 1}) son karesi çıkartıldı.`);
           }
         } catch (e) {
-          logWarn(`[WARN] Önceki sahnenin son karesi çıkartılamadı:`, e);
+          Logger.warn(`[WARN] Önceki sahnenin son karesi çıkartılamadı:`, e);
         }
       }
 
-      logInfo('Colab\'a sahne gönderiliyor', {
+      Logger.info('Colab\'a sahne gönderiliyor', {
         sceneNumber: scene.sceneNumber,
         apply_lipsync: applyLipsync,
         videoPrompt: scene.videoPrompt?.substring(0, 80),
@@ -420,15 +410,17 @@ async function startProduction(job: any) {
         video_model: 'CogVideoX-2b',
         tts_provider: job.tts_provider || 'xtts',
         tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
-        callback_url: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/v1/video/callback` : 'http://localhost:3010/api/v1/video/callback'
+        callback_url: process.env.PUBLIC_URL 
+          ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
+          : `http://localhost:3010/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
       }, { timeout: 0 });
 
       const taskId = response.data?.task_id;
       if (!taskId) {
-        logError('Colab task_id DÖNMEDİ', response.data);
+        Logger.error('Colab task_id DÖNMEDİ', response.data);
         throw new Error('Colab task_id dönmedi.');
       }
-      logInfo('Colab görevi başlatıldı', { taskId, status: response.data?.status });
+      Logger.info('Colab görevi başlatıldı', { taskId, status: response.data?.status });
 
       // Colab task durumunu logla
       await db.run("UPDATE video_jobs SET colab_task_id = ? WHERE id = ?", [taskId, job.id]);
@@ -446,17 +438,17 @@ async function startProduction(job: any) {
         // Colab kilitlenme/timeout önlemi (Dinamik zaman aşımı)
         const totalElapsedMs = Date.now() - taskStartTime;
         if (totalElapsedMs > dynamicTimeoutMs) {
-          logError(`Colab render işlemi zaman aşımına uğradı (${Math.round(dynamicTimeoutMs / 1000)} sn)`, new Error('COLAB_RENDER_TIMEOUT'));
+          Logger.error(`Colab render işlemi zaman aşımına uğradı (${Math.round(dynamicTimeoutMs / 1000)} sn)`, new Error('COLAB_RENDER_TIMEOUT'));
           throw new Error(`Colab video üretimi zaman aşımı sınırını (${Math.round(dynamicTimeoutMs / 1000)} sn) aştı.`);
         }
 
         // Polling döngüsünde iptal kontrolü
-        const cancelCheck2: any = await db.get(
+        const cancelCheck2: { status: string } | undefined = await db.get(
           'SELECT status FROM video_jobs WHERE id = ?',
           [job.id]
         );
         if (cancelCheck2 && cancelCheck2.status === 'cancelled') {
-          logInfo('Polling sırasında iş iptal edildi');
+          Logger.info('Polling sırasında iş iptal edildi');
           throw new Error('JOB_CANCELLED');
         }
 
@@ -468,7 +460,7 @@ async function startProduction(job: any) {
           taskData = statusRes.data;
           taskStatus = taskData.status || 'processing';
 
-          logInfo(`Colab polling #${attempt}`, {
+          Logger.info(`Colab polling #${attempt}`, {
             taskId,
             taskStatus,
             stage: taskData?.stage,
@@ -480,7 +472,7 @@ async function startProduction(job: any) {
           // Dinamik watchdog zaman aşımı güncellemesi
           if (taskData && typeof taskData.etaSeconds === 'number') {
             dynamicTimeoutMs = totalElapsedMs + (taskData.etaSeconds * 1000) + 180000; // geçen süre + kalan süre + 3 dk güvenlik payı
-            logInfo(`Watchdog zaman aşımı güncellendi: ${Math.round(dynamicTimeoutMs / 1000)} sn (Colab ETA: ${taskData.etaSeconds} sn)`);
+            Logger.info(`Watchdog zaman aşımı güncellendi: ${Math.round(dynamicTimeoutMs / 1000)} sn (Colab ETA: ${taskData.etaSeconds} sn)`);
           }
 
           // S7: Colab sub-stage bilgisini SSE'ye yayınla
@@ -502,22 +494,22 @@ async function startProduction(job: any) {
             });
           }
         } catch (statusErr: any) {
-          logWarn(`Colab status check hatası (tekrar denenecek)`, { attempt, error: statusErr.message });
+          Logger.warn(`Colab status check hatası (tekrar denenecek)`, { attempt, error: statusErr.message });
           if (attempt > 60) {
-            logError('Colab timeout (3 dk)', statusErr);
+            Logger.error('Colab timeout (3 dk)', statusErr);
             throw new Error(`Colab sunucusuna erişilemiyor (timeout): ${statusErr.message}`);
           }
         }
       }
 
-      logInfo('Colab görev durumu:', { taskStatus, taskData });
+      Logger.info('Colab görev durumu:', { taskStatus, taskData });
       if (taskStatus === 'error' || taskStatus === 'failed') {
-        logError('Colab işleme hatası', { message: taskData?.message });
+        Logger.error('Colab işleme hatası', { message: taskData?.message });
         throw new Error(`Colab işleme hatası: ${taskData?.message || 'Bilinmeyen hata'}`);
       }
 
       const hasSubtitle = taskData?.has_subtitle || false;
-      logInfo('Sahne tamamlandı, dosyalar indiriliyor', { hasSubtitle });
+      Logger.info('Sahne tamamlandı, dosyalar indiriliyor', { hasSubtitle });
 
       const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.sceneNumber}.mp4`);
       const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.sceneNumber}.wav`);
@@ -526,38 +518,38 @@ async function startProduction(job: any) {
       const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.sceneNumber}.mp4`);
 
       if (!await fs.pathExists(tV)) {
-        logInfo('Video indiriliyor...', { url: `${COLAB_URL}/download/video` });
+        Logger.info('Video indiriliyor...', { url: `${COLAB_URL}/download/video` });
         await dl(`${COLAB_URL}/download/video`, tV);
       } else {
-        logInfo('Video lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tV });
+        Logger.info('Video lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tV });
       }
 
       if (!await fs.pathExists(tS)) {
-        logInfo('Speech indiriliyor...', { url: `${COLAB_URL}/download/speech` });
+        Logger.info('Speech indiriliyor...', { url: `${COLAB_URL}/download/speech` });
         await dl(`${COLAB_URL}/download/speech`, tS);
       } else {
-        logInfo('Speech lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tS });
+        Logger.info('Speech lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tS });
       }
 
       if (!await fs.pathExists(tE)) {
-        logInfo('SFX indiriliyor...', { url: `${COLAB_URL}/download/sfx` });
+        Logger.info('SFX indiriliyor...', { url: `${COLAB_URL}/download/sfx` });
         await dl(`${COLAB_URL}/download/sfx`, tE);
       } else {
-        logInfo('SFX lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tE });
+        Logger.info('SFX lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tE });
       }
 
       let srtFile = '';
       if (hasSubtitle && job.has_subtitles !== 0) {
         if (await fs.pathExists(tSRT)) {
-          logInfo('Altyazı lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tSRT });
+          Logger.info('Altyazı lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.', { tSRT });
           srtFile = tSRT;
         } else {
           try {
-            logInfo('Altyazı indiriliyor...', { url: `${COLAB_URL}/download/subtitle` });
+            Logger.info('Altyazı indiriliyor...', { url: `${COLAB_URL}/download/subtitle` });
             await dl(`${COLAB_URL}/download/subtitle`, tSRT);
             srtFile = tSRT;
           } catch (srtErr) {
-            console.warn(`[WARN] Altyazı indirilemedi:`, srtErr);
+            Logger.warn('Altyazı indirilemedi:', srtErr);
           }
         }
       }
@@ -598,12 +590,12 @@ async function startProduction(job: any) {
     }
 
     // S6: After the scene loop, re-check cancellation.
-    const postLoopCheck: any = await db.get(
+    const postLoopCheck: { status: string } | undefined = await db.get(
       'SELECT status FROM video_jobs WHERE id = ?',
       [job.id]
     );
     if (postLoopCheck && postLoopCheck.status === 'cancelled') {
-      console.log(`[INFO] Is #${job.id} iptal edildi, montaj adimi atlandi.`);
+      Logger.info(`Is #${job.id} iptal edildi, montaj adimi atlandi.`);
       for (const f of finalScenes) {
         try { await fs.remove(f); } catch { /* ignore */ }
       }
@@ -618,7 +610,7 @@ async function startProduction(job: any) {
     const fPath = path.join(process.cwd(), 'videolar', fName);
 
     // Concat with crossfade transition
-    logInfo('Sahneler crossfade gecisleriyle birlestiriliyor...', { finalScenes });
+    Logger.info('Sahneler crossfade gecisleriyle birlestiriliyor...', { finalScenes });
     await concatVideosWithCrossfade(finalScenes, fPath);
 
     // Temizlik
@@ -630,13 +622,13 @@ async function startProduction(job: any) {
     if (job.differentiation_layout === 1) {
       const differentiatedName = `diff_${fName}`;
       const differentiatedPath = path.join(process.cwd(), 'videolar', differentiatedName);
-      logInfo('Video özgünleştirme filtreleri uygulanıyor...', { fPath, differentiatedPath });
+      Logger.info('Video özgünleştirme filtreleri uygulanıyor...', { fPath, differentiatedPath });
       try {
         await applyVideoDifferentiationFilters(fPath, differentiatedPath, false); // false for horizontal
         await fs.move(differentiatedPath, fPath, { overwrite: true });
-        logInfo('Video özgünleştirme filtreleri başarıyla uygulandı.');
+        Logger.info('Video özgünleştirme filtreleri başarıyla uygulandı.');
       } catch (diffErr) {
-        logWarn('Video özgünleştirme filtreleri uygulanırken hata oluştu:', diffErr);
+        Logger.warn('Video özgünleştirme filtreleri uygulanırken hata oluştu:', diffErr);
       }
     }
 
@@ -649,7 +641,7 @@ async function startProduction(job: any) {
       dur = parseFloat(durStr.trim());
       if (isNaN(dur)) dur = 0;
     } catch (durErr) {
-      console.warn(`[WARN] Video süresi okunamadı:`, durErr);
+      Logger.warn('Video süresi okunamadı:', durErr);
     }
 
     // ── S4: End screen on horizontal video (if enabled) ──
@@ -668,15 +660,15 @@ async function startProduction(job: any) {
         const endAppliedPath = path.join(process.cwd(), 'videolar', `end_${fName}`);
         await applyEndScreen(fPath, endScreenPath, endAppliedPath, false);
         finalHorizontalPath = endAppliedPath;
-        console.log(`[INFO] End screen uygulandı: ${endAppliedPath}`);
+        Logger.info(`End screen uygulandı: ${endAppliedPath}`);
       }
     } catch (endErr) {
-      console.warn(`[WARN] End screen uygulanamadı:`, endErr);
+      Logger.warn('End screen uygulanamadı:', endErr);
     }
 
     // ── AKILLI DİKEY VİDEO VE CALLOUT'LAR (Shorts vb. için) ──
     if (job.has_shorts !== 0) {
-      console.log(`[INFO] Dikey 9:16 Shorts/TikTok videosu üretiliyor...`);
+      Logger.info('Dikey 9:16 Shorts/TikTok videosu üretiliyor...');
       await db.run("UPDATE video_jobs SET current_stage = 'Dikey Shorts Dönüşümü', progress_percent = 95 WHERE id = ?", [job.id]);
       broadcast(job.id, { stageKey: 'stageShortsConversion', percent: 95 });
 
@@ -690,19 +682,17 @@ async function startProduction(job: any) {
       const t2End = (dur * 0.50 + 4).toFixed(2);
       const t3End = (dur * 0.65 + 3).toFixed(2);
 
-      const ffmpegBlurCmd = `ffmpeg -y -i "${finalHorizontalPath}" -vf "split[original][copy];[copy]scale=1080:1920,boxblur=40[blurred];[original]scale=1080:-1[scaled];[blurred][scaled]overlay=(W-w)/2:(H-h)/2,drawtext=text='👍 BEGEN':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t1},${t1End})',drawtext=text='🔔 Kanalima abone olmayi unutmayin':fontcolor=yellow:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${t2},${t2End})',drawtext=text='🔔 ABONE OL':fontcolor=cyan:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t3},${t3End})'" -c:a copy "${dPath}"`;
-
       try {
         await runFFmpegWithFallback([{ cmd: 'ffmpeg', args: ['-y', '-i', finalHorizontalPath, '-vf', `split[original][copy];[copy]scale=1080:1920,boxblur=40[blurred];[original]scale=1080:-1[scaled];[blurred][scaled]overlay=(W-w)/2:(H-h)/2,drawtext=text='👍 BEGEN':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t1},${t1End})',drawtext=text='🔔 Kanalima abone olmayi unutmayin':fontcolor=yellow:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${t2},${t2End})',drawtext=text='🔔 ABONE OL':fontcolor=cyan:fontsize=48:x=(w-text_w)/2:y=h-200:enable='between(t,${t3},${t3End})'`, '-c:a', 'copy', dPath] }]);
-        console.log(`[INFO] Shorts üretimi tamamlandı: ${dName}`);
+        Logger.info(`Shorts üretimi tamamlandı: ${dName}`);
 
         try {
           const pingedPath = path.join(process.cwd(), 'videolar', `pinged_${dName}`);
           await addCalloutPings(dPath, pingedPath);
           await fs.move(pingedPath, dPath, { overwrite: true });
-          console.log(`[INFO] Callout ping sesleri eklendi: ${dPath}`);
+          Logger.info(`Callout ping sesleri eklendi: ${dPath}`);
         } catch (pingErr) {
-          console.warn(`[WARN] Ping sesleri eklenemedi, video sessiz callout'larla devam ediyor:`, pingErr);
+          Logger.warn('Ping sesleri eklenemedi, video sessiz callout\'larla devam ediyor:', pingErr);
         }
 
         try {
@@ -719,13 +709,13 @@ async function startProduction(job: any) {
             const endAppliedPath = path.join(process.cwd(), 'videolar', `end_${dName}`);
             await applyEndScreen(dPath, endScreenPath, endAppliedPath, true);
             await fs.move(endAppliedPath, dPath, { overwrite: true });
-            console.log(`[INFO] Shorts end screen uygulandı`);
+            Logger.info('Shorts end screen uygulandı');
           }
         } catch (endErr) {
-          console.warn(`[WARN] Shorts end screen uygulanamadı:`, endErr);
+          Logger.warn('Shorts end screen uygulanamadı:', endErr);
         }
       } catch (shortsErr) {
-        console.warn(`[WARN] Shorts/Dikey dönüşüm hatası:`, shortsErr);
+        Logger.warn('Shorts/Dikey dönüşüm hatası:', shortsErr);
       }
     }
 
@@ -734,15 +724,15 @@ async function startProduction(job: any) {
       [fName, job.id]
     );
     broadcast(job.id, { stageKey: 'stageCompleted', percent: 100, finalFilename: fName });
-    console.log(`[INFO] İş başarıyla tamamlandı: ID=${job.id}`);
+    Logger.info(`İş başarıyla tamamlandı: ID=${job.id}`);
 
   } catch (error) {
     if (error && (error as any).message === 'JOB_CANCELLED') {
-      console.log(`[INFO] Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);
+      Logger.info(`Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);
       broadcast(job.id, { stageKey: 'stageCancelled', percent: 0 });
       return;
     }
-    console.error(`[ERROR] İş sırasında kritik hata (ID=${job.id}):`, error);
+    Logger.error(`İş sırasında kritik hata (ID=${job.id})`, error);
     await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata Oluştu' WHERE id = ?", [job.id]);
     broadcast(job.id, { stageKey: 'stageError', percent: 0 });
   } finally {
@@ -753,11 +743,11 @@ async function startProduction(job: any) {
       );
       const remainingCount = remaining?.cnt || 0;
       if (remainingCount === 0) {
-        console.log(`[INFO] Kuyruk tamamen boşaldı — Colab sunucusu kapatılıyor.`);
+        Logger.info('Kuyruk tamamen boşaldı — Colab sunucusu kapatılıyor.');
         await colab.stop();
       }
     } catch (err) {
-      console.error('[ERROR] Could not check queue for colab.stop():', err);
+      Logger.error('Could not check queue for colab.stop()', err);
     }
   }
 }
@@ -769,7 +759,7 @@ export async function startVideoQueueWorker() {
       const channel = getRabbitChannel();
       await channel.prefetch(3);
 
-      console.log(`[INFO] RabbitMQ Worker: ${VIDEO_JOBS_QUEUE} dinleniyor (Prefetch=3)`);
+      Logger.info(`RabbitMQ Worker: ${VIDEO_JOBS_QUEUE} dinleniyor (Prefetch=3)`);
 
       channel.consume(VIDEO_JOBS_QUEUE, async (msg: any) => {
         if (!msg) return;
@@ -778,21 +768,21 @@ export async function startVideoQueueWorker() {
         try {
           payload = JSON.parse(msg.content.toString());
         } catch (e) {
-          console.error('[ERROR] Kuyruktan geçersiz mesaj geldi:', msg.content.toString());
+          Logger.error('Kuyruktan geçersiz mesaj geldi: ' + msg.content.toString());
           channel.ack(msg);
           return;
         }
 
         try {
-          const job = await db.get("SELECT * FROM video_jobs WHERE id = ?", [payload.jobId]);
+          const job: VideoJob | undefined = await db.get("SELECT * FROM video_jobs WHERE id = ?", [payload.jobId]);
           if (!job) {
-            console.warn(`[WARN] İş #${payload.jobId} veritabanında bulunamadı. Atlanıyor.`);
+            Logger.warn(`İş #${payload.jobId} veritabanında bulunamadı. Atlanıyor.`);
             channel.ack(msg);
             return;
           }
 
           if (job.status === 'cancelled') {
-            console.log(`[INFO] İş #${payload.jobId} önceden iptal edilmiş. İşlenmeden geçiliyor.`);
+            Logger.info(`İş #${payload.jobId} önceden iptal edilmiş. İşlenmeden geçiliyor.`);
             channel.ack(msg);
             return;
           }
@@ -801,10 +791,10 @@ export async function startVideoQueueWorker() {
 
           channel.ack(msg);
         } catch (error: any) {
-          console.error(`[ERROR] İş #${payload.jobId} işlenirken hata:`, error);
+          Logger.error(`İş #${payload.jobId} işlenirken hata`, error);
           
           if (error && error.message === 'JOB_CANCELLED') {
-             console.log(`[INFO] İş #${payload.jobId} iptal edildi. Kuyruktan çıkarılıyor.`);
+             Logger.info(`İş #${payload.jobId} iptal edildi. Kuyruktan çıkarılıyor.`);
              channel.ack(msg);
              return;
           }
@@ -815,7 +805,7 @@ export async function startVideoQueueWorker() {
         }
       });
     } catch (err: any) {
-      console.error('[ERROR] Video queue worker setup failed (will retry on reconnect):', err.message);
+      Logger.error('Video queue worker setup failed (will retry on reconnect)', err);
     }
   };
 

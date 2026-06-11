@@ -77,12 +77,19 @@ if not already_installed:
     for err in import_errors:
         print(f"  - {err}")
 
-def run_cmd(cmd):
-    try:
-        print(f"[INFO] Running: {cmd}")
-        subprocess.run(cmd, shell=True, check=True)
-    except Exception as e:
-        print(f"[WARN] Command failed: {cmd}. Error: {e}")
+def run_cmd(cmd, max_retries=3, delay=5):
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"[INFO] Running (Attempt {attempt}/{max_retries}): {cmd}")
+            subprocess.run(cmd, shell=True, check=True)
+            return True
+        except Exception as e:
+            print(f"[WARN] Attempt {attempt} failed: {e}")
+            if attempt < max_retries:
+                time.sleep(delay)
+            else:
+                print(f"[ERROR] Command failed after {max_retries} attempts: {cmd}")
+                return False
 
 if not already_installed:
     print("[INFO] Gerekli paketler bulunamadı. Kurulum başlatılıyor...")

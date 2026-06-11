@@ -22,7 +22,7 @@ function getZenProvider() {
       let modifiedBody = options?.body;
       if (options?.body) {
         try {
-          let bodyObj = JSON.parse(String(options.body));
+          const bodyObj = JSON.parse(String(options.body));
           // Zen API reasoning models require high max_tokens to fit both reasoning and final content.
           if (!bodyObj.max_tokens && !bodyObj.max_completion_tokens) {
             bodyObj.max_tokens = 4000;
@@ -138,7 +138,7 @@ function getZenProvider() {
         }
 
         try {
-          let data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+          const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
           
           if (data && typeof data === 'object') {
             if (data.created === undefined || data.created === null || isNaN(Number(data.created))) {

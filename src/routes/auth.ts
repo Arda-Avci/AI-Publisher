@@ -16,7 +16,7 @@ export function registerAuthRoutes(app: Application): void {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.send(buildLoginHTML(req.t, res.locals.themeStyles, req.lang));
+    res.send(buildLoginHTML(req.t, res.locals.themeStyles, req.lang, res.locals.csrfToken));
   });
 
   app.post('/login', authLimiter, async (req, res) => {
@@ -31,7 +31,7 @@ export function registerAuthRoutes(app: Application): void {
       res.redirect('/');
     } else {
       logAudit({ userId: null, action: 'auth.login.failed', details: { username }, req });
-      res.send(buildLoginHTML(req.t, res.locals.themeStyles, req.lang).replace('</form>', `<div class="error">${req.t.invalidLogin}</div></form>`));
+      res.send(buildLoginHTML(req.t, res.locals.themeStyles, req.lang, res.locals.csrfToken).replace('</form>', `<div class="error">${req.t.invalidLogin}</div></form>`));
     }
   });
 

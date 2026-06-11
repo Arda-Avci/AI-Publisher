@@ -12,7 +12,7 @@ export interface FFmpegCommand {
 import { Worker } from 'worker_threads';
 import { fileURLToPath } from 'url';
 
-let __dirnameStr = __dirname;
+const __dirnameStr = __dirname;
 
 export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<void> {
   const workerPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.ts');

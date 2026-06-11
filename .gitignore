@@ -4,11 +4,9 @@ videolar/*.mp4
 videolar/*.wav
 videolar/*.srt
 videolar/*.txt
-uploads/*
-auth_youtube.json
-auth_tiktok.json
-auth_x.json
-auth_meta.json
+uploads/
+auth*.json
+auth_*.json
 .env
 .env.local
 .gemini

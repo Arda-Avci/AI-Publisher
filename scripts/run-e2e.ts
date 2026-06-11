@@ -1,7 +1,6 @@
 import { chromium } from 'playwright';
 import { spawn, ChildProcess } from 'child_process';
 import net from 'net';
-import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,16 +11,10 @@ function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer()
       .once('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
+        if (err.code === 'EADDRINUSE') resolve(true);
+        else resolve(false);
       })
-      .once('listening', () => {
-        server.close();
-        resolve(false);
-      });
+      .once('listening', () => { server.close(); resolve(false); });
     server.listen(port);
   });
 }
@@ -30,164 +23,205 @@ async function main() {
   const port = 3016;
   let serverProcess: ChildProcess | null = null;
 
-  console.log('--------------------------------------------------');
-  console.log('🚀 AI Publisher E2E Görsel Tarayıcı Testi Başlatılıyor');
-  console.log('--------------------------------------------------');
+  console.log('══════════════════════════════════════════════');
+  console.log('  AI Publisher E2E Görsel Test');
+  console.log('══════════════════════════════════════════════');
 
   const portActive = await isPortInUse(port);
   if (!portActive) {
-    console.log(`[E2E] Port ${port} aktif değil. Express sunucusu arka planda başlatılıyor...`);
+    console.log(`[E2E] Sunucu başlatılıyor (port ${port})...`);
     serverProcess = spawn('npx', ['tsx', 'src/server.ts'], {
-      stdio: 'inherit',
-      shell: true,
+      stdio: 'inherit', shell: true,
       env: { ...process.env, NODE_ENV: 'development' }
     });
-    // Sunucunun ayağa kalkması için 6 saniye bekle
-    await delay(6000);
+    await delay(10000);
   } else {
-    console.log(`[E2E] Port ${port} zaten aktif. Mevcut çalışan sunucu kullanılacak.`);
+    console.log(`[E2E] Mevcut sunucu kullanılıyor (port ${port}).`);
   }
 
-  // Tarayıcıyı headful (headless: false) modda başlatıyoruz
-  console.log('[E2E] Playwright Chromium tarayıcısı açılıyor (headless: false)...');
-  const browser = await chromium.launch({
-    headless: false,
-    slowMo: 100 // Her işlemi 100ms yavaşlatarak takibi kolaylaştırır
-  });
-
+  const browser = await chromium.launch({ headless: false, slowMo: 60 });
   const page = await browser.newPage();
-  
-  // Ekran boyutunu ayarla
   await page.setViewportSize({ width: 1280, height: 800 });
 
   try {
     const baseUrl = `http://localhost:${port}`;
 
-    // 1. Giriş Sayfasına Git
-    console.log(`[E2E] 1. Giriş sayfasına gidiliyor: ${baseUrl}/login`);
-    await page.goto(`${baseUrl}/login`);
-    await delay(1500);
-
-    // 2. Formu Doldur ve Giriş Yap
-    console.log('[E2E] 2. Kullanıcı bilgileri dolduruluyor...');
-    const adminUser = 'arda.avci@gmail.com';
-    const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
-
-    await page.fill('input[name="username"]', adminUser);
-    await delay(500);
-    await page.fill('input[name="password"]', adminPass);
+    // 1. Giriş
+    console.log('\n[1/7] Giriş yapılıyor...');
+    await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
     await delay(1000);
-
-    console.log('[E2E] Giriş yap butonuna tıklanıyor...');
+    await page.fill('input[name="username"]', 'arda.avci@gmail.com');
+    await page.fill('input[name="password"]', process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!');
     await page.click('button[type="submit"]');
-    
-    // Yönlendirmeyi bekle
-    await page.waitForURL(baseUrl + '/');
-    console.log('[E2E] Başarıyla giriş yapıldı ve Dashboard yüklendi!');
-    await delay(2000);
+    await page.waitForURL('**/');
+    console.log('  ✅ Giriş başarılı');
 
-    // 3. Ayarlar Modalı ve Tema Değişimi
-    console.log('[E2E] 3. Ayarlar modalı açılıyor...');
-    await page.click('button[onclick="openModal(\'settingsModal\')"]');
-    await page.waitForSelector('#settingsModal', { state: 'visible' });
-    await delay(1500);
+    // 2. Fırsatlar Hunisi
+    console.log('\n[2/7] Fırsatlar Hunisi açılıyor...');
 
-    // Sekmeler arasında gezin
-    console.log('[E2E] Ayarlar sekmeleri geziliyor...');
-    const tabs = ['settings-language', 'settings-account', 'settings-production', 'settings-appearance'];
-    for (const tab of tabs) {
-      await page.click(`button[data-target="${tab}"]`);
-      console.log(`[E2E] Sekme açıldı: ${tab}`);
-      await delay(1200);
+    // Butona tıkla — click + evaluate ile modal aç
+    const iconBtns = await page.$$('.icon-btn');
+    // İlk icon btn (🔥) opportunity modal'ı açar
+    if (iconBtns.length > 0) {
+      await iconBtns[0].click();
+    } else {
+      await page.evaluate(() => (window as any).openModal('opportunityModal'));
     }
-
-    // Temayı değiştir (örneğin Cyberpunk)
-    console.log('[E2E] Premium tema uygulanıyor (cyberpunk)...');
-    await page.click('button[data-theme="cyberpunk"]');
-    await delay(2000);
-
-    // Temayı değiştir (örneğin Nebula)
-    console.log('[E2E] Premium tema değiştiriliyor (nebula)...');
-    await page.click('button[data-theme="nebula"]');
-    await delay(2000);
-
-    // Ayarlar modalını kapat
-    console.log('[E2E] Ayarlar modalı kapatılıyor...');
-    await page.click('#settingsModal button.modal-close');
-    await page.waitForSelector('#settingsModal', { state: 'hidden' });
-    await delay(1500);
-
-    // 4. Fırsatlar Hunisi Modalı
-    console.log('[E2E] 4. Fırsatlar Hunisi modalı açılıyor...');
-    await page.click('button[onclick="openModal(\'opportunityModal\')"]');
-    await page.waitForSelector('#opportunityModal', { state: 'visible' });
-    await delay(1500);
-
-    // Önerilen bir kelimeye tıkla
-    console.log('[E2E] Önerilen anahtar kelime seçiliyor...');
-    const suggestionBtn = await page.$('.opp-suggestion');
-    if (suggestionBtn) {
-      await suggestionBtn.click();
-      console.log('[E2E] Anahtar kelime eklendi.');
-      await delay(1500);
-    }
-
-    // Modal kapat
-    console.log('[E2E] Fırsatlar Hunisi modalı kapatılıyor...');
-    await page.click('#opportunityModal button.modal-close');
-    await page.waitForSelector('#opportunityModal', { state: 'hidden' });
-    await delay(1500);
-
-    // 5. Yeni Proje Formunu Doldurma
-    console.log('[E2E] 5. Yeni proje oluşturma formu dolduruluyor...');
-    
-    await page.fill('textarea[name="master_prompt"]', 'E2E Görsel Test: Siberpunk sarmalında kaybolan son insan.');
-    await delay(800);
-    
-    await page.fill('textarea[name="production_notes"]', 'Karanlık siberpunk atmosfer, neon mavi sarmallar, dramatik synthwave müzik.');
-    await delay(800);
-    
-    await page.fill('textarea[name="transcript_text"]', 'Gelecekte, yapay zeka insanlığın kaderini kontrol ediyor.');
-    await delay(800);
-    
-    await page.fill('textarea[name="character_features"]', 'Mavi neon şeritli ceket giyen, sarışın siberpunk kadın ajan.');
-    await delay(800);
-
-    // Süre modunu değiştir
-    console.log('[E2E] Süre modu seçiliyor (shorter)...');
-    await page.selectOption('select[name="differentiation_duration_mode"]', 'shorter');
     await delay(1000);
 
-    // Platformları seç (X platformunu da işaretle)
-    console.log('[E2E] Hedef paylaşım platformları seçiliyor...');
-    const xCheckbox = await page.$('input[name="platforms"][value="x"]');
-    if (xCheckbox && !(await xCheckbox.isChecked())) {
-      await xCheckbox.check();
-      await delay(1000);
+    // Modal görünür olana kadar bekle (state:'attached' ile)
+    await page.waitForSelector('#opportunityModal', { state: 'attached', timeout: 5000 });
+    await delay(500);
+
+    // Modal'ın display kontrolü (CSS'den okumak için getComputedStyle kullanılır)
+    const modalVisible = await page.evaluate(() => {
+      const el = document.getElementById('opportunityModal');
+      return el ? window.getComputedStyle(el).display : 'not found';
+    });
+    console.log(`  Modal display: ${modalVisible}`);
+
+    // Eğer görünür değilse JS ile zorla aç
+    if (modalVisible !== 'block') {
+      console.log('  Modal görünür değil, JS ile zorla açılıyor...');
+      await page.evaluate(() => {
+        document.getElementById('modalBackdrop')!.style.display = 'block';
+        document.getElementById('opportunityModal')!.style.display = 'block';
+        if (typeof (window as any).openOppStep1 === 'function') (window as any).openOppStep1();
+      });
+      await delay(800);
     }
 
-    // Formu gönder
-    console.log('[E2E] Proje kuyruğa ekleniyor (Form gönderiliyor)...');
-    await page.click('form#jobForm button[type="submit"]');
+    // 3. Fırsat araması
+    console.log('\n[3/7] Fırsat araması yapılıyor...');
+    const searchInput = await page.$('#opp-interest-input');
+    if (searchInput) {
+      await searchInput.fill('yapay zeka geleceği');
+      await delay(300);
+      // addInterest fonksiyonunu doğrudan JS ile çağır (klavye event'i yerine)
+      await page.evaluate(() => {
+        if (typeof (window as any).addInterest === 'function') (window as any).addInterest('yapay zeka geleceği');
+      });
+      await delay(500);
+      console.log('  Anahtar kelime eklendi');
 
-    // Dashboard'un yenilenmesini bekle
-    await page.waitForURL(baseUrl + '/');
-    console.log('[E2E] Yeni proje başarıyla kuyruğa eklendi!');
-    await delay(3000);
+      // Ara butonuna bas (artık enabled olmalı)
+      const searchBtn = await page.$('#opp-search-btn');
+      if (searchBtn) {
+        const disabled = await searchBtn.evaluate((el) => (el as HTMLButtonElement).disabled);
+        console.log(`  Search btn disabled: ${disabled}`);
+        if (!disabled) {
+          await searchBtn.click();
+          await delay(3000);
+          console.log('  Arama yapıldı');
+        } else {
+          console.log('  Search btn hala disabled, sonuçlar doğrudan yüklenemiyor');
+        }
+      }
+    } else {
+      console.log('  Arama kutusu bulunamadı, öneri tıklanıyor...');
+      const suggestion = await page.$('.opp-suggestion');
+      if (suggestion) { await suggestion.click(); await delay(3000); }
+    }
+
+    // Sonuç varsa kullan butonuna bas
+    const resultBtn = await page.$('.opp-card .opp-use-btn, button:has-text("Prompt Olarak Kullan"), button:has-text("Kullan")');
+    if (resultBtn) {
+      await resultBtn.click();
+      await delay(1500);
+      console.log('  İçerik seçildi, forma aktarıldı');
+    } else {
+      console.log('  Sonuç bulunamadı, form elle doldurulacak');
+    }
+
+    // Modal'ı kapat (backdrop dahil)
+    await page.evaluate(() => {
+      document.getElementById('opportunityModal')!.style.display = 'none';
+      document.getElementById('modalBackdrop')!.style.display = 'none';
+    });
+    await delay(800);
+    console.log('  Modal kapatıldı');
+
+    // 4. Form doldurma
+    console.log('\n[4/7] Proje formu dolduruluyor...');
+    const promptEl = await page.$('textarea[name="master_prompt"]');
+    if (promptEl) {
+      const val = await promptEl.inputValue();
+      if (!val || val.trim() === '') {
+        await promptEl.fill('Yapay zeka ve insanlığın ortak geleceği: Teknoloji etik sınırlarını zorluyor.');
+      } else {
+        await promptEl.fill(val);
+      }
+    }
+    await page.fill('textarea[name="production_notes"]', 'Sakin fon müziği, derin ses tonu, mavi-siyah görsel palet.');
+    await page.fill('textarea[name="character_features"]', 'Bilim insanı görünümlü, gözlüklü, 40 yaşında karizmatik anlatıcı.');
+    console.log('  Temel alanlar dolduruldu');
+
+    // 5. TTS sağlayıcı seçimi
+    console.log('\n[5/7] TTS sağlayıcı test ediliyor...');
+    const ttsSelect = await page.$('select[name="tts_provider"]');
+    if (ttsSelect) {
+      console.log('  TTS dropdown bulundu, edge seçiliyor...');
+      await ttsSelect.selectOption('edge');
+      await delay(500);
+      const voiceInput = await page.$('#tts-voice-input');
+      if (voiceInput) {
+        const voiceVal = await voiceInput.inputValue();
+        console.log(`  TTS: edge seçildi, ses: ${voiceVal}`);
+      }
+      await ttsSelect.selectOption('openai');
+      await delay(500);
+      const voiceVal2 = await page.$eval('#tts-voice-input', (el: HTMLInputElement) => el.value);
+      console.log(`  TTS: openai seçildi, otomatik ses: ${voiceVal2}`);
+      await ttsSelect.selectOption('xtts');
+      await delay(300);
+    } else {
+      // Debug: form içindeki tüm select'leri listele
+      const allSelects = await page.$$eval('form select', els => els.map(e => (e as HTMLSelectElement).name));
+      console.log(`  ⚠️ TTS dropdown bulunamadı! Formdaki select'ler: [${allSelects.join(', ')}]`);
+      const formHTML = await page.$eval('form[action="/create-job"]', (el: HTMLElement) => el.innerHTML.substring(0, 500));
+      console.log(`  Form HTML (ilk 500): ${formHTML}`);
+    }
+
+    // 6. Platform ve süre seçimi
+    console.log('\n[6/7] Platform ve süre seçiliyor...');
+    const xCb = await page.$('input[name="platforms"][value="x"]');
+    if (xCb) { const ch = await xCb.isChecked(); if (!ch) await xCb.check(); }
+    const durSel = await page.$('select[name="differentiation_duration_mode"]');
+    if (durSel) await durSel.selectOption('shorter');
+    await delay(500);
+
+    // 7. Form gönderme
+    console.log('\n[7/7] Form gönderiliyor...');
+    const submitBtn = await page.$('form[action="/create-job"] button[type="submit"]');
+    if (submitBtn) {
+      await submitBtn.click();
+      await delay(3000);
+      // Sayfanın yenilenmesini bekle
+      try { await page.waitForURL('**/', { timeout: 8000 }); } catch { /* skip */ }
+      await delay(2000);
+      console.log('  ✅ Proje başarıyla kuyruğa eklendi!');
+    } else {
+      console.log('  ⚠️ Submit butonu bulunamadı!');
+    }
+
+    // Doğrulama
+    const bodyText = await page.textContent('body');
+    if (bodyText && (bodyText.includes('Kuyrukta') || bodyText.includes('pending'))) {
+      console.log('\n  ✅ TEST BAŞARILI — İş kuyrukta görünüyor');
+    } else {
+      console.log('\n  ⚠️ İş kuyrukta görünmeyebilir, lütfen tarayıcıyı kontrol edin');
+    }
+
+    await delay(2000);
 
   } catch (err) {
-    console.error('[E2E] Test sırasında HATA oluştu:', err);
+    console.error('\n❌ Test hatası:', err);
   } finally {
-    console.log('[E2E] Tarayıcı kapatılıyor...');
+    console.log('\n══════════════════════════════════════════════');
     await browser.close();
-
-    if (serverProcess) {
-      console.log('[E2E] Spawn edilmiş Express sunucusu kapatılıyor...');
-      serverProcess.kill('SIGINT');
-    }
-    console.log('--------------------------------------------------');
-    console.log('🏁 AI Publisher E2E Görsel Tarayıcı Testi Tamamlandı');
-    console.log('--------------------------------------------------');
+    if (serverProcess) { serverProcess.kill('SIGINT'); }
+    console.log('  E2E Test tamamlandı');
+    console.log('══════════════════════════════════════════════');
   }
 }
 

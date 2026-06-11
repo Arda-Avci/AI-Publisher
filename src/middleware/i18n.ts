@@ -33,7 +33,7 @@ export async function i18nMiddleware(req: Request, res: Response, next: NextFunc
   }
 
   // Varsayılan dili seans üzerinden al, yoksa 'tr' olsun
-  let lang: 'tr' | 'en' = req.session?.lang || 'tr';
+  const lang: 'tr' | 'en' = req.session?.lang || 'tr';
   
   req.lang = lang;
   req.t = lang === 'tr' ? (trMessages || {}) : (enMessages || {});

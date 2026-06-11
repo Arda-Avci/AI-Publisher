@@ -64,7 +64,7 @@ Görevlerin:
       abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
       prompt
     });
-  }, models);
+  }, models, 2, 2000, true); // skipZenModels=true because Zen doesn't support response_format
   return result.object;
 }
 
@@ -109,7 +109,7 @@ Referans Metin / Transkript: ${transcriptText}`;
       abortSignal: AbortSignal.timeout(60000), // Sahneler için 60 saniye zaman aşımı
       prompt
     });
-  }, models);
+  }, models, 2, 2000, true); // skipZenModels=true — Zen doesn't support response_format
   return result.object;
 }
 
@@ -136,6 +136,6 @@ Yazılacak konuşma metni yaklaşık 150-300 kelime arası, akıcı, bilgilendir
       abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
       prompt
     });
-  }, models);
+  }, models, 2, 2000, true); // skipZenModels=true — Zen doesn't support response_format
   return result.object.script;
 }

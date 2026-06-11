@@ -9,13 +9,22 @@ export async function withFallbackAndRetry<T>(
   operation: (model: any) => Promise<T>,
   models: any[],
   maxRetries: number = 2,
-  baseDelayMs: number = 2000
+  baseDelayMs: number = 2000,
+  skipZenModels?: boolean
 ): Promise<T> {
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
     const currentModel = models[modelIndex];
 
-    const isZenModel = currentModel && currentModel.modelId &&
-      ['big-pickle', 'mimo-v2.5-free', 'nemotron-3-ultra-free'].includes(currentModel.modelId);
+    const modelId = currentModel?.modelId || currentModel?.model || '';
+    const isZenModel = typeof modelId === 'string' &&
+      ['big-pickle', 'mimo-v2.5-free', 'nemotron-3-ultra-free'].some(id => modelId.includes(id));
+
+    // Skip Zen models for structured output (generateObject) — they don't support response_format
+    if (isZenModel && skipZenModels) {
+      console.log(`[AI] Skipping Zen model "${modelId}" — not compatible with structured output.`);
+      continue;
+    }
+
     const effectiveMaxRetries = isZenModel ? 0 : maxRetries;
 
     let attempt = 0;

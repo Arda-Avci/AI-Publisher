@@ -77,10 +77,11 @@ from diffusers import DiffusionPipeline
 import scipy.io.wavfile as wavfile
 import gc
 import traceback
-from pyngrok import ngrok
+import base64
+import requests
 import uuid
 import threading
-import base64
+from pyngrok import ngrok
 
 app = Flask(__name__)
 
@@ -815,21 +816,29 @@ def _generate_media_worker_with_callback(task_id: str, data: dict):
                 "message": "Colab render işlemi başarıyla tamamlandı."
             }
             
-            # Backend sunucuna otonom POST atılıyor
-            response = requests.post(callback_url, data=payload, files=files, timeout=120)
+            # Backend sunucuna otonom POST atılıyor (ngrok ve localtunnel bypass header'ları eklenerek)
+            bypass_headers = {
+                "ngrok-skip-browser-warning": "any-value",
+                "bypass-tunnel-reminder": "true"
+            }
+            response = requests.post(callback_url, data=payload, files=files, headers=bypass_headers, timeout=120)
             print(f"📩 Node.js Sunucu Yanıtı: {response.status_code}")
             
     except Exception as e:
         print(f"❌ Otonom callback hatası: {e}")
         if callback_url:
             try:
+                bypass_headers = {
+                    "ngrok-skip-browser-warning": "any-value",
+                    "bypass-tunnel-reminder": "true"
+                }
                 requests.post(callback_url, data={
                     "task_id": task_id,
                     "job_id": job_id,
                     "scene_number": scene_number,
                     "status": "error",
                     "message": str(e)
-                }, timeout=10)
+                }, headers=bypass_headers, timeout=10)
             except Exception as cb_err:
                 print(f"❌ Hata callback gönderimi başarısız: {cb_err}")
 
@@ -1127,7 +1136,11 @@ def generate_covers():
                 "message": "Kapak tasarımları başarıyla tamamlandı."
             }
             try:
-                response = requests.post(callback_url, data=payload, files=files, timeout=60)
+                bypass_headers = {
+                    "ngrok-skip-browser-warning": "any-value",
+                    "bypass-tunnel-reminder": "true"
+                }
+                response = requests.post(callback_url, data=payload, files=files, headers=bypass_headers, timeout=60)
                 print(f"📩 Kapak callback yanıtı: {response.status_code}")
             except Exception as e:
                 print(f"❌ Kapak callback gönderilemedi: {e}")
@@ -1187,7 +1200,7 @@ if __name__ == "__main__":
         except Exception:
             pass
 
-    if NGROK_TOKEN and NGROK_TOKEN != "BURAYA_NGROK_TOKEN_GELECEK":
+    if NGROK_TOKEN and len(NGROK_TOKEN.strip()) > 10:
         ngrok.set_auth_token(NGROK_TOKEN)
         public_url = ngrok.connect(5000)
         print("\n🔗 NODE.JS PROJENİZE YAPIŞTIRACAĞINIZ URL:\n", public_url.public_url)
@@ -1195,10 +1208,9 @@ if __name__ == "__main__":
             f.write(public_url.public_url)
         print("\n" + "-" * 50 + "\n")
     else:
-        print("\n⚠️ NGROK_TOKEN eksik.")
+        print("\n⚠️ NGROK_TOKEN eksik veya geçersiz.")
 
-    import time as _time_module
-    health._start_time = _time_module.time()
+    # server_start_time line 71'de modül yüklendiğinde zaten set edilmiştir.
     
     # CRITICAL: debug=False ve threaded=True yapılarak Colab/Ngrok kilitlenmeleri önlendi.
     app.run(port=5000, debug=False, threaded=True, use_reloader=False)

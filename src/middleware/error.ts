@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
  * Express recognizes this as an error handler because it has 4 parameters
  * (err, req, res, next) — even if `next` is unused.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction): void {
   console.error('[ERROR] Unhandled error:', err);
   if (res.headersSent) {
