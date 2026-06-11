@@ -196,26 +196,35 @@ else:
         print("\n🔑 NGROK_TOKEN bulunamadı.")
         NGROK_TOKEN = input("Lütfen Ngrok Auth Token'ınızı girin: ").strip()
 
-    print("\n[INFO] colab_server.py GitHub'dan indiriliyor/güncelleniyor...")
-    try:
-        import urllib.request
-        urllib.request.urlretrieve("https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_server.py", "colab_server.py")
-        print("[OK] colab_server.py GitHub'dan başarıyla indirildi ve güncellendi!")
-    except Exception as dl_e:
-        print(f"[WARN] GitHub'dan otomatik indirilemedi/güncellenemedi: {dl_e}")
-        if not os.path.exists("colab_server.py"):
-            print("👉 Lütfen bilgisayarınızdaki 'colab_server.py' dosyasını seçip yükleyin:\n")
-            try:
-                from google.colab import files
-                uploaded = files.upload()
-                if "colab_server.py" not in uploaded:
-                    print("❌ colab_server.py dosyası yüklenmedi! Başlatma iptal edildi.")
+    print("\n[INFO] colab_server.py güncelleniyor...")
+    repo_server_path = "/content/AI-Publisher/colab_server.py"
+    if os.path.exists(repo_server_path):
+        try:
+            import shutil
+            shutil.copy(repo_server_path, "colab_server.py")
+            print("[OK] colab_server.py yerel git deposundan kopyalandı ve güncellendi!")
+        except Exception as copy_e:
+            print(f"[WARN] Yerel depodan kopyalanamadı: {copy_e}")
+    else:
+        try:
+            import urllib.request
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_server.py", "colab_server.py")
+            print("[OK] colab_server.py GitHub raw URL üzerinden başarıyla indirildi ve güncellendi!")
+        except Exception as dl_e:
+            print(f"[WARN] GitHub'dan otomatik indirilemedi/güncellenemedi: {dl_e}")
+            if not os.path.exists("colab_server.py"):
+                print("👉 Lütfen bilgisayarınızdaki 'colab_server.py' dosyasını seçip yükleyin:\n")
+                try:
+                    from google.colab import files
+                    uploaded = files.upload()
+                    if "colab_server.py" not in uploaded:
+                        print("❌ colab_server.py dosyası yüklenmedi! Başlatma iptal edildi.")
+                        sys.exit(1)
+                except Exception as e:
+                    print(f"❌ Dosya yükleme arayüzü açılamadı: {e}")
                     sys.exit(1)
-            except Exception as e:
-                print(f"❌ Dosya yükleme arayüzü açılamadı: {e}")
-                sys.exit(1)
-        else:
-            print("[INFO] Mevcut yerel colab_server.py dosyası kullanılacak.")
+            else:
+                print("[INFO] Mevcut yerel colab_server.py dosyası kullanılacak.")
 
 
     print("[INFO] Eski ngrok süreçleri temizleniyor...")
