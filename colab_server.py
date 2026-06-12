@@ -456,13 +456,20 @@ def generate_sfx_lazy(prompt: str):
     from diffusers import AudioLDM2Pipeline
     flush_memory()
 
+    vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
+
     print("🔊 Ses efekti motoru belleğe yükleniyor...")
     sfx_pipe = AudioLDM2Pipeline.from_pretrained(
         "cvssp/audioldm2",
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
     )
-    sfx_pipe.enable_model_cpu_offload()
+    if vram_gb >= 18.0:
+        print(f"⚡ Güçlü GPU ({vram_gb:.1f}GB) — CPU offload atlanıyor, doğrudan CUDA.")
+        sfx_pipe = sfx_pipe.to("cuda")
+    else:
+        print(f"🐢 Düşük GPU ({vram_gb:.1f}GB) — CPU offload etkin.")
+        sfx_pipe.enable_model_cpu_offload()
 
     print("🔊 Ses efekti üretiliyor...")
     with torch.inference_mode():
@@ -1349,13 +1356,20 @@ def generate_covers_lazy(prompt: str):
     Bellek yönetimi için iş bittiğinde pipeline temizlenir.
     """
     flush_memory()
+    vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
+
     print("🎨 Kapak resimleri için Stable Diffusion (DreamShaper 8) belleğe yükleniyor...")
     pipe = DiffusionPipeline.from_pretrained(
         "Lykon/dreamshaper-8",
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True
     )
-    pipe.to("cuda")
+    if vram_gb >= 18.0:
+        print(f"⚡ Güçlü GPU ({vram_gb:.1f}GB) — doğrudan CUDA.")
+        pipe = pipe.to("cuda")
+    else:
+        print(f"🐢 Düşük GPU ({vram_gb:.1f}GB) — CPU offload etkin.")
+        pipe.enable_model_cpu_offload()
     
     print("🎨 3 adet alternatif kapak resmi üretiliyor...")
     try:

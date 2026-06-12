@@ -37,6 +37,7 @@ import { bRollRouter } from './routes/bRoll.js';
 import { paymentsRouter } from './routes/payments.js';
 import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
+import { talkShowRouter } from './routes/talkShow.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -127,6 +128,7 @@ registerPipecatRoutes(app);
 
 // API Rotaları
 app.use('/api/v1/broll', bRollRouter);
+app.use('/api/v1/talkshow', talkShowRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);

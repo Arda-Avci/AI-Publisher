@@ -344,3 +344,22 @@
 
 ---
 > **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose ve container planları raftan kaldırılmıştır.
+
+
+## ✅ Sprint 9 - Multi-Agent Talk-Show Orchestrator (MVP)
+- [x] src/services/talkShow/ - types, dataSources, orchestrator (5 agents AI + fallback)
+- [x] src/routes/talkShow.ts - POST /orchestrate + GET /health
+- [x] src/test_talkShow.spec.ts - 16 tests
+- [x] tsc --noEmit 0 errors, 58/58 vitest passed
+
+---
+
+## ✅ Sprint 10 - Production Audit and Fixes
+- [x] queue.ts: unused DEFAULT_IDLE_STOP_MS import + dead clients export removed
+- [x] colab_server.py: GPU size check added to SFX and cover generators
+- [x] jobs.ts: English error messages -> Turkish for consistency
+- [x] queue.ts: auto-retry on transient Colab errors (up to 3 attempts)
+- [x] db.ts: retry_count INTEGER DEFAULT 0 migration + VideoJob type update
+- [x] src/test_audit_fixes.spec.ts - 4 tests (schema, retry_count, type)
+- [x] Full audit: Colab lazy loading OK, L4 GPU OK, callback/polling OK, queue lifecycle OK, local->colab ordering OK, fallback mechanisms OK
+- [x] 62/62 vitest (7 files) GREEN - tsc --noEmit 0 - lint 0 - vite build 1.03s

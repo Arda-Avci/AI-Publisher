@@ -205,6 +205,26 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **B — Useless escape temizliği** | `src/views/dashboardScripts.ts` — tek-tırnaklı JS string içindeki gereksiz `\'` kaçışları kaldırıldı (font adı zaten tırnaksız) | ✅ Tamam |
 | **C — Doğrulama** | `npm run check:lint` 0 hata, `tsc --noEmit` 0 hata, 42/42 vitest geçti | ✅ Tamam |
 
+### Sprint 9 (Hafta 15) — Multi-Agent Talk-Show Orchestrator (MVP)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Orkestratör** | `src/services/talkShow/orchestrator.ts` — 5 ajanlı (meta-orchestrator + match_analyst + former_player + bookmaker + data_scout) | ✅ Tamam |
+| **B — Veri Kaynakları** | `src/services/talkShow/dataSources.ts` — deterministik stub'lar (match feed, hava, sakatlık, oran) | ✅ Tamam |
+| **C — Route'lar** | `src/routes/talkShow.ts` — POST `/orchestrate` + GET `/health`, server.ts'e kayıtlı | ✅ Tamam |
+| **D — Test** | `src/test_talkShow.spec.ts` — 16 test (deterministik, AI fallback, API validasyonu, doğrulama) | ✅ Tamam |
+
+### Sprint 10 (Hafta 16) — Production Audit & Fixes
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Ölü Kod Temizliği** | `queue.ts`: `DEFAULT_IDLE_STOP_MS` import + `clients` export kaldırıldı | ✅ Tamam |
+| **B — GPU Boyut Kontrolü** | `colab_server.py`: SFX (`generate_sfx_lazy`) ve kapak (`generate_covers_lazy`) GPU boyut kontrolü (≥18GB→CUDA, <18GB→CPU offload) | ✅ Tamam |
+| **C — Route Hata Dil Tutarlılığı** | `jobs.ts`: İngilizce `'Job not found'` → Türkçe `'Job bulunamadı.'` | ✅ Tamam |
+| **D — Queue Retry Mekanizması** | `queue.ts`: Geçici Colab hatalarında (COLAB_NOT_READY, timeout, ağ) iş 2 kez yeniden denenir; `retry_count` kolonu eklendi | ✅ Tamam |
+| **E — Test** | `src/test_audit_fixes.spec.ts` — 4 yeni test (schema migration, retry_count okuma/yazma, tip denetimi) | ✅ Tamam |
+| **F — Doğrulama** | `tsc --noEmit` 0 hata, `npm run check:lint` 0 hata, `vite build` 1.03s, 62/62 vitest (7 dosya) | ✅ Tamam |
+
 ### Sonraya Bırakılanlar
 
 | Madde | Gerekçe |

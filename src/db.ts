@@ -283,6 +283,7 @@ export async function initDatabase() {
   `);
 
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS background_music_path TEXT;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS music_volume REAL DEFAULT 0.2;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS speaker VARCHAR(50);');
 }

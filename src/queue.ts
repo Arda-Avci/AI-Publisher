@@ -19,7 +19,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execFile } from 'child_process';
 import { db } from './db.js';
-import { colab, DEFAULT_IDLE_STOP_MS } from './lib/colab-manager.js';
+import { colab } from './lib/colab-manager.js';
 import { RedisMutex } from './lib/redis-mutex.js';
 import { runDifferentiationPipeline } from './lib/differentiate.js';
 import { Logger } from './lib/logger.js';
@@ -28,7 +28,6 @@ const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
 import { broadcastProgress } from './lib/redis.js';
 
-export const clients = new Map<number, any>(); // Deprecated, use broadcastProgress
 let isProcessing = false;
 
 function broadcast(jobId: number, data: object) {
@@ -1062,6 +1061,24 @@ async function startProduction(job: VideoJob) {
       broadcast(job.id, { stageKey: 'stageCancelled', percent: 0 });
       return;
     }
+
+    // --- Retry logic for transient Colab errors ---
+    const errMsg = (error as any)?.message || '';
+    const transientPatterns = ['COLAB_NOT_READY', 'COLAB_LIBRARIES_FAILED', 'timeout', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'socket hang up', 'Internal Server Error'];
+    const isTransient = transientPatterns.some(p => errMsg.toLowerCase().includes(p.toLowerCase()));
+    const retryCount = job.retry_count || 0;
+
+    if (isTransient && retryCount < 2) {
+      const nextRetry = retryCount + 1;
+      Logger.warn(`İş #${job.id} geçici hata nedeniyle yeniden deneniyor (${nextRetry}/3): ${error}`);
+      await db.run(
+        "UPDATE video_jobs SET status = 'pending', current_stage = ?, retry_count = ? WHERE id = ?",
+        [`Yeniden Deneniyor (${nextRetry}/3)`, nextRetry, job.id]
+      );
+      broadcast(job.id, { stageKey: 'stageRetrying', percent: 0, message: `Yeniden deneniyor (${nextRetry}/3)` });
+      return; // checkQueue will pick it up on next tick
+    }
+
     Logger.error(`İş sırasında kritik hata (ID=${job.id})`, error);
     await db.run("UPDATE video_jobs SET status = 'failed', current_stage = 'Hata Oluştu' WHERE id = ?", [job.id]);
     broadcast(job.id, { stageKey: 'stageError', percent: 0 });

@@ -151,7 +151,7 @@ export function registerJobRoutes(app: Application): void {
     try {
       const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [id]);
       if (!job) {
-        return res.status(404).json({ success: false, error: 'Job not found' });
+        return res.status(404).json({ success: false, error: 'Job bulunamadı.' });
       }
       // Safe file removal helper to prevent Path Traversal
       const safeRemove = async (targetPath: string) => {

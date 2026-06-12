@@ -52,6 +52,7 @@ export interface VideoJob {
   auto_sfx_placement?: number;
   audio_ducking?: number;
   background_music_path?: string;
+  retry_count?: number;
 }
 
 export interface VideoScene {
