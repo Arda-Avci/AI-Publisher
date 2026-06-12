@@ -109,6 +109,12 @@ app.use(themeMiddleware);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/videolar', express.static(path.join(process.cwd(), 'videolar')));
 
+// React build çıktısını serve et (production'da Express üzerinden)
+const clientDist = path.join(process.cwd(), 'client', 'dist');
+if (process.env.NODE_ENV === 'production' || process.env.SERVE_REACT === 'true') {
+  app.use(express.static(clientDist));
+}
+
 // Register all routes
 registerAuthRoutes(app);
 registerDashboardRoutes(app);
@@ -137,6 +143,15 @@ app.use('/api/v1/colab', colabStatusRouter);
 
 // Global error handler (last)
 app.use(errorHandler);
+
+// React SPA catch-all: API olmayan tüm GET isteklerinde React index.html serve et
+if (process.env.NODE_ENV === 'production' || process.env.SERVE_REACT === 'true') {
+  const reactIndex = path.join(clientDist, 'index.html');
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/login') || req.path.startsWith('/logout')) return;
+    res.sendFile(reactIndex);
+  });
+}
 
 // Sunucu Başlatma
 async function startServer() {
