@@ -14,9 +14,15 @@ import {
   OrchestratorInput, OrchestratorResult, Sentiment,
 } from './types.js';
 import {
-  fetchInjuries, fetchMatchFeed, fetchOdds, fetchWeather,
+  fetchInjuries, fetchMatchFeed as stubFetchMatchFeed,
+  fetchOdds, fetchWeather,
   InjuryReport, MatchFeed, OddsSnapshot, WeatherSnapshot,
 } from './dataSources.js';
+import {
+  fetchMatchFeed as apiFetchMatchFeed,
+  isApiFootballConfigured,
+  findFixture,
+} from './apiFootballProvider.js';
 
 const ROUNDS_DEFAULT = 3;
 
@@ -46,7 +52,7 @@ export interface OrchestratorDeps {
 }
 
 const defaultDeps: Required<OrchestratorDeps> = {
-  fetchMatchFeed,
+  fetchMatchFeed: stubFetchMatchFeed,
   fetchWeather,
   fetchInjuries,
   fetchOdds,
@@ -266,6 +272,29 @@ export async function orchestrateTalkShow(
   depsOverrides?: OrchestratorDeps
 ): Promise<OrchestratorResult> {
   const deps: Required<OrchestratorDeps> = { ...defaultDeps, ...(depsOverrides ?? {}) };
+
+  // Switch to real API-Football data when requested
+  if (input.useApiFootball && isApiFootballConfigured()) {
+    try {
+      Logger.info('[TalkShow] API-Football kullanılıyor');
+      deps.fetchMatchFeed = apiFetchMatchFeed;
+      // Fetch fixture ID if not provided but teams are
+      if (!input.match.fixtureId) {
+        const fixture = await findFixture(input.match.homeTeam, input.match.awayTeam, input.match.season);
+        if (fixture) {
+          input.match.fixtureId = fixture.fixture?.id;
+          input.match.venue = fixture.fixture?.venue?.name || input.match.venue;
+          input.match.kickoff = fixture.fixture?.date || input.match.kickoff;
+          if (fixture.goals?.home !== null) {
+            input.match.xg = { home: fixture.goals.home ?? 0, away: fixture.goals.away ?? 0 };
+          }
+        }
+      }
+    } catch (err) {
+      Logger.warn(`[TalkShow] API-Football hatası, stub kullanılıyor: ${(err as Error).message}`);
+    }
+  }
+
   const t0 = Date.now();
   const rounds = input.rounds ?? ROUNDS_DEFAULT;
 

@@ -33,6 +33,8 @@ talkShowRouter.post('/orchestrate', mediumLimiter, requireAuth, async (req: Requ
       match: req.body.match,
       rounds: req.body.rounds ?? 3,
       language: req.body.language ?? 'tr',
+      useApiFootball: req.body.useApiFootball ?? false,
+      characters: req.body.characters,
     };
 
     const result = await orchestrateTalkShow(input);

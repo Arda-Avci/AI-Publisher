@@ -36,6 +36,8 @@ export interface MatchContext {
   injurySummary?: string;
   odds?: { home: number; draw: number; away: number };
   xg?: { home: number; away: number };
+  fixtureId?: number;         // API-Football fixture ID
+  season?: number;            // Season year (default 2024)
 }
 
 export interface OrchestratorInput {
@@ -43,6 +45,7 @@ export interface OrchestratorInput {
   match: MatchContext;
   rounds?: number;             // how many back-and-forth exchanges (default 3)
   language?: 'tr' | 'en';      // default 'tr'
+  useApiFootball?: boolean;    // use real API-Football data instead of stubs
   characters?: Array<{          // user-selected characters for each agent role
     role: AgentRole;
     name: string;
