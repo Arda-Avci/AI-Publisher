@@ -30,6 +30,8 @@ import { registerEditorRoutes } from './routes/editor.js';
 import { registerCreditRoutes } from './routes/credits.js';
 import { registerLocalesRoutes } from './routes/locales.js';
 import { registerChatToEditRoutes } from './routes/chatToEdit.js';
+import { registerViMaxRoutes } from './routes/viMax.js';
+import { bRollRouter } from './routes/bRoll.js';
 import { paymentsRouter } from './routes/payments.js';
 import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
@@ -117,8 +119,10 @@ registerEditorRoutes(app);
 registerCreditRoutes(app);
 registerLocalesRoutes(app);
 registerChatToEditRoutes(app);
+registerViMaxRoutes(app);
 
 // API Rotaları
+app.use('/api/v1/broll', bRollRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);
@@ -144,6 +148,13 @@ async function startServer() {
     startGarbageCollector();
     startVideoQueueWorker();
     startPublishQueueWorker();
+
+    // MCP (Model Context Protocol) sunucusu — AI ajanları için API
+    import('./services/mcpServer.js').then(({ startMCPServer }) => {
+      startMCPServer(Number(process.env.MCP_PORT) || 3099).catch((err: any) =>
+        Logger.warn('[MCP] Server failed to start:', err)
+      );
+    });
   });
 }
 
