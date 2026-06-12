@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type React from 'react';
-import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap, Beaker, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap, Beaker, ChevronDown, ChevronUp, Monitor, Video } from 'lucide-react';
 import type { Job, UserCredits } from '../types.js';
 
 interface ColabStatusData {
@@ -17,6 +17,18 @@ interface ModelTestEntry {
   status: string;
   vram?: number;
   error?: string;
+}
+
+interface LogLine {
+  text: string;
+  isMain?: boolean;
+  indent?: boolean;
+  progress?: number;
+}
+
+interface SystemLogEntry {
+  time: string;
+  lines: LogLine[];
 }
 
 interface GalleryPanelProps {
@@ -40,6 +52,17 @@ interface GalleryPanelProps {
   t: (key: string, params?: Record<string, any>) => string;
 }
 
+const statusLabel = (status: Job['status']): string => {
+  const labels: Record<Job['status'], string> = {
+    pending: 'Beklemede',
+    processing: 'İşleniyor',
+    completed: 'Tamamlandı',
+    failed: 'Başarısız',
+    awaiting_approval: 'Onay Bekliyor',
+  };
+  return labels[status] || status;
+};
+
 export function GalleryPanel({
   jobs, selectedJob, metaYtTitle, metaYtDesc, metaYtTags, isMetaSaving,
   progressMsg, progressPercent, userCredits,
@@ -47,66 +70,191 @@ export function GalleryPanel({
   onSetMetaYtTitle, onSetMetaYtDesc, onSetMetaYtTags,
   onSaveMetaAndPublish, t,
 }: GalleryPanelProps) {
+  const [systemLogEntries, setSystemLogEntries] = useState<SystemLogEntry[]>([
+    {
+      time: new Date().toLocaleTimeString('tr-TR'),
+      lines: [
+        { text: 'AI Publisher sistemi başlatıldı', isMain: true },
+        { text: 'WebSocket bağlantısı kuruldu', indent: true },
+      ],
+    },
+  ]);
+
+  const addLog = useCallback((lines: LogLine[]) => {
+    setSystemLogEntries(prev => [
+      ...prev,
+      { time: new Date().toLocaleTimeString('tr-TR'), lines },
+    ].slice(-50));
+  }, []);
+
+  const prevJobKey = useMemo(() => {
+    if (!selectedJob) return null;
+    return `${selectedJob.id}_${selectedJob.status}`;
+  }, [selectedJob?.id, selectedJob?.status]);
+
+  const [lastProcessedKey, setLastProcessedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!prevJobKey || prevJobKey === lastProcessedKey) return;
+    setLastProcessedKey(prevJobKey);
+    if (selectedJob!.status === 'processing') {
+      addLog([
+        { text: `Proje #${selectedJob!.id} işleniyor`, isMain: true },
+        { text: `Sahneler: 0 / ${selectedJob!.total_scenes}`, indent: true },
+      ]);
+    } else if (selectedJob!.status === 'completed') {
+      addLog([
+        { text: `Proje #${selectedJob!.id} tamamlandı`, isMain: true },
+        { text: `Final video hazır`, indent: true },
+      ]);
+    } else {
+      addLog([{ text: `Proje #${selectedJob!.id} → ${statusLabel(selectedJob!.status)}`, isMain: true }]);
+    }
+  }, [prevJobKey, lastProcessedKey, addLog]);
+
+  const prevScenes = useMemo(() => {
+    if (!selectedJob) return -1;
+    return selectedJob.completed_scenes;
+  }, [selectedJob?.completed_scenes]);
+  const [lastScenes, setLastScenes] = useState(-1);
+
+  useEffect(() => {
+    if (!selectedJob || prevScenes <= lastScenes) return;
+    setLastScenes(prevScenes);
+    addLog([
+      { text: `Sahne ${selectedJob.completed_scenes}/${selectedJob.total_scenes} tamamlandı`, isMain: true },
+    ]);
+  }, [prevScenes, lastScenes, selectedJob, addLog]);
+
+  const [lastMsg, setLastMsg] = useState('');
+
+  useEffect(() => {
+    if (!progressMsg || progressMsg === lastMsg) return;
+    setLastMsg(progressMsg);
+    const lines: LogLine[] = [{ text: progressMsg, isMain: true }];
+    if (progressPercent > 0 && progressPercent < 100) {
+      lines.push({ text: '', progress: progressPercent });
+    }
+    addLog(lines);
+  }, [progressMsg, progressPercent, lastMsg, addLog]);
+
+  const recentProductions = useMemo(
+    () => jobs.filter(j => j.status === 'completed').slice(-4),
+    [jobs],
+  );
+
+  const isProcessing = selectedJob?.status === 'processing';
+  const showMeta = selectedJob && (selectedJob.status === 'awaiting_approval' || selectedJob.status === 'completed');
+
   return (
-    <aside className="sidebar-right" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <ColabStatusPanel />
+    <aside style={{
+      width: '100%', height: '100%',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }}>
+        <ColabStatusPanel />
+        {userCredits && (
+          <CreditsBadge credits={userCredits.credits} limit={userCredits.limit} resetDate={userCredits.resetDate} />
+        )}
+        {isProcessing && (
+          <ProgressTracker
+            progressMsg={progressMsg}
+            progressPercent={progressPercent}
+            onCancel={() => onCancelJob(selectedJob.id)}
+          />
+        )}
+        {showMeta && (
+          <MetaEditor
+            status={selectedJob.status}
+            ytTitle={metaYtTitle}
+            ytDesc={metaYtDesc}
+            ytTags={metaYtTags}
+            isSaving={isMetaSaving}
+            onSetYtTitle={onSetMetaYtTitle}
+            onSetYtDesc={onSetMetaYtDesc}
+            onSetYtTags={onSetMetaYtTags}
+            onSave={onSaveMetaAndPublish}
+          />
+        )}
+      </div>
 
-      {userCredits && (
-        <CreditsBadge credits={userCredits.credits} limit={userCredits.limit} resetDate={userCredits.resetDate} />
-      )}
+      {selectedJob ? (
+        <>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginTop: '12px' }}>
+            <div style={{
+              padding: '12px 16px', borderBottom: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: 'rgba(24,24,27,0.5)',
+            }}>
+              <Monitor size={14} style={{ color: 'var(--accent)' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+                SİSTEM LOGLARI
+              </span>
+            </div>
+            <div style={{
+              flex: 1, overflow: 'auto', padding: '16px',
+              fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)',
+            }}>
+              {systemLogEntries.length === 0 ? (
+                <div style={{ opacity: 0.4 }}>Sistem hazır, bekleniyor...</div>
+              ) : (
+                systemLogEntries.map((entry, i) => <SystemLogEntry key={i} entry={entry} />)
+              )}
+            </div>
+          </div>
 
-      {selectedJob?.status === 'processing' && (
-        <ProgressTracker
-          progressMsg={progressMsg}
-          progressPercent={progressPercent}
-          onCancel={() => onCancelJob(selectedJob.id)}
-        />
-      )}
-
-      {selectedJob && (selectedJob.status === 'awaiting_approval' || selectedJob.status === 'completed') && (
-        <MetaEditor
-          status={selectedJob.status}
-          ytTitle={metaYtTitle}
-          ytDesc={metaYtDesc}
-          ytTags={metaYtTags}
-          isSaving={isMetaSaving}
-          onSetYtTitle={onSetMetaYtTitle}
-          onSetYtDesc={onSetMetaYtDesc}
-          onSetYtTags={onSetMetaYtTags}
-          onSave={onSaveMetaAndPublish}
-        />
-      )}
-
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
-            {t('gallery')}
-          </h4>
-          <button
-            onClick={onRefreshJobs}
-            style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-          >
-            <RefreshCw size={12} />
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {jobs.map((job) => {
-            const isActive = selectedJob?.id === job.id;
-            return (
+          {recentProductions.length > 0 && (
+            <div style={{
+              height: '33%', minHeight: '100px',
+              borderTop: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column',
+              overflow: 'hidden', flexShrink: 0,
+            }}>
+              <div style={{
+                padding: '10px 16px', fontSize: '12px', fontWeight: 600,
+                color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase',
+              }}>
+                Son Üretimler
+              </div>
+              <div style={{ flex: 1, overflow: 'auto', padding: '0 16px 16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {recentProductions.map(job => (
+                    <RecentThumbnail key={job.id} job={job} onSelect={() => onSelectJob(job)} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+              {t('gallery')}
+            </h4>
+            <button onClick={onRefreshJobs} style={{
+              background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center',
+            }}>
+              <RefreshCw size={12} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {jobs.map((job) => (
               <div
                 key={job.id}
                 onClick={() => onSelectJob(job)}
                 className="glass"
                 style={{
                   padding: '10px', borderRadius: '8px',
-                  border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
-                  background: isActive ? 'var(--accent-light)' : undefined,
+                  border: '1px solid var(--border)',
                   cursor: 'pointer', transition: 'var(--transition)', position: 'relative',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Proje #{job.id}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    Proje #{job.id}
+                  </span>
                   <StatusBadge status={job.status} />
                 </div>
                 <div style={{
@@ -115,7 +263,9 @@ export function GalleryPanel({
                 }}>
                   {job.master_prompt}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                <div style={{
+                  fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)',
+                }}>
                   Sahneler: {job.completed_scenes} / {job.total_scenes} | Model: {job.model_type || 'CogVideo'}
                 </div>
                 <button
@@ -129,11 +279,77 @@ export function GalleryPanel({
                   <Trash2 size={12} />
                 </button>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </aside>
+  );
+}
+
+function SystemLogEntry({ entry: { lines } }: { entry: SystemLogEntry }) {
+  return (
+    <div style={{ marginBottom: '10px' }}>
+      {lines.map((line, i) => {
+        if (line.progress !== undefined) {
+          return (
+            <div key={i} style={{ marginTop: '4px', marginBottom: '4px', paddingLeft: '16px' }}>
+              <div style={{
+                height: '4px', background: 'rgba(255,255,255,0.08)',
+                borderRadius: '2px', overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${line.progress}%`, height: '100%',
+                  background: 'var(--accent)',
+                  boxShadow: '0 0 8px var(--accent-glow)',
+                  borderRadius: '2px', transition: 'width 0.3s ease',
+                }} />
+              </div>
+            </div>
+          );
+        }
+        if (i === 0 || line.isMain) {
+          return (
+            <div key={i} style={{ color: 'var(--accent)', marginBottom: '1px' }}>
+              <span style={{ opacity: 0.7 }}>&gt;&gt; </span>{line.text}
+            </div>
+          );
+        }
+        return (
+          <div key={i} style={{
+            paddingLeft: '16px', borderLeft: '1px solid rgba(255,255,255,0.1)',
+            marginBottom: '1px',
+          }}>
+            {line.text}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RecentThumbnail({ job, onSelect }: { job: Job; onSelect: () => void }) {
+  const coverUrl = job.cover_image_path;
+
+  return (
+    <div
+      onClick={onSelect}
+      style={{
+        aspectRatio: '16/9', borderRadius: '8px',
+        background: coverUrl
+          ? `url(${coverUrl}) center / cover no-repeat`
+          : 'var(--bg-surface)',
+        border: '1px solid var(--border)', cursor: 'pointer',
+        opacity: 0.5, transition: 'opacity 0.2s ease',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+      onMouseOver={e => { e.currentTarget.style.opacity = '1'; }}
+      onMouseOut={e => { e.currentTarget.style.opacity = '0.5'; }}
+      title={job.master_prompt}
+    >
+      {!coverUrl && <Video size={20} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />}
+    </div>
   );
 }
 
@@ -147,7 +363,10 @@ function StatusBadge({ status }: { status: Job['status'] }) {
   };
   const color = dotColors[status] || 'var(--text-muted)';
   return (
-    <span style={{ width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', background: color, boxShadow: `0 0 6px ${color}` }} />
+    <span style={{
+      width: '8px', height: '8px', borderRadius: '50%',
+      display: 'inline-block', background: color, boxShadow: `0 0 6px ${color}`,
+    }} />
   );
 }
 
@@ -166,9 +385,15 @@ function ProgressTracker({
         <span>{progressPercent}%</span>
       </div>
       <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
-        <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), var(--secondary))', transition: 'width 0.3s ease', borderRadius: '3px' }} />
+        <div style={{
+          width: `${progressPercent}%`, height: '100%',
+          background: 'linear-gradient(90deg, var(--accent), var(--secondary))',
+          transition: 'width 0.3s ease', borderRadius: '3px',
+        }} />
       </div>
-      <button onClick={onCancel} className="btn btn-danger" style={{ width: '100%', padding: '5px', fontSize: '11px', marginTop: '12px' }}>
+      <button onClick={onCancel} className="btn btn-danger" style={{
+        width: '100%', padding: '5px', fontSize: '11px', marginTop: '12px',
+      }}>
         Üretimi İptal Et
       </button>
     </div>
@@ -191,25 +416,23 @@ function MetaEditor({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)' }}>SOSYAL MEDYA KOPYALARI</h4>
         {status === 'awaiting_approval' && (
-          <span style={{ fontSize: '9px', background: 'var(--warning)', color: '#0b0f19', padding: '2px 5px', borderRadius: '3px', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>
+          <span style={{
+            fontSize: '9px', background: 'var(--warning)', color: '#0b0f19',
+            padding: '2px 5px', borderRadius: '3px', fontWeight: 'bold', fontFamily: 'var(--font-mono)',
+          }}>
             ONAY BEKLİYOR
           </span>
         )}
       </div>
-
       <MetaField label="Video Başlığı (YouTube)">
-        <input type="text" value={ytTitle} onChange={(e) => onSetYtTitle(e.target.value)}
-          style={inputStyle} />
+        <input type="text" value={ytTitle} onChange={e => onSetYtTitle(e.target.value)} style={inputStyle} />
       </MetaField>
       <MetaField label="Video Açıklaması">
-        <textarea value={ytDesc} onChange={(e) => onSetYtDesc(e.target.value)}
-          style={{ ...inputStyle, height: '80px', resize: 'none' }} />
+        <textarea value={ytDesc} onChange={e => onSetYtDesc(e.target.value)} style={{ ...inputStyle, height: '80px', resize: 'none' }} />
       </MetaField>
       <MetaField label="Etiketler / Hashtags (virgülle ayırın)">
-        <input type="text" value={ytTags} onChange={(e) => onSetYtTags(e.target.value)}
-          style={inputStyle} />
+        <input type="text" value={ytTags} onChange={e => onSetYtTags(e.target.value)} style={inputStyle} />
       </MetaField>
-
       <button
         onClick={onSave}
         disabled={isSaving}
@@ -226,7 +449,9 @@ function MetaEditor({
 function MetaField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</label>
+      <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        {label}
+      </label>
       {children}
     </div>
   );
@@ -289,7 +514,6 @@ function ColabStatusPanel() {
           boxShadow: isRunning ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
         }} />
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
         <Row label="GPU" value={
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -297,16 +521,13 @@ function ColabStatusPanel() {
             {isL4 && <Zap size={10} style={{ color: '#eab308' }} aria-label="L4" />}
           </span>
         } />
-        <Row label="VRAM" value={
-          vramTotal > 0 ? `${vramUsed.toFixed(1)} / ${vramTotal.toFixed(1)} GB` : '—'
-        } />
+        <Row label="VRAM" value={vramTotal > 0 ? `${vramUsed.toFixed(1)} / ${vramTotal.toFixed(1)} GB` : '—'} />
         <Row label="Durum" value={
           <span style={{ color: isRunning ? '#22c55e' : '#ef4444' }}>
             {isRunning ? 'Çalışıyor' : 'Durduruldu'}
           </span>
         } />
       </div>
-
       <button
         onClick={handleTestModels}
         className="btn btn-primary"
@@ -315,7 +536,6 @@ function ColabStatusPanel() {
         <Beaker size={12} />
         Modelleri Test Et
       </button>
-
       {testOpen && testResults && (
         <div style={{ marginTop: '4px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
           <div
@@ -345,7 +565,6 @@ function ColabStatusPanel() {
           </div>
         </div>
       )}
-
       {testLoading && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
           <Loader size={12} className="pulse" />

@@ -1,10 +1,9 @@
-import { useState } from 'react';
-import { Loader, FileVideo, Download } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Play, Loader, Zap } from 'lucide-react';
 import type { Scene } from './Timeline.js';
 import type { OpportunityVideo } from './Opportunities.js';
-import { Timeline } from './Timeline.js';
-import { Opportunities } from './Opportunities.js';
-import type { Tab, Job, TalkShowResult } from '../types.js';
+import type { Job, TalkShowResult, Tab } from '../types.js';
+import { CharacterCreationPanel } from './CharacterCreationPanel.js';
 
 interface StudioPanelProps {
   activeTab: Tab;
@@ -13,6 +12,7 @@ interface StudioPanelProps {
   progressMsg: string;
   progressPercent: number;
   etaSeconds: number | null;
+  csrfToken: string;
   onSetSelectedJob: (j: Job | null) => void;
   onUpdateScenes: (s: Scene[]) => void;
   onRegenerateScene: (sceneId: number) => void;
@@ -21,132 +21,321 @@ interface StudioPanelProps {
   onSelectScene: (scene: Scene) => void;
   onUseAsPrompt: (video: OpportunityVideo) => void;
   t: (key: string, params?: Record<string, any>) => string;
+  masterPrompt: string;
+  onSetMasterPrompt: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  formLoading: boolean;
+  mainTab: string;
 }
 
 export function StudioPanel({
-  activeTab, selectedJob, scenes, progressMsg, progressPercent, etaSeconds,
-  onUpdateScenes, onRegenerateScene, onAddScene, onDeleteScene, onSelectScene,
-  onUseAsPrompt, t: _t,
+  activeTab: _activeTab,
+  selectedJob, progressMsg, progressPercent, etaSeconds,
+  csrfToken,
+  onSetSelectedJob: _onSetSelectedJob,
+  onUpdateScenes: _onUpdateScenes,
+  onRegenerateScene: _onRegenerateScene,
+  onAddScene: _onAddScene,
+  onDeleteScene: _onDeleteScene,
+  onSelectScene: _onSelectScene,
+  onUseAsPrompt: _onUseAsPrompt,
+  t: _t,
+  masterPrompt, onSetMasterPrompt, onSubmit, formLoading, mainTab,
 }: StudioPanelProps) {
-  return (
-    <main className="main-panel" style={{ borderRight: '1px solid var(--border)' }}>
-      <TabBar activeTab={activeTab} />
-      <div style={{ flexGrow: 1, padding: '20px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
-        {activeTab === 'create' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
-            <PreviewPanel
-              selectedJob={selectedJob}
-              progressMsg={progressMsg}
-              progressPercent={progressPercent}
-              etaSeconds={etaSeconds}
-            />
-            {selectedJob && (
-              <div className="glass" style={{ padding: '15px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <Timeline
-                  scenes={scenes}
-                  onUpdateScenes={onUpdateScenes}
-                  onRegenerateScene={onRegenerateScene}
-                  onAddScene={onAddScene}
-                  onDeleteScene={onDeleteScene}
-                  onSelectScene={(scene: Scene) => onSelectScene(scene)}
-                />
-              </div>
-            )}
+  if (mainTab === 'Galeri') {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
+        {selectedJob ? (
+          <VideoPreview
+            selectedJob={selectedJob}
+            progressMsg={progressMsg}
+            progressPercent={progressPercent}
+            etaSeconds={etaSeconds}
+            masterPrompt={masterPrompt}
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+            <Play size={48} style={{ opacity: 0.3 }} />
+            <span style={{ fontSize: '14px', fontFamily: 'var(--font-mono)' }}>Galeriden bir proje seçin</span>
+            <span style={{ fontSize: '12px', opacity: 0.6 }}>Sağ paneldeki listeden bir video seçerek önizleyebilirsiniz</span>
           </div>
         )}
-        {activeTab === 'opportunities' && (
-          <div className="glass" style={{ padding: '20px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-            <Opportunities onUseAsPrompt={onUseAsPrompt} />
-          </div>
-        )}
-        {activeTab === 'groupchat' && <TalkShowPanel />}
       </div>
-    </main>
-  );
-}
+    );
+  }
 
-function TabBar({ activeTab }: { activeTab: Tab }) {
-  const tabs: { key: Tab; label: string; primary: string }[] = [
-    { key: 'create', label: 'Stüdyo & Timeline', primary: 'var(--accent)' },
-    { key: 'opportunities', label: 'Fırsatlar Hunisi', primary: 'var(--accent)' },
-    { key: 'groupchat', label: 'AI Talk-Show', primary: 'var(--secondary)' },
-  ];
+  if (mainTab === 'Talk-Show') {
+    return (
+      <div style={{ flex: 1, padding: '24px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
+        <TalkShowPanel />
+      </div>
+    );
+  }
+
+  if (mainTab === 'Karakterler') {
+    return (
+      <div style={{ flex: 1, padding: '24px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
+        <CharacterCreationPanel csrfToken={csrfToken} />
+      </div>
+    );
+  }
 
   return (
-    <div style={{ height: '40px', background: 'var(--bg-surface)', display: 'flex', borderBottom: '1px solid var(--border)' }}>
-      {tabs.map(({ key, label, primary }) => (
-        <div
-          key={key}
-          style={{
-            flexGrow: 1, border: 'none',
-            background: activeTab === key ? 'var(--accent-light)' : 'transparent',
-            color: activeTab === key ? primary : 'var(--text-muted)',
-            fontWeight: activeTab === key ? 'bold' : 'normal',
-            borderBottom: activeTab === key ? `2px solid ${primary}` : 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
-          }}
-        >
-          {label}
-        </div>
-      ))}
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 100px 24px' }}>
+        <VideoPreview
+          selectedJob={selectedJob}
+          progressMsg={progressMsg}
+          progressPercent={progressPercent}
+          etaSeconds={etaSeconds}
+          masterPrompt={masterPrompt}
+        />
+      </div>
+      <FloatingPrompt
+        masterPrompt={masterPrompt}
+        onSetMasterPrompt={onSetMasterPrompt}
+        onSubmit={onSubmit}
+        formLoading={formLoading}
+      />
     </div>
   );
 }
 
-function PreviewPanel({
-  selectedJob, progressMsg, progressPercent, etaSeconds,
+function FloatingPrompt({
+  masterPrompt, onSetMasterPrompt, onSubmit, formLoading,
 }: {
-  selectedJob: Job | null; progressMsg: string; progressPercent: number; etaSeconds: number | null;
+  masterPrompt: string; onSetMasterPrompt: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void; formLoading: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (masterPrompt.trim() && !formLoading) {
+        onSubmit(e as unknown as React.FormEvent);
+      }
+    }
+  };
+
   return (
-    <div style={{
-      flexGrow: 1, minHeight: '300px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)',
-      border: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden',
-    }}>
-      {selectedJob?.final_filename ? (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '20px' }}>
-          <video
-            src={`/videolar/${selectedJob.final_filename}`}
-            controls
-            style={{ maxWidth: '100%', maxHeight: '350px', borderRadius: '8px', border: '1px solid var(--border)' }}
-          />
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <a href={`/videolar/${selectedJob.final_filename}`} download className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 12px' }}>
-              <Download size={12} /> Yatay Videoyu İndir
-            </a>
-            {selectedJob.has_shorts !== 0 && (
-              <a
-                href={`/videolar/shorts_${selectedJob.final_filename.replace(/^film_/, '')}`}
-                download
-                className="btn btn-primary"
-                style={{ fontSize: '11px', padding: '6px 12px' }}
-              >
-                <Download size={12} /> Dikey Shorts İndir
-              </a>
-            )}
-          </div>
-        </div>
-      ) : selectedJob?.status === 'processing' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--accent)' }}>
+    <form
+      onSubmit={onSubmit}
+      style={{
+        position: 'absolute',
+        bottom: '32px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '90%',
+        maxWidth: '48rem',
+        background: 'var(--bg-card)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: `1px solid ${focused ? 'var(--accent)' : 'var(--border-subtle)'}`,
+        borderRadius: '16px',
+        padding: '8px',
+        display: 'flex',
+        gap: '8px',
+        alignItems: 'flex-end',
+        boxShadow: focused ? '0 0 24px var(--accent-glow)' : undefined,
+        transition: 'border-color 0.2s, box-shadow 0.2s',
+        zIndex: 10,
+      }}
+    >
+      <textarea
+        ref={textareaRef}
+        value={masterPrompt}
+        onChange={(e) => onSetMasterPrompt(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={handleKeyDown}
+        placeholder="Bir video konsepti yazın…"
+        rows={1}
+        style={{
+          flex: 1,
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: 'var(--text-primary)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '13px',
+          lineHeight: '24px',
+          padding: '4px 8px',
+          resize: 'none',
+        }}
+      />
+      <button
+        type="submit"
+        disabled={formLoading || !masterPrompt.trim()}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          padding: '10px 18px',
+          borderRadius: '12px',
+          border: 'none',
+          background: 'white',
+          color: '#09090b',
+          fontWeight: 700,
+          fontSize: '13px',
+          cursor: formLoading || !masterPrompt.trim() ? 'not-allowed' : 'pointer',
+          opacity: formLoading ? 0.6 : 1,
+          whiteSpace: 'nowrap',
+          transition: 'opacity 0.2s',
+          fontFamily: 'var(--font-sans)',
+        }}
+      >
+        {formLoading ? (
+          <Loader size={16} className="spin" />
+        ) : (
+          <Zap size={16} />
+        )}
+        {formLoading ? 'Üretiliyor…' : 'Üret'}
+      </button>
+    </form>
+  );
+}
+
+function VideoPreview({
+  selectedJob, progressMsg, progressPercent, etaSeconds, masterPrompt,
+}: {
+  selectedJob: Job | null; progressMsg: string; progressPercent: number;
+  etaSeconds: number | null; masterPrompt: string;
+}) {
+  const hasVideo = selectedJob?.final_filename;
+  const isProcessing = selectedJob?.status === 'processing';
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        maxWidth: '56rem',
+        aspectRatio: '16 / 9',
+        borderRadius: '12px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        background: '#000',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* gradient overlay */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 50%, rgba(0,0,0,0.3) 100%)',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      />
+
+      {hasVideo ? (
+        <video
+          src={`/videolar/${selectedJob!.final_filename}`}
+          controls
+          style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'relative', zIndex: 0 }}
+        />
+      ) : isProcessing ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: 'var(--accent)', position: 'relative', zIndex: 2 }}>
           <Loader size={48} className="pulse" />
-          <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Video Üretiliyor ({progressPercent}%)</div>
+          <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'white' }}>
+            Video Üretiliyor ({progressPercent}%)
+          </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Aşama: {progressMsg}</div>
           {etaSeconds !== null && (
             <div style={{
               fontSize: '11px', color: 'var(--warning)',
-              background: 'rgba(234,179,8,0.08)', padding: '4px 10px', borderRadius: '4px',
+              background: 'rgba(234,179,8,0.08)',
+              padding: '4px 10px', borderRadius: '4px',
+              fontFamily: 'var(--font-mono)',
             }}>
-              Kalan Tahmini Süre: {Math.floor(etaSeconds / 60)} dk {etaSeconds % 60} sn
+              Kalan: {Math.floor(etaSeconds / 60)}dk {etaSeconds % 60}sn
             </div>
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', color: 'var(--text-muted)' }}>
-          <FileVideo size={48} />
-          <span>Oynatılacak video seçilmedi. Galeriden bir proje seçin veya yeni oluşturun.</span>
-        </div>
+        <>
+          {/* play button */}
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'var(--bg-card)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              boxShadow: '0 0 20px rgba(99,102,241,0.3)',
+              position: 'relative',
+              zIndex: 2,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 0 32px rgba(99,102,241,0.5)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(99,102,241,0.3)'; }}
+          >
+            <Play size={28} style={{ color: 'white', marginLeft: '3px' }} />
+          </div>
+
+          {/* info badges */}
+          <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
+            <span style={{
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              fontSize: '10px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.05em',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              4K UHD
+            </span>
+            <span style={{
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              fontSize: '10px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.05em',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              24 FPS
+            </span>
+          </div>
+
+          {/* prompt text */}
+          <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 2, textAlign: 'center', width: '80%' }}>
+            <span style={{
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.5)',
+              fontFamily: 'var(--font-mono)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block',
+              maxWidth: '100%',
+            }}>
+              {masterPrompt || 'Yukarıdaki prompt alanına bir video konsepti yazın ve Üret butonuna tıklayın'}
+            </span>
+          </div>
+        </>
       )}
     </div>
   );
@@ -200,31 +389,17 @@ function TalkShowPanel() {
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: '1 1 160px', minWidth: '140px' }}>
             <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Konu</label>
-            <input
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              style={inputGlassStyle}
-            />
+            <input value={topic} onChange={(e) => setTopic(e.target.value)} style={inputGlassStyle} />
           </div>
           <div style={{ flex: '1 1 120px', minWidth: '100px' }}>
             <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Ev Sahibi</label>
-            <input
-              value={homeTeam}
-              onChange={(e) => setHomeTeam(e.target.value)}
-              style={inputGlassStyle}
-            />
+            <input value={homeTeam} onChange={(e) => setHomeTeam(e.target.value)} style={inputGlassStyle} />
           </div>
           <div style={{ flex: '1 1 120px', minWidth: '100px' }}>
             <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Deplasman</label>
-            <input
-              value={awayTeam}
-              onChange={(e) => setAwayTeam(e.target.value)}
-              style={inputGlassStyle}
-            />
+            <input value={awayTeam} onChange={(e) => setAwayTeam(e.target.value)} style={inputGlassStyle} />
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
+          <button onClick={handleSubmit} disabled={loading}
             className="btn btn-primary"
             style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
           >
@@ -272,10 +447,7 @@ function TalkShowPanel() {
               </div>
             ))}
           </div>
-          <div style={{
-            padding: '12px 16px', borderTop: '1px solid var(--border)',
-            background: 'rgba(234,179,8,0.05)',
-          }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'rgba(234,179,8,0.05)' }}>
             <div style={{ fontSize: '12px', color: 'var(--warning)', fontWeight: 'bold', marginBottom: '4px' }}>
               Fikir Birliği:{' '}
               {result.consensus.pick === 'home' ? result.match.homeTeam
@@ -298,7 +470,8 @@ function TalkShowPanel() {
         position: 'sticky', bottom: 0, left: 0, right: 0,
         padding: '12px 16px', background: 'var(--bg-card)',
         backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border)',
-        borderRadius: '10px', textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+        borderRadius: '10px', textAlign: 'center', fontSize: '11px',
+        color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
       }}>
         Bir spor konusu girin ve AI uzmanlarının analizini dinleyin
       </div>

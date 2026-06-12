@@ -1,4 +1,3 @@
-import { LogOut, Moon, Sun, Sparkles, MessageSquare, RefreshCw } from 'lucide-react';
 import type { Language, Tab, UserCredits } from '../types.js';
 
 interface HeaderProps {
@@ -16,117 +15,72 @@ interface HeaderProps {
 }
 
 export function Header({
-  language, theme, isDark, activeTab, userCredits,
-  onSetTheme, onToggleDark, onToggleLanguage, onSetActiveTab, onLogout, t,
+  language: _language, theme: _theme, isDark: _isDark, activeTab: _activeTab, userCredits,
+  onSetTheme: _onSetTheme, onToggleDark: _onToggleDark, onToggleLanguage: _onToggleLanguage,
+  onSetActiveTab: _onSetActiveTab, onLogout: _onLogout, t: _t,
 }: HeaderProps) {
+  const creditsStr = userCredits ? userCredits.credits.toLocaleString() : '0';
+
   return (
     <header
       style={{
-        height: '56px', padding: '0 20px', display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)',
+        height: '56px',
+        padding: '0 16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: 'var(--bg-primary)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{
-          width: '24px', height: '24px', borderRadius: '50%',
+          width: '28px', height: '28px', borderRadius: '50%',
           background: 'linear-gradient(135deg, var(--accent), var(--secondary))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '10px', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-mono)',
+          fontSize: '10px', fontWeight: 'bold', color: 'white',
+          fontFamily: 'var(--font-mono)',
+          boxShadow: '0 0 12px var(--accent-glow)',
         }}>
           AP
         </div>
-        <span className="gradient-text" style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '1px' }}>
-          AI-PUBLISHER
+        <span style={{ fontWeight: 600, fontSize: '14px', fontFamily: 'var(--font-sans)' }}>
+          AI-Publisher
         </span>
-        <span
-          style={{
-            fontSize: '9px', background: 'var(--accent-light)', color: 'var(--accent)',
-            padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontFamily: 'var(--font-mono)',
-          }}
-        >
-          PRO v5
+        <span style={{ color: 'var(--text-muted)', fontSize: '14px', fontFamily: 'var(--font-sans)' }}>
+          / Studio
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {userCredits && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div
-            className="glass"
+            className="pulse"
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '4px 10px', borderRadius: '20px', fontSize: '11px',
-              borderColor: 'rgba(99, 102, 241, 0.25)',
-              fontFamily: 'var(--font-mono)',
+              width: '12px', height: '12px', borderRadius: '50%',
+              background: 'var(--success)',
+              boxShadow: '0 0 8px var(--success-glow)',
             }}
-            title={t('creditResetDate', { date: new Date(userCredits.resetDate).toLocaleDateString() })}
-          >
-            <RefreshCw size={10} className="pulse" />
-            <span>{t('userCredits', { credits: userCredits.credits, limit: userCredits.limit })}</span>
-          </div>
-        )}
+          />
+          <span style={{
+            color: 'var(--text-muted)', fontSize: '12px',
+            fontFamily: 'var(--font-mono)',
+          }}>
+            Engine: v2.4 (Online)
+          </span>
+        </div>
 
-        <button
-          onClick={() => onSetActiveTab('opportunities')}
-          className="btn btn-secondary"
-          style={{
-            padding: '4px 10px', fontSize: '11px',
-            background: activeTab === 'opportunities' ? 'var(--accent-light)' : undefined,
-            borderColor: activeTab === 'opportunities' ? 'var(--accent)' : undefined,
-          }}
-        >
-          <Sparkles size={12} style={{ color: 'var(--accent)' }} />
-          {t('opportunities')}
-        </button>
+        <div style={{
+          width: '1px', height: '16px',
+          background: 'rgba(255, 255, 255, 0.1)',
+        }} />
 
-        <button
-          onClick={() => onSetActiveTab('groupchat')}
-          className="btn btn-secondary"
-          style={{
-            padding: '4px 10px', fontSize: '11px',
-            background: activeTab === 'groupchat' ? 'var(--secondary-glow)' : undefined,
-            borderColor: activeTab === 'groupchat' ? 'var(--secondary)' : undefined,
-          }}
-        >
-          <MessageSquare size={12} style={{ color: 'var(--secondary)' }} />
-          AI Talk-Show
-        </button>
-
-        <select
-          value={theme}
-          onChange={(e) => onSetTheme(e.target.value)}
-          className="btn btn-secondary"
-          style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
-        >
-          <option value="default">Default</option>
-          <option value="nebula">Nebula Purple</option>
-          <option value="forest">Forest Green</option>
-          <option value="corporate">Corporate Red</option>
-          <option value="midnight">Midnight Gold</option>
-          <option value="sunset">Sunset Orange</option>
-          <option value="ocean">Ocean Cyan</option>
-          <option value="cyberpunk">Cyberpunk Magenta</option>
-          <option value="matrix">Matrix Green</option>
-        </select>
-
-        <button
-          onClick={onToggleDark}
-          className="btn btn-secondary"
-          style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          {isDark ? <Sun size={12} /> : <Moon size={12} />}
-        </button>
-
-        <button
-          onClick={onToggleLanguage}
-          className="btn btn-secondary"
-          style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}
-        >
-          {language.toUpperCase()}
-        </button>
-
-        <button onClick={onLogout} className="btn btn-danger" style={{ padding: '4px 10px', fontSize: '11px' }}>
-          <LogOut size={12} /> {t('logout')}
-        </button>
+        <span style={{
+          color: 'var(--text-muted)', fontSize: '12px',
+          fontFamily: 'var(--font-mono)',
+        }}>
+          Kredi: <span style={{ color: 'var(--text-primary)' }}>{creditsStr}</span>
+        </span>
       </div>
     </header>
   );
