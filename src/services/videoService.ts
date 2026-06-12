@@ -1,60 +1,88 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { execFile } from 'child_process';
 
 let pingPathCache: string | null = null;
 
 export interface FFmpegCommand {
   cmd: string;
   args: string[];
+  timeoutMs?: number;
 }
 
 import { Worker } from 'worker_threads';
-import { fileURLToPath } from 'url';
 
 const __dirnameStr = __dirname;
 
-export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<void> {
-  const workerPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.ts');
-  const isTsNode = (process as any)[Symbol.for('ts-node.register.instance')] || process.env.TS_NODE_DEV;
+export interface WorkerResult {
+  status: 'success' | 'error' | 'timeout';
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+}
 
+export function runInWorker<T = WorkerResult>(
+  cmd: string,
+  args: string[],
+  timeoutMs = 30000
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const workerJsPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.js');
+    const workerTsPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.ts');
+    const useTs = !!(process as any)[Symbol.for('ts-node.register.instance')]
+      || process.env.TS_NODE_DEV
+      || process.env.NODE_ENV === 'development';
+
+    let scriptPath: string;
+    let useEval = false;
+    if (useTs) {
+      scriptPath = `require('ts-node').register(); require(${JSON.stringify(workerTsPath)});`;
+      useEval = true;
+    } else {
+      scriptPath = workerJsPath;
+    }
+
+    const opts: any = useEval
+      ? { eval: true, workerData: { cmd, args, timeoutMs } }
+      : { workerData: { cmd, args, timeoutMs } };
+
+    const worker = new Worker(scriptPath, opts);
+    let settled = false;
+
+    worker.on('message', (msg: any) => {
+      settled = true;
+      worker.terminate().catch(() => {});
+      resolve(msg as T);
+    });
+    worker.on('error', (err) => {
+      if (!settled) { settled = true; reject(err); }
+    });
+    worker.on('exit', (code) => {
+      if (!settled) {
+        if (code === 0) resolve({ status: 'success' } as any);
+        else reject(new Error(`Worker stopped with exit code ${code}`));
+      }
+    });
+  });
+}
+
+export async function runFFmpeg(
+  cmd: string,
+  args: string[],
+  timeoutMs = 30000
+): Promise<{ stdout: string; stderr: string }> {
+  const res = await runInWorker<WorkerResult>(cmd, args, timeoutMs);
+  if (res.status === 'success') {
+    return { stdout: res.stdout || '', stderr: res.stderr || '' };
+  }
+  throw new Error(res.error || `FFmpeg worker ${res.status}`);
+}
+
+export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<void> {
   for (let i = 0; i < commands.length; i++) {
-    const { cmd, args } = commands[i];
+    const { cmd, args, timeoutMs = 30000 } = commands[i];
     try {
       console.log(`[INFO] FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
-      
-      await new Promise<void>((resolve, reject) => {
-        let workerArgs = { workerData: { cmd, args, timeoutMs: 30000 } };
-        let workerScript = workerPath;
-
-        // If running in ts-node or similar dev environment, we might need to load TS files differently
-        if (isTsNode || workerPath.endsWith('.ts')) {
-          workerScript = `
-            require('ts-node').register();
-            require('${workerPath.replace(/\\/g, '\\\\')}');
-          `;
-          workerArgs = { eval: true, workerData: { cmd, args, timeoutMs: 30000 } } as any;
-        }
-
-        const worker = new Worker(workerScript, workerArgs);
-
-        worker.on('message', (msg) => {
-          if (msg.status === 'success') {
-            resolve();
-          } else if (msg.status === 'timeout_fallback') {
-            reject(new Error(msg.error));
-          } else {
-            reject(new Error(msg.error || 'Unknown worker error'));
-          }
-        });
-
-        worker.on('error', reject);
-        worker.on('exit', (code) => {
-          if (code !== 0) {
-            reject(new Error(`Worker stopped with exit code ${code}`));
-          }
-        });
-      });
+      await runFFmpeg(cmd, args, timeoutMs);
       return;
     } catch (err: any) {
       console.warn(`[WARN] FFmpeg Coworker deneme ${i + 1} başarısız oldu. Hata: ${err.message}`);
@@ -70,25 +98,19 @@ export async function ensurePingSound(): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'uploads');
   await fs.ensureDir(uploadsDir);
   const pingPath = path.join(uploadsDir, 'ping.wav');
-  await new Promise<void>((resolve, reject) => {
-    execFile(
-      'ffmpeg',
-      ['-y', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=0.25', '-af', 'afade=t=out:st=0.2:d=0.05', pingPath],
-      (err) => (err ? reject(err) : resolve())
-    );
-  });
+  await runFFmpeg(
+    'ffmpeg',
+    ['-y', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=0.25', '-af', 'afade=t=out:st=0.2:d=0.05', pingPath]
+  );
   pingPathCache = pingPath;
   return pingPath;
 }
 
 export async function addCalloutPings(videoPath: string, outputPath: string): Promise<void> {
-  const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    execFile(
-      'ffprobe',
-      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath],
-      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
-    );
-  });
+  const { stdout: durStr } = await runFFmpeg(
+    'ffprobe',
+    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath]
+  );
   const dur = parseFloat(durStr.trim());
   if (isNaN(dur) || dur < 1) throw new Error('Geçersiz video süresi');
 
@@ -108,13 +130,10 @@ export async function addCalloutPings(videoPath: string, outputPath: string): Pr
     `[0:a][p1][p2][p3]amix=inputs=4:duration=first:dropout_transition=0[aout]`
   ].join(';');
 
-  await new Promise<void>((resolve, reject) => {
-    execFile(
-      'ffmpeg',
-      ['-y', '-i', videoPath, '-i', pingPath, '-filter_complex', filter, '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath],
-      (err) => (err ? reject(err) : resolve())
-    );
-  });
+  await runFFmpeg(
+    'ffmpeg',
+    ['-y', '-i', videoPath, '-i', pingPath, '-filter_complex', filter, '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath]
+  );
 }
 
 export async function generateEndScreenImage(
@@ -146,13 +165,11 @@ export async function generateEndScreenImage(
 
   const finalFilter = `${overlayFilter};[bg]drawtext=text='${ctaText}':fontcolor=white:fontsize=${isVertical ? 64 : 72}:x=(w-text_w)/2:y=${textY}:box=1:boxcolor=red@0.8:boxborderw=20[out]`;
 
-  await new Promise<void>((resolve, reject) => {
-    const args = ['-y'];
-    // We safely parse inputs: ["-f", "lavfi", "-i", "..."]
-    inputs.forEach(i => args.push(...i.split(' ')));
-    args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath);
-    execFile('ffmpeg', args, (err) => (err ? reject(err) : resolve()));
-  });
+  const args = ['-y'];
+  // We safely parse inputs: ["-f", "lavfi", "-i", "..."]
+  inputs.forEach(i => args.push(...i.split(' ')));
+  args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath);
+  await runFFmpeg('ffmpeg', args);
 }
 
 export async function applyEndScreen(
@@ -161,13 +178,10 @@ export async function applyEndScreen(
   outputPath: string,
   isVertical: boolean
 ): Promise<void> {
-  const { stdout: durStr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    execFile(
-      'ffprobe',
-      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath],
-      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
-    );
-  });
+  const { stdout: durStr } = await runFFmpeg(
+    'ffprobe',
+    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath]
+  );
   const dur = parseFloat(durStr.trim());
   if (isNaN(dur) || dur < 5) throw new Error('Video 5 saniyeden kısa, end screen uygulanamaz');
 
@@ -175,13 +189,10 @@ export async function applyEndScreen(
   const h = isVertical ? 1920 : 1080;
   const endStart = (dur - 5).toFixed(3);
 
-  await new Promise<void>((resolve, reject) => {
-    execFile(
-      'ffmpeg',
-      ['-y', '-i', videoPath, '-loop', '1', '-i', endScreenPath, '-filter_complex', `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`, '-c:a', 'copy', outputPath],
-      (err) => (err ? reject(err) : resolve())
-    );
-  });
+  await runFFmpeg(
+    'ffmpeg',
+    ['-y', '-i', videoPath, '-loop', '1', '-i', endScreenPath, '-filter_complex', `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`, '-c:a', 'copy', outputPath]
+  );
 }
 
 export async function getOrBuildEndScreen(
@@ -353,18 +364,14 @@ export async function extractLastFrame(videoPath: string): Promise<string> {
 }
 
 export async function getVideoDuration(videoPath: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    execFile('ffprobe', [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'csv=p=0',
-      videoPath
-    ], (err, stdout) => {
-      if (err) return reject(err);
-      const d = parseFloat(stdout.trim());
-      resolve(isNaN(d) ? 0 : d);
-    });
-  });
+  const { stdout } = await runFFmpeg('ffprobe', [
+    '-v', 'error',
+    '-show_entries', 'format=duration',
+    '-of', 'csv=p=0',
+    videoPath
+  ]);
+  const d = parseFloat(stdout.trim());
+  return isNaN(d) ? 0 : d;
 }
 
 export async function concatVideosWithCrossfade(
@@ -634,13 +641,10 @@ export async function applyBrandKit(
   await fs.writeFile(logoPath, Buffer.from(b64, 'base64'));
 
   // Video boyutlarını ffprobe ile alalım
-  const { stdout: dims } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    execFile(
-      'ffprobe',
-      ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath],
-      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr }))
-    );
-  });
+  const { stdout: dims } = await runFFmpeg(
+    'ffprobe',
+    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath]
+  );
 
   const [vW, vH] = dims.trim().split('x').map(Number);
   const logoW = Math.round(vW * 0.15); // Logonun genişliği videonun %15'i kadar olsun
