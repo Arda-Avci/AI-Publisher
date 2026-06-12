@@ -29,12 +29,9 @@ export function StudioPanel({
   onUseAsPrompt, t: _t,
 }: StudioPanelProps) {
   return (
-    <main style={{
-      flexGrow: 1, display: 'flex', flexDirection: 'column',
-      background: '#090d16', borderRight: '1px solid var(--border)',
-    }}>
+    <main className="main-panel" style={{ borderRight: '1px solid var(--border)' }}>
       <TabBar activeTab={activeTab} />
-      <div style={{ flexGrow: 1, padding: '20px', overflowY: 'auto' }}>
+      <div style={{ flexGrow: 1, padding: '20px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
         {activeTab === 'create' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
             <PreviewPanel
@@ -70,24 +67,24 @@ export function StudioPanel({
 
 function TabBar({ activeTab }: { activeTab: Tab }) {
   const tabs: { key: Tab; label: string; primary: string }[] = [
-    { key: 'create', label: 'Stüdyo & Timeline', primary: 'var(--primary)' },
-    { key: 'opportunities', label: 'Fırsatlar Hunisi', primary: 'var(--primary)' },
+    { key: 'create', label: 'Stüdyo & Timeline', primary: 'var(--accent)' },
+    { key: 'opportunities', label: 'Fırsatlar Hunisi', primary: 'var(--accent)' },
     { key: 'groupchat', label: 'AI Talk-Show', primary: 'var(--secondary)' },
   ];
 
   return (
-    <div style={{ height: '40px', background: 'var(--card)', display: 'flex', borderBottom: '1px solid var(--border)' }}>
+    <div style={{ height: '40px', background: 'var(--bg-surface)', display: 'flex', borderBottom: '1px solid var(--border)' }}>
       {tabs.map(({ key, label, primary }) => (
         <div
           key={key}
           style={{
             flexGrow: 1, border: 'none',
-            background: activeTab === key ? 'rgba(0, 242, 254, 0.05)' : 'transparent',
+            background: activeTab === key ? 'var(--accent-light)' : 'transparent',
             color: activeTab === key ? primary : 'var(--text-muted)',
             fontWeight: activeTab === key ? 'bold' : 'normal',
             borderBottom: activeTab === key ? `2px solid ${primary}` : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', fontSize: '12px',
+            cursor: 'pointer', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
           }}
         >
           {label}
@@ -104,7 +101,7 @@ function PreviewPanel({
 }) {
   return (
     <div style={{
-      flexGrow: 1, minHeight: '300px', background: '#05070c', borderRadius: '10px',
+      flexGrow: 1, minHeight: '300px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)',
       border: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden',
     }}>
@@ -132,7 +129,7 @@ function PreviewPanel({
           </div>
         </div>
       ) : selectedJob?.status === 'processing' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--primary)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--accent)' }}>
           <Loader size={48} className="pulse" />
           <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Video Üretiliyor ({progressPercent}%)</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Aşama: {progressMsg}</div>
@@ -190,32 +187,39 @@ function TalkShowPanel() {
     }
   };
 
+  const inputGlassStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: '6px',
+    border: '1px solid var(--border)', background: 'var(--bg-card)',
+    backdropFilter: 'blur(16px)', color: 'white', fontSize: '12px',
+    outline: 'none', boxSizing: 'border-box', fontFamily: 'var(--font-mono)',
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', position: 'relative' }}>
       <div className="glass" style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: '1 1 160px', minWidth: '140px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Konu</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Konu</label>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', color: 'white', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+              style={inputGlassStyle}
             />
           </div>
           <div style={{ flex: '1 1 120px', minWidth: '100px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Ev Sahibi</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Ev Sahibi</label>
             <input
               value={homeTeam}
               onChange={(e) => setHomeTeam(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', color: 'white', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+              style={inputGlassStyle}
             />
           </div>
           <div style={{ flex: '1 1 120px', minWidth: '100px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Deplasman</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Deplasman</label>
             <input
               value={awayTeam}
               onChange={(e) => setAwayTeam(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', color: 'white', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
+              style={inputGlassStyle}
             />
           </div>
           <button
@@ -236,33 +240,33 @@ function TalkShowPanel() {
       )}
 
       {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px', color: 'var(--primary)', fontSize: '13px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px', color: 'var(--accent)', fontSize: '13px' }}>
           <Loader size={20} className="pulse" />
           Talk-Show hazırlanıyor...
         </div>
       )}
 
       {result && (
-        <div className="glass" style={{ borderRadius: '10px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div className="glass" style={{ borderRadius: '10px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 'bold', color: 'var(--secondary)' }}>
             {result.topic} — {result.match.homeTeam} vs {result.match.awayTeam}
           </div>
-          <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
             {result.transcript.map((msg, i) => (
-              <div key={i} style={{
+              <div key={i} className="terminal-line" style={{
                 padding: '10px 12px', borderRadius: '8px',
-                background: msg.role === 'meta_orchestrator' ? 'rgba(155,81,224,0.08)' : 'rgba(255,255,255,0.03)',
+                background: msg.role === 'meta_orchestrator' ? 'rgba(167,139,250,0.08)' : 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.06)',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: msg.role === 'meta_orchestrator' ? 'var(--secondary)' : 'var(--primary)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: msg.role === 'meta_orchestrator' ? 'var(--secondary)' : 'var(--accent)' }}>
                     {msg.speaker}
                   </span>
                   <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                     {msg.sentiment === 'bullish' ? '📈' : msg.sentiment === 'bearish' ? '📉' : '➖'} %{Math.round(msg.confidence * 100)}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', lineHeight: '18px' }}>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', lineHeight: '18px', fontFamily: 'var(--font-mono)' }}>
                   {msg.content}
                 </div>
               </div>
@@ -284,11 +288,20 @@ function TalkShowPanel() {
               {result.consensus.rationale}
             </div>
           </div>
-          <div style={{ padding: '8px 16px', fontSize: '10px', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
+          <div style={{ padding: '8px 16px', fontSize: '10px', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
             {(result.durationMs / 1000).toFixed(1)}s
           </div>
         </div>
       )}
+
+      <div style={{
+        position: 'sticky', bottom: 0, left: 0, right: 0,
+        padding: '12px 16px', background: 'var(--bg-card)',
+        backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border)',
+        borderRadius: '10px', textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+      }}>
+        Bir spor konusu girin ve AI uzmanlarının analizini dinleyin
+      </div>
     </div>
   );
 }

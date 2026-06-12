@@ -1,4 +1,4 @@
-import { Film, LogOut, Moon, Sun, Sparkles, MessageSquare, RefreshCw } from 'lucide-react';
+import { LogOut, Moon, Sun, Sparkles, MessageSquare, RefreshCw } from 'lucide-react';
 import type { Language, Tab, UserCredits } from '../types.js';
 
 interface HeaderProps {
@@ -21,40 +21,46 @@ export function Header({
 }: HeaderProps) {
   return (
     <header
-      className="header glass"
       style={{
-        height: '60px', padding: '0 24px', display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', borderBottom: '1px solid var(--border)',
+        height: '56px', padding: '0 20px', display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Film size={24} style={{ color: 'var(--primary)' }} />
-        <span className="gradient-text" style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '1px' }}>
+        <div style={{
+          width: '24px', height: '24px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, var(--accent), var(--secondary))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '10px', fontWeight: 'bold', color: 'white', fontFamily: 'var(--font-mono)',
+        }}>
+          AP
+        </div>
+        <span className="gradient-text" style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '1px' }}>
           AI-PUBLISHER
         </span>
         <span
           style={{
-            fontSize: '10px', background: 'var(--secondary-glow)', color: 'var(--secondary)',
-            padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold',
+            fontSize: '9px', background: 'var(--accent-light)', color: 'var(--accent)',
+            padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontFamily: 'var(--font-mono)',
           }}
         >
           PRO v5
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {userCredits && (
           <div
+            className="glass"
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              background: 'rgba(0, 242, 254, 0.08)',
-              border: '1px solid rgba(0, 242, 254, 0.2)',
-              padding: '6px 12px', borderRadius: '8px', fontSize: '12px',
-              color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '4px 10px', borderRadius: '20px', fontSize: '11px',
+              borderColor: 'rgba(99, 102, 241, 0.25)',
+              fontFamily: 'var(--font-mono)',
             }}
             title={t('creditResetDate', { date: new Date(userCredits.resetDate).toLocaleDateString() })}
           >
-            <RefreshCw size={12} className="pulse" />
+            <RefreshCw size={10} className="pulse" />
             <span>{t('userCredits', { credits: userCredits.credits, limit: userCredits.limit })}</span>
           </div>
         )}
@@ -63,12 +69,12 @@ export function Header({
           onClick={() => onSetActiveTab('opportunities')}
           className="btn btn-secondary"
           style={{
-            padding: '6px 12px', fontSize: '12px',
-            background: activeTab === 'opportunities' ? 'var(--primary-glow)' : 'transparent',
-            borderColor: activeTab === 'opportunities' ? 'var(--primary)' : 'var(--border)',
+            padding: '4px 10px', fontSize: '11px',
+            background: activeTab === 'opportunities' ? 'var(--accent-light)' : undefined,
+            borderColor: activeTab === 'opportunities' ? 'var(--accent)' : undefined,
           }}
         >
-          <Sparkles size={14} style={{ color: 'var(--primary)' }} />
+          <Sparkles size={12} style={{ color: 'var(--accent)' }} />
           {t('opportunities')}
         </button>
 
@@ -76,52 +82,50 @@ export function Header({
           onClick={() => onSetActiveTab('groupchat')}
           className="btn btn-secondary"
           style={{
-            padding: '6px 12px', fontSize: '12px',
-            background: activeTab === 'groupchat' ? 'var(--secondary-glow)' : 'transparent',
-            borderColor: activeTab === 'groupchat' ? 'var(--secondary)' : 'var(--border)',
+            padding: '4px 10px', fontSize: '11px',
+            background: activeTab === 'groupchat' ? 'var(--secondary-glow)' : undefined,
+            borderColor: activeTab === 'groupchat' ? 'var(--secondary)' : undefined,
           }}
         >
-          <MessageSquare size={14} style={{ color: 'var(--secondary)' }} />
+          <MessageSquare size={12} style={{ color: 'var(--secondary)' }} />
           AI Talk-Show
         </button>
 
         <select
           value={theme}
           onChange={(e) => onSetTheme(e.target.value)}
-          style={{
-            background: 'var(--card)', border: '1px solid var(--border)', color: 'white',
-            padding: '5px 10px', borderRadius: '6px', fontSize: '12px', outline: 'none',
-          }}
+          className="btn btn-secondary"
+          style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
         >
-          <option value="default">🌐 Default Cyan</option>
-          <option value="nebula">🌌 Nebula Purple</option>
-          <option value="forest">🌲 Forest Green</option>
-          <option value="corporate">💼 Corporate Red</option>
-          <option value="midnight">🌙 Midnight Gold</option>
-          <option value="sunset">🌇 Sunset Orange</option>
-          <option value="ocean">🌊 Ocean Cyan</option>
-          <option value="cyberpunk">⚡ Cyberpunk Magenta</option>
-          <option value="matrix">📟 Matrix Green</option>
+          <option value="default">Default</option>
+          <option value="nebula">Nebula Purple</option>
+          <option value="forest">Forest Green</option>
+          <option value="corporate">Corporate Red</option>
+          <option value="midnight">Midnight Gold</option>
+          <option value="sunset">Sunset Orange</option>
+          <option value="ocean">Ocean Cyan</option>
+          <option value="cyberpunk">Cyberpunk Magenta</option>
+          <option value="matrix">Matrix Green</option>
         </select>
 
         <button
           onClick={onToggleDark}
           className="btn btn-secondary"
-          style={{ padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          {isDark ? <Sun size={14} /> : <Moon size={14} />}
+          {isDark ? <Sun size={12} /> : <Moon size={12} />}
         </button>
 
         <button
           onClick={onToggleLanguage}
           className="btn btn-secondary"
-          style={{ padding: '4px 10px', fontSize: '12px', fontWeight: 'bold' }}
+          style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}
         >
           {language.toUpperCase()}
         </button>
 
-        <button onClick={onLogout} className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '12px' }}>
-          <LogOut size={14} /> {t('logout')}
+        <button onClick={onLogout} className="btn btn-danger" style={{ padding: '4px 10px', fontSize: '11px' }}>
+          <LogOut size={12} /> {t('logout')}
         </button>
       </div>
     </header>

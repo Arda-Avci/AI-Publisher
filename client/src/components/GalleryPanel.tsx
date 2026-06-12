@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import type React from 'react';
-import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap,  Beaker, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap, Beaker, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Job, UserCredits } from '../types.js';
-
-/* ─── Colab status types ─── */
 
 interface ColabStatusData {
   gpu?: string;
@@ -20,8 +18,6 @@ interface ModelTestEntry {
   vram?: number;
   error?: string;
 }
-
-/* ─── Props ─── */
 
 interface GalleryPanelProps {
   jobs: Job[];
@@ -52,10 +48,7 @@ export function GalleryPanel({
   onSaveMetaAndPublish, t,
 }: GalleryPanelProps) {
   return (
-    <aside className="sidebar-right" style={{
-      width: '340px', flexShrink: 0, background: 'var(--card)',
-      padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px',
-    }}>
+    <aside className="sidebar-right" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <ColabStatusPanel />
 
       {userCredits && (
@@ -91,7 +84,7 @@ export function GalleryPanel({
           </h4>
           <button
             onClick={onRefreshJobs}
-            style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
           >
             <RefreshCw size={12} />
           </button>
@@ -107,13 +100,13 @@ export function GalleryPanel({
                 className="glass"
                 style={{
                   padding: '10px', borderRadius: '8px',
-                  border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
-                  background: isActive ? 'rgba(0, 242, 254, 0.03)' : 'var(--bg-surface)',
+                  border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: isActive ? 'var(--accent-light)' : undefined,
                   cursor: 'pointer', transition: 'var(--transition)', position: 'relative',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)' }}>Proje #{job.id}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Proje #{job.id}</span>
                   <StatusBadge status={job.status} />
                 </div>
                 <div style={{
@@ -122,7 +115,7 @@ export function GalleryPanel({
                 }}>
                   {job.master_prompt}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                   Sahneler: {job.completed_scenes} / {job.total_scenes} | Model: {job.model_type || 'CogVideo'}
                 </div>
                 <button
@@ -145,17 +138,16 @@ export function GalleryPanel({
 }
 
 function StatusBadge({ status }: { status: Job['status'] }) {
-  const colors: Record<Job['status'], string> = {
+  const dotColors: Record<Job['status'], string> = {
     completed: 'var(--success)',
     failed: 'var(--danger)',
     processing: 'var(--warning)',
     pending: 'var(--text-muted)',
     awaiting_approval: 'var(--warning)',
   };
+  const color = dotColors[status] || 'var(--text-muted)';
   return (
-    <span style={{ fontSize: '9px', fontWeight: 'bold', color: colors[status] || 'var(--text-muted)' }}>
-      {status.toUpperCase()}
-    </span>
+    <span style={{ width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', background: color, boxShadow: `0 0 6px ${color}` }} />
   );
 }
 
@@ -167,15 +159,14 @@ function ProgressTracker({
   return (
     <div className="glass" style={{
       padding: '15px', borderRadius: '10px', border: '1px solid var(--border)',
-      background: 'rgba(0, 242, 254, 0.02)',
     }}>
-      <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px' }}>İlerleme</h4>
+      <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '8px' }}>İlerleme</h4>
       <div style={{ fontSize: '11px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
         <span>Aşama: <strong>{progressMsg}</strong></span>
         <span>{progressPercent}%</span>
       </div>
-      <div style={{ height: '6px', background: '#070a14', borderRadius: '3px', overflow: 'hidden' }}>
-        <div style={{ width: `${progressPercent}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.3s ease' }} />
+      <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), var(--secondary))', transition: 'width 0.3s ease', borderRadius: '3px' }} />
       </div>
       <button onClick={onCancel} className="btn btn-danger" style={{ width: '100%', padding: '5px', fontSize: '11px', marginTop: '12px' }}>
         Üretimi İptal Et
@@ -198,9 +189,9 @@ function MetaEditor({
       display: 'flex', flexDirection: 'column', gap: '12px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)' }}>SOSYAL MEDYA KOPYALARI</h4>
+        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)' }}>SOSYAL MEDYA KOPYALARI</h4>
         {status === 'awaiting_approval' && (
-          <span style={{ fontSize: '9px', background: 'var(--warning)', color: '#0b0f19', padding: '2px 5px', borderRadius: '3px', fontWeight: 'bold' }}>
+          <span style={{ fontSize: '9px', background: 'var(--warning)', color: '#0b0f19', padding: '2px 5px', borderRadius: '3px', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>
             ONAY BEKLİYOR
           </span>
         )}
@@ -235,13 +226,11 @@ function MetaEditor({
 function MetaField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{label}</label>
+      <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</label>
       {children}
     </div>
   );
 }
-
-/* ─── Colab Status Panel ─── */
 
 function ColabStatusPanel() {
   const [data, setData] = useState<ColabStatusData | null>(null);
@@ -256,7 +245,7 @@ function ColabStatusPanel() {
         const json = await res.json();
         setData(json);
       }
-    } catch { /* server may be offline */ }
+    } catch { }
   };
 
   useEffect(() => {
@@ -291,8 +280,8 @@ function ColabStatusPanel() {
       display: 'flex', flexDirection: 'column', gap: '10px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Cpu size={14} style={{ color: 'var(--primary)' }} />
-        <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', flex: 1 }}>Colab GPU</span>
+        <Cpu size={14} style={{ color: 'var(--accent)' }} />
+        <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)', flex: 1 }}>Colab GPU</span>
         <span style={{
           width: 8, height: 8, borderRadius: '50%',
           background: isRunning ? '#22c55e' : '#ef4444',
@@ -305,7 +294,7 @@ function ColabStatusPanel() {
         <Row label="GPU" value={
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {gpuModel}
-            {isL4 && <Zap size={10} style={{ color: '#eab308' }} aria-label="L4"/>}
+            {isL4 && <Zap size={10} style={{ color: '#eab308' }} aria-label="L4" />}
           </span>
         } />
         <Row label="VRAM" value={
@@ -340,12 +329,12 @@ function ColabStatusPanel() {
             {testResults.map((r, i) => (
               <div key={i} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '6px 8px', borderRadius: '6px', background: 'rgba(0,0,0,0.25)', fontSize: '10px',
+                padding: '6px 8px', borderRadius: '6px', background: 'rgba(0,0,0,0.25)', fontSize: '10px', fontFamily: 'var(--font-mono)',
               }}>
                 <span style={{ fontWeight: 600 }}>{r.model}</span>
                 <span style={{
                   color: r.status === 'loaded' || r.status === 'ok' ? '#22c55e' :
-                         r.status === 'error' ? '#ef4444' : 'var(--text-muted)',
+                    r.status === 'error' ? '#ef4444' : 'var(--text-muted)',
                 }}>
                   {r.status === 'loaded' || r.status === 'ok' ? '✓' : r.status === 'error' ? '✗' : r.status}
                   {r.vram != null ? `  ${r.vram.toFixed(1)} GB` : ''}
@@ -367,8 +356,6 @@ function ColabStatusPanel() {
   );
 }
 
-/* ─── Credits Badge ─── */
-
 function CreditsBadge({ credits, limit, resetDate }: { credits: number; limit: number; resetDate?: string }) {
   const ratio = limit > 0 ? credits / limit : 1;
   const barColor = ratio > 0.8 ? 'var(--danger)' : ratio > 0.5 ? 'var(--warning)' : 'var(--success)';
@@ -383,19 +370,17 @@ function CreditsBadge({ credits, limit, resetDate }: { credits: number; limit: n
           {credits} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {limit}</span>
         </span>
       </div>
-      <div style={{ height: '4px', background: '#070a14', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
         <div style={{ width: `${Math.min(ratio * 100, 100)}%`, height: '100%', background: barColor, transition: 'width 0.3s ease' }} />
       </div>
       {resetDate && (
-        <div style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'right' }}>
+        <div style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
           Sıfırlanma: {new Date(resetDate).toLocaleDateString('tr-TR')}
         </div>
       )}
     </div>
   );
 }
-
-/* ─── Inline helper ─── */
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -407,6 +392,6 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: '#070a14', border: '1px solid var(--border)', borderRadius: '4px',
-  color: 'white', padding: '6px 10px', fontSize: '12px', outline: 'none',
+  background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '4px',
+  color: 'white', padding: '6px 10px', fontSize: '11px', outline: 'none', fontFamily: 'var(--font-mono)',
 };

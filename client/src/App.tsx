@@ -574,13 +574,7 @@ export default function App() {
   }
 
   return (
-    <div
-      className="app-container"
-      style={{
-        display: 'flex', flexDirection: 'column', height: '100vh',
-        background: 'var(--background)', color: 'var(--foreground)',
-      }}
-    >
+    <div className="app-grid">
       <Header
         language={language}
         theme={theme}
@@ -595,12 +589,7 @@ export default function App() {
         t={t}
       />
 
-      <div
-        className="main-content"
-        style={{
-          display: 'flex', flexGrow: 1, overflow: 'hidden',
-        }}
-      >
+      <div className="app-body">
         <ProjectForm
           masterPrompt={masterPrompt}
           productionNotes={productionNotes}
