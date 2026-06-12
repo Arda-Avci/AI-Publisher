@@ -334,4 +334,13 @@
 - [x] Tüm ADR'ler standart format: Durum / Bağlam / Karar / Sonuçlar
 
 ---
+
+## ✅ Sprint 8 — Lint Temizliği
+- [x] `src/routes/payments.ts` — `@ts-ignore` → `@ts-expect-error` (iyzipay için)
+- [x] `src/views/dashboardScripts.ts` — `\'` gereksiz kaçışları kaldırıldı
+- [x] `npm run check:lint` 0 hata
+- [x] `tsc --noEmit` 0 hata
+- [x] 42/42 vitest testi geçti
+
+---
 > **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose ve container planları raftan kaldırılmıştır.

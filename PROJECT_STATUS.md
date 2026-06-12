@@ -197,6 +197,14 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **B — Worker Pool ADR** | `docs/adr/ADR-003-FFmpeg-Worker-Pool.md` — Sprint 6'daki ffmpeg çağrılarının worker_threads'e taşınmasının gerekçesi | ✅ Tamam |
 | **C — ADR Takibi** | `docs/adr/ADR-001-TTS-Engine-Evaluation.md` dahil tüm ADR'ler git'e eklendi | ✅ Tamam |
 
+### Sprint 8 (Hafta 14) — Lint Temizliği
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — `@ts-ignore` → `@ts-expect-error`** | `src/routes/payments.ts` iyzipay import'unda yüke bağlı (load-bearing) direktif | ✅ Tamam |
+| **B — Useless escape temizliği** | `src/views/dashboardScripts.ts` — tek-tırnaklı JS string içindeki gereksiz `\'` kaçışları kaldırıldı (font adı zaten tırnaksız) | ✅ Tamam |
+| **C — Doğrulama** | `npm run check:lint` 0 hata, `tsc --noEmit` 0 hata, 42/42 vitest geçti | ✅ Tamam |
+
 ### Sonraya Bırakılanlar
 
 | Madde | Gerekçe |
