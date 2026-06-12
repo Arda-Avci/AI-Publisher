@@ -219,4 +219,93 @@ export function registerPublishRoutes(app: Application): void {
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
+
+  app.post('/publish-all/:id', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = req.session.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'NOT_AUTHENTICATED' });
+    }
+
+    const jobId = typeof id === 'string' ? parseInt(id, 10) : NaN;
+    if (isNaN(jobId) || jobId <= 0) {
+      return res.json({ success: false, error: 'Gecersiz job ID.' });
+    }
+
+    try {
+      const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
+      if (!job) {
+        return res.json({ success: false, error: 'Job bulunamadi.' });
+      }
+
+      if (job.status !== 'completed') {
+        return res.json({ success: false, error: 'Video henuz tamamlanmamis.' });
+      }
+
+      const videoPath = path.join(process.cwd(), 'videolar', job.final_filename || `final_${jobId}.mp4`);
+      if (!(await fs.pathExists(videoPath))) {
+        return res.json({ success: false, error: 'Video dosyasi bulunamadi.' });
+      }
+
+      const platformStatus: Record<Platform, string> = {
+        youtube: job.yt_status || 'pending',
+        tiktok: job.tt_status || 'pending',
+        x: job.x_status || 'pending',
+        meta: job.meta_status || 'pending',
+      };
+
+      const targetPlatforms = VALID_PLATFORMS.filter(p => {
+        const raw = job.target_platforms;
+        if (!raw) return true;
+        try {
+          const platforms = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          return Array.isArray(platforms) && platforms.includes(p);
+        } catch { return true; }
+      });
+
+      const queued: string[] = [];
+      for (const platform of targetPlatforms) {
+        if (platformStatus[platform] === 'published' || platformStatus[platform] === 'publishing') {
+          continue;
+        }
+
+        const statusField = STATUS_FIELD_MAP[platform];
+        await db.run(
+          `UPDATE video_jobs SET ${statusField} = 'publishing' WHERE id = ?`,
+          [jobId]
+        );
+
+        const payload = {
+          jobId,
+          platform,
+          videoPath,
+          statusField,
+          jobData: {
+            yt_title: job.yt_title, yt_desc: job.yt_desc, yt_tags: job.yt_tags,
+            playlist_id: job.playlist_id,
+            tt_desc: job.tt_desc, tt_tags: job.tt_tags,
+            x_desc: job.x_desc, x_tags: job.x_tags,
+            meta_desc: job.meta_desc, meta_tags: job.meta_tags,
+          },
+        };
+
+        await sendToQueue('publish_jobs_queue', payload);
+        queued.push(platform);
+      }
+
+      logAudit({
+        userId,
+        action: 'publish.youtube' as any,
+        entityType: 'video_job',
+        entityId: jobId,
+        details: { type: 'publish_all', platforms: queued },
+        req,
+      });
+
+      res.json({ success: true, data: { queued, skipped: targetPlatforms.length - queued.length } });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
+    }
+  });
 }

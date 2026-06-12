@@ -17,7 +17,10 @@
     "build": "tsc",
     "setup-ngrok": "node scripts/setup-ngrok.js",
     "test": "npx vitest run",
-    "test:browser": "tsx scripts/run-e2e.ts"
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "format:write": "prettier --write \"src/**/*.ts\"",
+    "test:browser": "tsx scripts/run-e2e.ts",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
@@ -62,6 +65,8 @@
     "@types/yt-search": "^2.10.3",
     "concurrently": "^10.0.3",
     "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.4",
     "supertest": "^7.2.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
