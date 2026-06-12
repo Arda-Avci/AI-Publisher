@@ -136,20 +136,26 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **TypeScript:** `tsc --noEmit` sıfır hata ile doğrulandı.
 - **Testler:** 22/22 Vitest başarıyla geçti.
 
-### Sprint 3 (Hafta 5-6) — Talk-Show Altyapısı
+### Sprint 3 (Hafta 5-6) — Pipecat & Known Issues
 
 | Paralel Track | İçerik | Durum |
 |---|---|---|
-| **A — Pipecat** | Python → Node.js bridge, WebRTC/WebSocket streaming, HeyGen/Tavus avatar entegrasyonu | ⏳ Bekliyor |
-| **B — Talk-Show MVP** | Sportoto entegrasyonlu "Top Yuvarlak AI" prototipi | ⏳ Bekliyor |
-| **C — Known Issues** | Audit Log, Toplu Yayın, Phase 1 Async differentiation | ⏳ Bekliyor |
+| **A — Pipecat** | Python → Node.js bridge, WebRTC/WebSocket streaming, HeyGen/Tavus avatar entegrasyonu, Multi-agent handoff / RabbitMQ fan-out | ⏳ Başlanacak |
+| **C — Known Issues** | Audit Log tablosu + middleware, Toplu Yayın butonu, Prettier/ESLint standartı | ⏳ Başlanacak |
 
-### Sprint 4 (Hafta 7-8) — Stabilizasyon & Kalite
+### Sprint 4 (Hafta 7-8) — CI/CD & React Migration
 
 | Paralel Track | İçerik | Durum |
 |---|---|---|
-| **A — E2E Test** | Tüm yeni özelliklerin entegrasyon testleri (+15-20 test) | ⏳ Bekliyor |
-| **B — CI/CD** | GitHub Actions, Pre-commit hooks | ⏳ Bekliyor |
-| **C — React Migration** | Frontend framework'e geçiş başlangıcı (Opsiyonel) | ⏳ Bekliyor |
+| **B — CI/CD** | GitHub Actions — otomatik typecheck + test, Pre-commit hooks (Prettier + ESLint) | ⏳ Başlanacak |
+| **C — React Migration** | Express template → React/Vite bileşen tabanlı mimariye geçiş başlangıcı | ⏳ Başlanacak |
 
-> **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose planı raftan kaldırılmıştır.
+### Sonraya Bırakılanlar
+
+| Madde | Gerekçe |
+|---|---|
+| **Top Yuvarlak AI Talk-Show (S3.B)** | Sportoto API entegrasyonu gerektiriyor, harici bağımlılık yüksek |
+| **E2E Test — yeni özellikler (S4.A)** | Tüm entegrasyonlar tamamlanınca yapılacak |
+| **Docker Compose** | Bu geliştirme makinesinde Docker çalışmıyor |
+
+> **Not:** S3.B ve S4.A sprint planından çıkarıldı, ilerleyen aşamalarda değerlendirilmek üzere ertelendi.

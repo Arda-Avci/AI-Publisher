@@ -251,21 +251,13 @@
 
 ---
 
-## 🚀 Sprint 3 (Hafta 5-6) — Talk-Show Altyapısı
+## 🚀 Sprint 3 (Hafta 5-6) — Pipecat & Known Issues
 
 ### Track A: Pipecat — Multi-Agent Voice/Video Pipeline
 - [ ] Python → Node.js bridge katmanı
 - [ ] WebRTC/WebSocket gerçek zamanlı ses/video akışı
 - [ ] HeyGen, Tavus video avatar entegrasyonu
 - [ ] Multi-agent handoff, parallel fan-out (RabbitMQ üstüne konuşturma katmanı)
-
-### Track B: "Top Yuvarlak AI" Talk-Show MVP
-- [ ] **Sunucu (Meta-Orchestrator):** Masanın lideri, trafiği yönetir
-- [ ] **Maç Yorumcusu (Gemini):** Rasyonel veriler, xG beklentileri ve taktik haritalar
-- [ ] **Eski Futbolcu (Claude):** Saha içi stres, derbi psikolojisi ve tribün baskısı
-- [ ] **Kumarbaz (DeepSeek):** Oran hareketleri ve Kelly Kriteri ile Value bahis anomalileri
-- [ ] **DataScout (Siber Keşif Subayı):** Uydu hava durumu, sakatlık matrisleri
-- [ ] Grup sohbetinden video üretimi (her karakter için ayrı ses/video → kronolojik montaj)
 
 ### Track C: Known Issues
 - [ ] Audit Log (`audit_log` tablosu + middleware)
@@ -274,14 +266,7 @@
 
 ---
 
-## 🚀 Sprint 4 (Hafta 7-8) — Stabilizasyon & Kalite
-
-### Track A: E2E Test
-- [ ] vibeclip Chat-to-Edit entegrasyon testleri
-- [ ] ViMax multi-agent pipeline testleri
-- [ ] Remotion + Kokoro TTS testleri
-- [ ] Pipecat + Talk-Show testleri
-- [ ] Tüm testlerin (22 + ~20 = 42+) yeşillenmesi
+## 🚀 Sprint 4 (Hafta 7-8) — CI/CD & React Migration
 
 ### Track B: CI/CD
 - [ ] GitHub Actions — otomatik typecheck + test
@@ -291,6 +276,24 @@
 ### Track C: React Migration (Opsiyonel)
 - [ ] Frontend framework'e geçiş başlangıcı
 - [ ] Bileşen tabanlı mimariye ilk adım
+
+---
+
+## ⏳ Sonraya Bırakılanlar
+
+### Top Yuvarlak AI Talk-Show MVP (Sprint 3.B)
+- [ ] **Sunucu (Meta-Orchestrator):** Masanın lideri, trafiği yönetir
+- [ ] **Maç Yorumcusu (Gemini):** Rasyonel veriler, xG beklentileri ve taktik haritalar
+- [ ] **Eski Futbolcu (Claude):** Saha içi stres, derbi psikolojisi ve tribün baskısı
+- [ ] **Kumarbaz (DeepSeek):** Oran hareketleri ve Kelly Kriteri ile Value bahis anomalileri
+- [ ] **DataScout (Siber Keşif Subayı):** Uydu hava durumu, sakatlık matrisleri
+- [ ] Grup sohbetinden video üretimi (her karakter için ayrı ses/video → kronolojik montaj)
+
+### E2E Test — Yeni Özellikler (Sprint 4.A)
+- [ ] vibeclip Chat-to-Edit entegrasyon testleri
+- [ ] ViMax multi-agent pipeline testleri
+- [ ] Remotion + Kokoro TTS testleri
+- [ ] Pipecat testleri
 
 ---
 > **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose ve container planları raftan kaldırılmıştır.
