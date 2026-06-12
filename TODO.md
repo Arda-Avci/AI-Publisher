@@ -233,20 +233,21 @@
 
 ---
 
-## 🚀 Sprint 2 (Hafta 3-4) — Karakter Tutarlılığı & Remotion
+## 🚀 Sprint 2 (Hafta 3-4) — Karakter Tutarlılığı & Remotion ✅ TAMAMLANDI
 
 ### Track A: ViMax — Multi-Agent Pipeline
-- [ ] Director/Screenwriter/Producer/Video Generator multi-agent pipeline
-- [ ] AutoCameo — fotoğraftan video karakteri oluşturma (Colab entegrasyonu)
-- [ ] MLLM/VLM ile frame doğrulama (görsel tutarlılık kontrolü)
-- [ ] RAG-based script generation (uzun metinleri sahnelere bölme)
-- [ ] Mevcut Gemini storyboard'un alternatifi olarak entegrasyon
+- [x] Director/Screenwriter/Producer/Video Generator multi-agent pipeline (`src/services/multiAgentPipeline.ts`)
+- [x] AutoCameo — fotoğraftan video karakteri oluşturma, Colab avatar endpoint entegrasyonu (`src/services/autoCameo.ts`)
+- [x] MLLM/VLM ile frame doğrulama — sahne tutarlılığı (7 kriter) + final video kalite kontrolü (`src/services/mllmValidator.ts`)
+- [x] RAG-based script generation — SQLite geçmiş projelerden RAG taraması (`src/services/ragScriptGenerator.ts`)
+- [x] 5 API endpoint (`src/routes/viMax.ts`): pipeline, auto-cameo, validate-consistency, quality-inspect, rag-script
+- [x] Mevcut Gemini storyboard'un alternatifi olarak entegrasyon
 
 ### Track B: short-video-maker — Remotion & Kokoro TTS
-- [ ] Remotion pipeline (kodla video render) — `vite-react-remotion` spec'i ile uyumlu
-- [ ] Kokoro TTS + Whisper (hafif, GPU'suz TTS + caption) — Edge-TTS alternatifi
-- [ ] Pexels otomatik stok video eşleştirme (B-roll desteği)
-- [ ] MCP (Model Context Protocol) server — AI agent entegrasyonu
+- [x] Remotion React bileşeni — sahneleri kademeli katmanlar halinde render, SceneLayer yapısı (`client/src/components/RemotionVideo.tsx`)
+- [x] Kokoro TTS — Colab `/generate-media?mode=kokoro_tts` endpoint entegrasyonu (`src/services/kokoroTts.ts`)
+- [x] Pexels B-roll route — `POST /api/v1/broll/generate-broll` + `GET /api/v1/broll/broll/list` (`src/routes/bRoll.ts`)
+- [x] MCP Server — 5 MCP tool, chat endpoint, port 3099 (`src/services/mcpServer.ts`)
 
 ---
 

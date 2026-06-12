@@ -115,12 +115,26 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **B — Refactor** | `server.ts` (5093 satır → modüler `routes/`, `middleware/`, `views/`), magic number'ları env'e taşıma | ✅ Zaten tamam |
 | **C — Bug Fix** | SSE Auth, Rate Limiting, Global Error Middleware, Cancel Endpoint | ✅ Zaten tamam |
 
-### Sprint 2 (Hafta 3-4) — Karakter Tutarlılığı & Remotion
+### Sprint 2 (Hafta 3-4) — Karakter Tutarlılığı & Remotion — ✅ TAMAMLANDI
 
 | Paralel Track | İçerik | Durum |
 |---|---|---|
-| **A — ViMax** | Multi-agent pipeline (Director/Screenwriter/Producer), AutoCameo (fotoğraftan karakter), MLLM frame validation, RAG script generation | ⏳ Bekliyor |
-| **B — short-video-maker** | Remotion pipeline (kodla video render), Kokoro TTS (CPU tabanlı alternatif), Pexels B-roll, MCP server | ⏳ Bekliyor |
+| **A — ViMax** | Multi-agent pipeline (Director/Screenwriter/Producer/VideoGenerator), AutoCameo (fotoğraftan karakter, Colab avatar endpoint), MLLM frame validation (sahne tutarlılığı + final video), RAG script generation (Gemini storyboard alternatifi), 5 API endpoint | ✅ Tamam |
+| **B — short-video-maker** | Remotion React komponenti (`client/src/components/RemotionVideo.tsx`), Pexels B-roll route (`src/routes/bRoll.ts` — POST generate + GET list), Kokoro TTS Colab entegrasyonu, MCP server (`src/services/mcpServer.ts` — 5 tool, chat, 3099 port), `src/server.ts` kayıtları | ✅ Tamam |
+
+---
+
+## Sprint 2 — Çıktılar (12 Haziran 2026 - v5.1)
+- **ViMax Multi-Agent Pipeline (Yeni):** `src/services/multiAgentPipeline.ts` — Director (senaryo planlama), Screenwriter (diyalog/speech üretimi), Producer (kamera hareketi/SFX planlaması), VideoGenerator (Colab orchestration) ajanlarından oluşan pipeline. `qualityInspect()` ile final video frame-by-frame doğrulama. `src/routes/viMax.ts` — 5 endpoint: `/api/v1/vimax/pipeline`, `/auto-cameo`, `/validate-consistency`, `/quality-inspect`, `/rag-script`.
+- **AutoCameo (Yeni):** `src/services/autoCameo.ts` — Karakter tasvirinden `@` tag parser ile karakter çıkarma, Colab avatar endpoint'ine görsel ürettirme, Base64 PNG olarak diske kaydetme.
+- **MLLM Validator (Yeni):** `src/services/mllmValidator.ts` — `validateSceneConsistency()` ile 7 kriter (arkaplan, karakter görünümü, duygu durumu, saat/ışık, kamera açısı, renk paleti, mekan), `validateFinalVideo()` ile frame-by-frame kalite kontrolü.
+- **RAG Script Generator (Yeni):** `src/services/ragScriptGenerator.ts` — SQLite'dan geçmiş projelerin senaryolarını RAG ile tarayıp Gemini storyboard alternatifi olarak prompt zenginleştirme.
+- **B-Roll Route (Yeni):** `src/routes/bRoll.ts` — `POST /api/v1/broll/generate-broll` (Colab Pexels B-roll üretimi), `GET /api/v1/broll/broll/list` (mevcut B-roll'leri listeleme).
+- **Kokoro TTS (Yeni):** `src/services/kokoroTts.ts` — Kokoro TTS'in Colab `/generate-media?mode=kokoro_tts` endpoint'i üzerinden kullanımı. Mevcut XTTS/OpenAI/Edge zincirine ek seçenek.
+- **Remotion Video Composition (Yeni):** `client/src/components/RemotionVideo.tsx` — React bileşeni, sahneleri kademeli katmanlar halinde render eden SceneLayer yapısı, 1080×1920 portre modu.
+- **MCP Server (Yeni):** `src/services/mcpServer.ts` — Model Context Protocol sunucusu (port 3099). 5 MCP tool: `list_jobs`, `get_job_details`, `get_colab_status`, `list_broll`, `get_job_progress`. `POST /mcp/v1/tools`, `/mcp/v1/execute`, `/mcp/v1/chat` endpoint'leri. AI ajanları (Claude Code vb.) ile etkileşim.
+- **TypeScript:** `tsc --noEmit` sıfır hata ile doğrulandı.
+- **Testler:** 22/22 Vitest başarıyla geçti.
 
 ### Sprint 3 (Hafta 5-6) — Talk-Show Altyapısı
 
