@@ -326,4 +326,12 @@
 - [x] `tsc --noEmit` sıfır hata, 42/42 vitest testi geçti
 
 ---
+
+## ✅ Sprint 7 — Mimari Karar Kayıtları (ADR)
+- [x] `docs/adr/ADR-001-TTS-Engine-Evaluation.md` (XTTS-v2 vs VoxCPM2 değerlendirmesi) — git'e eklendi
+- [x] `docs/adr/ADR-002-Frontend-Component-Architecture.md` (App.tsx modüler refactor gerekçesi)
+- [x] `docs/adr/ADR-003-FFmpeg-Worker-Pool.md` (worker_threads izolasyonu gerekçesi)
+- [x] Tüm ADR'ler standart format: Durum / Bağlam / Karar / Sonuçlar
+
+---
 > **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose ve container planları raftan kaldırılmıştır.

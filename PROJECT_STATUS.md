@@ -189,6 +189,14 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **B — Refactor Temizliği** | `runFFmpegWithFallback` basit döngüye indirgendi, `child_process.execFile` ve `url.fileURLToPath` import'ları kaldırıldı | ✅ Tamam |
 | **C — Doğrulama** | `tsc --noEmit` sıfır hata, 42/42 Vitest testi geçti | ✅ Tamam |
 
+### Sprint 7 (Hafta 13) — Mimari Karar Kayıtları (ADR)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Bileşen Mimarisi ADR** | `docs/adr/ADR-002-Frontend-Component-Architecture.md` — Sprint 5'teki 1208 satırlık App.tsx parçalanmasının gerekçesi | ✅ Tamam |
+| **B — Worker Pool ADR** | `docs/adr/ADR-003-FFmpeg-Worker-Pool.md` — Sprint 6'daki ffmpeg çağrılarının worker_threads'e taşınmasının gerekçesi | ✅ Tamam |
+| **C — ADR Takibi** | `docs/adr/ADR-001-TTS-Engine-Evaluation.md` dahil tüm ADR'ler git'e eklendi | ✅ Tamam |
+
 ### Sonraya Bırakılanlar
 
 | Madde | Gerekçe |
