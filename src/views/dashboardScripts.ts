@@ -1115,7 +1115,7 @@ export function getDashboardScripts(params: {
         btn.disabled = true;
         btn.innerHTML = '<span class="spin">⏳</span> AI Viralite Analizi Yapılıyor...';
         resultDiv.style.display = 'block';
-        resultDiv.innerHTML = '<div style="opacity:0.6;font-family:\'JetBrains Mono\',monospace;">Kapak ve ilk 3 saniyelik kanca inceleniyor...</div>';
+        resultDiv.innerHTML = '<div style="opacity:0.6;font-family:JetBrains Mono,monospace;">Kapak ve ilk 3 saniyelik kanca inceleniyor...</div>';
 
         try {
           const res = await fetch('/api/v1/jobs/' + jobId + '/viral-score', { method: 'POST' });
