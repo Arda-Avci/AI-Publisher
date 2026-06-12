@@ -315,4 +315,15 @@
 - [x] GitHub Actions CI workflow (Sprint 4.B'den gelen `.github/workflows/ci.yml`)
 
 ---
+
+## ✅ Sprint 6 — FFmpeg Coworker Pool (worker_threads)
+- [x] `src/services/videoService.ts` — `runInWorker<T>()` ve `runFFmpeg()` yardımcıları eklendi
+- [x] Otomatik ts-node/dev vs production `.ts` / `.js` yükleme ayrımı (eval tabanlı)
+- [x] `runFFmpegWithFallback` basit `runFFmpeg` döngüsüne sadeleştirildi
+- [x] `FFmpegCommand.timeoutMs` opsiyonel alanı eklendi
+- [x] `ensurePingSound`, `addCalloutPings`, `generateEndScreenImage`, `applyEndScreen`, `getVideoDuration`, `applyBrandKit` çağrıları `runFFmpeg`'e taşındı
+- [x] Kullanılmayan `child_process.execFile` ve `url.fileURLToPath` import'ları kaldırıldı
+- [x] `tsc --noEmit` sıfır hata, 42/42 vitest testi geçti
+
+---
 > **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose ve container planları raftan kaldırılmıştır.

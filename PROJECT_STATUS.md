@@ -181,6 +181,14 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **B — Tip Güvenliği** | Paylaşılan `client/src/types.ts`, `verbatimModuleSyntax` uyumlu `import type` | ✅ Tamam |
 | **C — Derleme Doğrulama** | `tsc --noEmit` sıfır hata, `vite build` başarılı, 42/42 Vitest testi geçti | ✅ Tamam |
 
+### Sprint 6 (Hafta 11-12) — FFmpeg Coworker Pool Tamamlanması
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Worker Refactor** | Tüm `execFile(ffmpeg\|ffprobe)` çağrıları `worker_threads` üzerinden yeni `runFFmpeg()` / `runInWorker()` yardımcılarına taşındı | ✅ Tamam |
+| **B — Refactor Temizliği** | `runFFmpegWithFallback` basit döngüye indirgendi, `child_process.execFile` ve `url.fileURLToPath` import'ları kaldırıldı | ✅ Tamam |
+| **C — Doğrulama** | `tsc --noEmit` sıfır hata, 42/42 Vitest testi geçti | ✅ Tamam |
+
 ### Sonraya Bırakılanlar
 
 | Madde | Gerekçe |
@@ -213,5 +221,16 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Type-Only Import Standardı:** `verbatimModuleSyntax: true` gereksinimi nedeniyle tüm tip import'ları `import type` ile güncellendi.
 - **Mevcut Bileşen Temizliği:** `LandingPage`, `PhotoEditor`, `Opportunities`, `RemotionVideo` içindeki kullanılmayan lucide-react import'ları kaldırıldı; `Timeline` `_index` parametre uyarısı giderildi.
 - **Sonuç:** `tsc --noEmit` sıfır hata, `vite build` 809 ms'de başarılı, tüm backend + frontend testleri 42/42 yeşil.
+
+---
+
+## ✅ Sprint 6 — Çıktılar (FFmpeg Coworker Pool)
+- **`runInWorker<T>()` Yardımcısı:** `src/services/videoService.ts` içine eklendi. `worker_threads` üzerinden komut çalıştırır; ts-node / dev ortamında `.ts` kaynak dosyasını eval ile yükler, production'da derlenmiş `.js` dosyasını kullanır.
+- **`runFFmpeg()` Sarmalayıcısı:** Tek komut için standartlaştırılmış Promise arayüzü (stdout/stderr döndürür, hata/timeout fırlatır). 30 sn varsayılan zaman aşımı korunur.
+- **`runFFmpegWithFallback` Basitleştirildi:** Önceden Worker oluşturma mantığını manuel yöneten 30+ satırlık kod, `runFFmpeg`'i döngüde çağıran 15 satırlık basit bir yapıya indirildi.
+- **`FFmpegCommand.timeoutMs` Alanı:** İsteğe bağlı zaman aşımı parametresi eklendi.
+- **Tüm `execFile(ffmpeg|ffprobe)` Çağrıları Taşındı:** `ensurePingSound`, `addCalloutPings`, `generateEndScreenImage`, `applyEndScreen`, `getVideoDuration`, `applyBrandKit` artık tümüyle worker üzerinden çalışıyor; ana event loop bloke olmuyor.
+- **Import Temizliği:** Kullanılmayan `child_process.execFile` ve `url.fileURLToPath` import'ları kaldırıldı.
+- **Sonuç:** 104 satır eklendi, 100 satır silindi (net +4); tüm davranış korundu. `tsc --noEmit` sıfır hata, 42/42 vitest yeşil.
 
 > **Not:** S3.B ve S4.A sprint planından çıkarıldı, ilerleyen aşamalarda değerlendirilmek üzere ertelendi.
