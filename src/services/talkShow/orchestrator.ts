@@ -20,13 +20,21 @@ import {
 
 const ROUNDS_DEFAULT = 3;
 
-const AGENT_META = {
-  meta_orchestrator: { name: 'Sunucu', model: 'zen' as const },
-  match_analyst:     { name: 'Maç Yorumcusu', model: 'zen' as const },
-  former_player:     { name: 'Eski Futbolcu', model: 'zen' as const },
-  bookmaker:         { name: 'Kumarbaz', model: 'zen' as const },
-  data_scout:        { name: 'İstihbarat Subayı', model: 'zen' as const },
+const AGENT_META: Record<AgentRole, { name: string; model: string }> = {
+  meta_orchestrator: { name: 'Sunucu', model: 'zen' },
+  match_analyst:     { name: 'Maç Yorumcusu', model: 'zen' },
+  former_player:     { name: 'Eski Futbolcu', model: 'zen' },
+  bookmaker:         { name: 'Kumarbaz', model: 'zen' },
+  data_scout:        { name: 'İstihbarat Subayı', model: 'zen' },
 };
+
+function getAgentName(role: AgentRole, characters?: OrchestratorInput['characters']): string {
+  if (characters) {
+    const match = characters.find(c => c.role === role);
+    if (match) return match.name;
+  }
+  return AGENT_META[role]?.name || role;
+}
 
 export interface OrchestratorDeps {
   fetchMatchFeed?: (m: MatchContext) => Promise<MatchFeed>;
@@ -227,15 +235,19 @@ async function runAgent(
   deps: Required<OrchestratorDeps>,
   bundle: MatchBundle
 ): Promise<AgentMessage> {
-  const baseFallback = fallbackMessage(role, ctx, bundle);
+  const speaker = ctx.characters
+    ? (ctx.characters.find(c => c.role === role)?.name ?? AGENT_META[role]?.name ?? role)
+    : (AGENT_META[role]?.name ?? role);
+  const baseFallback = { ...fallbackMessage(role, ctx, bundle), speaker };
   const prompt = [
+    ctx.characterBlock || '',
     `Konu: ${ctx.topic}`,
     `Maç: ${ctx.match.homeTeam} vs ${ctx.match.awayTeam} — ${ctx.match.venue}`,
     `Hava: ${bundle.weather.tempC}°C ${bundle.weather.condition}, rüzgar ${bundle.weather.windKph} km/s`,
     `Sakatlıklar: ${bundle.injuries.map((i) => `${i.team} ${i.player} (${i.status})`).join('; ')}`,
     `Oranlar: ${bundle.odds.map((o) => `${o.bookmaker} ${o.home}/${o.draw}/${o.away}`).join('; ')}`,
     `Önceki konuşmalar: ${ctx.priorMessages.map((m) => `${m.speaker}: ${m.content}`).join(' | ')}`,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 
   try {
     const text = await aiGenerate(systemPromptFor(role), prompt, deps);
@@ -257,11 +269,26 @@ export async function orchestrateTalkShow(
   const t0 = Date.now();
   const rounds = input.rounds ?? ROUNDS_DEFAULT;
 
+  // Build character consistency block (Comic-Studio-Ai pattern)
+  const charBlock = (input.characters?.length ?? 0) > 0
+    ? [
+        '',
+        'KARAKTER TANIMLARI (tüm sahnelerde aynı kalmalı):',
+        ...(input.characters ?? []).map(c =>
+          `- ${c.name} (${c.role}): ${c.description}`
+        ),
+        'TUTARLILIK GEREKSİNİMİ: Her ajan kendi karakterini aynı kişilik, aynı ses tonu ve aynı fiziksel özelliklerle canlandırmalıdır.',
+        '',
+      ].join('\n')
+    : '';
+
   const bundle = await buildBundle(input, deps);
   const transcript: AgentMessage[] = [];
   const baseCtx: Omit<AgentPromptContext, 'priorMessages'> = {
     topic: input.topic,
     match: input.match,
+    characters: input.characters,
+    characterBlock: charBlock,
   };
 
   // Round 0: meta-orchestrator sets the stage

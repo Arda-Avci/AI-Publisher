@@ -1,6 +1,27 @@
+import { useState, useEffect } from 'react';
 import type React from 'react';
-import { RefreshCw, Trash2, Share2, Loader } from 'lucide-react';
-import type { Job } from '../types.js';
+import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap,  Beaker, ChevronDown, ChevronUp } from 'lucide-react';
+import type { Job, UserCredits } from '../types.js';
+
+/* ─── Colab status types ─── */
+
+interface ColabStatusData {
+  gpu?: string;
+  gpuModel?: string;
+  vram_used?: number;
+  vram_total?: number;
+  status?: string;
+  isRunning?: boolean;
+}
+
+interface ModelTestEntry {
+  model: string;
+  status: string;
+  vram?: number;
+  error?: string;
+}
+
+/* ─── Props ─── */
 
 interface GalleryPanelProps {
   jobs: Job[];
@@ -11,6 +32,7 @@ interface GalleryPanelProps {
   isMetaSaving: boolean;
   progressMsg: string;
   progressPercent: number;
+  userCredits?: UserCredits | null;
   onSelectJob: (job: Job) => void;
   onRefreshJobs: () => void;
   onCancelJob: (id: number) => void;
@@ -24,7 +46,7 @@ interface GalleryPanelProps {
 
 export function GalleryPanel({
   jobs, selectedJob, metaYtTitle, metaYtDesc, metaYtTags, isMetaSaving,
-  progressMsg, progressPercent,
+  progressMsg, progressPercent, userCredits,
   onSelectJob, onRefreshJobs, onCancelJob, onDeleteJob,
   onSetMetaYtTitle, onSetMetaYtDesc, onSetMetaYtTags,
   onSaveMetaAndPublish, t,
@@ -34,6 +56,12 @@ export function GalleryPanel({
       width: '340px', flexShrink: 0, background: 'var(--card)',
       padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px',
     }}>
+      <ColabStatusPanel />
+
+      {userCredits && (
+        <CreditsBadge credits={userCredits.credits} limit={userCredits.limit} resetDate={userCredits.resetDate} />
+      )}
+
       {selectedJob?.status === 'processing' && (
         <ProgressTracker
           progressMsg={progressMsg}
@@ -209,6 +237,171 @@ function MetaField({ label, children }: { label: string; children: React.ReactNo
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <label style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{label}</label>
       {children}
+    </div>
+  );
+}
+
+/* ─── Colab Status Panel ─── */
+
+function ColabStatusPanel() {
+  const [data, setData] = useState<ColabStatusData | null>(null);
+  const [testResults, setTestResults] = useState<ModelTestEntry[] | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch('/api/v1/colab/status');
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch { /* server may be offline */ }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleTestModels = async () => {
+    setTestLoading(true);
+    setTestOpen(true);
+    try {
+      const res = await fetch('/api/v1/colab/test-models');
+      const json = await res.json();
+      setTestResults(Array.isArray(json) ? json : json.results ?? []);
+    } catch {
+      setTestResults([{ model: 'Bağlantı Hatası', status: 'error', error: 'Sunucuya ulaşılamadı' }]);
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const gpuModel = data?.gpu ?? data?.gpuModel ?? 'Bağlı Değil';
+  const isRunning = data?.isRunning ?? data?.status === 'running';
+  const vramUsed = data?.vram_used ?? 0;
+  const vramTotal = data?.vram_total ?? 0;
+  const isL4 = gpuModel.toLowerCase().includes('l4');
+
+  return (
+    <div className="glass" style={{
+      padding: '14px', borderRadius: '10px', border: '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column', gap: '10px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Cpu size={14} style={{ color: 'var(--primary)' }} />
+        <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', flex: 1 }}>Colab GPU</span>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: isRunning ? '#22c55e' : '#ef4444',
+          display: 'inline-block',
+          boxShadow: isRunning ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
+        }} />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
+        <Row label="GPU" value={
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {gpuModel}
+            {isL4 && <Zap size={10} style={{ color: '#eab308' }} aria-label="L4"/>}
+          </span>
+        } />
+        <Row label="VRAM" value={
+          vramTotal > 0 ? `${vramUsed.toFixed(1)} / ${vramTotal.toFixed(1)} GB` : '—'
+        } />
+        <Row label="Durum" value={
+          <span style={{ color: isRunning ? '#22c55e' : '#ef4444' }}>
+            {isRunning ? 'Çalışıyor' : 'Durduruldu'}
+          </span>
+        } />
+      </div>
+
+      <button
+        onClick={handleTestModels}
+        className="btn btn-primary"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', padding: '6px 10px' }}
+      >
+        <Beaker size={12} />
+        Modelleri Test Et
+      </button>
+
+      {testOpen && testResults && (
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+          <div
+            onClick={() => setTestOpen(!testOpen)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}
+          >
+            Test Sonuçları
+            {testOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+            {testResults.map((r, i) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '6px 8px', borderRadius: '6px', background: 'rgba(0,0,0,0.25)', fontSize: '10px',
+              }}>
+                <span style={{ fontWeight: 600 }}>{r.model}</span>
+                <span style={{
+                  color: r.status === 'loaded' || r.status === 'ok' ? '#22c55e' :
+                         r.status === 'error' ? '#ef4444' : 'var(--text-muted)',
+                }}>
+                  {r.status === 'loaded' || r.status === 'ok' ? '✓' : r.status === 'error' ? '✗' : r.status}
+                  {r.vram != null ? `  ${r.vram.toFixed(1)} GB` : ''}
+                  {r.error ? `  ${r.error}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {testLoading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+          <Loader size={12} className="pulse" />
+          Test ediliyor...
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Credits Badge ─── */
+
+function CreditsBadge({ credits, limit, resetDate }: { credits: number; limit: number; resetDate?: string }) {
+  const ratio = limit > 0 ? credits / limit : 1;
+  const barColor = ratio > 0.8 ? 'var(--danger)' : ratio > 0.5 ? 'var(--warning)' : 'var(--success)';
+  return (
+    <div className="glass" style={{
+      padding: '10px 14px', borderRadius: '10px', border: `1px solid ${barColor}33`,
+      display: 'flex', flexDirection: 'column', gap: '6px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Krediniz</span>
+        <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'white' }}>
+          {credits} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>/ {limit}</span>
+        </span>
+      </div>
+      <div style={{ height: '4px', background: '#070a14', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(ratio * 100, 100)}%`, height: '100%', background: barColor, transition: 'width 0.3s ease' }} />
+      </div>
+      {resetDate && (
+        <div style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'right' }}>
+          Sıfırlanma: {new Date(resetDate).toLocaleDateString('tr-TR')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Inline helper ─── */
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span style={{ fontWeight: 600, color: 'white' }}>{value}</span>
     </div>
   );
 }

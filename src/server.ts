@@ -38,6 +38,7 @@ import { paymentsRouter } from './routes/payments.js';
 import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
 import { talkShowRouter } from './routes/talkShow.js';
+import colabStatusRouter from './routes/colabStatus.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -132,6 +133,7 @@ app.use('/api/v1/talkshow', talkShowRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);
+app.use('/api/v1/colab', colabStatusRouter);
 
 // Global error handler (last)
 app.use(errorHandler);

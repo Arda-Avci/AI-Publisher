@@ -133,13 +133,44 @@ def flush_memory():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
+def _check_model_whitelist(video_model: str, whitelist_param: list = None):
+    """
+    Model whitelist kontrolü.
+    Öncelik sırası:
+    1. whitelist_param (fonksiyon parametresi)
+    2. COLAB_MODEL_WHITELIST ortam değişkeni (virgülle ayrılmış model adları)
+    Whitelist boşsa veya hiçbiri tanımlanmamışsa kontrol atlanır.
+    Eşleşme case-insensitive ve kısmi (substring) bazlıdır.
+    """
+    whitelist = whitelist_param
+    if whitelist is None:
+        env_val = os.environ.get("COLAB_MODEL_WHITELIST", "")
+        if env_val:
+            whitelist = [m.strip().lower() for m in env_val.split(",")]
+    if not whitelist:
+        return
+    vm_lower = video_model.lower()
+    allowed = any(w in vm_lower or vm_lower in w for w in whitelist)
+    if not allowed:
+        raise ValueError(
+            f"Model '{video_model}' whitelist'te bulunamadı. "
+            f"İzin verilenler: {whitelist}. "
+            f"COLAB_MODEL_WHITELIST env değişkenini ayarlayın veya "
+            f"model_whitelist JSON parametresini iletin."
+        )
+
 # ── 1. VİDEO ÜRETİMİ (Lazy Loading - Wan 2.1, LTX 2, Hunyuan, CogVideo) ─────────
-def generate_video_image_lazy(prompt: str, image_path: str, task_id: str = None, video_model: str = "CogVideoX-5b-I2V") -> list:
+def generate_video_image_lazy(prompt: str, image_path: str, task_id: str = None, video_model: str = "CogVideoX-5b-I2V", model_whitelist: list = None) -> list:
     """
     Seçilen model ile görselden video üretir.
+    model_whitelist: İzin verilen model adları listesi (case-insensitive kısmi eşleşme).
+                     Yoksa COLAB_MODEL_WHITELIST ortam değişkeninden okunur (virgülle ayrılmış).
     """
+    # Model whitelist kontrolü
+    _check_model_whitelist(video_model, model_whitelist)
+
     from diffusers.utils import load_image
-    
+
     flush_memory()
     print(f"🎬 Görselden Video motoru ({video_model}) belleğe yükleniyor...")
     
@@ -239,10 +270,15 @@ def generate_video_image_lazy(prompt: str, image_path: str, task_id: str = None,
         
     return frames
 
-def generate_video_text_lazy(prompt: str, task_id: str = None, video_model: str = "CogVideoX-5b") -> list:
+def generate_video_text_lazy(prompt: str, task_id: str = None, video_model: str = "CogVideoX-5b", model_whitelist: list = None) -> list:
     """
     Seçilen model ile metinden video üretir.
+    model_whitelist: İzin verilen model adları listesi (case-insensitive kısmi eşleşme).
+                     Yoksa COLAB_MODEL_WHITELIST ortam değişkeninden okunur (virgülle ayrılmış).
     """
+    # Model whitelist kontrolü
+    _check_model_whitelist(video_model, model_whitelist)
+
     flush_memory()
     print(f"🎬 Metinden Video motoru ({video_model}) belleğe yükleniyor...")
     
@@ -776,6 +812,7 @@ def _generate_media_worker(task_id: str, data: dict):
     source_video_id     = data.get("source_video_id", "")
     reference_image_base64 = data.get("reference_image_base64", "")
     video_model         = data.get("video_model", "CogVideoX-5b")
+    model_whitelist     = data.get("model_whitelist")
 
     final_prompt = f"{character_features}, {video_prompt}" if character_features else video_prompt
 
@@ -820,10 +857,10 @@ def _generate_media_worker(task_id: str, data: dict):
                 i2v_model = "HunyuanVideo-I2V"
                 
             print(f"Using I2V model ({i2v_model}) with init_image: {image_path}")
-            frames = generate_video_image_lazy(final_prompt, image_path, task_id, i2v_model)
+            frames = generate_video_image_lazy(final_prompt, image_path, task_id, i2v_model, model_whitelist)
         else:
             print(f"Using T2V model ({video_model})...")
-            frames = generate_video_text_lazy(final_prompt, task_id, video_model)
+            frames = generate_video_text_lazy(final_prompt, task_id, video_model, model_whitelist)
     except Exception as exc:
         TASKS[task_id] = {"status": "error", "message": str(exc)}
         return
@@ -1289,6 +1326,77 @@ def verify_libs():
         "success": success,
         "report": report
     }), 200 if success else 500
+
+# ── TEST-MODELS ENDPOINT ─────────────────────────────────────────────────────
+@app.route("/test-models", methods=["POST"])
+def test_models():
+    """
+    Her video modelinin pipeline sınıfını import edilebilirlik açısından test eder.
+    Ağırlıkları yüklemez, sadece sınıfın var olup olmadığını kontrol eder.
+    """
+    from importlib import import_module
+
+    test_cases = [
+        ("CogVideoX-5b", "diffusers", "CogVideoXPipeline"),
+        ("CogVideoX-2b", "diffusers", "CogVideoXPipeline"),
+        ("Wan2.1", "diffusers", "WanAnimatePipeline"),
+        ("HunyuanVideo", "diffusers", "HunyuanVideoPipeline"),
+        ("LTX-Video", "diffusers", "LTXPipeline"),
+    ]
+
+    models_result = {}
+    all_ok = True
+    for model_name, module_name, class_name in test_cases:
+        try:
+            mod = import_module(module_name)
+            getattr(mod, class_name)
+            models_result[model_name] = {"loaded": True}
+        except (ImportError, AttributeError) as e:
+            models_result[model_name] = {"loaded": False, "error": str(e)}
+            all_ok = False
+
+    gpu_info = {}
+    if torch.cuda.is_available():
+        try:
+            device = torch.cuda.current_device()
+            props = torch.cuda.get_device_properties(device)
+            gpu_info = {
+                "gpu_name": props.name,
+                "total_vram_gb": round(props.total_memory / 1e9, 2),
+                "cuda_version": torch.version.cuda or "unknown",
+            }
+        except Exception as e:
+            gpu_info = {"error": str(e)}
+
+    # Belleği temizle
+    flush_memory()
+
+    return jsonify({
+        "success": all_ok,
+        "models": models_result,
+        "gpu": gpu_info,
+    })
+
+
+# ── GPU-INFO ENDPOINT ────────────────────────────────────────────────────────
+@app.route("/gpu-info", methods=["GET"])
+def gpu_info_route():
+    """GPU adı, VRAM, CUDA sürümü ve L4 kontrolü döndürür."""
+    if not torch.cuda.is_available():
+        return jsonify({"error": "CUDA kullanılamıyor"}), 503
+
+    device = torch.cuda.current_device()
+    props = torch.cuda.get_device_properties(device)
+    name = props.name
+    vram_gb = round(props.total_memory / 1e9, 2)
+
+    return jsonify({
+        "gpu_name": name,
+        "vram_gb": vram_gb,
+        "cuda_version": torch.version.cuda or "unknown",
+        "is_l4": "L4" in name,
+    })
+
 
 # ── 6. KAPAK RESMİ ÜRETİMİ (DreamShaper 8 - SD 1.5) ───────────────────────────
 COVER_PATHS = ["/content/cover_0.jpg", "/content/cover_1.jpg", "/content/cover_2.jpg"]

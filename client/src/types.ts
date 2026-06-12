@@ -60,6 +60,50 @@ export interface UserCredits {
   resetDate: string;
 }
 
+export interface TalkShowMessage {
+  role: string;
+  speaker: string;
+  content: string;
+  confidence: number;
+  sentiment: string;
+  evidence?: string[];
+  timestamp: number;
+}
+
+export interface TalkShowConsensus {
+  pick: 'home' | 'draw' | 'away' | 'no_consensus';
+  confidence: number;
+  rationale: string;
+}
+
+export interface TalkShowResult {
+  topic: string;
+  match: {
+    homeTeam: string;
+    awayTeam: string;
+    kickoff: string;
+    venue: string;
+    competition: string;
+  };
+  transcript: TalkShowMessage[];
+  summary: string;
+  consensus: TalkShowConsensus;
+  generatedAt: number;
+  durationMs: number;
+}
+
+export interface Character {
+  id: number;
+  name: string;
+  description: string;
+  role_archetype: 'protagonist' | 'mentor' | 'comic_relief' | 'antagonist' | 'supporting' | 'narrator';
+  voice_provider: 'edge' | 'openai' | 'xtts';
+  voice_id: string;
+  reference_image?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';

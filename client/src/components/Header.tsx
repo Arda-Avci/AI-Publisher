@@ -82,7 +82,7 @@ export function Header({
           }}
         >
           <MessageSquare size={14} style={{ color: 'var(--secondary)' }} />
-          Grup Sohbeti
+          AI Talk-Show
         </button>
 
         <select

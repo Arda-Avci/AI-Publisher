@@ -134,6 +134,21 @@ export async function initDatabase() {
       credit_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     
+    CREATE TABLE IF NOT EXISTS credit_costs (
+      model_type TEXT PRIMARY KEY,
+      scene_cost INTEGER NOT NULL DEFAULT 10,
+      cover_cost INTEGER NOT NULL DEFAULT 5,
+      description TEXT
+    );
+    
+    INSERT INTO credit_costs (model_type, scene_cost, cover_cost, description) VALUES
+      ('CogVideoX-5b', 15, 8, 'Yüksek kalite video + kapak'),
+      ('CogVideoX-2b', 10, 5, 'Orta kalite video + kapak'),
+      ('Wan2.1', 20, 10, 'Dinamik aksiyon video + kapak'),
+      ('HunyuanVideo', 25, 12, 'Sinematik video + kapak'),
+      ('LTX-Video', 5, 3, 'Hızlı düşük kalite video + kapak')
+    ON CONFLICT (model_type) DO NOTHING;
+    
     CREATE TABLE IF NOT EXISTS video_jobs (
       id SERIAL PRIMARY KEY,
       user_id INTEGER,
@@ -286,4 +301,26 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS music_volume REAL DEFAULT 0.2;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS speaker VARCHAR(50);');
+
+  // Characters table for Talk-Show & story consistency
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS characters (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      description TEXT DEFAULT '',
+      slug VARCHAR(100) NOT NULL,
+      role_archetype VARCHAR(50) DEFAULT 'supporting',
+      reference_image_base64 TEXT,
+      tts_voice_id VARCHAR(100) DEFAULT '',
+      voice_provider VARCHAR(20) DEFAULT 'edge',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Credit system migrations: admin flag + model-based pricing
+  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;');
+  // Set existing admin user
+  await db.run("UPDATE users SET is_admin = 1 WHERE username = ?", [encryptUsername('admin')]);
 }

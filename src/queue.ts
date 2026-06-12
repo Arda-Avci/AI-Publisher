@@ -13,7 +13,7 @@ import {
 } from './services/videoService.js';
 import { VideoJob } from './types/job.js';
 import { generateStudioScenes } from './services/aiService.js';
-import { CreditService } from './services/creditService.js';
+import { CreditService, getModelCost } from './services/creditService.js';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -64,7 +64,6 @@ export async function checkQueue() {
 
 async function startProduction(job: VideoJob) {
   let requiredCredits = 0;
-  let hasDeducted = false;
 
   // İş başında Zen modellerinin sağlığını bir kere test edip, hata alanları geçici olarak skip edelim.
   // Not: Ana kuyruk işleme akışını tıkamamak için asenkron (non-blocking) olarak arka planda çalıştırıyoruz.
@@ -232,26 +231,22 @@ async function startProduction(job: VideoJob) {
       };
     }
 
-    // ── Kredi Düşme İşlemi ──
-    requiredCredits = totalScenes * 10 + 5;
+    // ── Kredi Kontrolü (sadece bakiye kontrolü, henüz düşme) ──
+    const modelType = job.model_type || 'CogVideoX-5b';
+    const modelCost = getModelCost(modelType);
+    requiredCredits = totalScenes * modelCost.sceneCost + modelCost.coverCost;
     if (job.differentiation_layout === 1) {
       requiredCredits += 15;
     }
 
-    const hasEnoughCredits = await CreditService.checkAndDeductCredits(
-      job.user_id,
-      requiredCredits,
-      'usage',
-      `Video Projesi #${job.id} üretimi (Sahneler: ${totalScenes})`
-    );
-
-    if (!hasEnoughCredits) {
+    const balanceCheck = await CreditService.checkSufficientCredits(job.user_id, requiredCredits);
+    if (!balanceCheck.ok) {
       const errorMsg = 'Yetersiz Kredi! Projeyi başlatmak için krediniz yetersiz.';
       await db.run("UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?", [errorMsg, job.id]);
       broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
       throw new Error('INSUFFICIENT_CREDITS');
     }
-    hasDeducted = true;
+    // Kredi daha sonra (üretim başarıyla tamamlanınca) düşülecek
 
     broadcast(job.id, {
       stageKey: 'stageScenesPreparing',
@@ -1047,14 +1042,18 @@ async function startProduction(job: VideoJob) {
     broadcast(job.id, { stageKey: 'stageCompleted', percent: 100, finalFilename: fName });
     Logger.info(`İş başarıyla tamamlandı: ID=${job.id}`);
 
-  } catch (error) {
-    if (hasDeducted && requiredCredits > 0) {
-      await CreditService.refundCredits(
+    // Kredi düşme — sadece üretim başarıyla tamamlanınca (kullanıcının istediği davranış)
+    if (requiredCredits > 0) {
+      await CreditService.deductAfterProduction(
         job.user_id,
         requiredCredits,
-        `Proje #${job.id} başarısız/iptal olduğu için iade edilen kredi`
+        `Video Projesi #${job.id} üretimi (Sahneler: ${totalScenes}, Model: ${job.model_type || 'CogVideoX-5b'})`
       );
     }
+
+  } catch (error) {
+    // Artık önceden düşülmüş kredi olmadığı için refund mantığı kalktı.
+    // (Kredi kontrolü sadece bakiye sorgusuydu, gerçek düşme başarılı üretim sonrası.)
 
     if (error && (error as any).message === 'JOB_CANCELLED') {
       Logger.info(`Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);

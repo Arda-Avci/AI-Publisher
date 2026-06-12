@@ -1,55 +1,65 @@
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
 
+/** Model bazlı kredi maliyetleri: scene_cost (sahne başı) + cover_cost */
+const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
+  'CogVideoX-5b':     { sceneCost: 15, coverCost: 8 },
+  'CogVideoX-2b':     { sceneCost: 10, coverCost: 5 },
+  'Wan2.1':           { sceneCost: 20, coverCost: 10 },
+  'HunyuanVideo':     { sceneCost: 25, coverCost: 12 },
+  'LTX-Video':        { sceneCost: 5,  coverCost: 3 },
+};
+
+const DEFAULT_COST = { sceneCost: 10, coverCost: 5 };
+
+export function getModelCost(modelType?: string | null): { sceneCost: number; coverCost: number } {
+  if (!modelType) return DEFAULT_COST;
+  const key = Object.keys(MODEL_COSTS).find(k => modelType.toLowerCase().includes(k.toLowerCase()));
+  return key ? MODEL_COSTS[key] : DEFAULT_COST;
+}
+
 export class CreditService {
-  /**
-   * Kullanıcının güncel kredi durumunu alır.
-   * Eğer aylık sıfırlama tarihi geçmişse, kredi miktarını sıfırlar/yeniler.
-   */
+  static async isAdmin(userId: number): Promise<boolean> {
+    const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [userId]);
+    return user?.is_admin === 1 || user?.is_admin === true;
+  }
+
   static async getUserCredits(userId: number): Promise<{ credits: number; limit: number; resetDate: string }> {
+    if (await this.isAdmin(userId)) {
+      return { credits: 999999, limit: 999999, resetDate: new Date(Date.now() + 365 * 86400000).toISOString() };
+    }
     try {
       const user = await db.get(
         'SELECT credits, monthly_credit_limit, credit_reset_date FROM users WHERE id = ?',
         [userId]
       );
 
-      if (!user) {
-        throw new Error('User not found');
-      }
+      if (!user) throw new Error('User not found');
 
       const now = new Date();
       const resetDate = new Date(user.credit_reset_date || now);
 
       if (now >= resetDate) {
-        // Kredi limitini yenileme zamanı gelmiş
         const newResetDate = new Date();
         newResetDate.setMonth(newResetDate.getMonth() + 1);
-
         const newCredits = user.monthly_credit_limit || 100;
 
         await db.run(
           'UPDATE users SET credits = ?, credit_reset_date = ? WHERE id = ?',
           [newCredits, newResetDate.toISOString(), userId]
         );
-
-        // Kredi yenileme işlemini loga ve transaction tablosuna ekle
         await db.run(
           `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
-           VALUES (?, ?, 'grant', 'Aylık otomatik kredi yenilemesi')`,
+           VALUES (?, ?, 'grant', 'Aylik otomatik kredi yenilemesi')`,
           [userId, newCredits]
         );
+        Logger.info(`[CREDIT] Kullanici kredileri aylik limitine yenilendi: userId=${userId}, credits=${newCredits}`);
 
-        Logger.info(`[CREDIT] Kullanıcı kredileri aylık limitine yenilendi: userId=${userId}, credits=${newCredits}`);
-
-        return {
-          credits: newCredits,
-          limit: user.monthly_credit_limit || 100,
-          resetDate: newResetDate.toISOString(),
-        };
+        return { credits: newCredits, limit: user.monthly_credit_limit || 100, resetDate: newResetDate.toISOString() };
       }
 
       return {
-        credits: user.credits !== undefined ? user.credits : 100,
+        credits: user.credits ?? 100,
         limit: user.monthly_credit_limit || 100,
         resetDate: resetDate.toISOString(),
       };
@@ -59,66 +69,50 @@ export class CreditService {
     }
   }
 
-  /**
-   * Kredi kontrolü yapar ve yeterliyse düşer.
-   */
-  static async checkAndDeductCredits(
-    userId: number,
-    requiredCredits: number,
-    type: string,
-    description: string
-  ): Promise<boolean> {
+  /** Balance check only — does NOT deduct. Returns { ok, requiredCredits }. */
+  static async checkSufficientCredits(userId: number, requiredCredits: number): Promise<{ ok: boolean; balance: number }> {
+    if (await this.isAdmin(userId)) return { ok: true, balance: 999999 };
+    const { credits } = await this.getUserCredits(userId);
+    return { ok: credits >= requiredCredits, balance: credits };
+  }
+
+  /** Deduct credits AFTER successful production. */
+  static async deductAfterProduction(userId: number, amount: number, description: string): Promise<boolean> {
+    if (await this.isAdmin(userId)) return true;
     try {
       const { credits } = await this.getUserCredits(userId);
-
-      if (credits < requiredCredits) {
-        Logger.warn(`[CREDIT] Yetersiz kredi: userId=${userId}, mevcut=${credits}, gereken=${requiredCredits}`);
-        return false;
-      }
-
-      const newCredits = credits - requiredCredits;
+      const newCredits = credits - amount;
       await db.run('UPDATE users SET credits = ? WHERE id = ?', [newCredits, userId]);
-
-      // İşlemi transaction tablosuna kaydet
       await db.run(
         `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
-         VALUES (?, ?, ?, ?)`,
-        [userId, -requiredCredits, type, description]
+         VALUES (?, ?, 'usage', ?)`,
+        [userId, -amount, description]
       );
-
-      Logger.info(`[CREDIT] Kredi başarıyla düşüldü: userId=${userId}, harcanan=${requiredCredits}, kalan=${newCredits}`);
+      Logger.info(`[CREDIT] Kredi basariyla dusuldu: userId=${userId}, harcanan=${amount}, kalan=${newCredits}`);
       return true;
     } catch (err) {
-      Logger.error('checkAndDeductCredits error:', err);
+      Logger.error('deductAfterProduction error:', err);
       return false;
     }
   }
 
-  /**
-   * Kredi iadesi yapar.
-   */
   static async refundCredits(userId: number, amount: number, description: string): Promise<void> {
+    if (await this.isAdmin(userId)) return;
     try {
       const { credits } = await this.getUserCredits(userId);
       const newCredits = credits + amount;
-
       await db.run('UPDATE users SET credits = ? WHERE id = ?', [newCredits, userId]);
-
       await db.run(
         `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
          VALUES (?, ?, 'refund', ?)`,
         [userId, amount, description]
       );
-
-      Logger.info(`[CREDIT] Kredi başarıyla iade edildi: userId=${userId}, iade=${amount}, yeni_bakiye=${newCredits}`);
+      Logger.info(`[CREDIT] Kredi basariyla iade edildi: userId=${userId}, iade=${amount}, yeni_bakiye=${newCredits}`);
     } catch (err) {
       Logger.error('refundCredits error:', err);
     }
   }
 
-  /**
-   * Son 5 kredi işlemini getirir.
-   */
   static async getTransactionHistory(userId: number): Promise<any[]> {
     try {
       return await db.all(

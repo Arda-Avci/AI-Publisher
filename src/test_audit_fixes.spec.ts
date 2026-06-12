@@ -29,7 +29,7 @@ describe('Sprint 10 — Production Audit Fixes', () => {
         `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES ($1, $2, 'pending')`,
         [user.id, 'Retry test']
       );
-      const jobId = result.lastID || result.id;
+      const jobId = result.lastID as number;
       const job = await db.get('SELECT retry_count FROM video_jobs WHERE id = $1', [jobId]);
       expect(Number(job.retry_count)).toBe(0);
       await db.run('DELETE FROM video_jobs WHERE id = $1', [jobId]);
@@ -47,7 +47,7 @@ describe('Sprint 10 — Production Audit Fixes', () => {
         `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES ($1, $2, 'pending')`,
         [user.id, 'Retry update test']
       );
-      const jobId = result.lastID || result.id;
+      const jobId = result.lastID as number;
       await db.run(
         "UPDATE video_jobs SET status = 'pending', retry_count = 2 WHERE id = $1",
         [jobId]

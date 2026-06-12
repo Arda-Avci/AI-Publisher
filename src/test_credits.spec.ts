@@ -52,10 +52,15 @@ describe('SaaS Kredi Sistemi Birim Testleri', () => {
     // Krediyi 100 yapalım
     await db.run('UPDATE users SET credits = 100 WHERE id = ?', [testUserId]);
 
-    const success = await CreditService.checkAndDeductCredits(
+    // Önce bakiye kontrolü
+    const balanceCheck = await CreditService.checkSufficientCredits(testUserId, 30);
+    expect(balanceCheck.ok).toBe(true);
+    expect(balanceCheck.balance).toBe(100);
+
+    // Sonra gerçek düşme
+    const success = await CreditService.deductAfterProduction(
       testUserId,
       30,
-      'usage',
       'Test kredi harcaması'
     );
 
@@ -74,14 +79,9 @@ describe('SaaS Kredi Sistemi Birim Testleri', () => {
     // Krediyi 10 yapalım
     await db.run('UPDATE users SET credits = 10 WHERE id = ?', [testUserId]);
 
-    const success = await CreditService.checkAndDeductCredits(
-      testUserId,
-      50,
-      'usage',
-      'Geçersiz harcama'
-    );
-
-    expect(success).toBe(false);
+    const balanceCheck = await CreditService.checkSufficientCredits(testUserId, 50);
+    expect(balanceCheck.ok).toBe(false);
+    expect(balanceCheck.balance).toBe(10);
 
     const info = await CreditService.getUserCredits(testUserId);
     expect(info.credits).toBe(10); // Kredi düşmemiş olmalı

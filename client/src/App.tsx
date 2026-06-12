@@ -5,6 +5,7 @@ import { StudioPanel } from './components/StudioPanel.js';
 import { GalleryPanel } from './components/GalleryPanel.js';
 import { PhotoEditor } from './components/PhotoEditor.js';
 import { LandingPage } from './components/LandingPage.js';
+import { CharacterSelectorModal, extractCharacterNames } from './components/CharacterSelectorModal.js';
 import type { Scene } from './components/Timeline.js';
 import type { OpportunityVideo } from './components/Opportunities.js';
 import type {
@@ -57,6 +58,12 @@ export default function App() {
 
   // Photo editor modal
   const [editingImageScene, setEditingImageScene] = useState<Scene | null>(null);
+
+  // Character selector for video production
+  const [charModalOpen, setCharModalOpen] = useState(false);
+  const [charDetectedNames, setCharDetectedNames] = useState<string[]>([]);
+  const [charPendingFormData, setCharPendingFormData] = useState<FormData | null>(null);
+  const [existingCharacters, setExistingCharacters] = useState<any[]>([]);
 
   // SSE progress
   const [progressMsg, setProgressMsg] = useState<string>('');
@@ -339,6 +346,48 @@ export default function App() {
     e.preventDefault();
     if (!masterPrompt.trim()) return;
 
+    // Detect @character references
+    const combinedText = `${masterPrompt} ${characterFeatures}`;
+    const names = extractCharacterNames(combinedText);
+
+    if (names.length > 0) {
+      // Fetch existing characters and show modal
+      try {
+        const res = await fetch('/api/v1/characters');
+        const json = await res.json();
+        const chars = json.data || json || [];
+        setExistingCharacters(chars);
+
+        // Check if @me exists as a character; if not, offer to auto-create
+        if (names.includes('me') && !chars.some((c: any) => c.slug === 'me')) {
+          // @me will be handled in the modal
+        }
+      } catch { /* ignore */ }
+
+      // Build formData but don't submit yet — store for later
+      const fd = new FormData();
+      fd.append('master_prompt', masterPrompt);
+      fd.append('production_notes', productionNotes);
+      fd.append('character_features', characterFeatures);
+      fd.append('tts_provider', ttsProvider);
+      fd.append('tts_voice', ttsVoice);
+      fd.append('production_template', productionTemplate);
+      fd.append('has_shorts', hasShorts ? '1' : '0');
+      fd.append('has_subtitles', hasSubtitles ? '1' : '0');
+      fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0');
+      fd.append('kinetic_subtitles', kineticSubtitles ? '1' : '0');
+      fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0');
+      fd.append('audio_ducking', audioDucking ? '1' : '0');
+      targetPlatforms.forEach((p) => fd.append('platforms[]', p));
+      if (selectedFile) fd.append('material', selectedFile);
+      if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
+      setCharPendingFormData(fd);
+      setCharDetectedNames(names);
+      setCharModalOpen(true);
+      return; // Wait for modal confirmation
+    }
+
+    // No characters detected — submit directly
     setFormLoading(true);
     const formData = new FormData();
     formData.append('master_prompt', masterPrompt);
@@ -378,6 +427,38 @@ export default function App() {
       console.error('Job creation failed:', err);
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleCharModalConfirm = async (charMap: Record<string, { name: string; description: string; isNew: boolean }>) => {
+    setCharModalOpen(false);
+    if (!charPendingFormData) return;
+
+    // Append character mappings to form data
+    charPendingFormData.append('character_map', JSON.stringify(charMap));
+    setFormLoading(true);
+    try {
+      await fetch('/create-job', {
+        method: 'POST',
+        headers: { 'x-csrf-token': csrfToken },
+        body: charPendingFormData,
+      });
+      setMasterPrompt('');
+      setProductionNotes('');
+      setCharacterFeatures('');
+      setSelectedFile(null);
+      setSelectedMusicFile(null);
+      setBrandKitEnabled(false);
+      setKineticSubtitles(false);
+      setAutoSfxPlacement(false);
+      setAudioDucking(false);
+      fetchJobs();
+      setActiveTab('gallery');
+    } catch (err) {
+      console.error('Job creation failed:', err);
+    } finally {
+      setFormLoading(false);
+      setCharPendingFormData(null);
     }
   };
 
@@ -581,6 +662,7 @@ export default function App() {
           isMetaSaving={isMetaSaving}
           progressMsg={progressMsg}
           progressPercent={progressPercent}
+          userCredits={userCredits}
           onSelectJob={handleSelectJob}
           onRefreshJobs={fetchJobs}
           onCancelJob={handleCancelJob}
@@ -595,7 +677,7 @@ export default function App() {
 
       {editingImageScene && (
         <PhotoEditor
-          imageUrl={editingImageScene.image_path || '/uploads/scene_placeholder.jpg'}
+          imageUrl={editingImageScene.image_path || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect fill="#131a2c" width="400" height="400"/><text x="200" y="200" text-anchor="middle" fill="#8e9bb4" font-family="sans-serif" font-size="14">Sahne Görseli Yok</text></svg>')}
           onClose={() => setEditingImageScene(null)}
           onSave={async (newImageUrl: string) => {
             const updated = scenes.map((s) =>
@@ -604,6 +686,17 @@ export default function App() {
             handleUpdateScenes(updated);
             setEditingImageScene(null);
           }}
+        />
+      )}
+
+      {charModalOpen && (
+        <CharacterSelectorModal
+          isOpen={charModalOpen}
+          onClose={() => { setCharModalOpen(false); setCharPendingFormData(null); }}
+          onConfirm={handleCharModalConfirm}
+          detectedNames={charDetectedNames}
+          existingCharacters={existingCharacters}
+          csrfToken={csrfToken}
         />
       )}
     </div>

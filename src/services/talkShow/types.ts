@@ -43,6 +43,13 @@ export interface OrchestratorInput {
   match: MatchContext;
   rounds?: number;             // how many back-and-forth exchanges (default 3)
   language?: 'tr' | 'en';      // default 'tr'
+  characters?: Array<{          // user-selected characters for each agent role
+    role: AgentRole;
+    name: string;
+    description: string;
+    voice_id?: string;
+    reference_image_base64?: string;
+  }>;
 }
 
 export interface OrchestratorResult {
@@ -63,4 +70,6 @@ export interface AgentPromptContext {
   topic: string;
   match: MatchContext;
   priorMessages: AgentMessage[];
+  characters?: OrchestratorInput['characters'];
+  characterBlock?: string;
 }
