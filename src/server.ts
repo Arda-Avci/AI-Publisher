@@ -31,6 +31,7 @@ import { registerCreditRoutes } from './routes/credits.js';
 import { registerLocalesRoutes } from './routes/locales.js';
 import { registerChatToEditRoutes } from './routes/chatToEdit.js';
 import { registerViMaxRoutes } from './routes/viMax.js';
+import { registerPipecatRoutes } from './routes/pipecat.js';
 import { bRollRouter } from './routes/bRoll.js';
 import { paymentsRouter } from './routes/payments.js';
 import { charactersRouter } from './routes/characters.js';
@@ -120,6 +121,7 @@ registerCreditRoutes(app);
 registerLocalesRoutes(app);
 registerChatToEditRoutes(app);
 registerViMaxRoutes(app);
+registerPipecatRoutes(app);
 
 // API Rotaları
 app.use('/api/v1/broll', bRollRouter);
@@ -148,6 +150,13 @@ async function startServer() {
     startGarbageCollector();
     startVideoQueueWorker();
     startPublishQueueWorker();
+
+    // Pipecat bridge sunucusu — multi-agent voice/video pipeline
+    import('./services/pipecatBridge.js').then(({ pipecatBridge }) => {
+      pipecatBridge.start().catch((err: any) =>
+        Logger.warn('[Pipecat] Auto-start failed:', err)
+      );
+    });
 
     // MCP (Model Context Protocol) sunucusu — AI ajanları için API
     import('./services/mcpServer.js').then(({ startMCPServer }) => {
