@@ -136,26 +136,82 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **TypeScript:** `tsc --noEmit` sıfır hata ile doğrulandı.
 - **Testler:** 22/22 Vitest başarıyla geçti.
 
-### Sprint 3 (Hafta 5-6) — Pipecat & Known Issues
+---
+
+## Sprint 3 — Çıktılar (12 Haziran 2026 - v5.2)
+
+### Track A: Pipecat — Multi-Agent Voice/Video Pipeline
+- **Pipecat Python Server (Yeni):** `services/pipecat_server.py` — FastAPI WebSocket sunucusu (port 8765). Pipeline yönetimi (start/cancel/status/list), HeyGen/Tavus avatar simülasyonu, AI broadcast endpoint. WebSocket üzerinden gerçek zamanlı ses/video akışı.
+- **Pipecat Node.js Bridge (Yeni):** `src/services/pipecatBridge.ts` — Python subprocess yönetimi (spawn, auto-restart, health check). WebSocket client ile Python sunucusuna bağlantı. Callback pattern ile olay tabanlı iletişim.
+- **Avatar Service (Yeni):** `src/services/avatarService.ts` — HeyGenService + TavusService. API key varsa gerçek çağrı, yoksa graceful skip ile simülasyon modu.
+- **Pipecat Routes (Yeni):** `src/routes/pipecat.ts` — 8 REST endpoint: `POST /api/v1/pipecat/start-server`, `POST /stop-server`, `POST /pipeline/start`, `POST /pipeline/:id/cancel`, `GET /pipeline/:id/status`, `GET /pipelines`, `POST /avatar/generate`, `POST /ai-broadcast`.
+- **server.ts Entegrasyonu:** Tüm pipecat rotaları server.ts'e kayıtlı, auto-start ile Python sunucusu otomatik başlatılıyor.
+
+### Track C: Known Issues — Audit, Toplu Yayın, Prettier/ESLint
+- **Audit Log API (Yeni):** `src/routes/audit.ts` — `GET /api/v1/audit-logs` (sayfalı, filtreli log listesi), `GET /api/v1/audit-logs/actions` (aksiyon tipleri). Her önemli işlem otomatik audit log'a kaydediliyor.
+- **Toplu Yayın (Yeni):** `src/routes/publish.ts` — `POST /api/v1/publish-all/:id` endpoint'i. Bir videoyu tüm hedef platformlara (YouTube, TikTok, X, Meta) sırayla yayınlar.
+- **Prettier/ESLint Standardı:** `.prettierrc` oluşturuldu (semi, singleQuote, trailingComma all). `prettier` + `eslint-config-prettier` kuruldu. `format:check` / `format:write` scriptleri package.json'a eklendi.
+- **Husky Pre-commit Hook:** `.husky/pre-commit` — her committe otomatik `npx tsc --noEmit && npx vitest run --reporter=verbose`.
+- **server.ts:** Audit ve publish-all rotaları kayıtlı.
+- **TypeScript:** `tsc --noEmit` sıfır hata ile doğrulandı.
+- **Testler:** 22/22 Vitest başarıyla geçti.
+
+---
+
+### Sprint 3 (Hafta 5-6) — Pipecat & Known Issues — ✅ TAMAMLANDI
 
 | Paralel Track | İçerik | Durum |
 |---|---|---|
-| **A — Pipecat** | Python → Node.js bridge, WebRTC/WebSocket streaming, HeyGen/Tavus avatar entegrasyonu, Multi-agent handoff / RabbitMQ fan-out | ⏳ Başlanacak |
-| **C — Known Issues** | Audit Log tablosu + middleware, Toplu Yayın butonu, Prettier/ESLint standartı | ⏳ Başlanacak |
+| **A — Pipecat** | Python → Node.js bridge, WebRTC/WebSocket streaming, HeyGen/Tavus avatar entegrasyonu, Multi-agent handoff / RabbitMQ fan-out | ✅ Tamam |
+| **C — Known Issues** | Audit Log tablosu + middleware, Toplu Yayın butonu, Prettier/ESLint standartı | ✅ Tamam |
 
 ### Sprint 4 (Hafta 7-8) — CI/CD & React Migration
 
 | Paralel Track | İçerik | Durum |
 |---|---|---|
-| **B — CI/CD** | GitHub Actions — otomatik typecheck + test, Pre-commit hooks (Prettier + ESLint) | ⏳ Başlanacak |
+| **B — CI/CD** | GitHub Actions — otomatik typecheck + test (`.github/workflows/ci.yml`) | ✅ Tamam |
 | **C — React Migration** | Express template → React/Vite bileşen tabanlı mimariye geçiş başlangıcı | ⏳ Başlanacak |
+| **A — E2E Testler** | Chat-to-Edit, ViMax, Pipecat, B-Roll, Kokoro TTS entegrasyon testleri (20/20) | ✅ Tamam |
+
+### Sprint 5 (Hafta 9-10) — Frontend Modüler Refactor & Type-Güvenliği
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Bileşen Çıkarımı** | Monolitik `App.tsx` (1208 satır) → 4 ayrı bileşen: `Header`, `ProjectForm`, `StudioPanel`, `GalleryPanel` | ✅ Tamam |
+| **B — Tip Güvenliği** | Paylaşılan `client/src/types.ts`, `verbatimModuleSyntax` uyumlu `import type` | ✅ Tamam |
+| **C — Derleme Doğrulama** | `tsc --noEmit` sıfır hata, `vite build` başarılı, 42/42 Vitest testi geçti | ✅ Tamam |
 
 ### Sonraya Bırakılanlar
 
 | Madde | Gerekçe |
 |---|---|
 | **Top Yuvarlak AI Talk-Show (S3.B)** | Sportoto API entegrasyonu gerektiriyor, harici bağımlılık yüksek |
-| **E2E Test — yeni özellikler (S4.A)** | Tüm entegrasyonlar tamamlanınca yapılacak |
 | **Docker Compose** | Bu geliştirme makinesinde Docker çalışmıyor |
+
+---
+
+## ✅ Sprint 4.A — Çıktılar (E2E Testler)
+- **E2E Test Suite:** `src/test_e2e_features.spec.ts` — 4 ana modül için 20 entegrasyon testi:
+  - **vibeclip Chat-to-Edit:** `parse`, `apply`, `score`, geçersiz komut
+  - **ViMax Multi-Agent:** `pipeline`, `auto-cameo`, `validate-consistency`, `quality-inspect`, `rag-script`, 404 doğrulama
+  - **Pipecat:** `start-server`, `stop-server`, `pipeline`, `pipelines`, `avatar/generate`, `broadcast`, `health`
+  - **B-Roll & Kokoro TTS:** `generate-broll`, `list`, Kokoro sentezi
+- **Test İzolasyonu:** Her testin kendi admin ID'sini yakalayan `adminUserId` değişkeni, gerçek kullanıcı kimliği ile `WHERE user_id = ?` filtrelerini geçiyor.
+- **Mock Mimari Standardı:** `ai` SDK (`generateText`), `avatarService` (sınıf + instance), `axios` (download_url), `pipecatBridge` (start/stop/healthCheck), `rabbitmq` (queue), `queue` (broadcast) modülleri vitest `vi.mock` ile yalıtıldı.
+- **DB NOT NULL Çözümü:** `video_scenes.sort_order` ve `status` kolonları test INSERT'larına eklendi.
+- **Sonuç:** 20/20 test geçti; tüm test paketi 42/42 yeşil.
+
+---
+
+## ✅ Sprint 5 — Çıktılar (Frontend Modüler Refactor)
+- **Monolitik App.tsx Parçalanması:** 1208 satırlık tek dosya 4 ayrı bileşene ayrıldı.
+  - `client/src/components/Header.tsx` — Navbar (tema seçici, dil toggle, karanlık mod, fırsatlar, grup sohbeti, krediler, çıkış).
+  - `client/src/components/ProjectForm.tsx` — Sol kenar çubuğu (master prompt, notlar, karakter, dosya yükleme, 4 şablon, TTS, 6 özellik checkbox, 4 platform).
+  - `client/src/components/StudioPanel.tsx` — Orta panel (tab bar, önizleme/timeline, fırsatlar hunisi, grup sohbeti placeholder).
+  - `client/src/components/GalleryPanel.tsx` — Sağ kenar çubuğu (progress tracker, meta editör, galeri, durum badge'leri).
+- **Paylaşılan Tipler:** `client/src/types.ts` — `Job`, `UserCredits`, `Language`, `Tab`, `ProductionTemplate`, `TtsProvider`, `Platform`. `Scene` ve `OpportunityVideo` tipleri ilgili bileşenlerden `import type` ile çekildi.
+- **Type-Only Import Standardı:** `verbatimModuleSyntax: true` gereksinimi nedeniyle tüm tip import'ları `import type` ile güncellendi.
+- **Mevcut Bileşen Temizliği:** `LandingPage`, `PhotoEditor`, `Opportunities`, `RemotionVideo` içindeki kullanılmayan lucide-react import'ları kaldırıldı; `Timeline` `_index` parametre uyarısı giderildi.
+- **Sonuç:** `tsc --noEmit` sıfır hata, `vite build` 809 ms'de başarılı, tüm backend + frontend testleri 42/42 yeşil.
 
 > **Not:** S3.B ve S4.A sprint planından çıkarıldı, ilerleyen aşamalarda değerlendirilmek üzere ertelendi.

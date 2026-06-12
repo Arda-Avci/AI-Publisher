@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Film, Sparkles, Send, Moon, Sun, Play, X, 
-  Globe, FileVideo, MessageSquare, CheckSquare, 
-  ArrowRight, Share2, Loader, Download, ArrowUpRight, CheckCircle2, Shield
+import { useState, useEffect } from 'react';
+import {
+  Film, Sparkles, Play, X,
+  Globe, MessageSquare, ArrowRight, Share2, Loader, Download, ArrowUpRight, CheckCircle2, Shield
 } from 'lucide-react';
 
 interface Scene {

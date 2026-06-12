@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Flame, Eye, Sparkles, TrendingUp, Globe, AlertCircle, Loader } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Flame, Eye, Sparkles, TrendingUp, AlertCircle, Loader } from 'lucide-react';
 
 export interface OpportunityVideo {
   videoId: string;

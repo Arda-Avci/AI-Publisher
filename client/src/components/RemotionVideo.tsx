@@ -17,9 +17,10 @@ export const RemotionVideo: React.FC<RemotionVideoProps> = ({
   height = 1920,
 }) => {
   const fps = 30;
-  const durationInFrames = useMemo(() => {
+  const _durationInFrames = useMemo(() => {
     return scenes.reduce((total, scene) => total + (scene.durationInFrames || fps * 6), 0);
   }, [scenes, fps]);
+  void _durationInFrames;
 
   if (scenes.length === 0) {
     return (
@@ -85,7 +86,6 @@ interface SceneLayerProps {
 
 const SceneLayer: React.FC<SceneLayerProps> = ({
   scene,
-  durationInFrames,
 }) => {
   return (
     <div style={{

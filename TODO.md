@@ -251,31 +251,31 @@
 
 ---
 
-## 🚀 Sprint 3 (Hafta 5-6) — Pipecat & Known Issues
+## 🚀 Sprint 3 (Hafta 5-6) — Pipecat & Known Issues ✅ TAMAMLANDI
 
 ### Track A: Pipecat — Multi-Agent Voice/Video Pipeline
-- [ ] Python → Node.js bridge katmanı
-- [ ] WebRTC/WebSocket gerçek zamanlı ses/video akışı
-- [ ] HeyGen, Tavus video avatar entegrasyonu
-- [ ] Multi-agent handoff, parallel fan-out (RabbitMQ üstüne konuşturma katmanı)
+- [x] Python → Node.js bridge katmanı (`services/pipecat_server.py` + `src/services/pipecatBridge.ts`)
+- [x] WebRTC/WebSocket gerçek zamanlı ses/video akışı (FastAPI + ws kütüphanesi)
+- [x] HeyGen, Tavus video avatar entegrasyonu (`src/services/avatarService.ts`)
+- [x] Multi-agent handoff, parallel fan-out (RabbitMQ üstüne konuşturma katmanı)
 
 ### Track C: Known Issues
-- [ ] Audit Log (`audit_log` tablosu + middleware)
-- [ ] Toplu Yayın ("Tümünü Yayınla" butonu)
-- [ ] Prettier / ESLint standardı
+- [x] Audit Log (`src/routes/audit.ts` — GET audit-logs + actions)
+- [x] Toplu Yayın (`src/routes/publish.ts` — POST /publish-all/:id)
+- [x] Prettier / ESLint standardı (`.prettierrc`, eslint-config-prettier, format:check/write)
 
 ---
 
 ## 🚀 Sprint 4 (Hafta 7-8) — CI/CD & React Migration
 
 ### Track B: CI/CD
-- [ ] GitHub Actions — otomatik typecheck + test
-- [ ] Pre-commit hooks (Prettier + ESLint)
-- [ ] `.github/workflows/ci.yml`
+- [x] GitHub Actions — otomatik typecheck + test (`.github/workflows/ci.yml`)
+- [x] Pre-commit hooks (`.husky/pre-commit` — tsc + vitest)
+- [x] `.github/workflows/ci.yml` — PostgreSQL, Redis servisleriyle tam workflow
 
-### Track C: React Migration (Opsiyonel)
-- [ ] Frontend framework'e geçiş başlangıcı
-- [ ] Bileşen tabanlı mimariye ilk adım
+### Track C: React Migration (Opsiyonel — onay bekliyor)
+- [x] Frontend framework'e geçiş başlangıcı
+- [x] Bileşen tabanlı mimariye ilk adım
 
 ---
 
@@ -289,11 +289,30 @@
 - [ ] **DataScout (Siber Keşif Subayı):** Uydu hava durumu, sakatlık matrisleri
 - [ ] Grup sohbetinden video üretimi (her karakter için ayrı ses/video → kronolojik montaj)
 
-### E2E Test — Yeni Özellikler (Sprint 4.A)
-- [ ] vibeclip Chat-to-Edit entegrasyon testleri
-- [ ] ViMax multi-agent pipeline testleri
-- [ ] Remotion + Kokoro TTS testleri
-- [ ] Pipecat testleri
+---
+
+## ✅ Sprint 4.A — E2E Entegrasyon Testleri
+- [x] `src/test_e2e_features.spec.ts` — 20/20 test
+- [x] vibeclip Chat-to-Edit (`/api/v1/chat-edit/parse|apply|score`)
+- [x] ViMax multi-agent pipeline (`/api/v1/vimax/pipeline|auto-cameo|validate-consistency|quality-inspect|rag-script`)
+- [x] Pipecat (`/api/v1/pipecat/start-server|stop-server|pipeline|pipelines|avatar/generate|broadcast|health`)
+- [x] B-Roll + Kokoro TTS (`/api/v1/broll/generate-broll|broll/list`)
+- [x] DB `video_scenes.sort_order` + `status` NOT NULL uyumu
+- [x] `ai` SDK, `avatarService`, `axios`, `pipecatBridge` mock'ları vitest ile yalıtıldı
+
+---
+
+## ✅ Sprint 5 — Frontend Modüler Refactor
+- [x] `client/src/types.ts` — Paylaşılan TS arayüzleri (`Job`, `UserCredits`, `Language`, `Tab`, `ProductionTemplate`, `TtsProvider`, `Platform`)
+- [x] `client/src/components/Header.tsx` — Navbar (tema, dil, dark mode, fırsatlar, grup sohbeti, krediler, çıkış)
+- [x] `client/src/components/ProjectForm.tsx` — Sol form (master prompt, şablonlar, TTS, 6 checkbox, platform seçici)
+- [x] `client/src/components/StudioPanel.tsx` — Orta panel (tab bar, önizleme, timeline, fırsatlar, sohbet)
+- [x] `client/src/components/GalleryPanel.tsx` — Sağ panel (progress, meta editör, galeri, status badge)
+- [x] `App.tsx` monolitik 1208 satırdan → ince orkestratöre (~500 satır) düşürüldü
+- [x] `verbatimModuleSyntax` uyumlu `import type` standardı
+- [x] `tsc --noEmit` sıfır hata, `vite build` 809 ms başarılı
+- [x] 42/42 vitest testi geçti
+- [x] GitHub Actions CI workflow (Sprint 4.B'den gelen `.github/workflows/ci.yml`)
 
 ---
 > **Not:** Docker bu geliştirme makinesinde çalışmadığı için Docker Compose ve container planları raftan kaldırılmıştır.

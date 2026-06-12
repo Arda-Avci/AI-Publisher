@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Eraser, Paintbrush, Scissors, Sparkles, RefreshCw, Wand2, Download, Image as ImageIcon } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Eraser, Paintbrush, Scissors, Sparkles, RefreshCw, Wand2 } from 'lucide-react';
 
 interface PhotoEditorProps {
   imageUrl: string;
