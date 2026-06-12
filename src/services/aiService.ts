@@ -9,7 +9,10 @@ export const StudioSchema = z.object({
     sceneNumber: z.number(),
     videoPrompt: z.string(),
     speechText: z.string(),
-    sfxPrompt: z.string()
+    sfxPrompt: z.string(),
+    cameraMotion: z.string().optional(),
+    speaker: z.string().optional(),
+    charactersInScene: z.array(z.string()).optional()
   })),
   marketing: z.object({
     ytTitle: z.string(),
@@ -91,12 +94,17 @@ Topic: ${job.master_prompt}
 Notes: ${job.production_notes}
 Character: ${job.character_features}
 Transcript: ${transcriptText}
-Template Style: ${job.production_template}`
+Template Style: ${job.production_template}
+Identify speaker (e.g. @me, @sibel) and charactersInScene (e.g. ['@me', '@sibel']) for each scene.`
       : `Sen profesyonel bir film yönetmeni ve sosyal medya pazarlama uzmanısın.
 Görevlerin:
 1. Hikayeyi analiz et ve ardışık 6 saniyelik sahnelere böl. Konu başlığında geçen "100 Video", "50 Gün" gibi rakamları KESİNLİKLE oluşturulacak sahne sayısı olarak algılama. Sahne sayısını konunun ve metnin doğal anlatım akışına göre belirle.
 2. Karakter tasviri ve üretim notlarını dikkate alarak her sahne için detaylı görsel prompt (videoPrompt), konuşma metni (speechText) ve ses efekti (sfxPrompt) tasarla.${styleInstruction}
-3. Arda Avcı 2026 SEO ve İçerik Standartlarına uygun pazarlama metinleri tasarla.
+3. Her sahne için:
+   - Konuşan karakteri "speaker" alanında belirt (örn: eğer o an senin avatarın konuşuyorsa "@me", veritabanından bir karakter konuşuyorsa "@sibel", "@arda" vb.). Promptta geçen karakter adlarını @ işaretiyle eşleştir.
+   - Sahnede o an görünen tüm karakterlerin etiketlerini (örn: ["@me", "@sibel"]) "charactersInScene" dizisine ata.
+   - Kamera hareketini (cameraMotion) belirle (zoom_in, zoom_out, pan_left, pan_right, breathing, none).
+4. Arda Avcı 2026 SEO ve İçerik Standartlarına uygun pazarlama metinleri tasarla.
    - YouTube Başlık Formatı: '2026: [Vurucu İfade] | [Ana Başlık]' olmalıdır.
    - İçerik yılı olarak daima 2026 referans alınmalı.
    - İlk 2 cümlede konunun teknik terimleri geçmelidir.

@@ -273,5 +273,7 @@
   "templateCinematicDesc": "Runs the Hunyuan AI model asynchronously for ultra-detailed visual quality, artistic camera movements, and cinematic depth.",
   "templateDynamicDesc": "Triggers the Wan 2.1 AI model asynchronously for dynamic, lively movements and a balanced duration/quality ratio.",
   "templateSimpleDesc": "Deploys the LTX AI model for fast render times, social media shorts drafts, and simple scene transitions.",
-  "templatePixarDesc": "Runs the Wan 2.1 model with autonomous prompt styling for high-quality Pixar-style 3D animations and cartoon videos."
+  "templatePixarDesc": "Runs the Wan 2.1 model with autonomous prompt styling for high-quality Pixar-style 3D animations and cartoon videos.",
+  "heroBadge": "Future of Autonomous Video Production",
+  "heroCTA": "Get Started Now"
 }

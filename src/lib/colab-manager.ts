@@ -327,6 +327,20 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     const prev = this.state.status;
     this.setStatus('stopping', this.state.ngrokUrl, null);
     this.stopHealthChecks();
+
+    const url = this.state.ngrokUrl || process.env.COLAB_URL;
+    if (url) {
+      try {
+        console.log(`[colab] Sending shutdown request to Colab at ${url}/shutdown`);
+        await axios.post(`${url}/shutdown`, {}, {
+          timeout: 4000,
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+      } catch (e: any) {
+        console.warn(`[colab] Failed to call /shutdown endpoint: ${e.message}`);
+      }
+    }
+
     await this.killProc();
     this.setStatus('stopped', null, null);
     // Clear env var so future requests fall back to whatever was set externally

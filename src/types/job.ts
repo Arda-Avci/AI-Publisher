@@ -51,4 +51,24 @@ export interface VideoJob {
   viral_score?: number;
   auto_sfx_placement?: number;
   audio_ducking?: number;
+  background_music_path?: string;
 }
+
+export interface VideoScene {
+  id: number;
+  job_id: number;
+  scene_number: number;
+  video_prompt: string;
+  speech_text?: string;
+  sfx_prompt?: string;
+  camera_motion?: string;
+  image_path?: string;
+  mask_path?: string;
+  video_path?: string;
+  audio_path?: string;
+  status?: string;
+  sort_order: number;
+  music_volume?: number;
+  speaker?: string;
+}
+

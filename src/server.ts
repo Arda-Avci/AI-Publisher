@@ -29,6 +29,9 @@ import { registerColabRoutes } from './routes/colab.js';
 import { registerEditorRoutes } from './routes/editor.js';
 import { registerCreditRoutes } from './routes/credits.js';
 import { registerLocalesRoutes } from './routes/locales.js';
+import { paymentsRouter } from './routes/payments.js';
+import { charactersRouter } from './routes/characters.js';
+import { publicRouter } from './routes/public.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -112,6 +115,11 @@ registerColabRoutes(app);
 registerEditorRoutes(app);
 registerCreditRoutes(app);
 registerLocalesRoutes(app);
+
+// API Rotaları
+app.use('/api/v1/payments', paymentsRouter);
+app.use('/api/v1/characters', charactersRouter);
+app.use('/api/v1/public', publicRouter);
 
 // Global error handler (last)
 app.use(errorHandler);

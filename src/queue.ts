@@ -501,12 +501,48 @@ async function startProduction(job: VideoJob) {
         modelType = job.model_type;
       }
 
+      // ── Karakter ve Ses Algılama ──
+      const detectedTags: string[] = [];
+      const tagRegex = /@(\w+)/g;
+      let tagMatch;
+      while ((tagMatch = tagRegex.exec(finalPrompt)) !== null) {
+        detectedTags.push('@' + tagMatch[1].toLowerCase());
+      }
+      
+      const currentSpeaker = scene.speaker ? scene.speaker.toLowerCase() : (detectedTags.includes('@me') ? '@me' : (detectedTags[0] || ''));
+      
+      const characterImages: Record<string, string> = {};
+      const characterVoices: Record<string, string> = {};
+
+      for (const tag of detectedTags) {
+        if (tag === '@me') {
+          const user: any = await db.get('SELECT personal_avatar_base64, personal_voice_base64 FROM users WHERE id = ?', [job.user_id]);
+          if (user?.personal_avatar_base64) characterImages['@me'] = user.personal_avatar_base64;
+          if (user?.personal_voice_base64) characterVoices['@me'] = user.personal_voice_base64;
+        } else {
+          const charName = tag.replace('@', '').toLowerCase();
+          const char: any = await db.get('SELECT avatar_base64, voice_base64 FROM characters WHERE name = ? AND user_id = ?', [charName, job.user_id]);
+          if (char?.avatar_base64) characterImages[tag] = char.avatar_base64;
+          if (char?.voice_base64) characterVoices[tag] = char.voice_base64;
+        }
+      }
+
+      let speakerAudioBase64 = userSettings?.personal_voice_base64 || '';
+      if (currentSpeaker && currentSpeaker !== '@me') {
+        const spkVoice = characterVoices[currentSpeaker];
+        if (spkVoice) {
+          speakerAudioBase64 = spkVoice;
+        }
+      }
+
       Logger.info('Colab\'a sahne gönderiliyor', {
         sceneNumber: scene.scene_number,
         apply_lipsync: applyLipsync,
         videoPrompt: finalPrompt?.substring(0, 80),
         source_video_id: sendSourceVideoId,
-        videoModel: modelType
+        videoModel: modelType,
+        speaker: currentSpeaker,
+        detectedCharacters: Object.keys(characterImages)
       });
 
       const response = await axios.post(`${COLAB_URL}/generate-media`, {
@@ -523,7 +559,9 @@ async function startProduction(job: VideoJob) {
         video_model: modelType,
         tts_provider: job.tts_provider || 'xtts',
         tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
-        reference_audio_base64: userSettings?.personal_voice_base64 || '',
+        reference_audio_base64: speakerAudioBase64,
+        character_images: characterImages,
+        speaker: currentSpeaker,
         callback_url: process.env.PUBLIC_URL 
           ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
           : `http://localhost:3010/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
@@ -712,6 +750,17 @@ async function startProduction(job: VideoJob) {
         const filterComplexParts: string[] = [];
         const inputArgs = ['-y', '-i', tV, '-i', tS, '-i', tE];
         
+        let musicIndex = -1;
+        if (job.background_music_path) {
+          const musicAbsPath = path.resolve(path.join(process.cwd(), job.background_music_path));
+          if (await fs.pathExists(musicAbsPath)) {
+            inputArgs.push('-i', musicAbsPath);
+            // push sonrası length / 2 - 1 ile sırasını bulalım
+            musicIndex = (inputArgs.length / 2) - 1;
+            Logger.info(`Müzik dosyası FFmpeg'e eklendi: index=${musicIndex}, path=${musicAbsPath}`);
+          }
+        }
+
         let videoInput = '[0:v]';
         
         if (finalSubtitleFile) {
@@ -729,9 +778,10 @@ async function startProduction(job: VideoJob) {
           await fs.writeFile(tempLogoFile, Buffer.from(b64, 'base64'));
 
           inputArgs.push('-i', tempLogoFile);
+          const logoIndex = (inputArgs.length / 2) - 1;
           
           const logoW = 160;
-          filterComplexParts.push(`[3:v]scale=${logoW}:-1[logo]`);
+          filterComplexParts.push(`[${logoIndex}:v]scale=${logoW}:-1[logo]`);
           
           let overlayX = 'W-w-20';
           let overlayY = '20';
@@ -755,12 +805,27 @@ async function startProduction(job: VideoJob) {
           sfxSource = '[sfx_panned]';
         }
 
-        if (job.audio_ducking === 1) {
-          filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
-          filterComplexParts.push(`[sfx_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`);
-          filterComplexParts.push(`[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`);
+        if (musicIndex !== -1) {
+          const vol = scene.music_volume !== undefined && scene.music_volume !== null ? scene.music_volume : 0.2;
+          filterComplexParts.push(`[${musicIndex}:a]volume=${vol}[music_vol]`);
+
+          if (job.audio_ducking === 1) {
+            filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
+            filterComplexParts.push(`[music_vol]volume=0.2[music_low]`);
+            filterComplexParts.push(`[music_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_music_ducked]`);
+            filterComplexParts.push(`[sfx_low][bg_music_ducked]amix=inputs=2:duration=first[ducked_bg]`);
+            filterComplexParts.push(`[1:a][ducked_bg]amix=inputs=2:duration=first:dropout_transition=0[aout]`);
+          } else {
+            filterComplexParts.push(`[1:a]${sfxSource}[music_vol]amix=inputs=3:duration=first[aout]`);
+          }
         } else {
-          filterComplexParts.push(`[1:a]${sfxSource}amix=inputs=2:duration=first[aout]`);
+          if (job.audio_ducking === 1) {
+            filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
+            filterComplexParts.push(`[sfx_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`);
+            filterComplexParts.push(`[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`);
+          } else {
+            filterComplexParts.push(`[1:a]${sfxSource}amix=inputs=2:duration=first[aout]`);
+          }
         }
 
         const filterComplexStr = filterComplexParts.join(';');

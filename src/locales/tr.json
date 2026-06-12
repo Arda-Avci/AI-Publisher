@@ -273,5 +273,7 @@
   "templateCinematicDesc": "Ultra detaylı görsel kalite, sanatsal kamera hareketleri ve sinematik derinlik için Hunyuan AI modelini asenkron olarak çalıştırır.",
   "templateDynamicDesc": "Dinamik, canlı hareketler ve dengeli süre/kalite oranı için Wan 2.1 AI modelini asenkron olarak tetikler.",
   "templateSimpleDesc": "Hızlı render süreleri, sosyal medya shorts taslakları ve basit sahne geçişleri için LTX AI modelini devreye sokar.",
-  "templatePixarDesc": "Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır."
+  "templatePixarDesc": "Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır.",
+  "heroBadge": "Otonom Video Üretiminin Geleceği",
+  "heroCTA": "Hemen Başla"
 }

@@ -26,7 +26,10 @@ import { CreditService } from '../services/creditService.js';
  */
 export function registerJobRoutes(app: Application): void {
   // Is Ekleme
-  app.post('/create-job', heavyLimiter, requireAuth, upload.single('material'), async (req: any, res) => {
+  app.post('/create-job', heavyLimiter, requireAuth, upload.fields([
+    { name: 'material', maxCount: 1 },
+    { name: 'background_music', maxCount: 1 }
+  ]), async (req: any, res) => {
     const validation = validateCreateJob(req.body);
     if (!validation.valid) {
       return res.status(400).json({ success: false, errors: validation.errors });
@@ -48,12 +51,20 @@ export function registerJobRoutes(app: Application): void {
       tts_voice,
       production_template
     } = req.body;
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     let materialPath = '';
-    if (req.file) {
-      materialPath = `/uploads/${req.file.filename}`;
+    if (files && files['material'] && files['material'][0]) {
+      materialPath = `/uploads/${files['material'][0].filename}`;
     } else if (material_path_hidden) {
       materialPath = String(material_path_hidden);
     }
+
+    let backgroundMusicPath = '';
+    if (files && files['background_music'] && files['background_music'][0]) {
+      backgroundMusicPath = `/uploads/${files['background_music'][0].filename}`;
+    }
+
     const userId = req.session.userId;
 
     const targetPlatforms = Array.isArray(platforms) ? platforms : (platforms ? [platforms] : []);
@@ -70,9 +81,9 @@ export function registerJobRoutes(app: Application): void {
       
       const insertResult: any = await db.run(
         `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode, finalTtsProvider, finalTtsVoice, finalProductionTemplate]
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, master_prompt, production_notes || '', character_features || '', materialPath, platformsJson, playlist_id || '', hasShorts, hasSubtitles, transcript_text || '', differentiationLayout, differentiationDurationMode, finalTtsProvider, finalTtsVoice, finalProductionTemplate, backgroundMusicPath]
       );
 
       const newJobId = Number(insertResult.lastID);
@@ -83,7 +94,7 @@ export function registerJobRoutes(app: Application): void {
         action: 'job.create',
         entityType: 'video_job',
         entityId: newJobId,
-        details: { platforms: targetPlatforms, has_shorts: hasShorts, has_subtitles: hasSubtitles, differentiation_layout: differentiationLayout, differentiation_duration_mode: differentiationDurationMode },
+        details: { platforms: targetPlatforms, has_shorts: hasShorts, has_subtitles: hasSubtitles, differentiation_layout: differentiationLayout, differentiation_duration_mode: differentiationDurationMode, background_music_path: backgroundMusicPath },
         req
       });
 
@@ -431,7 +442,9 @@ export function registerJobRoutes(app: Application): void {
 
       // Her sahneyi güncelle veya ekle
       for (const scene of scenes) {
-        const { id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, sort_order } = scene;
+        const { id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, sort_order, music_volume, speaker } = scene;
+        const volume = typeof music_volume === 'number' ? music_volume : 0.2;
+        const spk = speaker || null;
         if (id) {
           // Güncelleme
           await db.run(
@@ -441,16 +454,18 @@ export function registerJobRoutes(app: Application): void {
               speech_text = ?,
               sfx_prompt = ?,
               camera_motion = ?,
-              sort_order = ?
+              sort_order = ?,
+              music_volume = ?,
+              speaker = ?
              WHERE id = ? AND job_id = ?`,
-            [scene_number, video_prompt, speech_text || '', sfx_prompt || '', camera_motion || 'none', sort_order, id, jobId]
+            [scene_number, video_prompt, speech_text || '', sfx_prompt || '', camera_motion || 'none', sort_order, volume, spk, id, jobId]
           );
         } else {
           // Yeni ekleme
           await db.run(
-            `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
-            [jobId, scene_number, video_prompt, speech_text || '', sfx_prompt || '', camera_motion || 'none', sort_order]
+            `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order, music_volume, speaker)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+            [jobId, scene_number, video_prompt, speech_text || '', sfx_prompt || '', camera_motion || 'none', sort_order, volume, spk]
           );
         }
       }

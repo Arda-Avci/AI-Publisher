@@ -572,6 +572,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
               <span class="settings-nav-icon">🎬</span>
               <span>${t.production108}</span>
             </button>
+            <button class="settings-nav-item" data-target="settings-characters" onclick="switchSettingsTab(this)">
+              <span class="settings-nav-icon">👥</span>
+              <span>Karakterlerim</span>
+            </button>
           </div>
  
           <div class="settings-content">
@@ -848,6 +852,55 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
               <button onclick="saveSettings()" class="btn-primary mt-2">${t.saveSettings}</button>
             </div>
+
+            <!-- Characters Tab -->
+            <div class="tab-content" id="settings-characters">
+              <div class="settings-section">
+                <div class="settings-section-header">
+                  <h3>Karakterlerim</h3>
+                  <p>Videolarınızda <code>@karakter_adı</code> şeklinde çağırabileceğiniz özel karakterlerinizi yönetin.</p>
+                </div>
+                
+                <!-- Character creation form -->
+                <div class="glass-card" style="padding: 1rem; margin-bottom: 1.5rem; background: hsla(var(--border), 0.1);">
+                  <h4 style="margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600;">✨ Yeni Karakter Ekle</h4>
+                  <div class="form-stack">
+                    <div>
+                      <label class="form-label" style="font-size:0.75rem;">Karakter Adı (örn: sibel)</label>
+                      <input type="text" class="form-input" id="new_char_name" placeholder="sibel" style="font-size:0.8rem; margin-bottom:0.5rem;">
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size:0.75rem;">Fiziksel Özellikler (Avatar promptu)</label>
+                      <textarea class="form-input" id="new_char_prompt" rows="2" placeholder="mavi gözlü, sarı saçlı kadın..." style="font-size:0.8rem; min-height:45px; margin-bottom:0.5rem;"></textarea>
+                    </div>
+                    <div class="form-grid-2" style="margin-bottom:0.5rem;">
+                      <div>
+                        <label class="form-label" style="font-size:0.75rem;">Referans Fotoğraf (Opsiyonel)</label>
+                        <input type="file" class="form-input" id="new_char_image_file" accept="image/*" onchange="encodeImageFileAsURL(this, 'character')" style="font-size:0.8rem;">
+                        <input type="hidden" id="new_char_image_base64">
+                      </div>
+                      <div>
+                        <label class="form-label" style="font-size:0.75rem;">Ses Dosyası (XTTS Klonlama için - Opsiyonel)</label>
+                        <input type="file" class="form-input" id="new_char_voice_file" accept="audio/*" onchange="encodeCharacterVoiceFileAsURL(this)" style="font-size:0.8rem;">
+                        <input type="hidden" id="new_char_voice_base64">
+                      </div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:0.5rem;">
+                      <button type="button" onclick="createCharacter()" class="btn-primary" style="flex:1; padding:0.5rem;">Ekle</button>
+                      <button type="button" onclick="generateCharacterAvatar()" class="btn-publish" style="flex:1; padding:0.5rem; background:linear-gradient(135deg,#7F00FF,#FF007F);">SD Avatar Üret</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Characters List -->
+                <div class="characters-list-wrap">
+                  <h4 style="margin-bottom: 0.75rem; font-size: 0.9rem; font-weight: 600;">👥 Kayıtlı Karakterler</h4>
+                  <div id="settings-characters-list" class="form-stack" style="gap:10px;">
+                    <div style="color:hsl(var(--muted-foreground)); font-style:italic; font-size:0.8rem;">Karakterler yükleniyor...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -885,6 +938,53 @@ export function buildDashboardHTML(params: DashboardParams): string {
         </div>
       </div>
     </div>
+
+    <!-- 4. Kredi / Abonelik Satın Al Modal (iyzico) -->
+    <div class="app-modal modal-w-std" id="paymentModal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <div class="modal-title-icon">💳</div>
+          Kredi / Abonelik Satın Al
+        </div>
+        <button class="modal-close" onclick="closeModal('paymentModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:1.5rem; text-align:center;">
+          <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.4rem;">Kredilerinizi Güncelleyin, Üretime Devam Edin!</h3>
+          <p style="font-size:0.85rem;color:hsl(var(--muted-foreground));">iyzico güvencesiyle tek seferlik paket veya aylık abonelik satın alabilirsiniz.</p>
+        </div>
+        
+        <!-- Options Grid -->
+        <div class="form-grid-2" style="gap: 15px; margin-bottom:1.5rem;" id="paymentOptions">
+          <!-- Option A: Single credit package -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 1px solid hsla(var(--border), 0.4); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="initiateIyzicoPayment('pro')">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🪙</div>
+            <h4 style="font-size:1rem; font-weight:700; margin-bottom:0.25rem;">250 Kredi Paketi</h4>
+            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">450 TL</div>
+            <p style="font-size:0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 1rem;">Tek seferlik alım. Kredileriniz anında hesabınıza yüklenir.</p>
+            <button class="btn-publish" style="width: 100%;">Satın Al</button>
+          </div>
+          <!-- Option B: Subscription -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 2px solid hsl(var(--primary)); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; position:relative;" onclick="initiateIyzicoPayment('sub_silver')">
+            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: hsl(var(--primary)); color: #000; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;">EN POPÜLER</span>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🚀</div>
+            <h4 style="font-size:1rem; font-weight:700; margin-bottom:0.25rem;">Gümüş Abonelik</h4>
+            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">299 TL / ay</div>
+            <p style="font-size:0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 1rem;">Her ay 300 kredi. Bir sonraki ay otomatik yenilenir.</p>
+            <button class="btn-primary" style="width: 100%;">Abone Ol</button>
+          </div>
+        </div>
+
+        <!-- iyzico iFrame container -->
+        <div id="iyzico-iframe-wrapper" style="display:none; border:1px solid hsla(var(--border), 0.3); border-radius:0.75rem; overflow:hidden; min-height:450px; background:#fff; padding:10px; position:relative;">
+          <div style="text-align: center; padding: 2rem;" id="payment-loading">
+            <span class="spin" style="font-size:2rem; display:inline-block; margin-bottom:1rem;">⏳</span>
+            <p>iyzico Güvenli Ödeme Formu Yükleniyor...</p>
+          </div>
+          <div id="iyzipay-checkout-form" class="responsive"></div>
+        </div>
+      </div>
+    </div>
  
     <!-- App Shell -->
     <div class="app-shell">
@@ -897,6 +997,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
           </div>
         </div>
         <div class="header-actions">
+          <div class="user-credits-badge" style="font-family:'Geist',sans-serif;font-size:0.85rem;font-weight:600;background:hsla(var(--primary),0.1);color:hsl(var(--primary));padding:0.4rem 0.8rem;border-radius:0.5rem;border:1px solid hsla(var(--primary),0.2);display:flex;align-items:center;gap:0.35rem;cursor:pointer;" onclick="openPaymentModal()" title="Kredi Satın Al">
+            🪙 <span id="headerCredits">${user?.credits !== undefined ? user.credits : 0}</span> / ${user?.monthly_credit_limit || 100} Kredi
+          </div>
+          <div class="header-divider"></div>
           <div class="colab-status-wrap" id="colabStatusWrap">
             <button class="colab-badge colab-stopped" id="colabBadge" onclick="toggleColabPopover(event)" title="Colab GPU">
               <span class="colab-dot" id="colabDot"></span>
@@ -966,9 +1070,15 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <input type="file" name="material" class="form-input" accept="image/*" style="padding: 0.5rem;">
                 </div>
               </div>
-              <div>
-                <label class="form-label">${t.playlistTarget}</label>
-                <input type="text" name="playlist_id" class="form-input" placeholder="${t.playlistTargetPlaceholder}">
+              <div class="form-grid-2">
+                <div>
+                  <label class="form-label">Arka Plan Müziği (Background Music)</label>
+                  <input type="file" name="background_music" class="form-input" accept="audio/*" style="padding: 0.5rem;">
+                </div>
+                <div>
+                  <label class="form-label">${t.playlistTarget}</label>
+                  <input type="text" name="playlist_id" class="form-input" placeholder="${t.playlistTargetPlaceholder}">
+                </div>
               </div>
               <div>
                 <label class="form-label">${t.videoOptions}</label>

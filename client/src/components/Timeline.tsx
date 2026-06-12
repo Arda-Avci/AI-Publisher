@@ -12,6 +12,8 @@ export interface Scene {
   video_path?: string;
   audio_path?: string;
   status: 'pending' | 'generating' | 'completed' | 'failed';
+  music_volume?: number;
+  speaker?: string;
 }
 
 interface TimelineProps {
@@ -35,6 +37,18 @@ export const Timeline: React.FC<TimelineProps> = ({
 }) => {
   // HTML5 Drag and Drop for simplicity and custom styling control
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
+  const [dbCharacters, setDbCharacters] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetch('/api/v1/characters')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success' && Array.isArray(data.data)) {
+          setDbCharacters(data.data);
+        }
+      })
+      .catch(err => console.error('Error fetching characters:', err));
+  }, []);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -86,7 +100,7 @@ export const Timeline: React.FC<TimelineProps> = ({
       </div>
 
       {/* Tracks Container */}
-      <div className="tracks-wrapper" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px', minHeight: '140px' }}>
+      <div className="tracks-wrapper" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px', minHeight: '230px' }}>
         {scenes.map((scene, index) => {
           const isSelected = scene.id === selectedSceneId;
           const statusColors = {
@@ -118,7 +132,8 @@ export const Timeline: React.FC<TimelineProps> = ({
                 padding: '10px',
                 position: 'relative',
                 transition: 'var(--transition)',
-                boxShadow: isSelected ? '0 0 15px var(--primary-glow)' : 'none'
+                boxShadow: isSelected ? '0 0 15px var(--primary-glow)' : 'none',
+                minHeight: '250px'
               }}
             >
               {/* Header Info */}
@@ -187,7 +202,7 @@ export const Timeline: React.FC<TimelineProps> = ({
               </div>
 
               {/* Dynamic Camera Motion */}
-              <div style={{ marginBottom: '8px' }}>
+              <div style={{ marginBottom: '6px' }}>
                 <select
                   value={scene.camera_motion}
                   onChange={(e) => updateSceneField(scene.id, 'camera_motion', e.target.value)}
@@ -204,13 +219,61 @@ export const Timeline: React.FC<TimelineProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <option value="none">🎥 Kamera Hareketi: Yok</option>
-                  <option value="zoom_in">🔍 Zoom In (Yakınlaşma)</option>
-                  <option value="zoom_out">🔍 Zoom Out (Uzaklaşma)</option>
-                  <option value="pan_left">⬅️ Pan Left (Sola Kayma)</option>
-                  <option value="pan_right">➡️ Pan Right (Sağa Kayma)</option>
-                  <option value="breathing">🌬️ Breathing (Nefes Alma)</option>
+                  <option value="none">🎥 Kamera: Yok</option>
+                  <option value="zoom_in">🔍 Zoom In</option>
+                  <option value="zoom_out">🔍 Zoom Out</option>
+                  <option value="pan_left">⬅️ Pan Left</option>
+                  <option value="pan_right">➡️ Pan Right</option>
+                  <option value="breathing">🌬️ Breathing</option>
                 </select>
+              </div>
+
+              {/* Speaker Selector */}
+              <div style={{ marginBottom: '6px' }}>
+                <select
+                  value={scene.speaker || ''}
+                  onChange={(e) => updateSceneField(scene.id, 'speaker', e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-timeline)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '3px 6px',
+                    fontSize: '11px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <option value="">🎙️ Konuşmacı: Yok</option>
+                  <option value="@me">👤 @me (Ben)</option>
+                  {dbCharacters.map(char => (
+                    <option key={char.id} value={`@${char.name}`}>👤 @{char.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Volume Slider */}
+              <div style={{ marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '2px' }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)' }}>
+                  <span>🎵 Müzik Seviyesi:</span>
+                  <span>{Math.round((scene.music_volume !== undefined ? scene.music_volume : 0.1) * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={scene.music_volume !== undefined ? scene.music_volume : 0.1}
+                  onChange={(e) => updateSceneField(scene.id, 'music_volume', parseFloat(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: 'var(--primary)',
+                    height: '3px',
+                    cursor: 'pointer'
+                  }}
+                />
               </div>
 
               {/* Tracks (Visual Representation) */}
@@ -250,7 +313,7 @@ export const Timeline: React.FC<TimelineProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            minHeight: '140px',
+            minHeight: '250px',
             transition: 'var(--transition)'
           }}
           onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}

@@ -99,44 +99,47 @@ def run_cmd(cmd, max_retries=3, delay=5):
 if not already_installed:
     print("[INFO] Gerekli paketler bulunamadı. Kurulum başlatılıyor...")
 
+    # Öncelikle hızlı paket kurulumu için uv paket yöneticisini kuruyoruz
+    run_cmd('pip install uv')
+
     # SymPy / mpmath AttributeError çakışma önlemi
     run_cmd('pip uninstall -y sympy mpmath')
-    run_cmd('pip install sympy mpmath --no-cache-dir')
+    run_cmd('uv pip install --system sympy mpmath --no-cache-dir')
 
     # Ana ML kütüphaneleri ve Flask, pyngrok sürüm sabitlemeleriyle
     # transformers >=4.47 (coqui-tts, isin_mps_friendly fonksiyonunu ister)
     # Üst sınır yok — monkey patch (ModuleProxy) 4.47+ import_utils değişikliklerini yönetir
-    run_cmd("pip install --prefer-binary --no-cache-dir --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
+    run_cmd("uv pip install --system --prefer-binary --no-cache-dir --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
 
     # Arka plan temizleme (rembg)
-    run_cmd('pip install --prefer-binary --no-cache-dir rembg')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir rembg')
 
     # ModelScope T2V ek paketler
-    run_cmd('pip install --prefer-binary --no-cache-dir "decord>=0.6.0" "open_clip_torch"')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir "decord>=0.6.0" "open_clip_torch"')
 
     # Wav2Lip Repo
     if not os.path.exists('Wav2Lip'):
         run_cmd('git clone https://github.com/Rudrabha/Wav2Lip.git')
 
     # Wav2Lip & Face detection paketleri
-    run_cmd('pip install --prefer-binary --no-cache-dir face_recognition_models')
-    run_cmd('pip install --prefer-binary --no-cache-dir face_recognition opencv-python-headless librosa')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir face_recognition_models')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir face_recognition opencv-python-headless librosa')
 
     # Altyazı çıkarıcı (faster-whisper)
-    run_cmd('pip install --prefer-binary --no-cache-dir faster-whisper')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir faster-whisper')
 
     # Video indirici (yt-dlp) — colab_server.py ve özgünleştirme için
-    run_cmd('pip install --prefer-binary --no-cache-dir yt-dlp')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir yt-dlp')
 
     # Rubberband ses senkronizasyonu (Auto-Synced-Translated-Dubs)
-    run_cmd('pip install --prefer-binary --no-cache-dir pyrubberband soundfile')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir pyrubberband soundfile')
     run_cmd('apt-get install -y rubberband-cli rubberband-ladspa')
 
     # Alternatif TTS sağlayıcıları (Lobe Chat / OpenAI / Edge)
-    run_cmd('pip install --prefer-binary --no-cache-dir openai edge-tts')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir openai edge-tts')
 
     # GFPGAN + RealESRGAN yüz düzeltme ve upscale (stable-diffusion-webui)
-    run_cmd('pip install --prefer-binary --no-cache-dir gfpgan realesrgan basicsr')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir gfpgan realesrgan basicsr')
 
     # Wav2Lip checkpoint (~400MB) indirme zinciri
     WAV2LIP_CKPT_SOURCES = [

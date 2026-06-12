@@ -8,6 +8,7 @@ import {
 import { Timeline, Scene } from './components/Timeline.js';
 import { PhotoEditor } from './components/PhotoEditor.js';
 import { Opportunities, OpportunityVideo } from './components/Opportunities.js';
+import { LandingPage } from './components/LandingPage.js';
 
 interface Job {
   id: number;
@@ -77,6 +78,7 @@ export default function App() {
   const [audioDucking, setAudioDucking] = useState<boolean>(false);
   const [targetPlatforms, setTargetPlatforms] = useState<string[]>(['youtube']);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedMusicFile, setSelectedMusicFile] = useState<File | null>(null);
   const [formLoading, setFormLoading] = useState<boolean>(false);
 
   // Editing details (Awaiting Approval / Metadata)
@@ -193,8 +195,7 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLoginDirect = async (u: string, p: string) => {
     setAuthError('');
     try {
       const res = await fetch('/login', {
@@ -203,7 +204,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'x-csrf-token': csrfToken
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username: u, password: p })
       });
       const data = await res.json();
       if (data.success) {
@@ -211,9 +212,11 @@ export default function App() {
         fetchSession();
       } else {
         setAuthError(data.error || 'Giriş başarısız.');
+        throw new Error(data.error || 'Giriş başarısız.');
       }
-    } catch (err) {
-      setAuthError('Sunucu hatası.');
+    } catch (err: any) {
+      setAuthError(err.message || 'Sunucu hatası.');
+      throw err;
     }
   };
 
@@ -409,6 +412,9 @@ export default function App() {
     if (selectedFile) {
       formData.append('material', selectedFile);
     }
+    if (selectedMusicFile) {
+      formData.append('background_music', selectedMusicFile);
+    }
 
     try {
       const res = await fetch('/create-job', {
@@ -422,6 +428,7 @@ export default function App() {
       setProductionNotes('');
       setCharacterFeatures('');
       setSelectedFile(null);
+      setSelectedMusicFile(null);
       setBrandKitEnabled(false);
       setKineticSubtitles(false);
       setAutoSfxPlacement(false);
@@ -537,83 +544,17 @@ export default function App() {
     return text;
   };
 
-  // Render Auth screen if not logged in
+  // Render Landing page if not logged in
   if (!isLoggedIn) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        background: 'var(--bg-main)',
-        fontFamily: 'var(--font-sans)'
-      }}>
-        <form onSubmit={handleLogin} className="glass" style={{
-          padding: '40px',
-          borderRadius: '12px',
-          width: '100%',
-          maxWidth: '400px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px',
-          border: '1px solid var(--border)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-            <Film size={40} className="gradient-text" style={{ color: 'var(--primary)', marginBottom: '10px' }} />
-            <h2 className="gradient-text" style={{ fontWeight: 'bold', fontSize: '20px' }}>AI-PUBLISHER</h2>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Otonom Video Pazarlama Portalı</p>
-          </div>
-
-          {authError && (
-            <div style={{ color: 'var(--danger)', fontSize: '12px', textAlign: 'center' }}>
-              {authError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kullanıcı Adı</label>
-            <input 
-              type="text" 
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{
-                background: '#070a14',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                color: 'white',
-                padding: '10px',
-                outline: 'none',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Şifre</label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                background: '#070a14',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                color: 'white',
-                padding: '10px',
-                outline: 'none',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary" style={{ padding: '12px', width: '100%', fontWeight: 'bold' }}>
-            Giriş Yap
-          </button>
-        </form>
-      </div>
+      <LandingPage 
+        onLogin={handleLoginDirect}
+        authError={authError}
+        setAuthError={setAuthError}
+        language={language}
+        setLanguage={setLanguage}
+        t={t}
+      />
     );
   }
 
@@ -779,6 +720,17 @@ export default function App() {
                 type="file"
                 accept="image/*,video/*"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                style={{ fontSize: '11px', color: 'var(--text-muted)' }}
+              />
+            </div>
+
+            {/* File Upload (Background Music) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Arka Plan Müziği (Background Music)</label>
+              <input 
+                type="file"
+                accept="audio/*"
+                onChange={(e) => setSelectedMusicFile(e.target.files?.[0] || null)}
                 style={{ fontSize: '11px', color: 'var(--text-muted)' }}
               />
             </div>

@@ -262,7 +262,27 @@ export async function initDatabase() {
       video_path TEXT,
       audio_path TEXT,
       status VARCHAR(20) DEFAULT 'pending',
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      music_volume REAL DEFAULT 0.2,
+      speaker VARCHAR(50)
     );
   `);
+
+  // characters tablosu kurulumu
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS characters (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(50) UNIQUE,
+      description TEXT,
+      avatar_base64 TEXT,
+      voice_base64 TEXT,
+      tts_voice VARCHAR(100) DEFAULT 'Claribel Dervla',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS background_music_path TEXT;');
+  await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS music_volume REAL DEFAULT 0.2;');
+  await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS speaker VARCHAR(50);');
 }

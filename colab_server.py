@@ -519,18 +519,93 @@ def load_wav2lip():
         return None
 
 
-def apply_lipsync_internal(video_path: str, audio_path: str) -> dict:
+import base64
+import face_recognition
+
+def load_image_from_base64(b64_str):
+    if not b64_str:
+        return None
+    if "," in b64_str:
+        b64_str = b64_str.split(",")[1]
+    img_bytes = base64.b64decode(b64_str)
+    nparr = np.frombuffer(img_bytes, np.uint8)
+    return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+def make_custom_face_detect(ref_encoding=None):
+    def custom_face_detect(images):
+        pady1, pady2, padx1, padx2 = [0, 10, 0, 0]
+        results = []
+        
+        for idx, img in enumerate(images):
+            # face_recognition için RGB formatına çevir
+            rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            # Yüz lokasyonlarını tespit et
+            face_locations = face_recognition.face_locations(rgb_img)
+            
+            if len(face_locations) == 0:
+                # Yüz bulunamazsa varsayılan olarak tüm resmi al
+                h, w, _ = img.shape
+                results.append([0, 0, w, h])
+                continue
+                
+            best_rect = face_locations[0] # varsayılan ilk yüz
+            if ref_encoding is not None and len(face_locations) > 1:
+                # Frame'deki tüm yüzlerin encoding'lerini çıkar
+                face_encodings = face_recognition.face_encodings(rgb_img, face_locations)
+                min_dist = 999.0
+                for f_idx, enc in enumerate(face_encodings):
+                    dist = face_recognition.face_distance([ref_encoding], enc)[0]
+                    if dist < min_dist:
+                        min_dist = dist
+                        best_rect = face_locations[f_idx]
+            
+            top, right, bottom, left = best_rect
+            
+            y1 = max(0, top - pady1)
+            y2 = min(img.shape[0], bottom + pady2)
+            x1 = max(0, left - padx1)
+            x2 = min(img.shape[1], right + padx2)
+            
+            results.append([x1, y1, x2, y2])
+            
+        boxes = np.array(results)
+        final_results = [[images[i][y1:y2, x1:x2], (y1, y2, x1, x2)] for i, (x1, y1, x2, y2) in enumerate(boxes)]
+        return final_results
+        
+    return custom_face_detect
+
+
+def apply_lipsync_internal(video_path: str, audio_path: str, speaker: str = None, character_images: dict = None) -> dict:
     """
-    Wav2Lip inference — yüz bulunamazsa veya başka hata olursa
-    skipped=True, original_path ile orijinal video kullanılır.
+    Wav2Lip inference — face_recognition entegrasyonu sayesinde 
+    birden fazla yüz olan sahnelerde sadece konuşan karakterin (speaker) 
+    dudaklarını senkronize eder.
     """
     model = load_wav2lip()
     if not model:
         return {"success": False, "skipped": True, "error": "Wav2Lip modeli yüklenemedi"}
 
+    ref_encoding = None
+    if speaker and character_images and speaker in character_images:
+        try:
+            ref_img = load_image_from_base64(character_images[speaker])
+            if ref_img is not None:
+                rgb_ref = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
+                ref_encs = face_recognition.face_encodings(rgb_ref)
+                if len(ref_encs) > 0:
+                    ref_encoding = ref_encs[0]
+                    print(f"[INFO] Konuşmacı ({speaker}) referans yüz encoding'i çıkarıldı.")
+        except Exception as ex:
+            print(f"[WARN] Referans yüz encoding'i çıkarılırken hata: {ex}")
+
     output_path = video_path.replace('.mp4', '_lipsync.mp4')
     try:
         from Wav2Lip import inference as _w2l_inference
+        
+        # face_detect metodunu konuşmacı duyarlı versiyonla ez
+        _w2l_inference.face_detect = make_custom_face_detect(ref_encoding)
+        
         _w2l_inference.inference(
             model,
             face=video_path,
@@ -787,7 +862,9 @@ def _generate_media_worker(task_id: str, data: dict):
     out_path = RAW_VIDEO_PATH
     if apply_lipsync and speech_text:
         print("👄 Wav2Lip uygulanıyor...")
-        lipsync_result = apply_lipsync_internal(RAW_VIDEO_PATH, AUDIO_PATH)
+        speaker = data.get("speaker")
+        character_images = data.get("character_images")
+        lipsync_result = apply_lipsync_internal(RAW_VIDEO_PATH, AUDIO_PATH, speaker=speaker, character_images=character_images)
         if lipsync_result.get("success"):
             out_path = lipsync_result["output_path"]
             print(f"✅ Wav2Lip tamam: {out_path}")
@@ -1511,6 +1588,79 @@ def download_localized_audio(job_id, scene_number):
     if not os.path.exists(path):
         return jsonify({"error": "Localized audio bulunamadı"}), 404
     return send_file(path, mimetype="audio/wav")
+
+# ── AVATAR ÜRETİMİ (Stable Diffusion) ──────────────────────────────────────────
+@app.route("/generate-avatar", methods=["POST"])
+def generate_avatar():
+    global last_activity
+    last_activity = time.time()
+    
+    data = request.get_json(force=True) or {}
+    avatar_prompt = data.get("avatar_prompt")
+    if not avatar_prompt:
+        return jsonify({"error": "avatar_prompt zorunludur"}), 400
+
+    try:
+        flush_memory()
+        print("🎨 Karakter avatarı için Stable Diffusion (DreamShaper 8) yükleniyor...")
+        pipe = DiffusionPipeline.from_pretrained(
+            "Lykon/dreamshaper-8",
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True
+        )
+        pipe.to("cuda")
+        
+        print("🎨 Karakter avatarı üretiliyor...")
+        with torch.inference_mode():
+            img = pipe(prompt=avatar_prompt, num_inference_steps=25, height=512, width=512).images[0]
+            
+        temp_path = "/content/temp_avatar.jpg"
+        img.save(temp_path)
+        
+        enhance_face_gfpgan(temp_path)
+        upscale_image_realesrgan(temp_path, scale=2)
+        
+        with open(temp_path, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+            
+        avatar_base64 = f"data:image/jpeg;base64,{b64_data}"
+        
+        del pipe
+        flush_memory()
+        
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        return jsonify({"status": "success", "avatar_base64": avatar_base64}), 200
+    except Exception as exc:
+        print(f"❌ Avatar üretimi başarısız: {exc}")
+        flush_memory()
+        return jsonify({"error": str(exc)}), 500
+
+
+# ── SHUTDOWN ENDPOINT ─────────────────────────────────────────────────────────
+@app.route("/shutdown", methods=["POST"])
+def shutdown_server():
+    print("[INFO] Kapatma isteği alındı. Google Colab oturumu sonlandırılıyor...")
+    
+    import threading
+    import os
+    import signal
+    
+    def do_unassign():
+        time.sleep(2)
+        try:
+            # google.colab.runtime unassign API'sini çağıralım
+            from google.colab import runtime
+            runtime.unassign()
+            print("[INFO] unassign() başarıyla tetiklendi.")
+        except Exception as e:
+            print(f"[ERROR] unassign() başarısız, process kill deneniyor: {e}")
+            # unassign başarısız olursa python kernel'ini öldürelim
+            os.kill(os.getpid(), signal.SIGTERM)
+            
+    threading.Thread(target=do_unassign).start()
+    return jsonify({"status": "shutdown_triggered", "message": "Colab oturumu kapatılıyor."}), 200
 
 # ── HEALTH CHECK ──────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
