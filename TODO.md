@@ -210,25 +210,26 @@
 ## 🚀 Sprint 1 (Hafta 1-2) — Temel & Chat-to-Edit v1
 
 ### Track A: vibeclip — Chat-to-Edit Servisi
-- [ ] `src/services/chatToEdit.ts` — Tool-calling agent ile doğal dil → FFmpeg komutları
-- [ ] Sahne puanlaması (hook/flow/value analizi) — mevcut AI servisine entegrasyon
-- [ ] "Uhh/Eee'leri sil", "İkinci klibi vurucu yap" gibi doğal dil komutları
-- [ ] BYOK (Bring Your Own Key) — mevcut Zen/Minimax/Gemini zinciriyle uyum
-- [ ] Vitest testleri
+- [x] `src/services/chatToEdit.ts` — Tool-calling agent ile doğal dil → FFmpeg komutları
+- [x] Sahne puanlaması (hook/flow/value analizi) — mevcut AI servisine entegrasyon
+- [x] "Uhh/Eee'leri sil", "İkinci klibi vurucu yap" gibi doğal dil komutları
+- [x] BYOK (Bring Your Own Key) — mevcut Zen/Minimax/Gemini zinciriyle uyum
+- [ ] Vitest testleri (Sprint 4 kapsamında)
 
-### Track B: server.ts Modüler Refactoring
-- [ ] `src/routes/` — Tüm rotaları ayrı dosyalara böl
-- [ ] `src/middleware/` — Auth, CSRF, error handling middleware'ler
-- [ ] `src/views/` — Dashboard template'lerini ayrıştır
-- [ ] Magic number'ları `.env` ve constants dosyasına taşı
-- [ ] Global Error Middleware (`app.use((err, req, res, next) => ...)`)
-- [ ] `npm run check:types` ile doğrulama
+### Track B: server.ts Modüler Refactoring ✅ (Zaten Tamam)
+- [x] `src/routes/` — Tüm rotalar ayrı dosyalarda (15 route dosyası)
+- [x] `src/middleware/` — Auth, CSRF, error handling, rate-limit, i18n, theme, utf8
+- [x] `src/views/` — Dashboard template'leri ayrıştırılmış (dashboard.ts, dashboardScripts.ts, dashboardStyles.ts, login.ts)
+- [x] Magic number'lar `.env` ve rate-limit.ts'de sabitlenmiş
+- [x] Global Error Middleware (`src/middleware/error.ts`)
+- [x] `npm run check:types` ile doğrulandı (sıfır hata)
 
-### Track C: Kritik Bug Fix'ler
-- [ ] **SSE Auth:** `/progress/:id` rotasına `requireAuth` + `WHERE user_id = ?` kontrolü
-- [ ] **Rate Limiting:** `express-rate-limit` ile dakikada 5 istek limiti
-- [ ] **Cancel Endpoint:** `POST /cancel-job/:id` + worker `isCancelled` kontrolü
-- [ ] **Phase 1 Async:** Background differentiation + SSE bildirimi
+### Track C: Kritik Bug Fix'ler ✅ (Zaten Tamam)
+- [x] **SSE Auth:** `/progress/:id` rotasında `requireAuth` + `WHERE user_id = ?` kontrolü mevcut
+- [x] **Rate Limiting:** `express-rate-limit` ile 4 farklı limiter (heavy:5, medium:20, sse:10, auth:10 failed/15dk)
+- [x] **Cancel Endpoint:** `POST /cancel-job/:id` + ownership check + SSE broadcast + audit log
+- [x] **Global Error Handler:** `src/middleware/error.ts` — JSON/HTML dual response
+- [ ] **Phase 1 Async:** Background differentiation + SSE bildirimi (Sprint 3 Track C'ye ertelendi)
 
 ---
 

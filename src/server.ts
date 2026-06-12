@@ -29,6 +29,7 @@ import { registerColabRoutes } from './routes/colab.js';
 import { registerEditorRoutes } from './routes/editor.js';
 import { registerCreditRoutes } from './routes/credits.js';
 import { registerLocalesRoutes } from './routes/locales.js';
+import { registerChatToEditRoutes } from './routes/chatToEdit.js';
 import { paymentsRouter } from './routes/payments.js';
 import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
@@ -115,6 +116,7 @@ registerColabRoutes(app);
 registerEditorRoutes(app);
 registerCreditRoutes(app);
 registerLocalesRoutes(app);
+registerChatToEditRoutes(app);
 
 // API Rotaları
 app.use('/api/v1/payments', paymentsRouter);

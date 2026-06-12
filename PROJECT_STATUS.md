@@ -11,6 +11,11 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Tür Güvenliği:** `npx tsc --noEmit` ile TypeScript tür denetimi başarıyla doğrulandı.
 - **D-Note Arayüz Entegrasyonu:** D-Note projesindeki tema yapısı (8 premium tema) ve çoklu dil desteği (i18n), JSON dil dosyaları (`tr.json`, `en.json`), Express middleware katmanları ve `themes.ts` modülleri ile baştan aşağı yenilendi. Hardcoded metinler temizlendi.
 
+## Sprint 1 — Çıktılar (12 Haziran 2026 - v5.0)
+- **vibeclip Chat-to-Edit Servisi (Yeni):** `src/services/chatToEdit.ts` oluşturuldu. Doğal dil komutlarını AI (Zen→Minimax→Gemini) ile analiz edip FFmpeg operasyonlarına dönüştüren tool-calling agent eklendi. 14 farklı operasyon tipi destekleniyor: trim, speed, enhance, remove_silence, add_broll, add_transition, add_text, add_logo, adjust_audio, add_sfx, resize, add_pings, add_subtitles, duck_audio. Sahne puanlaması (hook/flow/value) `scoreScenes()` fonksiyonu ile çalışıyor. API rotaları: `/api/v1/chat-edit/parse`, `/api/v1/chat-edit/apply`, `/api/v1/chat-edit/score`.
+- **Track B (Refactor) ve Track C (Bug Fix) doğrulandı:** `server.ts` (148 satır) zaten modüler yapıda; routes (15), middleware (7), views (4) ayrışmış durumda. SSE Auth, Rate Limiting, Cancel Endpoint, Global Error Handler zaten mevcut — `KNOWN_ISSUES.md` güncellendi.
+- **TypeScript:** `tsc --noEmit` sıfır hata ile doğrulandı.
+
 ## Yapılan İyileştirmeler (Yeni S5+)
 - **SaaS Kredilendirme Sistemi ve Kredi Geçmişi (Yeni):** `users` tablosuna `credits`, `monthly_credit_limit` ve `credit_reset_date` eklenerek SaaS abonelik mimarisi kuruldu. Video sentezi (sahne başına 10 kredi), kapak sentezi (5 kredi) ve video özgünleştirme (15 kredi) işlemleri için kredi düşüm ve `credit_transactions` tablosuna transaction loglama mekanizmaları entegre edildi. Herhangi bir asenkron kuyruk hatasında veya kullanıcı iptalinde kredilerin tam olarak iade edilmesi (`refundCredits`) sağlanarak bakiye tutarlılığı garanti altına alındı.
 - **Dinamik i18n & Çeviri API'si (Yeni):** Frontend üzerindeki tüm hardcoded metinler ve diller temizlendi. `/api/v1/locales` API rotası üzerinden `tr.json` / `en.json` dosyaları dinamik olarak yüklenerek istemciye servis edilmeye başlandı. Arayüzde regex tabanlı parametre yerleştirme desteğiyle dinamik i18n yapısı tamamlandı.
@@ -106,9 +111,9 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 
 | Paralel Track | İçerik | Durum |
 |---|---|---|
-| **A — vibeclip** | Chat-to-Edit servisi (`src/services/chatToEdit.ts`), tool-calling agent ile doğal dil → FFmpeg kurgu, sahne puanlaması (hook/flow/value) | ⏳ Başlıyor |
-| **B — Refactor** | `server.ts` (5093 satır → modüler `routes/`, `middleware/`, `views/`), magic number'ları env'e taşıma | ⏳ Başlıyor |
-| **C — Bug Fix** | SSE Auth, Rate Limiting, Global Error Middleware, Cancel Endpoint | ⏳ Başlıyor |
+| **A — vibeclip** | Chat-to-Edit servisi (`src/services/chatToEdit.ts`), tool-calling agent ile doğal dil → FFmpeg kurgu, sahne puanlaması (hook/flow/value) | ✅ Tamam |
+| **B — Refactor** | `server.ts` (5093 satır → modüler `routes/`, `middleware/`, `views/`), magic number'ları env'e taşıma | ✅ Zaten tamam |
+| **C — Bug Fix** | SSE Auth, Rate Limiting, Global Error Middleware, Cancel Endpoint | ✅ Zaten tamam |
 
 ### Sprint 2 (Hafta 3-4) — Karakter Tutarlılığı & Remotion
 
