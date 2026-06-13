@@ -422,8 +422,27 @@
 - [ ] **Transkript Tabanlı Kurgu (Transcript-Based Editing):** Panel üzerinden transkript metnindeki kelimelerin silinmesiyle, videonun o saniyelerdeki kısımlarının FFmpeg ile otonom kırpılıp birleştirilmesi.
 - [ ] **Çok Dilli Otomatik Dublaj (Auto-Dubbing):** Whisper transkriptinin çevrilmesi, XTTS-v2 ses klonlama ile hedef dilde seslendirilmesi ve rubberband ile video süresine göre esnetilip dublajlanması.
 
+## 🚀 Faz E - Akıllı Kurgu ve Renk Derecelendirme (auto-editor / video-use Benzeri)
+- [ ] **Akıllı Sessizlik ve Hareketsizlik Kesici (Auto-Cuts & Motion Detection):** Konuşmadaki boşlukları ve video karelerindeki hareketsiz sabit anları otomatik tespit edip otonom kırpan FFmpeg filtre entegrasyonu.
+- [ ] **Doğal Dil ile Renk Derecelendirme (Natural Language Color Grading):** Kullanıcının "sıcak sinematik tonlar", "neon mor" gibi doğal dil komutlarıyla video renk filtrelerini (`colorbalance`, `eq`, LUT `.cube`) dinamik uygulayan kurgu ajanının geliştirilmesi.
+
+## 🚀 Faz F - Dinamik Altyazılar ve Hızlı Transkript (SubtitleAI / AI-Video-Editor Benzeri)
+- [ ] **Hormozi Tarzı Dinamik Altyazılar (Dynamic Captions):** Remotion React bileşeni (`RemotionVideo.tsx`) üzerinde kelime bazlı zaman damgaları (word-level timestamp) ile bounce, pulse, shake ve renkli dolgu animasyonları içeren modern altyazı desteğinin yazılması.
+- [ ] **`faster-whisper` ile Hızlı Deşifre:** Colab Flask sunucusunda yer alan konuşma tanıma motorunun `faster-whisper` C++ kütüphanesiyle güncellenerek deşifre süresinin 4 kat kısaltılması.
+
+## 🚀 Faz G - Premium AI Kurgu & Ses İyileştirme Entegrasyonları (Descript / Runway Benzeri)
+- [ ] **AI Göz Teması Düzeltici (Eye Contact Correction):** Konuşmacı veya üretilen avatarın göz bebeklerini ekrana sabitleyerek izleyiciyle doğrudan göz teması kurmasını sağlayan AI modelinin (örn: Gaze-correction) entegrasyonu.
+- [ ] **AI Stüdyo Ses İyileştirici (Studio Sound / Enhance Audio):** Yüklenen referans konuşma kayıtlarındaki arka plan gürültüsünü, yankıyı ve dip sesleri silerek stüdyo kalitesinde ses üreten ses temizleme filtresinin yazılması.
+- [ ] **Dinamik Otomatik Yeniden Çerçeveleme (Smart Auto-Reframe):** Yatay (16:9) videoları dikey (9:16) formata çevirirken, konuşmacının yüzünü veya ana odak noktasını OpenCV ile takip ederek (active tracking) dinamik crop yapan FFmpeg şablonu.
+- [ ] **AI Nesne Silici (Inpainting & Object Removal):** Sahnelerden istenmeyen objeleri veya bozulmaları maskeleyerek temizleyen Runway tarzı hafif inpainting modelinin sunulması.
+
+## 🚀 Faz H - İleri Düzey Viral Optimizasyon & B-Roll Sentezi (OpusClip / Captions Benzeri)
+- [ ] **Otonom Yapay Zeka B-Roll Sentezi (AI B-Roll Generation):** Sahnelerdeki anahtar kelimelere göre Pexels stok videoları yerine yerel CogVideoX modelleriyle doğrudan 3-4 saniyelik özgün B-Roll video parçaları sentezleyip kurguya dahil eden motor.
+- [ ] **Viral Hook & Trend Analiz Motoru (Viral Hook Generator):** Üretilen videonun ilk 3 saniyesindeki "Hook" kalitesini değerlendirip, sosyal medya trendlerine göre yüksek etkileşimli alternatif başlıklar ve viral hashtag'ler üreten LLM modülü.
+- [ ] **Duygu ve Vurgu Odaklı Altyazı Efektleri (Emotion & Highlight Captions):** Ses frekansı ve transkript tonlama analizine göre vurgulu kelimeleri tespit edip, altyazıda farklı renkler (örn: sarı/kırmızı) ve dinamik shake/pop efektleriyle öne çıkaran sistem.
+
 ## ✅ Sonraki Adımlar
-- [ ] Tüm Faz A, Faz B ve Faz C işleri tamamlandıktan sonra frontend-design skill ile görünüm düzenlemesi
+- [ ] Tüm Faz A, Faz B, Faz C, Faz D, Faz E, Faz F, Faz G ve Faz H işleri tamamlandıktan sonra frontend-design skill ile görünüm düzenlemesi
 - [ ] Code review çalıştırma
 - [ ] Testleri çalıştırma (`npm run check`)
 - [ ] Git push ve raporlama

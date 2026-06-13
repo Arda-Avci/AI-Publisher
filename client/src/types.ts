@@ -108,4 +108,4 @@ export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
 export type Language = 'tr' | 'en';
-export type Tab = 'create' | 'gallery' | 'opportunities' | 'groupchat';
+export type Tab = 'create' | 'gallery' | 'opportunities' | 'groupchat' | 'canvas' | 'apikeys' | 'batch';

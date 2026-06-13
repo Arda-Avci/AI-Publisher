@@ -9,6 +9,9 @@ import { CharacterSelectorModal, extractCharacterNames } from './components/Char
 import type { Scene } from './components/Timeline.js';
 import type { OpportunityVideo } from './components/Opportunities.js';
 import type { Job, UserCredits, Language, Tab, ProductionTemplate, TtsProvider, Platform } from './types.js';
+import { CanvasPanel } from './components/CanvasPanel.js';
+import { ApiKeyManager } from './components/ApiKeyManager.js';
+import { BatchUpload } from './components/BatchUpload.js';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -56,7 +59,7 @@ export default function App() {
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [camIntensity, setCamIntensity] = useState(0.75);
 
-  const mainTabs = ['Stüdyo', 'Galeri', 'Talk-Show', 'Karakterler'] as const;
+  const mainTabs = ['Stüdyo', 'Galeri', 'Talk-Show', 'Karakterler', 'Canvas', 'API Keys', 'Batch'] as const;
   const [mainTab, setMainTab] = useState<typeof mainTabs[number]>('Stüdyo');
 
   const t = useCallback((key: string, params?: Record<string, any>) => {
@@ -234,6 +237,18 @@ export default function App() {
             onSelectScene={(s: Scene) => setEditingImageScene(s)} onUseAsPrompt={handleUseAsPrompt} t={t}
             masterPrompt={masterPrompt} onSetMasterPrompt={setMasterPrompt}
             onSubmit={handleSubmitJob} formLoading={formLoading} mainTab={mainTab} />
+
+          {mainTab === 'Canvas' && (
+            <CanvasPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
+          )}
+
+          {mainTab === 'API Keys' && (
+            <ApiKeyManager language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
+          )}
+
+          {mainTab === 'Batch' && (
+            <BatchUpload language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
+          )}
         </main>
 
         <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>
