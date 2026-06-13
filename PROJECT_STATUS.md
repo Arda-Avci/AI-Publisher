@@ -241,13 +241,7 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 |---|---|
 | **Top Yuvarlak AI Talk-Show (S3.B)** | Sportoto API entegrasyonu gerektiriyor, harici bağımlılık yüksek |
 | **Docker Compose** | Bu geliştirme makinesinde Docker çalışmıyor |
-| **Otonom Clipping Motoru (Faz C)** | Uzun yatay videoları analiz edip dikey Shorts formatında kırpacak otonom motor planlandı |
-| **A/B Split Screen & Maskot (Faz C)** | Bölünmüş ekran ve logo/maskot yerleşimi retention artırımı için planlandı |
-| **Akıllı Kurgu & Dublaj (Faz D)** | Ritime göre kesim (beat-sync), transkript kurgusu ve otomatik dublaj planlandı |
-| **Kurgu & Renk Ajanı (Faz E)** | Sessizlik kesici (auto-cut), hareket algılama ve doğal dil renk derecelendirme planlandı |
-| **Altyazı & Transkript (Faz F)** | Hormozi tarzı dinamik altyazı (pulse, bounce, shake) ve faster-whisper planlandı |
-| **AI Göz, Ses & Reframe (Faz G)** | AI göz teması düzeltme, gürültü silme (Studio Sound), akıllı reframe ve inpainting planlandı |
-| **Viral Optimizasyon & B-Roll (Faz H)** | Otonom AI B-Roll sentezi, viral hook analiz motoru ve vurgulu altyazılar planlandı |
+| **Faz C-H v2 Geliştirmeleri (7 Job)** | React Migration (S4.C) sonrası başlanmak üzere [`docs/Sprint_18_Roadmap.md`](./docs/Sprint_18_Roadmap.md) dosyasına taşındı |
 
 ---
 
