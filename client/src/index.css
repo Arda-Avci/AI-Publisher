@@ -3,6 +3,7 @@
   --bg-surface: #18181b;
   --bg-surface-hover: #27272a;
   --bg-card: rgba(24, 24, 27, 0.4);
+  --card: var(--bg-card);
   --accent: #6366f1;
   --accent-600: #4f46e5;
   --accent-glow: rgba(99, 102, 241, 0.3);

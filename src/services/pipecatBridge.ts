@@ -95,10 +95,14 @@ class PipecatBridge {
       });
 
       const timeout = setTimeout(() => {
-        if (this.process) {
+        if (this.process && this.process.exitCode === null) {
           Logger.info('[Pipecat] Server started (timeout assume ready)');
           this.connectWebSocket();
           resolve();
+        } else if (this.process) {
+          Logger.warn(`[Pipecat] Process exited with code ${this.process.exitCode}, server başlatılamadı`);
+          this.process = null;
+          resolve(); // Don't reject — Pipecat non-critical
         }
       }, 5000);
 
