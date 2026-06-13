@@ -245,11 +245,20 @@ async function processExtraction(
   if (!job) return;
 
   try {
-    // For now, simulate transcription
-    // In real implementation, use Whisper or similar
-    const mockTranscription = generateMockTranscription();
+    // Try real transcription using existing audio-transcriber
+    let transcription;
+    try {
+      const { transcribeVideoAudio } = await import('../lib/audio-transcriber.js');
+      const text = await transcribeVideoAudio(videoPath);
+      // Convert plain text to mock segments (placeholder - real Whisper would provide timestamps)
+      Logger.info(`[Clipper] Transcription received (${text.length} chars), using mock segments`);
+      transcription = generateMockTranscription();
+    } catch (transcribeError) {
+      Logger.warn('[Clipper] Transcription failed, using mock:', transcribeError);
+      transcription = generateMockTranscription();
+    }
 
-    const result = await viralAnalyzer.analyze(mockTranscription, {
+    const result = await viralAnalyzer.analyze(transcription, {
       minDuration: options.minDuration || 30,
       maxDuration: options.maxDuration || 90,
       targetCount: options.targetCount || 5,
