@@ -53,3 +53,48 @@ export interface ViralAnalysisResult {
   topReason: string;
   transcriptSegments: number;
 }
+
+// Face tracking crop types
+export interface FaceCropOptions {
+  inputPath: string;
+  outputPath: string;
+  segment: ClipSegment;
+  trackingMode: 'face' | 'motion' | 'center';
+  outputWidth?: number;
+  outputHeight?: number;
+}
+
+export interface CropFrame {
+  timestamp: number;
+  cropX: number;
+  cropY: number;
+  cropW: number;
+  cropH: number;
+  confidence: number;
+}
+
+export interface FaceTrackResult {
+  frames: CropFrame[];
+  duration: number;
+  mode: string;
+}
+
+// Split screen types
+export interface SplitScreenOptions {
+  gapPx?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  transitionType?: 'none' | 'dissolve' | 'wipe';
+  outputWidth?: number;
+  outputHeight?: number;
+}
+
+export interface OverlayPosition {
+  x: number | string;
+  y: number | string;
+  scale?: number;
+  opacity?: number;
+}
+
+export type AnimationType = 'float' | 'bounce' | 'blink';
+export type PipPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';

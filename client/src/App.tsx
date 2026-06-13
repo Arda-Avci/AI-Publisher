@@ -12,6 +12,11 @@ import type { Job, UserCredits, Language, Tab, ProductionTemplate, TtsProvider, 
 import { CanvasPanel } from './components/CanvasPanel.js';
 import { ApiKeyManager } from './components/ApiKeyManager.js';
 import { BatchUpload } from './components/BatchUpload.js';
+import { ClipperPanel } from './components/ClipperPanel.js';
+import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
+import { HelpVideoPanel } from './components/HelpVideoPanel.js';
+import { AIStoryAssistant } from './components/AIStoryAssistant.js';
+import { ExamplesPanel } from './components/ExamplesPanel.js';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -59,8 +64,13 @@ export default function App() {
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [camIntensity, setCamIntensity] = useState(0.75);
 
-  const mainTabs = ['Stüdyo', 'Galeri', 'Talk-Show', 'Karakterler', 'Canvas', 'API Keys', 'Batch'] as const;
-  const [mainTab, setMainTab] = useState<typeof mainTabs[number]>('Stüdyo');
+  // Gelecek fazlar için form state'leri
+  const [dubbingLang, setDubbingLang] = useState('none');
+  const [subtitleStyle, setSubtitleStyle] = useState('dynamic_hormozi');
+  const [colorGrading, setColorGrading] = useState('');
+
+  const mainTabs = ['Örnekler', 'Stüdyo', 'Galeri', 'Talk-Show', 'AI Asistan', 'Karakterler', 'Canvas', 'API Keys', 'Batch', 'Clipper', 'Yayın Planla'] as const;
+  const [mainTab, setMainTab] = useState<typeof mainTabs[number]>('Örnekler');
 
   const t = useCallback((key: string, params?: Record<string, any>) => {
     let text = translations[key] || key;
@@ -146,6 +156,7 @@ export default function App() {
       fd.append('has_shorts', hasShorts ? '1' : '0'); fd.append('has_subtitles', hasSubtitles ? '1' : '0');
       fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0'); fd.append('kinetic_subtitles', kineticSubtitles ? '1' : '0');
       fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0'); fd.append('audio_ducking', audioDucking ? '1' : '0');
+      fd.append('dubbing_lang', dubbingLang); fd.append('subtitle_style', subtitleStyle); fd.append('color_grading', colorGrading);
       targetPlatforms.forEach(p => fd.append('platforms[]', p)); if (selectedFile) fd.append('material', selectedFile); if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
       setCharPendingFormData(fd); setCharDetectedNames(names); setCharModalOpen(true); return;
     }
@@ -156,15 +167,16 @@ export default function App() {
     fd.append('has_shorts', hasShorts ? '1' : '0'); fd.append('has_subtitles', hasSubtitles ? '1' : '0');
     fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0'); fd.append('kinetic_subtitles', kineticSubtitles ? '1' : '0');
     fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0'); fd.append('audio_ducking', audioDucking ? '1' : '0');
+    fd.append('dubbing_lang', dubbingLang); fd.append('subtitle_style', subtitleStyle); fd.append('color_grading', colorGrading);
     targetPlatforms.forEach(p => fd.append('platforms[]', p)); if (selectedFile) fd.append('material', selectedFile); if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
-    try { await fetch('/create-job', { method: 'POST', headers: { 'x-csrf-token': csrfToken }, body: fd }); setMasterPrompt(''); setProductionNotes(''); setCharacterFeatures(''); setSelectedFile(null); setSelectedMusicFile(null); setBrandKitEnabled(false); setKineticSubtitles(false); setAutoSfxPlacement(false); setAudioDucking(false); fetchJobs(); setActiveTab('gallery'); } catch {} finally { setFormLoading(false); }
+    try { await fetch('/create-job', { method: 'POST', headers: { 'x-csrf-token': csrfToken }, body: fd }); setMasterPrompt(''); setProductionNotes(''); setCharacterFeatures(''); setSelectedFile(null); setSelectedMusicFile(null); setBrandKitEnabled(false); setKineticSubtitles(false); setAutoSfxPlacement(false); setAudioDucking(false); setDubbingLang('none'); setSubtitleStyle('dynamic_hormozi'); setColorGrading(''); fetchJobs(); setActiveTab('gallery'); } catch {} finally { setFormLoading(false); }
   };
 
   const handleCharModalConfirm = async (charMap: Record<string, { name: string; description: string; isNew: boolean }>) => {
     setCharModalOpen(false); if (!charPendingFormData) return;
     charPendingFormData.append('character_map', JSON.stringify(charMap));
     setFormLoading(true);
-    try { await fetch('/create-job', { method: 'POST', headers: { 'x-csrf-token': csrfToken }, body: charPendingFormData }); setMasterPrompt(''); setProductionNotes(''); setCharacterFeatures(''); setSelectedFile(null); setSelectedMusicFile(null); setBrandKitEnabled(false); setKineticSubtitles(false); setAutoSfxPlacement(false); setAudioDucking(false); fetchJobs(); setActiveTab('gallery'); } catch {} finally { setFormLoading(false); setCharPendingFormData(null); }
+    try { await fetch('/create-job', { method: 'POST', headers: { 'x-csrf-token': csrfToken }, body: charPendingFormData }); setMasterPrompt(''); setProductionNotes(''); setCharacterFeatures(''); setSelectedFile(null); setSelectedMusicFile(null); setBrandKitEnabled(false); setKineticSubtitles(false); setAutoSfxPlacement(false); setAudioDucking(false); setDubbingLang('none'); setSubtitleStyle('dynamic_hormozi'); setColorGrading(''); fetchJobs(); setActiveTab('gallery'); } catch {} finally { setFormLoading(false); setCharPendingFormData(null); }
   };
 
   const handleSaveMetaAndPublish = async () => {
@@ -216,10 +228,13 @@ export default function App() {
             onSetSelectedMusicFile={setSelectedMusicFile} onSubmit={handleSubmitJob} t={t}
             selectedModel={selectedModel} onSetSelectedModel={setSelectedModel}
             aspectRatio={aspectRatio} onSetAspectRatio={setAspectRatio}
-            camIntensity={camIntensity} onSetCamIntensity={setCamIntensity} />
+            camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
+            dubbingLang={dubbingLang} onSetDubbingLang={setDubbingLang}
+            subtitleStyle={subtitleStyle} onSetSubtitleStyle={setSubtitleStyle}
+            colorGrading={colorGrading} onSetColorGrading={setColorGrading} />
         </aside>
 
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-primary)', backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-primary)', backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, background: 'rgba(99,102,241,0.05)', borderRadius: '50%', filter: 'blur(100px)', transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0 }} />
           <div style={{ height: 40, background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 4, zIndex: 1 }}>
             {mainTabs.map(tab => (
@@ -238,6 +253,19 @@ export default function App() {
             masterPrompt={masterPrompt} onSetMasterPrompt={setMasterPrompt}
             onSubmit={handleSubmitJob} formLoading={formLoading} mainTab={mainTab} />
 
+          {mainTab === 'Örnekler' && (
+            <ExamplesPanel language={language} t={t} />
+          )}
+
+          {mainTab === 'AI Asistan' && (
+            <AIStoryAssistant
+              language={language}
+              onApplyPrompts={(prompts) => {
+                setMasterPrompt(prompts.masterPrompt);
+              }}
+            />
+          )}
+
           {mainTab === 'Canvas' && (
             <CanvasPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
           )}
@@ -249,6 +277,20 @@ export default function App() {
           {mainTab === 'Batch' && (
             <BatchUpload language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
           )}
+
+          {mainTab === 'Clipper' && (
+            <ClipperPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
+          )}
+
+          {mainTab === 'Yayın Planla' && (
+            <SchedulePublishPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
+          )}
+
+          {/* Help Video Panel - shows contextual help for each section */}
+          <HelpVideoPanel
+            feature={mainTab === 'Stüdyo' ? 'studio' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Canvas' ? 'canvas' : mainTab === 'Batch' ? 'batch' : mainTab === 'Karakterler' ? 'characters' : mainTab === 'API Keys' ? 'api_keys' : 'studio'}
+            language={language}
+          />
         </main>
 
         <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>

@@ -64,6 +64,10 @@ export async function checkQueue() {
 }
 
 async function startProduction(job: VideoJob) {
+  if (!job) {
+    Logger.error('startProduction: job parametresi tanımsız!');
+    throw new Error('startProduction: job parametresi tanımsız.');
+  }
   let requiredCredits = 0;
 
   // İş başında Zen modellerinin sağlığını bir kere test edip, hata alanları geçici olarak skip edelim.
@@ -93,8 +97,10 @@ async function startProduction(job: VideoJob) {
       await runDifferentiationPipeline(job.id, job.user_id);
       // Reload job data
       const updatedJob = await db.get("SELECT * FROM video_jobs WHERE id = ?", [job.id]);
-      if (updatedJob) {
+      if (updatedJob && updatedJob.id) {
         job = updatedJob;
+      } else {
+        throw new Error(`İş #${job.id} veritabanında güncellenirken bulunamadı veya silindi.`);
       }
       if (job.status === 'awaiting_approval') {
         Logger.info('[PRODUCTION] Fırsatlar Hunisi Phase 1 completed. Awaiting approval. Stopping startProduction.', { jobId: job.id });
@@ -750,8 +756,8 @@ async function startProduction(job: VideoJob) {
           const musicAbsPath = path.resolve(path.join(process.cwd(), job.background_music_path));
           if (await fs.pathExists(musicAbsPath)) {
             inputArgs.push('-i', musicAbsPath);
-            // push sonrası length / 2 - 1 ile sırasını bulalım
-            musicIndex = (inputArgs.length / 2) - 1;
+            // -i flag sayısı - 1 = input sırası (0-indexed)
+            musicIndex = inputArgs.filter(a => a === '-i').length - 1;
             Logger.info(`Müzik dosyası FFmpeg'e eklendi: index=${musicIndex}, path=${musicAbsPath}`);
           }
         }

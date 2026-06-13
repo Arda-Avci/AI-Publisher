@@ -142,7 +142,7 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
       [
         '-y',
         '-i', videoPath,
-        '-vf', 'select=not(mod(n\,5))',
+        '-vf', 'select=not(mod(n,5))',
         '-vsync', 'vfr',
         '-frame_pts', '1',
         path.join(tempDir, 'frame_%08d.png').replace(/\\/g, '/')

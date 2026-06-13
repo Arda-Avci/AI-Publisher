@@ -690,41 +690,105 @@ AUDIO_PATH       = "/content/speech.wav"
 SFX_PATH         = "/content/sfx.wav"
 SUBTITLE_PATH    = "/content/subtitle.srt"   # faster-whisper çıktısı
 
-# ── 5. ALTYAZI ÜRETİMİ (faster-whisper) ──────────────────────────────────────
+# ── 5. ALTYAZI ÜRETİMİ (faster-whisper ve openai-whisper) ────────────────────
 _whisper_model = None
+_openai_whisper_model = None
+
+def load_faster_whisper(model_size="small"):
+    global _whisper_model
+    if _whisper_model is None:
+        from faster_whisper import WhisperModel
+        print(f"📝 faster-whisper modeli ({model_size}) belleğe yükleniyor...")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        compute_type = "float16" if torch.cuda.is_available() else "int8"
+        _whisper_model = WhisperModel(model_size, device=device, compute_type=compute_type)
+    return _whisper_model
+
+def load_openai_whisper(model_size="small"):
+    global _openai_whisper_model
+    if _openai_whisper_model is None:
+        import whisper
+        print(f"📝 OpenAI Whisper modeli ({model_size}) belleğe yükleniyor...")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        _openai_whisper_model = whisper.load_model(model_size, device=device)
+    return _openai_whisper_model
+
+def transcribe_audio_internal(audio_path: str, language: str = "tr", model_size: str = "small") -> dict:
+    """
+    Öncelikle faster-whisper ile deşifre yapmayı dener.
+    Eğer faster-whisper hata fırlatırsa veya kütüphane yüklü değilse,
+    standart openai-whisper modelini yükleyip onunla deşifre eder (fallback).
+    """
+    # 1. FASTER-WHISPER DENEMESİ
+    try:
+        print("📝 Deşifre deneniyor: faster-whisper...")
+        model = load_faster_whisper(model_size)
+        segments, info = model.transcribe(
+            audio_path,
+            beam_size=5,
+            word_timestamps=True,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500),
+            language=language
+        )
+        
+        result_segments = []
+        full_text = []
+        for seg in segments:
+            result_segments.append({
+                "start": round(seg.start, 2),
+                "end": round(seg.end, 2),
+                "text": seg.text.strip()
+            })
+            full_text.append(seg.text.strip())
+            
+        print("✅ Deşifre başarıyla tamamlandı (faster-whisper).")
+        return {
+            "status": "success",
+            "text": " ".join(full_text),
+            "segments": result_segments,
+            "language": info.language
+        }
+    except Exception as fw_err:
+        print(f"[WARN] faster-whisper deşifre hatası, OpenAI Whisper fallback deneniyor: {fw_err}")
+        
+    # 2. STANDARD OPENAI-WHISPER FALLBACK
+    try:
+        print("📝 Deşifre deneniyor: OpenAI Whisper...")
+        model = load_openai_whisper(model_size)
+        
+        result = model.transcribe(audio_path, language=language)
+        
+        result_segments = []
+        for seg in result.get("segments", []):
+            result_segments.append({
+                "start": round(seg.get("start", 0.0), 2),
+                "end": round(seg.get("end", 0.0), 2),
+                "text": seg.get("text", "").strip()
+            })
+            
+        print("✅ Deşifre başarıyla tamamlandı (OpenAI Whisper).")
+        return {
+            "status": "success",
+            "text": result.get("text", "").strip(),
+            "segments": result_segments,
+            "language": result.get("language", language)
+        }
+    except Exception as ow_err:
+        print(f"❌ OpenAI Whisper deşifre hatası: {ow_err}")
+        raise RuntimeError(f"Her iki deşifre motoru da başarısız oldu. Son hata: {ow_err}")
 
 def generate_subtitles_whisper(audio_path: str, output_srt: str, language: str = "tr") -> str | None:
     """
-    MPT'den uyarlanan faster-whisper altyazı üretici.
     Ses dosyasını analiz eder, kelime zamanlı .srt üretir.
-    Model: 'small' (~238MB) — T4'te ~5sn/dakika ses işler.
-    faster-whisper kurulu değilse sessizce None döner.
+    Geriye dönük uyumluluk için faster-whisper veya openai-whisper ile .srt yazar.
     """
-    global _whisper_model
     try:
-        from faster_whisper import WhisperModel
-    except ImportError:
-        print("⚠️ faster-whisper kurulu değil, altyazı atlanıyor. pip install faster-whisper")
+        res = transcribe_audio_internal(audio_path, language=language)
+        segments = res.get("segments", [])
+    except Exception as e:
+        print(f"⚠️ Altyazı üretimi başarısız: {e}")
         return None
-
-    if _whisper_model is None:
-        print("📝 Whisper modeli (small) belleğe yükleniyor...")
-        _whisper_model = WhisperModel(
-            "small",
-            device="cuda" if torch.cuda.is_available() else "cpu",
-            compute_type="float16" if torch.cuda.is_available() else "int8",
-        )
-
-    print("📝 Altyazı üretiliyor (faster-whisper)...")
-    segments, info = _whisper_model.transcribe(
-        audio_path,
-        beam_size=5,
-        word_timestamps=True,
-        vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=500),
-        language=language,
-    )
-    print(f"📝 Algılanan dil: '{info.language}' (güven: {info.language_probability:.2f})")
 
     def _fmt(secs: float) -> str:
         h  = int(secs // 3600)
@@ -737,8 +801,8 @@ def generate_subtitles_whisper(audio_path: str, output_srt: str, language: str =
     idx = 1
     for seg in segments:
         lines.append(str(idx))
-        lines.append(f"{_fmt(seg.start)} --> {_fmt(seg.end)}")
-        lines.append(seg.text.strip())
+        lines.append(f"{_fmt(seg['start'])} --> {_fmt(seg['end'])}")
+        lines.append(seg['text'].strip())
         lines.append("")
         idx += 1
 
@@ -1091,6 +1155,55 @@ def download_subtitle():
         return jsonify({"error": "Altyazı dosyası bulunamadı"}), 404
     return send_file(SUBTITLE_PATH, mimetype="text/plain", download_name="subtitle.srt")
 
+@app.route("/transcribe", methods=["POST"])
+def transcribe_route():
+    """
+    Ses veya video dosyasını alıp zaman damgalı deşifre eder.
+    """
+    global last_activity
+    last_activity = time.time()
+    
+    language = request.form.get("language", "tr")
+    model_size = request.form.get("model_size", "small")
+    file_path = request.form.get("file_path", "")
+    
+    if request.is_json:
+        data = request.get_json() or {}
+        language = data.get("language", language)
+        model_size = data.get("model_size", model_size)
+        file_path = data.get("file_path", file_path)
+        
+    temp_file_path = None
+    
+    try:
+        if "file" in request.files:
+            uploaded_file = request.files["file"]
+            ext = os.path.splitext(uploaded_file.filename)[1] or ".mp3"
+            temp_file_path = f"/content/transcribe_temp_{uuid.uuid4()}{ext}"
+            uploaded_file.save(temp_file_path)
+            target_path = temp_file_path
+            print(f"📥 Deşifre için dosya yüklendi: {target_path}")
+        elif file_path:
+            if not os.path.exists(file_path):
+                return jsonify({"status": "error", "message": f"Dosya bulunamadı: {file_path}"}), 404
+            target_path = file_path
+            print(f"📂 Deşifre için lokal dosya kullanılıyor: {target_path}")
+        else:
+            return jsonify({"status": "error", "message": "Dosya ('file') veya 'file_path' parametresi zorunludur"}), 400
+            
+        result = transcribe_audio_internal(target_path, language=language, model_size=model_size)
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"❌ Deşifre API hatası: {e}")
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            try: os.unlink(temp_file_path)
+            except: pass
+        flush_memory()
+
 # ── RESİM EDİTÖRÜ ENTEGRASYONLARI (Odysseus Esintili) ──────────────────────────
 
 @app.route("/remove-background", methods=["POST"])
@@ -1284,6 +1397,14 @@ def verify_libs():
         report["faster_whisper"] = {"status": "ok"}
     except Exception as e:
         report["faster_whisper"] = {"status": "error", "message": str(e)}
+        success = False
+
+    # 6b. OpenAI Whisper
+    try:
+        import whisper
+        report["whisper"] = {"status": "ok"}
+    except Exception as e:
+        report["whisper"] = {"status": "error", "message": str(e)}
         success = False
 
     # 7. face_recognition & OpenCV & imageio

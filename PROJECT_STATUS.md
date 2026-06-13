@@ -10,6 +10,7 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Playwright Otomasyonu:** YouTube playlist seçme / yeni oynatma listesi oluşturma simülasyonları ve çerez kontrolleri entegre edildi.
 - **Tür Güvenliği:** `npx tsc --noEmit` ile TypeScript tür denetimi başarıyla doğrulandı.
 - **D-Note Arayüz Entegrasyonu:** D-Note projesindeki tema yapısı (8 premium tema) ve çoklu dil desteği (i18n), JSON dil dosyaları (`tr.json`, `en.json`), Express middleware katmanları ve `themes.ts` modülleri ile baştan aşağı yenilendi. Hardcoded metinler temizlendi.
+- **Tasarım Yapılandırması ve Örnekler Vitrini (v5.5):** Tasarım_Standartlari.md kuralları doğrultusunda dark luxury teması (ana arka plan `#05070B`, yüzeyler `#08111F`, vurgu `#C81A56`, altın `#D4AF37`) ve Cormorant Garamond/Manrope fontları uygulandı. "Örnekler" sekmesi asimetrik editorial vitrin olarak eklendi. Sentez aşamaları için premium video yer tutucuları (placeholder) entegre edildi. LandingPage mount/unmount olurken body overflow özelliğinin dinamik yönetilmesiyle scroll hatası çözüldü. TypeScript derleme ve Vitest test (75/75) bütünlüğü sağlandı.
 
 ## Sprint 1 — Çıktılar (12 Haziran 2026 - v5.0)
 - **vibeclip Chat-to-Edit Servisi (Yeni):** `src/services/chatToEdit.ts` oluşturuldu. Doğal dil komutlarını AI (Zen→Minimax→Gemini) ile analiz edip FFmpeg operasyonlarına dönüştüren tool-calling agent eklendi. 14 farklı operasyon tipi destekleniyor: trim, speed, enhance, remove_silence, add_broll, add_transition, add_text, add_logo, adjust_audio, add_sfx, resize, add_pings, add_subtitles, duck_audio. Sahne puanlaması (hook/flow/value) `scoreScenes()` fonksiyonu ile çalışıyor. API rotaları: `/api/v1/chat-edit/parse`, `/api/v1/chat-edit/apply`, `/api/v1/chat-edit/score`.
@@ -225,6 +226,15 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **E — Test** | `src/test_audit_fixes.spec.ts` — 4 yeni test (schema migration, retry_count okuma/yazma, tip denetimi) | ✅ Tamam |
 | **F — Doğrulama** | `tsc --noEmit` 0 hata, `npm run check:lint` 0 hata, `vite build` 1.03s, 62/62 vitest (7 dosya) | ✅ Tamam |
 
+### Sprint 13 (Hafta 17) — Görsel Tasarım & Örnekler Entegrasyonu (v5.5)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Tasarım Yapılandırması** | Dark luxury teması, Cormorant Garamond ve Manrope fontları, buton uppercase kuralları ve altın rengi detaylar. | ✅ Tamam |
+| **B — Örnekler Vitrini** | `/demo-videos` API entegrasyonu, asimetrik editorial ExamplesPanel bileşeni, varsayılan sekme. | ✅ Tamam |
+| **C — Video Yer Tutucular** | pending, failed, awaiting_approval, processing durumları için premium animasyonlu placeholder'lar. | ✅ Tamam |
+| **D — TypeScript & Test** | AIStoryAssistant, TemplatePreview, HelpVideoPanel hataları onarıldı, 75/75 Vitest testi geçti. | ✅ Tamam |
+
 ### Sonraya Bırakılanlar
 
 | Madde | Gerekçe |
@@ -286,3 +296,50 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Google Antigravity Entegrasyonu:** Proje dizini altında yer alan Google Antigravity için 7 adet `caveman` alt skill'i (`cavecrew`, `caveman`, `caveman-commit`, `caveman-compress`, `caveman-help`, `caveman-review`, `caveman-stats`) `.agents/skills/` altına kuruldu.
 - **Yerel IDE Kural Entegrasyonu:** Cursor (`.cursor/rules/caveman.mdc`), Windsurf (`.windsurf/rules/caveman.md`), Cline (`.clinerules/caveman.md`), ve Copilot (`.github/copilot-instructions.md`) için kural dosyaları otomatik oluşturuldu.
 - **Kural Korunumu:** `AGENTS.md` dosyasındaki kural bütünlüğü korunarak kurulum süreci temiz bir şekilde tamamlandı.
+
+---
+
+## ✅ Sprint 12 — Çıktılar (Akıllı Prompt ve Tema Servisleri) (13 Haziran 2026 - v5.4)
+- **Akıllı Prompt Geliştirici:** Kullanıcının ham video promptunu kamera hareketi ve şablon seçimine göre optimize eden `enhanceVideoPrompt` fonksiyonu entegre edildi. Form arayüzündeki `masterPrompt` yanına "AI ile Geliştir" butonu eklenerek anlık zenginleştirme desteği sağlandı.
+- **Öğretici Video Prompt Üretici:** Özelliklerin nasıl kullanılacağını gösteren sahne sahne tutorial promptları hazırlayan `generateTutorialPrompts` fonksiyonu entegre edildi.
+- **Landing Page Asset Üretici:** Kategori bazlı Hero ve showcase videoları için prompt planlayan `generateLandingPageAssets` fonksiyonu entegre edildi.
+- **Dinamik HSL Tema Üretici:** Arayüzde kullanılabilecek CSS/HSL uyumlu dynamic renk paletleri üreten `generateCustomThemes` fonksiyonu entegre edildi. Tema Sihirbazı panelinden tek tıkla arayüze canlı olarak uygulanma desteği eklendi.
+- **AI Asistan Paneli:** `client/src/components/AiAssistantPanel.tsx` oluşturuldu ve Eğitim Planlayıcı, Vitrin Varlıkları Tasarımcısı ve Tema Sihirbazı araçları "AI Asistan" sekmesi altında kullanıcıya sunuldu.
+- **API Rotaları:** `/api/v1/ai-helper/` altında 4 endpoint (`enhance-prompt`, `tutorial-prompts`, `landing-assets`, `custom-theme`) Express sunucusuna bağlandı.
+- **Test ve Tip Denetimi:** `src/test_prompt_services.spec.ts` ve `src/test_ai_helper.spec.ts` (toplam 10 test) başarıyla geçti. TypeScript derlemesi (`tsc --noEmit`) ve Vite client build sıfır hata ile doğrulandı.
+
+---
+
+## ✅ Sprint 13 — Çıktılar (Kuyruk Kararlılığı ve FFmpeg Pool Worker Onarımı) (13 Haziran 2026 - v5.5)
+- **Kuyruk Kararlılığı ve TypeError Onarımı:** `queue.ts` içinde `startProduction` fonksiyonunda Fırsatlar Hunisi otonom akışı sonrası `job` nesnesinin `undefined` ile ezilerek `TypeError: Cannot read properties of undefined (reading 'scene_prompts')` hatasıyla uygulamanın çökmesi engellendi. `updatedJob` veritabanı reload işlemlerinde nesne ve id varlık kontrolleri sıkılaştırıldı.
+- **FFmpeg Pool Worker Hata Giderimi:** Geliştirme/test ortamlarında `.js` derlemesi bulunmadığı için `ffmpeg-pool-worker.js` modülünün bulunamaması uyarısı, `videoService.ts` üzerinde `fs.existsSync` kontrolü ve `execFile` fallback mekanizmasıyla çözüldü. Bu sayede üretim derlemesi olmayan lokal geliştirme süreçlerinde ve testlerde warning verilmesi önlendi.
+- **Vitest Mock Optimizasyonu:** `test_characters.spec.ts` üzerinde `videoService` modülü Vitest mock katmanına alınarak, testlerin harici FFmpeg ve mock dosyaların eksik olmasından kaynaklı zaman aşımı (timeout) sorunları tamamen giderildi.
+- **Test ve Tip Denetimi:** TypeScript derlemesi (`tsc --noEmit`) sıfır hata verdi. Vitest test paketi (`npx vitest run`) ile **72/72 testin tamamı başarıyla yeşile döndü**.
+
+---
+
+## ✅ Sprint 14 — Çıktılar (OpenAI Whisper ve Faster-Whisper Entegrasyonu) (13 Haziran 2026 - v5.6)
+- **OpenAI Whisper ve Faster-Whisper Çoklu Entegrasyonu:** Google Colab katmanına (`colab_server.py` ve `colab_setup.py`) hem `openai-whisper` hem de C++ tabanlı yüksek hızlı deşifre sunan `faster-whisper` kütüphaneleri dahil edildi.
+- **Güvenli Fallback Mekanizmalı `/transcribe` Endpoint:** Colab Flask sunucusuna eklenen `/transcribe` endpoint'i öncelikle en yüksek performansı sağlayan `faster-whisper` motorunu dener, hata veya kütüphane çakışması durumunda otomatik olarak `openai-whisper` motoruna geri düşer (fallback).
+- **Canlı Segmentasyon & Kelime/Cümle Bazlı Zaman Damgaları:** Node.js backend katmanındaki `audio-transcriber.ts` servisi baştan yazılarak Colab tüneline multi-part form-data ile dosya gönderen ve Colab'dan gelen zaman damgalı transkript JSON çıktısını çözen yapı kuruldu.
+- **Gemini 2.5 Flash Structured JSON Fallback:** Colab tünelinin kapalı veya sunucunun offline olması ihtimaline karşı, backend tarafına Gemini 2.5 Flash tabanlı ve `responseSchema` (start, end, text alanları zorunlu) tanımlı, yapılandırılmış transkript üreten kurtarma hattı (fallback) entegre edildi.
+- **Clipper & Otonom Kırpıcı Entegrasyonu:** `/api/v1/clipper/extract` asenkron işleme rotası, mock veri üretiminden çıkarılarak bu yeni zaman damgalı transkript sistemine ve viral segment analiz motoruna başarıyla bağlandı.
+- **Asenkron Test Tıkanıklığının Giderilmesi:** `test_clipper_whisper.spec.ts` entegrasyon testlerinde asenkron `/api/v1/clipper/extract` testinin dış Zen API completion çağrıları nedeniyle asılı kalması sorunu, `viralAnalyzer.analyze` metoduna mock uygulanarak çözüldü.
+- **Test ve Tip Denetimi:** `tsc --noEmit` sıfır hata ile tamamlandı. Vitest test paketi (`npx vitest run`) üzerinde Whisper & Clipper entegrasyonu dahil **75/75 testin tamamı başarıyla yeşillendi**.
+
+---
+
+## ✅ Sprint 15 — Çıktılar (Bütünsel Frontend Entegrasyonu ve Gelecek Fazlar UI Altyapısı) (13 Haziran 2026 - v5.7)
+- **Yeni Otonom Kırpıcı Paneli (`ClipperPanel.tsx`):** Arayüze "Clipper" (Otonom Kırpıcı) adında yeni bir ana sekme eklendi. Burada kullanıcılar uzun yatay videolarından viral dikey klipleri asenkron `/api/v1/clipper/extract` endpoint'i ile çıkarabilir, klipleri FFmpeg tabanlı `/export` API'si ile kırpıp diske kaydedebilir.
+- **Yeni Yayın Planlayıcı Paneli (`SchedulePublishPanel.tsx`):** Kullanıcıların tamamlanan video projelerini belirli bir tarih-saatte YouTube, TikTok, X ve Meta platformlarında paylaşmak üzere planlayabilecekleri, zamanlama takvimi ve listesi arayüzü oluşturuldu.
+- **Gelecek Fazlar Parametre Entegrasyonu:** Hem `ProjectForm.tsx` (Sol form) hem de `ClipperPanel.tsx` (Kırpıcı formu) bileşenlerine gelecek fazlarda (Faz D, E, F, G) backend'i yazılacak olan **Çok Dilli Dublaj Dili** (Select), **Altyazı Animasyon Stili ve Efektleri** (Select: bounce, pulse, shake) ve **Renk Derecelendirme Promptu** (Input) alanları eklendi. Bu alanlar state olarak tutulup `/create-job` veya `/extract` API'lerine gönderilen `FormData` ve JSON gövdelerine başarıyla entegre edildi.
+- **App.tsx Sekme Orkestrasyonu:** `client/src/App.tsx` ana bileşenindeki `mainTabs` listesine 'Clipper' ve 'Yayın Planla' sekmeleri eklenerek dinamik render ve form resetleme mantıkları kuruldu.
+- **Derleme ve Tip Doğrulaması:** Tip kontrolleri (`tsc -b && tsc --noEmit`) ve üretim derlemesi (`vite build`) **sıfır hatayla** başarıyla tamamlandı. Vitest test paketi (`npx vitest run`) ile **75/75 testin tamamı yeşilde kaldı**.
+
+---
+
+## ✅ Sprint 16 — Çıktılar (Scroll Düzeltmesi ve TypeScript Tip Temizliği) (13 Haziran 2026 - v5.8)
+- **Genel Scroll ve Layout Çakışma Düzeltmesi:** `StudioPanel.tsx` içerisinde 'Stüdyo' dışındaki tab'lerde (AI Asistan, Canvas, Clipper vb.) video önizlemesi ve prompt formunun tekrar render edilerek diğer panellerin üzerine binmesi ve sayfa yüksekliğini aşarak scroll'un çalışmamasına yol açması engellendi (null dönülerek temizlendi).
+- **Premium Scrollbar Tasarımı:** `index.css` içerisindeki webkit-scrollbar genişliği `8px` yapılarak modern, premium bir tasarım ve kolay kullanılabilirlik sağlandı.
+- **TypeScript Tip Hatalarının Giderilmesi:** `LandingPage.tsx` dosyasındaki relative import hatası (LandingPageAnimations.js eksik uzantısı), `helpVideos.ts` dosyasındaki db metot adları ve dönüş tipleri, `storyBibleService.ts`, `storyChatService.ts` ve `templatePromptService.ts` dosyalarındaki implicit any ve fallback model zinciri tip uyuşmazlıkları giderilerek tür güvenliği tam olarak sağlandı.
+

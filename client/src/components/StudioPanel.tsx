@@ -80,6 +80,10 @@ export function StudioPanel({
     );
   }
 
+  if (mainTab !== 'Stüdyo') {
+    return null;
+  }
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 100px 24px' }}>
@@ -205,7 +209,117 @@ function VideoPreview({
   etaSeconds: number | null; masterPrompt: string;
 }) {
   const hasVideo = selectedJob?.final_filename;
-  const isProcessing = selectedJob?.status === 'processing';
+  const status = selectedJob?.status;
+
+  const renderPlaceholder = () => {
+    if (!selectedJob) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+          <div className="gold-logo" style={{ fontSize: '14px', letterSpacing: '0.25em' }}>
+            AI PUBLISHER STUDIO
+          </div>
+          <div style={{ width: '40px', height: '1px', background: 'var(--gold)', opacity: 0.6 }} />
+          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+            Sinematik Prodüksiyonunuzu Başlatın
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+            {masterPrompt || 'Aşağıdaki alana bir video konsepti girin veya galeriden daha önce ürettiğiniz bir projeyi seçerek önizleyin.'}
+          </p>
+        </div>
+      );
+    }
+
+    if (status === 'pending') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+          <div className="pulse" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 8px var(--gold)' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>İŞLEM BEKLEMEDE</span>
+          </div>
+          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+            Sunucu Sırası Bekleniyor
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+            Prodüksiyon talebiniz kuyruğa alındı. Google Colab GPU hazır olduğunda otonom video üretim süreci otomatik olarak başlayacaktır.
+          </p>
+        </div>
+      );
+    }
+
+    if (status === 'failed') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>ÜRETİM BAŞARISIZ</span>
+          </div>
+          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+            Kurgu Sırasında Hata Oluştu
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+            Medya sentezi veya miksaj aşamasında bir sorunla karşılaşıldı. Detayları sistem loglarından inceleyebilir veya yeni bir konseptle tekrar deneyebilirsiniz.
+          </p>
+        </div>
+      );
+    }
+
+    if (status === 'awaiting_approval') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 8px var(--gold)' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>ONAY BEKLİYOR</span>
+          </div>
+          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+            Sosyal Medya Yayın Onayı
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+            Video üretimi başarıyla tamamlandı. Sağ panelden yapay zeka tarafından hazırlanan kopya metinlerini düzenleyip onaylayarak yayın motorunu tetikleyebilirsiniz.
+          </p>
+        </div>
+      );
+    }
+
+    if (status === 'processing') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+          <Loader size={36} className="spin" style={{ color: 'var(--accent)' }} />
+          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+            Video Üretiliyor ({progressPercent}%)
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+            Aşama: <strong>{progressMsg || 'Başlatılıyor...'}</strong>
+          </p>
+          {etaSeconds !== null && (
+            <div style={{
+              fontSize: '11px', color: 'var(--gold)',
+              background: 'rgba(212, 175, 55, 0.08)',
+              border: '1px solid rgba(212, 175, 55, 0.15)',
+              padding: '6px 14px', borderRadius: 'var(--radius)',
+              fontFamily: 'var(--font-mono)',
+            }}>
+              Tahmini Kalan Süre: {Math.floor(etaSeconds / 60)}dk {etaSeconds % 60}sn
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+        <div className="gold-logo" style={{ fontSize: '14px', letterSpacing: '0.25em' }}>
+          AI PUBLISHER
+        </div>
+        <div style={{ width: '40px', height: '1px', background: 'var(--gold)', opacity: 0.6 }} />
+        <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+          Prodüksiyon Sentezleniyor
+        </h3>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+          Video kurgusu veya medya sentez süreci henüz tamamlanmadı. Lütfen bekleyin.
+        </p>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -213,10 +327,10 @@ function VideoPreview({
         width: '100%',
         maxWidth: '56rem',
         aspectRatio: '16 / 9',
-        borderRadius: '12px',
-        border: '1px solid rgba(255,255,255,0.1)',
-        background: '#000',
-        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border)',
+        background: '#040810',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
@@ -229,7 +343,7 @@ function VideoPreview({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 50%, rgba(0,0,0,0.3) 100%)',
+          background: 'linear-gradient(180deg, rgba(5,7,11,0.9) 0%, transparent 60%, rgba(5,7,11,0.9) 100%)',
           pointerEvents: 'none',
           zIndex: 1,
         }}
@@ -241,101 +355,63 @@ function VideoPreview({
           controls
           style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'relative', zIndex: 0 }}
         />
-      ) : isProcessing ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: 'var(--accent)', position: 'relative', zIndex: 2 }}>
-          <Loader size={48} className="pulse" />
-          <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'white' }}>
-            Video Üretiliyor ({progressPercent}%)
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Aşama: {progressMsg}</div>
-          {etaSeconds !== null && (
-            <div style={{
-              fontSize: '11px', color: 'var(--warning)',
-              background: 'rgba(234,179,8,0.08)',
-              padding: '4px 10px', borderRadius: '4px',
-              fontFamily: 'var(--font-mono)',
-            }}>
-              Kalan: {Math.floor(etaSeconds / 60)}dk {etaSeconds % 60}sn
-            </div>
-          )}
-        </div>
       ) : (
-        <>
-          {/* play button */}
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'var(--bg-card)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-              boxShadow: '0 0 20px rgba(99,102,241,0.3)',
-              position: 'relative',
-              zIndex: 2,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 0 32px rgba(99,102,241,0.5)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(99,102,241,0.3)'; }}
-          >
-            <Play size={28} style={{ color: 'white', marginLeft: '3px' }} />
-          </div>
+        renderPlaceholder()
+      )}
 
-          {/* info badges */}
-          <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
-            <span style={{
-              padding: '3px 8px',
-              borderRadius: '4px',
-              background: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              fontSize: '10px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.05em',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              4K UHD
-            </span>
-            <span style={{
-              padding: '3px 8px',
-              borderRadius: '4px',
-              background: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              fontSize: '10px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.05em',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              24 FPS
-            </span>
-          </div>
+      {/* Info badges when preview is active */}
+      {hasVideo && (
+        <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
+          <span style={{
+            padding: '3px 8px',
+            borderRadius: '4px',
+            background: 'rgba(5, 7, 11, 0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-mono)',
+            letterSpacing: '0.05em',
+            border: '1px solid var(--border)',
+          }}>
+            4K UHD
+          </span>
+          <span style={{
+            padding: '3px 8px',
+            borderRadius: '4px',
+            background: 'rgba(5, 7, 11, 0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            fontSize: '10px',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-mono)',
+            letterSpacing: '0.05em',
+            border: '1px solid var(--border)',
+          }}>
+            24 FPS
+          </span>
+        </div>
+      )}
 
-          {/* prompt text */}
-          <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 2, textAlign: 'center', width: '80%' }}>
-            <span style={{
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.5)',
-              fontFamily: 'var(--font-mono)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              display: 'block',
-              maxWidth: '100%',
-            }}>
-              {masterPrompt || 'Yukarıdaki prompt alanına bir video konsepti yazın ve Üret butonuna tıklayın'}
-            </span>
-          </div>
-        </>
+      {/* Prompt text when preview is active */}
+      {hasVideo && (
+        <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 2, textAlign: 'center', width: '70%' }}>
+          <span style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-sans)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'block',
+            maxWidth: '100%',
+            letterSpacing: '0.02em',
+          }}>
+            {selectedJob?.master_prompt}
+          </span>
+        </div>
       )}
     </div>
   );

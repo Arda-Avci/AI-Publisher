@@ -323,4 +323,119 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;');
   // Set existing admin user
   await db.run("UPDATE users SET is_admin = 1 WHERE username = ?", [encryptUsername('admin')]);
+
+  // Help videos table for tutorial/documentation videos
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS help_videos (
+      id SERIAL PRIMARY KEY,
+      feature_key TEXT NOT NULL,
+      title_tr TEXT NOT NULL,
+      title_en TEXT NOT NULL,
+      description_tr TEXT,
+      description_en TEXT,
+      video_url TEXT,
+      thumbnail_url TEXT,
+      duration_seconds INTEGER,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Seed default help videos if table is empty
+  const existingVideos = await db.get('SELECT COUNT(*) as count FROM help_videos');
+  if (existingVideos?.count === 0) {
+    await db.exec(`
+      INSERT INTO help_videos (feature_key, title_tr, title_en, description_tr, description_en, duration_seconds, sort_order) VALUES
+      ('studio', 'Stüdyo Kullanımı', 'Studio Usage', 'Stüdyo panelinin nasıl kullanılacağını adım adım öğrenin.', 'Learn step by step how to use the studio panel.', 180, 1),
+      ('studio', 'Prompt Yazma Teknikleri', 'Prompt Writing Techniques', 'Etkili AI promptları yazmak için ipuçları.', 'Tips for writing effective AI prompts.', 240, 2),
+      ('studio', 'Şablon Seçimi', 'Template Selection', 'Hangi şablonun sizin için uygun olduğunu keşfedin.', 'Discover which template is right for you.', 150, 3),
+      ('gallery', 'Galeri Kullanımı', 'Gallery Usage', 'Oluşturduğunuz videoları galeride nasıl yönetirsiniz.', 'How to manage your created videos in the gallery.', 120, 1),
+      ('gallery', 'Video Düzenleme', 'Video Editing', 'Mevcut videolarınızı nasıl düzenlersiniz.', 'How to edit your existing videos.', 200, 2),
+      ('canvas', 'Canvas Özellikleri', 'Canvas Features', 'Canvas panelinin tüm özelliklerini keşfedin.', 'Discover all features of the canvas panel.', 300, 1),
+      ('batch', 'Toplu İşlemler', 'Batch Operations', 'Birden fazla videoyu aynı anda nasıl işlersiniz.', 'How to process multiple videos at once.', 250, 1),
+      ('characters', 'Karakter Oluşturma', 'Character Creation', 'AI karakterlerinizi nasıl oluşturursunuz.', 'How to create your AI characters.', 220, 1),
+      ('api_keys', 'API Anahtarları', 'API Keys', 'API anahtarlarınızı nasıl yönetirsiniz.', 'How to manage your API keys.', 100, 1)
+    `);
+  }
+
+  // Story Bible tables for AI story development
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS story_bibles (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      genre TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      world_setting TEXT,
+      themes TEXT,
+      tone TEXT,
+      target_audience TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS story_characters (
+      id SERIAL PRIMARY KEY,
+      story_bible_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT DEFAULT 'supporting',
+      description TEXT DEFAULT '',
+      backstory TEXT,
+      personality TEXT,
+      goals TEXT,
+      conflicts TEXT,
+      avatar_url TEXT
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS story_plot_points (
+      id SERIAL PRIMARY KEY,
+      story_bible_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      order_index INTEGER DEFAULT 0,
+      act VARCHAR(20) DEFAULT 'setup'
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS story_chat_sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      story_bible_id INTEGER,
+      context JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS story_chat_messages (
+      id SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL,
+      role VARCHAR(20) NOT NULL,
+      content TEXT NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS prompt_history (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      original_prompt TEXT NOT NULL,
+      enhanced_prompt TEXT,
+      template VARCHAR(50),
+      story_bible_id INTEGER,
+      is_favorite INTEGER DEFAULT 0,
+      version INTEGER DEFAULT 1,
+      parent_version_id INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 }

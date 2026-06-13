@@ -88,6 +88,35 @@ vi.mock('./lib/redis-mutex.js', () => {
   };
 });
 
+vi.mock('./lib/colab-manager.js', () => {
+  const mockState = {
+    status: 'running',
+    ngrokUrl: 'https://mock-colab.ngrok-free.dev',
+    gpuMemoryGB: 16,
+    gpuUsedGB: 4,
+    gpuUtilizationPct: 25,
+    lastHealthCheck: new Date().toISOString(),
+    lastError: null,
+    startedAt: new Date().toISOString(),
+    uptimeSeconds: 100,
+    runtimeSeconds: 100
+  };
+  return {
+    colab: {
+      getState: vi.fn(() => ({ ...mockState })),
+      start: vi.fn(async () => ({ ngrokUrl: 'https://mock-colab.ngrok-free.dev' })),
+      stop: vi.fn(async () => {}),
+      connect: vi.fn(async () => ({ ngrokUrl: 'https://mock-colab.ngrok-free.dev' })),
+      scheduleIdleStop: vi.fn(),
+      cancelIdleStop: vi.fn(),
+      isHealthy: vi.fn(() => true),
+      verifyLibraries: vi.fn(async () => ({ success: true, report: { diffusers: true } })),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+  };
+});
+
 // axios çağrılarını mock'layalım
 vi.mock('axios', () => {
   const mockAxiosInstance = vi.fn((config) => {
@@ -170,6 +199,16 @@ vi.mock('./services/aiService.js', () => ({
   })
 }));
 
+vi.mock('./services/videoService.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./services/videoService.js')>();
+  return {
+    ...original,
+    runFFmpegWithFallback: vi.fn(async () => {}),
+    runFFmpeg: vi.fn(async () => ({ stdout: '', stderr: '' })),
+    runInWorker: vi.fn(async () => ({ status: 'success' }))
+  };
+});
+
 describe('iyzico Webhook, Timeline Müzik Miksajı ve Çoklu Karakter Lipsync Testleri', () => {
   let app: express.Application;
   let testUserId: number;
@@ -195,6 +234,9 @@ describe('iyzico Webhook, Timeline Müzik Miksajı ve Çoklu Karakter Lipsync Te
 
     app.use('/api/v1/payments', paymentsRouter);
 
+    // Set COLAB_URL so queue doesn't try real colab.start()
+    process.env.COLAB_URL = 'https://mock-colab.ngrok-free.dev';
+
     // Init DB
     await initDatabase();
 
@@ -212,7 +254,7 @@ describe('iyzico Webhook, Timeline Müzik Miksajı ve Çoklu Karakter Lipsync Te
     testUserId = user.id;
 
     // spy on runFFmpegWithFallback
-    runFFmpegSpy = vi.spyOn(videoService, 'runFFmpegWithFallback').mockImplementation(async () => {});
+    runFFmpegSpy = videoService.runFFmpegWithFallback;
   });
 
   afterAll(async () => {
@@ -285,7 +327,7 @@ describe('iyzico Webhook, Timeline Müzik Miksajı ve Çoklu Karakter Lipsync Te
   });
 
   describe('2. Çoklu Karakter Lipsync ve Tag Parsing Testleri', () => {
-    it('Sahnelerdeki @me ve @karakter taglerini doğru ayrıştırmalı ve Colab payloaduna eklemeli', async () => {
+    it('Sahnelerdeki @me ve @karakter taglerini doğru ayrıştırmalı ve Colab payloaduna eklemeli', { timeout: 15000 }, async () => {
       // 0. Krediyi 1000 yapalım ve eski işleri temizleyelim
       await db.run("UPDATE users SET credits = 1000 WHERE id = ?", [testUserId]);
       await db.run("UPDATE video_jobs SET status = 'failed' WHERE status = 'pending' OR status = 'processing'");
@@ -349,7 +391,7 @@ describe('iyzico Webhook, Timeline Müzik Miksajı ve Çoklu Karakter Lipsync Te
   });
 
   describe('3. Timeline amix Müzik Miksajı Testleri', () => {
-    it('Sahne background_music_path ve music_volume parametrelerine göre FFmpeg filter_complex yapısını kurmalı', async () => {
+    it('Sahne background_music_path ve music_volume parametrelerine göre FFmpeg filter_complex yapısını kurmalı', { timeout: 15000 }, async () => {
       // 0. Krediyi 1000 yapalım ve eski işleri temizleyelim
       await db.run("UPDATE users SET credits = 1000 WHERE id = ?", [testUserId]);
       await db.run("UPDATE video_jobs SET status = 'failed' WHERE status = 'pending' OR status = 'processing'");

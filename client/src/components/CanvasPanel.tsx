@@ -55,7 +55,7 @@ const STATUS_BADGES: Record<string, { bg: string; text: string }> = {
   failed: { bg: 'rgba(239, 68, 68, 0.3)', text: '#F87171' },
 };
 
-export function CanvasPanel({ language, t, onShowToast }: CanvasPanelProps) {
+export function CanvasPanel({ language: _language, t, onShowToast }: CanvasPanelProps) {
   const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [selectedCanvas, setSelectedCanvas] = useState<Canvas | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +63,7 @@ export function CanvasPanel({ language, t, onShowToast }: CanvasPanelProps) {
   const [showNewCanvasModal, setShowNewCanvasModal] = useState(false);
   const [selectedNode, setSelectedNode] = useState<CanvasNode | null>(null);
   const [taskQueueStatus, setTaskQueueStatus] = useState({ pending: 0, running: 0, completed: 0, failed: 0 });
-  const [draggedNode, setDraggedNode] = useState<string | null>(null);
+  const [_draggedNode, setDraggedNode] = useState<string | null>(null);
 
   const fetchCanvases = useCallback(async () => {
     try {
@@ -196,7 +196,8 @@ export function CanvasPanel({ language, t, onShowToast }: CanvasPanelProps) {
   return (
     <div style={{
       display: 'flex',
-      height: '100%',
+      flex: 1,
+      minHeight: 0,
       gap: '12px',
       padding: '12px',
       background: 'rgba(10, 10, 20, 0.6)',

@@ -1,6 +1,7 @@
-import type React from 'react';
-import { Send, Loader } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, Loader, Wand2 } from 'lucide-react';
 import type { ProductionTemplate, TtsProvider, Platform, UserCredits } from '../types.js';
+import { TemplatePreview } from './TemplatePreview.js';
 
 interface ProjectFormProps {
   selectedModel: string;
@@ -41,6 +42,12 @@ interface ProjectFormProps {
   onSetSelectedMusicFile: (f: File | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   t: (key: string, params?: Record<string, any>) => string;
+  dubbingLang: string;
+  onSetDubbingLang: (v: string) => void;
+  subtitleStyle: string;
+  onSetSubtitleStyle: (v: string) => void;
+  colorGrading: string;
+  onSetColorGrading: (v: string) => void;
 }
 
 const MODELS = ['Publisher Cinematic V3', 'Anime Diffusion (Hızlı)', 'Zen-M3 Realism'];
@@ -88,6 +95,34 @@ function TemplateCard({
 }
 
 export function ProjectForm(props: ProjectFormProps) {
+  const [enhancing, setEnhancing] = useState(false);
+
+  const handleEnhance = async () => {
+    if (!props.masterPrompt.trim()) return;
+    setEnhancing(true);
+    try {
+      const res = await fetch('/api/v1/ai-helper/enhance-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: props.masterPrompt,
+          templateStyle: props.productionTemplate,
+          characterFeatures: props.characterFeatures
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.enhancedPrompt) {
+        props.onSetMasterPrompt(data.enhancedPrompt);
+      } else {
+        alert('Prompt geliştirilemedi: ' + (data.error || 'Bilinmeyen hata'));
+      }
+    } catch (err: any) {
+      alert('İletişim hatası: ' + err.message);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const insufficient = props.userCredits !== null && props.userCredits.credits < 15;
 
   const sectionStyle: React.CSSProperties = {
@@ -226,7 +261,34 @@ export function ProjectForm(props: ProjectFormProps) {
 
         {/* ---- Existing Form Fields ---- */}
         <form onSubmit={props.onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Field label={props.t('masterPrompt')} labelStyle={labelStyle}>
+          <Field 
+            label={props.t('masterPrompt')} 
+            labelStyle={labelStyle}
+            extra={
+              <button
+                type="button"
+                onClick={handleEnhance}
+                disabled={enhancing || !props.masterPrompt.trim()}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: props.masterPrompt.trim() ? 'var(--accent)' : 'var(--text-muted)',
+                  cursor: props.masterPrompt.trim() ? 'pointer' : 'default',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '0 4px',
+                  fontFamily: 'var(--font-sans)',
+                  outline: 'none',
+                }}
+              >
+                {enhancing ? <Loader size={11} className="pulse" /> : <Wand2 size={11} />}
+                Yapay Zeka ile Geliştir
+              </button>
+            }
+          >
             <textarea
               required value={props.masterPrompt}
               onChange={(e) => props.onSetMasterPrompt(e.target.value)}
@@ -288,6 +350,16 @@ export function ProjectForm(props: ProjectFormProps) {
                   t={props.t}
                 />
               ))}
+            </div>
+            {/* Template Preview Panel */}
+            <div style={{ marginTop: '12px' }}>
+              <TemplatePreview
+                template={props.productionTemplate}
+                onApplyPrompt={(prompt) => {
+                  props.onSetMasterPrompt(prompt);
+                }}
+                t={props.t}
+              />
             </div>
           </div>
 
@@ -363,6 +435,44 @@ export function ProjectForm(props: ProjectFormProps) {
 
           <Divider />
 
+          <Field label="Çok Dilli Dublaj (Gelecek Faz)" labelStyle={labelStyle}>
+            <select
+              value={props.dubbingLang}
+              onChange={(e) => props.onSetDubbingLang(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="none">Orijinal Ses</option>
+              <option value="tr">Türkçe (Dublaj)</option>
+              <option value="en">İngilizce (Dublaj)</option>
+              <option value="de">Almanca (Dublaj)</option>
+              <option value="es">İspanyolca (Dublaj)</option>
+            </select>
+          </Field>
+
+          <Field label="Altyazı Stili (Gelecek Faz)" labelStyle={labelStyle}>
+            <select
+              value={props.subtitleStyle}
+              onChange={(e) => props.onSetSubtitleStyle(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="dynamic_hormozi">Hormozi Tarzı (Bounce)</option>
+              <option value="modern_minimal">Minimal Modern</option>
+              <option value="classic_embedded">FFmpeg Drawtext</option>
+            </select>
+          </Field>
+
+          <Field label="Renk Derecelendirme (Gelecek Faz)" labelStyle={labelStyle}>
+            <input
+              type="text"
+              value={props.colorGrading}
+              onChange={(e) => props.onSetColorGrading(e.target.value)}
+              placeholder="Örn: warm_cinema, cyberpunk, neon_mor"
+              style={inputStyle}
+            />
+          </Field>
+
+          <Divider />
+
           <Field label={props.t('platformSelect')} labelStyle={labelStyle}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {(['youtube', 'tiktok', 'x', 'meta'] as Platform[]).map((plat) => (
@@ -408,10 +518,13 @@ function Divider() {
   return <div style={{ borderTop: '1px solid var(--border)' }} />;
 }
 
-function Field({ label, children, labelStyle }: { label: string; children: React.ReactNode; labelStyle: React.CSSProperties }) {
+function Field({ label, children, labelStyle, extra }: { label: string; children: React.ReactNode; labelStyle: React.CSSProperties; extra?: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <div style={labelStyle}>{label}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={labelStyle}>{label}</div>
+        {extra}
+      </div>
       {children}
     </div>
   );

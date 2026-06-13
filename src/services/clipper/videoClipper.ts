@@ -9,6 +9,8 @@ import { ClipSegment, ClipperConfig } from './types.js';
 import { Logger } from '../../lib/logger.js';
 import { runInWorker } from '../videoService.js';
 import { v4 as uuidv4 } from 'uuid';
+import { faceTracker, FaceTrackerService } from '../faceTracker.js';
+import type { FaceTrackResult } from '../faceTracker.js';
 
 const DEFAULT_CONFIG: ClipperConfig = {
   minSegmentDuration: 30,
@@ -82,14 +84,218 @@ export class VideoClipper {
   }
 
   /**
+   * Crop a video segment using face tracking - segments video into chunks
+   * based on stable face positions and applies appropriate crop to each chunk
+   */
+  async cropSegmentWithFaceTracking(
+    inputPath: string,
+    outputPath: string,
+    segment: ClipSegment,
+    options: {
+      aspectRatio?: '9:16' | '16:9' | '1:1';
+      outputWidth?: number;
+      outputHeight?: number;
+    } = {}
+  ): Promise<string> {
+    const { aspectRatio = '9:16', outputWidth = 1080, outputHeight = 1920 } = options;
+
+    Logger.info(`[VideoClipper] Face-tracking crop for segment ${segment.id}: ${segment.startTime}s - ${segment.endTime}s`);
+
+    // Ensure output directory exists
+    await fs.ensureDir(path.dirname(outputPath));
+
+    try {
+      // Get video dimensions
+      const [videoWidth, videoHeight] = await this.getVideoDimensions(inputPath);
+
+      // Run face tracking to get per-frame positions
+      const faceResult: FaceTrackResult = await faceTracker.trackFaces(inputPath, {
+        startTime: segment.startTime,
+        duration: segment.duration,
+      });
+
+      // If no faces detected or not enough data, fall back to center crop
+      if (faceResult.frames.length === 0 || faceResult.frames.every((f: { confidence: number }) => f.confidence === 0)) {
+        Logger.warn('[VideoClipper] No faces detected, falling back to center crop');
+        return this.cropSegment(inputPath, outputPath, segment, { aspectRatio, faceTracking: false });
+      }
+
+      // Get stable segments from face tracking data
+      const stableSegments = await faceTracker.getStableSegments(inputPath, {
+        startTime: segment.startTime,
+        duration: segment.duration,
+        stabilityThreshold: 50,
+        minSegmentDuration: 0.5,
+      });
+
+      // If only one stable segment or not enough variation, use simple approach
+      if (stableSegments.length <= 1) {
+        const avgFrame = faceResult.frames.reduce((acc: { cropX: number; cropY: number; count: number }, f: { cropX: number; cropY: number; confidence: number }) => {
+          if (f.confidence > 0) {
+            acc.cropX += f.cropX;
+            acc.cropY += f.cropY;
+            acc.count++;
+          }
+          return acc;
+        }, { cropX: 0, cropY: 0, count: 0 });
+
+        if (avgFrame.count > 0) {
+          avgFrame.cropX = Math.round(avgFrame.cropX / avgFrame.count);
+          avgFrame.cropY = Math.round(avgFrame.cropY / avgFrame.count);
+        }
+
+        const cropFilter = this.buildFaceCropFilter(
+          avgFrame.cropX || videoWidth / 2,
+          avgFrame.cropY || videoHeight / 2,
+          videoWidth,
+          videoHeight,
+          aspectRatio,
+          outputWidth,
+          outputHeight
+        );
+
+        return this.runCropCommand(inputPath, outputPath, segment, cropFilter);
+      }
+
+      // Multiple stable segments - need to use segment-based approach with FFmpeg
+      // For each segment, create a cropped clip then concatenate
+      const tempDir = path.join(path.dirname(outputPath), 'temp_face_track_' + uuidv4());
+      await fs.ensureDir(tempDir);
+
+      const clipPaths: string[] = [];
+
+      for (let i = 0; i < stableSegments.length; i++) {
+        const seg = stableSegments[i];
+        const clipPath = path.join(tempDir, `segment_${i}.mp4`);
+
+        const cropFilter = this.buildFaceCropFilter(
+          seg.cropX,
+          seg.cropY,
+          videoWidth,
+          videoHeight,
+          aspectRatio,
+          outputWidth,
+          outputHeight
+        );
+
+        const segArgs = [
+          '-ss', String(seg.startTime),
+          '-i', inputPath,
+          '-t', String(seg.endTime - seg.startTime),
+          '-vf', cropFilter,
+          '-c:a', 'copy',
+          '-y',
+          clipPath,
+        ];
+
+        await runInWorker('ffmpeg', segArgs, 120000);
+        clipPaths.push(clipPath);
+      }
+
+      // Concatenate all segments
+      const concatListPath = path.join(tempDir, 'concat.txt');
+      const concatContent = clipPaths.map(p => `file '${p}'`).join('\n');
+      await fs.writeFile(concatListPath, concatContent, 'utf-8');
+
+      const concatArgs = [
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', concatListPath,
+        '-c', 'copy',
+        '-y',
+        outputPath,
+      ];
+
+      await runInWorker('ffmpeg', concatArgs, 120000);
+
+      // Cleanup temp directory
+      await fs.remove(tempDir);
+
+      Logger.info(`[VideoClipper] Face-tracking crop completed: ${outputPath}`);
+      return outputPath;
+    } catch (error) {
+      Logger.error(`[VideoClipper] Face-tracking crop failed:`, error);
+      // Fall back to regular crop on error
+      return this.cropSegment(inputPath, outputPath, segment, { aspectRatio, faceTracking: false });
+    }
+  }
+
+  /**
+   * Build FFmpeg crop filter centered on face position
+   */
+  private buildFaceCropFilter(
+    faceX: number,
+    faceY: number,
+    videoWidth: number,
+    videoHeight: number,
+    targetRatio: '9:16' | '16:9' | '1:1',
+    outputWidth: number,
+    outputHeight: number
+  ): string {
+    let cropW: number, cropH: number;
+
+    switch (targetRatio) {
+      case '9:16':
+        cropH = videoHeight;
+        cropW = Math.round(videoHeight * (9 / 16));
+        break;
+      case '16:9':
+        cropW = videoWidth;
+        cropH = Math.round(videoWidth * (9 / 16));
+        break;
+      case '1:1':
+        cropW = cropH = Math.min(videoWidth, videoHeight);
+        break;
+      default:
+        cropW = videoWidth;
+        cropH = videoHeight;
+    }
+
+    // Center crop around face position
+    const cropX = Math.max(0, Math.min(videoWidth - cropW, Math.round(faceX - cropW / 2)));
+    const cropY = 0; // Always crop from top for vertical format
+
+    return `crop=${cropW}:${cropH}:${cropX}:${cropY},scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2`;
+  }
+
+  /**
+   * Run a crop FFmpeg command
+   */
+  private async runCropCommand(
+    inputPath: string,
+    outputPath: string,
+    segment: ClipSegment,
+    cropFilter: string
+  ): Promise<string> {
+    const args = [
+      '-ss', String(segment.startTime),
+      '-i', inputPath,
+      '-t', String(segment.duration),
+      '-vf', cropFilter,
+      '-c:a', 'copy',
+      '-y',
+    ];
+
+    if (this.config.outputFormat === 'webm') {
+      args.push('-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0');
+    } else {
+      args.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '23');
+    }
+
+    args.push(outputPath);
+
+    await runInWorker('ffmpeg', args, 120000);
+    return outputPath;
+  }
+
+  /**
    * Calculate FFmpeg crop filter based on aspect ratio and face tracking
    */
   private async calculateCropFilter(
     inputPath: string,
     targetRatio: '9:16' | '16:9' | '1:1',
-    _trackCenter?: { x: number; y: number }
+    trackCenter?: { x: number; y: number }
   ): Promise<string> {
-    // Face tracking would require OpenCV integration
     const [width, height] = await this.getVideoDimensions(inputPath);
 
     let cropW: number, cropH: number;
@@ -111,9 +317,9 @@ export class VideoClipper {
         cropH = height;
     }
 
-    // Center crop
-    const x = Math.round((width - cropW) / 2);
-    const y = Math.round((height - cropH) / 2);
+    // Use provided track center or default to center crop
+    const x = trackCenter ? Math.max(0, Math.min(width - cropW, Math.round(trackCenter.x - cropW / 2))) : Math.round((width - cropW) / 2);
+    const y = trackCenter ? 0 : Math.round((height - cropH) / 2);
 
     return `crop=${cropW}:${cropH}:${x}:${y},scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2`;
   }
@@ -123,7 +329,6 @@ export class VideoClipper {
    */
   private async getVideoDimensions(inputPath: string): Promise<[number, number]> {
     try {
-      const { runInWorker } = await import('../videoService.js');
       const { stdout } = await runInWorker('ffprobe', [
         '-v', 'error',
         '-select_streams', 'v:0',

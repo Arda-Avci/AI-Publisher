@@ -1,4 +1,6 @@
 node_modules
+.claude/
+.codegraph/
 database.sqlite
 videolar/*.mp4
 videolar/*.wav

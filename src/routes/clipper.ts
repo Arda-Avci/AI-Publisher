@@ -7,6 +7,9 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
 import { viralAnalyzer, videoClipper, ClipSegment, ClipJob } from '../services/clipper/index.js';
+import { smartCropper } from '../services/clipper/smartCropper.js';
+import { subtitleMixer } from '../services/clipper/subtitleMixer.js';
+import { splitScreenVertical, splitScreenHorizontal, splitScreenGrid, overlayMascot, overlayMascotWithAnimation, pipOverlay, SplitScreenOptions, OverlayPosition, AnimationType, PipPosition } from '../services/clipper/splitScreenService.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs-extra';
@@ -139,32 +142,34 @@ router.post('/:id/export', requireAuth, async (req, res) => {
     const outputPaths: string[] = [];
 
     for (const segment of selectedSegments) {
-      const outputPath = path.join(outputDir, `clip_${segment.id}.mp4`);
+      const clipPath = path.join(outputDir, `clip_${segment.id}.mp4`);
 
       try {
         // Crop segment to target aspect ratio
-        const croppedPath = await videoClipper.cropSegment(
+        let currentPath = await videoClipper.cropSegment(
           job.sourceVideoPath,
-          outputPath,
+          clipPath,
           segment,
           { aspectRatio }
         );
 
         // Add subtitles if requested
         if (addSubtitles) {
-          const withSubsPath = outputPath.replace('.mp4', '_subs.mp4');
-          await videoClipper.generateSubtitles(croppedPath, withSubsPath, [
+          const withSubsPath = clipPath.replace('.mp4', '_subs.mp4');
+          await videoClipper.generateSubtitles(currentPath, withSubsPath, [
             { start: 0, end: segment.duration, text: segment.suggestedCaption || '' },
           ]);
+          currentPath = withSubsPath;
         }
 
         // Add music if requested
         if (addMusic && musicPath) {
-          const withMusicPath = outputPath.replace('.mp4', '_music.mp4');
-          await videoClipper.mixMusic(outputPath, musicPath, withMusicPath);
+          const withMusicPath = clipPath.replace('.mp4', '_music.mp4');
+          await videoClipper.mixMusic(currentPath, musicPath, withMusicPath);
+          currentPath = withMusicPath;
         }
 
-        outputPaths.push(croppedPath);
+        outputPaths.push(currentPath);
       } catch (err) {
         Logger.error(`[Clipper] Failed to export segment ${segment.id}:`, err);
       }
@@ -230,6 +235,339 @@ router.post('/watermark', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/v1/clipper/split-screen-vertical
+ * Create vertical (top/bottom) split-screen video
+ */
+router.post('/split-screen-vertical', requireAuth, async (req, res) => {
+  try {
+    const { topVideoPath, bottomVideoPath, outputPath, gapPx, borderColor } = req.body;
+
+    if (!topVideoPath || !bottomVideoPath) {
+      return res.status(400).json({ error: 'topVideoPath and bottomVideoPath are required' });
+    }
+
+    if (!await fs.pathExists(topVideoPath)) {
+      return res.status(400).json({ error: 'Top video file not found' });
+    }
+
+    if (!await fs.pathExists(bottomVideoPath)) {
+      return res.status(400).json({ error: 'Bottom video file not found' });
+    }
+
+    const output = outputPath || path.join(process.cwd(), 'videolar', `split_v_${Date.now()}.mp4`);
+
+    const options: SplitScreenOptions = {};
+    if (gapPx !== undefined) options.gapPx = gapPx;
+    if (borderColor) options.borderColor = borderColor;
+
+    await splitScreenVertical(topVideoPath, bottomVideoPath, output, options);
+
+    res.json({ outputPath: output });
+  } catch (error) {
+    Logger.error('[Clipper] Vertical split-screen failed:', error);
+    res.status(500).json({ error: 'Vertical split-screen creation failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/split-screen-horizontal
+ * Create horizontal (left/right) split-screen video
+ */
+router.post('/split-screen-horizontal', requireAuth, async (req, res) => {
+  try {
+    const { leftVideoPath, rightVideoPath, outputPath, gapPx, borderColor } = req.body;
+
+    if (!leftVideoPath || !rightVideoPath) {
+      return res.status(400).json({ error: 'leftVideoPath and rightVideoPath are required' });
+    }
+
+    if (!await fs.pathExists(leftVideoPath)) {
+      return res.status(400).json({ error: 'Left video file not found' });
+    }
+
+    if (!await fs.pathExists(rightVideoPath)) {
+      return res.status(400).json({ error: 'Right video file not found' });
+    }
+
+    const output = outputPath || path.join(process.cwd(), 'videolar', `split_h_${Date.now()}.mp4`);
+
+    const options: SplitScreenOptions = {};
+    if (gapPx !== undefined) options.gapPx = gapPx;
+    if (borderColor) options.borderColor = borderColor;
+
+    await splitScreenHorizontal(leftVideoPath, rightVideoPath, output, options);
+
+    res.json({ outputPath: output });
+  } catch (error) {
+    Logger.error('[Clipper] Horizontal split-screen failed:', error);
+    res.status(500).json({ error: 'Horizontal split-screen creation failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/split-screen-grid
+ * Create grid split-screen from multiple videos
+ */
+router.post('/split-screen-grid', requireAuth, async (req, res) => {
+  try {
+    const { videoPaths, outputPath, gridCols = 2 } = req.body;
+
+    if (!videoPaths || !Array.isArray(videoPaths) || videoPaths.length < 2) {
+      return res.status(400).json({ error: 'videoPaths array with at least 2 videos is required' });
+    }
+
+    for (const p of videoPaths) {
+      if (!await fs.pathExists(p)) {
+        return res.status(400).json({ error: `Video file not found: ${p}` });
+      }
+    }
+
+    const output = outputPath || path.join(process.cwd(), 'videolar', `split_grid_${Date.now()}.mp4`);
+
+    await splitScreenGrid(videoPaths, output, gridCols);
+
+    res.json({ outputPath: output });
+  } catch (error) {
+    Logger.error('[Clipper] Grid split-screen failed:', error);
+    res.status(500).json({ error: 'Grid split-screen creation failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/mascot-overlay
+ * Overlay a mascot/avatar PNG on video at specified position
+ */
+router.post('/mascot-overlay', requireAuth, async (req, res) => {
+  try {
+    const { videoPath, mascotPngPath, outputPath, position } = req.body;
+
+    if (!videoPath || !mascotPngPath) {
+      return res.status(400).json({ error: 'videoPath and mascotPngPath are required' });
+    }
+
+    if (!await fs.pathExists(videoPath)) {
+      return res.status(400).json({ error: 'Video file not found' });
+    }
+
+    if (!await fs.pathExists(mascotPngPath)) {
+      return res.status(400).json({ error: 'Mascot PNG file not found' });
+    }
+
+    const output = outputPath || videoPath.replace('.mp4', '_mascot.mp4');
+
+    const overlayPos: OverlayPosition = position || { x: 'W-w-30', y: 'H-h-30', scale: 0.5, opacity: 1.0 };
+
+    await overlayMascot(videoPath, mascotPngPath, output, overlayPos);
+
+    res.json({ outputPath: output });
+  } catch (error) {
+    Logger.error('[Clipper] Mascot overlay failed:', error);
+    res.status(500).json({ error: 'Mascot overlay failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/mascot-overlay-animated
+ * Overlay a mascot with animation effects (float, bounce, blink)
+ */
+router.post('/mascot-overlay-animated', requireAuth, async (req, res) => {
+  try {
+    const { videoPath, mascotPngPath, outputPath, animType } = req.body;
+
+    if (!videoPath || !mascotPngPath) {
+      return res.status(400).json({ error: 'videoPath and mascotPngPath are required' });
+    }
+
+    if (!await fs.pathExists(videoPath)) {
+      return res.status(400).json({ error: 'Video file not found' });
+    }
+
+    if (!await fs.pathExists(mascotPngPath)) {
+      return res.status(400).json({ error: 'Mascot PNG file not found' });
+    }
+
+    if (!animType || !['float', 'bounce', 'blink'].includes(animType)) {
+      return res.status(400).json({ error: 'animType must be one of: float, bounce, blink' });
+    }
+
+    const output = outputPath || videoPath.replace('.mp4', `_mascot_${animType}.mp4`);
+
+    await overlayMascotWithAnimation(videoPath, mascotPngPath, output, animType as AnimationType);
+
+    res.json({ outputPath: output });
+  } catch (error) {
+    Logger.error('[Clipper] Animated mascot overlay failed:', error);
+    res.status(500).json({ error: 'Animated mascot overlay failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/pip-overlay
+ * Picture-in-Picture overlay (secondary video in corner of primary)
+ */
+router.post('/pip-overlay', requireAuth, async (req, res) => {
+  try {
+    const { mainVideoPath, pipVideoPath, outputPath, position = 'bottom-right' } = req.body;
+
+    if (!mainVideoPath || !pipVideoPath) {
+      return res.status(400).json({ error: 'mainVideoPath and pipVideoPath are required' });
+    }
+
+    if (!await fs.pathExists(mainVideoPath)) {
+      return res.status(400).json({ error: 'Main video file not found' });
+    }
+
+    if (!await fs.pathExists(pipVideoPath)) {
+      return res.status(400).json({ error: 'PIP video file not found' });
+    }
+
+    const validPositions: PipPosition[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+    if (!validPositions.includes(position)) {
+      return res.status(400).json({ error: `position must be one of: ${validPositions.join(', ')}` });
+    }
+
+    const output = outputPath || mainVideoPath.replace('.mp4', '_pip.mp4');
+
+    await pipOverlay(mainVideoPath, pipVideoPath, output, position);
+
+    res.json({ outputPath: output });
+  } catch (error) {
+    Logger.error('[Clipper] PIP overlay failed:', error);
+    res.status(500).json({ error: 'PIP overlay failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/smart-crop
+ * Smart crop video to target aspect ratio with face tracking
+ */
+router.post('/smart-crop', requireAuth, async (req, res) => {
+  try {
+    const {
+      videoPath,
+      outputPath,
+      targetFocus = 'face',
+      aspectRatio = '9:16',
+      outputWidth = 1080,
+      outputHeight = 1920,
+    } = req.body;
+
+    if (!videoPath) {
+      return res.status(400).json({ error: 'videoPath is required' });
+    }
+
+    if (!await fs.pathExists(videoPath)) {
+      return res.status(400).json({ error: 'Video file not found' });
+    }
+
+    const output = outputPath || videoPath.replace(/\.\w+$/, '_smart_crop.mp4');
+
+    const result = await smartCropper.cropVideo(videoPath, output, {
+      targetFocus,
+      aspectRatio: aspectRatio as '9:16' | '16:9' | '1:1' | '4:5',
+      outputWidth,
+      outputHeight,
+    });
+
+    res.json({
+      outputPath: result.outputPath,
+      cropRegion: result.cropRegion,
+      detectedFacesCount: result.detectedFaces.length,
+      duration: result.duration,
+    });
+  } catch (error) {
+    Logger.error('[Clipper] Smart crop failed:', error);
+    res.status(500).json({ error: 'Smart crop failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/subtitle-mix
+ * Embed subtitles and/or mix background music into a video
+ */
+router.post('/subtitle-mix', requireAuth, async (req, res) => {
+  try {
+    const {
+      videoPath,
+      outputPath,
+      srtPath,
+      musicPath,
+      musicVolume = 0.15,
+      voicePath,
+      thresholdDb,
+      attackSec,
+      releaseSec,
+      subtitleStyle,
+    } = req.body;
+
+    if (!videoPath) {
+      return res.status(400).json({ error: 'videoPath is required' });
+    }
+
+    if (!await fs.pathExists(videoPath)) {
+      return res.status(400).json({ error: 'Video file not found' });
+    }
+
+    if (srtPath && !await fs.pathExists(srtPath)) {
+      return res.status(400).json({ error: 'SRT file not found' });
+    }
+
+    if (musicPath && !await fs.pathExists(musicPath)) {
+      return res.status(400).json({ error: 'Music file not found' });
+    }
+
+    const output = outputPath || videoPath.replace(/\.\w+$/, '_mixed.mp4');
+
+    const result = await subtitleMixer.process(videoPath, {
+      srtPath,
+      outputPath: output,
+      subtitleStyle,
+      musicPath,
+      musicVolume,
+      voicePath,
+      duckingOptions: voicePath ? { thresholdDb, attackSec, releaseSec } : undefined,
+    });
+
+    res.json({
+      outputPath: result.outputPath,
+      srtPath: result.srtPath,
+      duration: result.duration,
+      subtitlesEmbedded: result.subtitlesEmbedded,
+      musicMixed: result.musicMixed,
+      duckingApplied: result.duckingApplied,
+    });
+  } catch (error) {
+    Logger.error('[Clipper] Subtitle mix failed:', error);
+    res.status(500).json({ error: 'Subtitle mix failed' });
+  }
+});
+
+/**
+ * POST /api/v1/clipper/generate-srt
+ * Generate SRT file from Whisper transcript
+ */
+router.post('/generate-srt', requireAuth, async (req, res) => {
+  try {
+    const { transcript, outputPath } = req.body;
+
+    if (!transcript || !transcript.segments) {
+      return res.status(400).json({ error: 'transcript with segments is required' });
+    }
+
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    await fs.ensureDir(uploadsDir);
+    const srtPath = outputPath || path.join(uploadsDir, `subtitles_${Date.now()}.srt`);
+
+    const result = await subtitleMixer.generateSrtFromWhisper(transcript, srtPath);
+
+    res.json({ srtPath: result });
+  } catch (error) {
+    Logger.error('[Clipper] Generate SRT failed:', error);
+    res.status(500).json({ error: 'Generate SRT failed' });
+  }
+});
+
+/**
  * Process video extraction asynchronously
  */
 async function processExtraction(
@@ -245,16 +583,19 @@ async function processExtraction(
   if (!job) return;
 
   try {
-    // Try real transcription using existing audio-transcriber
+    // Real transcription using our new timestamp transcriber (Whisper/Gemini fallback)
     let transcription;
     try {
-      const { transcribeVideoAudio } = await import('../lib/audio-transcriber.js');
-      const text = await transcribeVideoAudio(videoPath);
-      // Convert plain text to mock segments (placeholder - real Whisper would provide timestamps)
-      Logger.info(`[Clipper] Transcription received (${text.length} chars), using mock segments`);
-      transcription = generateMockTranscription();
+      const { transcribeVideoAudioWithTimestamps } = await import('../lib/audio-transcriber.js');
+      const result = await transcribeVideoAudioWithTimestamps(videoPath);
+      Logger.info(`[Clipper] Transcription completed successfully. Text length: ${result.text.length}, Segment count: ${result.segments.length}`);
+      transcription = {
+        text: result.text,
+        segments: result.segments,
+        language: result.language || 'tr'
+      };
     } catch (transcribeError) {
-      Logger.warn('[Clipper] Transcription failed, using mock:', transcribeError);
+      Logger.warn('[Clipper] Transcription failed, using mock placeholder:', transcribeError);
       transcription = generateMockTranscription();
     }
 

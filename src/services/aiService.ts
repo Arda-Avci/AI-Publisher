@@ -248,3 +248,156 @@ Görevlerin:
   return result.object;
 }
 
+export const TutorialSchema = z.object({
+  tutorialTitle: z.string(),
+  scenes: z.array(z.object({
+    sceneNumber: z.number(),
+    videoPrompt: z.string(),
+    speechText: z.string(),
+    sfxPrompt: z.string(),
+    screenAction: z.string()
+  }))
+});
+
+export const LandingAssetsSchema = z.object({
+  heroVideo: z.object({
+    title: z.string(),
+    prompt: z.string(),
+    description: z.string()
+  }),
+  showcaseVideos: z.array(z.object({
+    title: z.string(),
+    category: z.string(),
+    videoPrompt: z.string(),
+    coverPrompt: z.string(),
+    description: z.string()
+  }))
+});
+
+export const CustomThemeSchema = z.object({
+  themeName: z.string(),
+  isDark: z.boolean(),
+  colors: z.object({
+    background: z.string(),
+    foreground: z.string(),
+    card: z.string(),
+    cardForeground: z.string(),
+    popover: z.string(),
+    popoverForeground: z.string(),
+    primary: z.string(),
+    primaryForeground: z.string(),
+    secondary: z.string(),
+    secondaryForeground: z.string(),
+    muted: z.string(),
+    mutedForeground: z.string(),
+    accent: z.string(),
+    accentForeground: z.string(),
+    border: z.string(),
+    input: z.string(),
+    ring: z.string()
+  })
+});
+
+export async function enhanceVideoPrompt(
+  userPrompt: string, 
+  options: { 
+    cameraMotion?: string; 
+    templateStyle?: string; 
+    characterFeatures?: string;
+  }
+): Promise<string> {
+  const models = getAIModelChain();
+  const prompt = `Sen profesyonel bir yapay zeka video prompt mühendisisin.
+Görevin: Kullanıcının girdiği ham video promptunu, seçtiği üretim şablonu, kamera hareketi ve karakter özelliklerini birleştirerek CogVideoX-5b ve Wan 2.1 gibi video üretim modellerinde en iyi ve gerçekçi görsel çıktıyı verecek detaylı bir İngilizce prompta dönüştürmektir.
+
+Girdi Parametreleri:
+- Ham Kullanıcı Promptu: ${userPrompt}
+- Kamera Hareketi: ${options.cameraMotion || 'Yok'}
+- Üretim Şablonu/Tarzı: ${options.templateStyle || 'cinematic'}
+- Karakter Tasviri: ${options.characterFeatures || 'Yok'}
+
+Kurallar:
+1. Çıktı tamamen İngilizce olmalıdır.
+2. Kamera hareketini (pan, zoom, tilt vb.) sahnenin kompozisyonuna yedir.
+3. Çözünürlük, ışıklandırma (cinematic lighting, volumetric light), detay düzeyi (8k resolution, photorealistic) ekle.
+4. Çıktıyı doğrudan geliştirilmiş prompt olarak döndür, başka açıklama yazma.`;
+
+  const result = await withFallbackAndRetry((model) => {
+    return generateObject({
+      model,
+      schema: z.object({ enhancedPrompt: z.string() }),
+      abortSignal: AbortSignal.timeout(30000),
+      prompt
+    });
+  }, models, 2, 2000, true);
+
+  return result.object.enhancedPrompt;
+}
+
+export async function generateTutorialPrompts(featureName: string): Promise<z.infer<typeof TutorialSchema>> {
+  const models = getAIModelChain();
+  const prompt = `Sen bir eğitim/video yapımcısısın.
+AI-Publisher projesindeki "${featureName}" özelliğinin nasıl kullanılacağını anlatan kısa ve öğretici (tutorial) bir Shorts/TikTok videosu planlayacaksın.
+
+Görevlerin:
+1. Sahne bazlı video promptlarını, Türkçe seslendirme metinlerini, ses efektlerini (SFX) ve arayüzde gösterilecek ekran aksiyonunu (screenAction) tasarla.
+2. Zod şemasına uygun çıktı üret.`;
+
+  const result = await withFallbackAndRetry((model) => {
+    return generateObject({
+      model,
+      schema: TutorialSchema,
+      abortSignal: AbortSignal.timeout(45000),
+      prompt
+    });
+  }, models, 2, 2000, true);
+
+  return result.object;
+}
+
+export async function generateLandingPageAssets(niche: string): Promise<z.infer<typeof LandingAssetsSchema>> {
+  const models = getAIModelChain();
+  const prompt = `Sen profesyonel bir reklam ajansı kreatif direktörüsün.
+AI-Publisher platformunun Landing Page (Açılış Sayfası) ve Vitrin/Galeri bölümlerinde kullanılacak premium tanıtım videoları ve kapak görselleri için prompt planı hazırlayacaksın.
+
+Niche/Kategori Teması: ${niche}
+
+Görevlerin:
+1. Sayfa başında (Hero section) oynatılacak dikkat çekici 1 adet Hero Video promptu üret.
+2. Galeride gösterilmek üzere en az 3 adet kategori bazlı Vitrin Video ve Kapak Resmi promptu üret.
+3. Çıktıyı tamamen Zod şemasına uygun formatta hazırla.`;
+
+  const result = await withFallbackAndRetry((model) => {
+    return generateObject({
+      model,
+      schema: LandingAssetsSchema,
+      abortSignal: AbortSignal.timeout(45000),
+      prompt
+    });
+  }, models, 2, 2000, true);
+
+  return result.object;
+}
+
+export async function generateCustomThemes(styleDescription: string): Promise<z.infer<typeof CustomThemeSchema>> {
+  const models = getAIModelChain();
+  const prompt = `Sen profesyonel bir UI/UX tasarımcısısın.
+Kullanıcının talep ettiği "${styleDescription}" tarzına uygun, HSL renk uzayında CSS renk paleti tasarlayacaksın.
+
+Kurallar:
+1. Çıktı, Tailwind CSS veya shadcn/ui renk şemasıyla tam uyumlu HSL formatında olmalıdır (Örn: "220 15% 10%").
+2. Zıtlık oranlarına (WCAG standartları) dikkat et.
+3. Zod şemasına uygun çıktı üret.`;
+
+  const result = await withFallbackAndRetry((model) => {
+    return generateObject({
+      model,
+      schema: CustomThemeSchema,
+      abortSignal: AbortSignal.timeout(30000),
+      prompt
+    });
+  }, models, 2, 2000, true);
+
+  return result.object;
+}
+

@@ -3,6 +3,7 @@ import {
   Film, Sparkles, Play, X, Globe, ArrowRight, Share2,
   Loader, Download, ArrowUpRight, Heart, TrendingUp, BookOpen, Star, Activity, Music
 } from 'lucide-react';
+import { landingPageStyles, initScrollAnimations, initNumberAnimations } from './LandingPageAnimations.js';
 
 interface Scene {
   id: number;
@@ -81,7 +82,21 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
     : [];
 
   useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHeight = document.body.style.height;
+    document.body.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+
     fetchDemoVideos();
+    // Initialize scroll animations
+    const cleanup = initScrollAnimations();
+    initNumberAnimations();
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.height = originalHeight;
+      cleanup();
+    };
   }, []);
 
   const fetchDemoVideos = async () => {
@@ -128,6 +143,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+        ${landingPageStyles}
       `}</style>
 
       {/* GLOW DECORATIONS */}
@@ -145,7 +161,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
       }} />
 
       {/* ========== NAVBAR ========== */}
-      <header style={{
+      <header className="navbar" style={{
         position: 'sticky', top: 0, zIndex: 50,
         height: '64px', padding: '0 40px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -199,7 +215,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '28px'
       }}>
         {/* Badge */}
-        <div style={{
+        <div className="hero-badge" style={{
           display: 'inline-flex', alignItems: 'center', gap: '8px',
           background: 'var(--accent-light)', border: '1px solid rgba(99,102,241,0.2)',
           padding: '6px 18px', borderRadius: '30px', fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold'
@@ -209,7 +225,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         </div>
 
         {/* Title */}
-        <h1 style={{
+        <h1 className="hero-title" style={{
           fontSize: '56px', fontWeight: 800, lineHeight: '1.1', letterSpacing: '-2px',
           textAlign: 'center', margin: 0, maxWidth: '850px'
         }}>
@@ -217,7 +233,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         </h1>
 
         {/* Subtitle */}
-        <p style={{
+        <p className="hero-subtitle" style={{
           fontSize: '17px', color: 'var(--text-muted)', lineHeight: '1.6',
           textAlign: 'center', maxWidth: '600px', margin: 0
         }}>
@@ -225,7 +241,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+        <div className="hero-ctas" style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
           <button
             onClick={() => setIsLoginOpen(true)}
             className="btn btn-primary"
@@ -249,7 +265,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         </div>
 
         {/* Video Player Area */}
-        <div style={{
+        <div className="hero-video hero-float" style={{
           position: 'relative', width: '100%', maxWidth: '960px',
           borderRadius: '16px', overflow: 'hidden', marginTop: '20px',
           aspectRatio: '16/9',
@@ -277,7 +293,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
             position: 'absolute', inset: 0, display: 'flex',
             alignItems: 'center', justifyContent: 'center', zIndex: 2
           }}>
-            <div style={{
+            <div className="hero-play-btn" style={{
               width: '72px', height: '72px', borderRadius: '50%',
               background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -300,7 +316,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         </div>
 
         {/* Stat Badges */}
-        <div style={{
+        <div className="hero-stats" style={{
           display: 'flex', gap: '48px', justifyContent: 'center', alignItems: 'center', marginTop: '10px'
         }}>
           {[
@@ -328,7 +344,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         scrollMarginTop: '80px'
       }}>
         {/* Section Header */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+        <div className="reveal-on-scroll" style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h2 style={{ fontSize: '32px', fontWeight: 800, margin: 0 }}>
             AI Tarafından Üretilen <span className="gradient-text">Örnek Çalışmalar</span>
           </h2>
@@ -400,7 +416,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                   return (
                     <div
                       key={cat}
-                      className="glass"
+                      className="glass gallery-card"
                       style={{
                         borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
                         transition: 'var(--transition)',
@@ -462,7 +478,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                   <div
                     key={video.id}
                     onClick={() => setSelectedVideo(video)}
-                    className="glass"
+                    className="glass gallery-card"
                     style={{
                       borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
                       transition: 'var(--transition)',
@@ -565,7 +581,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         position: 'relative', zIndex: 1,
         maxWidth: '1200px', margin: '0 auto', padding: '60px 40px 80px'
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+        <div className="reveal-on-scroll" style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h2 style={{ fontSize: '32px', fontWeight: 800, margin: 0 }}>
             Güçlü <span className="gradient-text">Özellikler</span>
           </h2>
@@ -580,7 +596,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           minHeight: '320px'
         }}>
           {/* Large Left Card */}
-          <div className="glass" style={{
+          <div className="glass bento-card" style={{
             gridRow: '1 / 3',
             borderRadius: '16px', padding: '40px',
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
@@ -614,7 +630,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           </div>
 
           {/* Top Right Card */}
-          <div className="glass" style={{
+          <div className="glass bento-card" style={{
             gridRow: '1 / 2',
             borderRadius: '16px', padding: '32px',
             display: 'flex', flexDirection: 'column', gap: '16px',
@@ -641,7 +657,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           </div>
 
           {/* Bottom Right Card */}
-          <div className="glass" style={{
+          <div className="glass bento-card" style={{
             gridRow: '2 / 3',
             borderRadius: '16px', padding: '32px',
             display: 'flex', flexDirection: 'column', gap: '16px',
@@ -675,8 +691,8 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         maxWidth: '1200px', margin: '0 auto', padding: '40px 40px 60px',
         overflow: 'hidden'
       }}>
-        <div style={{ overflow: 'hidden', width: '100%', position: 'relative' }}>
-          <div style={{
+        <div className="marquee-container" style={{ overflow: 'hidden', width: '100%', position: 'relative' }}>
+          <div className="marquee-track" style={{
             display: 'flex', gap: '12px', width: 'fit-content',
             animation: 'marquee 30s linear infinite'
           }}>
@@ -715,7 +731,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
       </section>
 
       {/* ========== STATS SECTION ========== */}
-      <section style={{
+      <section className="reveal-on-scroll" style={{
         position: 'relative', zIndex: 1,
         maxWidth: '1200px', margin: '0 auto', padding: '60px 40px'
       }}>
@@ -727,8 +743,8 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
             { num: '25.000+', label: 'Kullanıcı' },
             { num: '4', label: 'Sosyal Medya Platformu' }
           ].map((stat, i) => (
-            <div key={i} style={{ textAlign: 'center' }}>
-              <div className="gradient-text" style={{
+            <div key={i} className="stat-item" style={{ textAlign: 'center' }}>
+              <div className="gradient-text stat-number" style={{
                 fontSize: '42px', fontWeight: 800, fontFamily: 'var(--font-mono)', lineHeight: 1
               }}>
                 {stat.num}
@@ -742,11 +758,11 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
       </section>
 
       {/* ========== FINAL CTA ========== */}
-      <section style={{
+      <section className="reveal-on-scroll" style={{
         position: 'relative', zIndex: 1,
         maxWidth: '1200px', margin: '0 auto', padding: '40px 40px 80px'
       }}>
-        <div className="glass" style={{
+        <div className="glass cta-section" style={{
           borderRadius: '20px', padding: '60px 40px', textAlign: 'center',
           border: '1px solid rgba(99,102,241,0.15)',
           background: 'linear-gradient(135deg, rgba(99,102,241,0.05), rgba(167,139,250,0.03))',
@@ -782,13 +798,13 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
       </section>
 
       {/* ========== FOOTER ========== */}
-      <footer style={{
+      <footer className="reveal-on-scroll" style={{
         position: 'relative', zIndex: 1,
         borderTop: '1px solid var(--border)',
         padding: '48px 40px 32px',
         background: 'rgba(9,9,11,0.5)'
       }}>
-        <div style={{
+        <div className="footer-content" style={{
           maxWidth: '1200px', margin: '0 auto',
           display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
         }}>
@@ -824,7 +840,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                   {group.title}
                 </div>
                 {group.links.map((link) => (
-                  <div key={link} style={{
+                  <div key={link} className="footer-link" style={{
                     fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px',
                     cursor: 'pointer', transition: 'var(--transition)'
                   }}
@@ -842,12 +858,12 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
 
       {/* ========== VIDEO PLAYER MODAL ========== */}
       {selectedVideo && (
-        <div style={{
+        <div className="modal-backdrop" style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
           background: 'rgba(3, 5, 10, 0.85)', backdropFilter: 'blur(10px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
         }}>
-          <div className="glass" style={{
+          <div className="glass modal-content" style={{
             width: '90%', maxWidth: '960px', maxHeight: '90%', borderRadius: '16px',
             border: '1px solid var(--border-hover)', overflow: 'hidden', display: 'flex',
             flexDirection: 'column', background: '#0a0d16', boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
@@ -961,12 +977,12 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
 
       {/* ========== LOGIN MODAL ========== */}
       {isLoginOpen && (
-        <div style={{
+        <div className="modal-backdrop" style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
           background: 'rgba(3, 5, 10, 0.85)', backdropFilter: 'blur(10px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
         }}>
-          <form onSubmit={handleLoginSubmit} className="glass" style={{
+          <form onSubmit={handleLoginSubmit} className="glass login-form" style={{
             padding: '40px', borderRadius: '16px', width: '100%', maxWidth: '400px',
             display: 'flex', flexDirection: 'column', gap: '20px',
             border: '1px solid var(--border-hover)',

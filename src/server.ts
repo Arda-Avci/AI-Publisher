@@ -44,6 +44,11 @@ import canvasRouter from './routes/canvas.js';
 import apiKeysRouter from './routes/apiKeys.js';
 import batchRouter from './routes/batch.js';
 import clipperRouter from './routes/clipper.js';
+import aiHelperRouter from './routes/aiHelper.js';
+import templatesRouter from './routes/templates.js';
+import beatSyncRouter from './routes/beatSync.js';
+import helpVideosRouter from './routes/helpVideos.js';
+import storyChatRouter from './routes/storyChat.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -150,6 +155,11 @@ app.use('/api/v1/canvas', canvasRouter);
 app.use('/api/v1/api-keys', apiKeysRouter);
 app.use('/api/v1/batch', batchRouter);
 app.use('/api/v1/clipper', clipperRouter);
+app.use('/api/v1/ai-helper', aiHelperRouter);
+app.use('/api/v1/templates', templatesRouter);
+app.use('/api/v1/beatsync', beatSyncRouter);
+app.use('/api/v1/help-videos', helpVideosRouter);
+app.use('/api/v1/story', storyChatRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

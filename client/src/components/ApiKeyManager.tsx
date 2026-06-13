@@ -161,6 +161,10 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
 
   return (
     <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      overflowY: 'auto',
       padding: '20px',
       background: 'rgba(10, 10, 20, 0.6)',
       borderRadius: '12px',

@@ -56,6 +56,7 @@ packages_to_check = [
     ("flask", "import flask"),
     ("pyngrok", "from pyngrok import ngrok"),
     ("faster_whisper", "from faster_whisper import WhisperModel"),
+    ("whisper", "import whisper"),
     ("yt_dlp", "import yt_dlp"),
     ("face_recognition", "import face_recognition"),
     ("decord", "import decord"),
@@ -125,8 +126,9 @@ if not already_installed:
     run_cmd('uv pip install --system --prefer-binary --no-cache-dir face_recognition_models')
     run_cmd('uv pip install --system --prefer-binary --no-cache-dir face_recognition opencv-python-headless librosa')
 
-    # Altyazı çıkarıcı (faster-whisper)
+    # Altyazı çıkarıcı (faster-whisper ve openai-whisper fallback)
     run_cmd('uv pip install --system --prefer-binary --no-cache-dir faster-whisper')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir openai-whisper')
 
     # Video indirici (yt-dlp) — colab_server.py ve özgünleştirme için
     run_cmd('uv pip install --system --prefer-binary --no-cache-dir yt-dlp')

@@ -27,41 +27,55 @@ export function runInWorker<T = WorkerResult>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const workerJsPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.js');
-    const workerTsPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.ts');
-    const useTs = !!(process as any)[Symbol.for('ts-node.register.instance')]
-      || process.env.TS_NODE_DEV
-      || process.env.NODE_ENV === 'development';
+    const hasJsFile = fs.existsSync(workerJsPath);
 
-    let scriptPath: string;
-    let useEval = false;
-    if (useTs) {
-      scriptPath = `require('ts-node').register(); require(${JSON.stringify(workerTsPath)});`;
-      useEval = true;
+    if (hasJsFile) {
+      const worker = new Worker(workerJsPath, { workerData: { cmd, args, timeoutMs } });
+      let settled = false;
+
+      worker.on('message', (msg: any) => {
+        settled = true;
+        worker.terminate().catch(() => {});
+        resolve(msg as T);
+      });
+      worker.on('error', (err) => {
+        if (!settled) { settled = true; reject(err); }
+      });
+      worker.on('exit', (code) => {
+        if (!settled) {
+          if (code === 0) resolve({ status: 'success' } as any);
+          else reject(new Error(`Worker stopped with exit code ${code}`));
+        }
+      });
     } else {
-      scriptPath = workerJsPath;
-    }
+      // Geliştirme veya test ortamında (derlenmiş JS yokken), FFmpeg harici bir process olduğundan
+      // ana thread'i bloke etmeden doğrudan child_process.execFile ile çalıştır
+      const { execFile } = require('child_process');
+      const child = execFile(cmd, args, (error: any, stdout: string, stderr: string) => {
+        if (error) {
+          resolve({
+            status: 'error',
+            error: `Command failed with code ${error.code}. Stderr: ${stderr}`,
+            stdout,
+            stderr
+          } as any);
+        } else {
+          resolve({ status: 'success', stdout, stderr } as any);
+        }
+      });
 
-    const opts: any = useEval
-      ? { eval: true, workerData: { cmd, args, timeoutMs } }
-      : { workerData: { cmd, args, timeoutMs } };
+      if (timeoutMs > 0) {
+        const timer = setTimeout(() => {
+          child.kill('SIGKILL');
+          resolve({
+            status: 'timeout',
+            error: 'FFmpeg execution timed out (Main Thread Fallback Protection).'
+          } as any);
+        }, timeoutMs);
 
-    const worker = new Worker(scriptPath, opts);
-    let settled = false;
-
-    worker.on('message', (msg: any) => {
-      settled = true;
-      worker.terminate().catch(() => {});
-      resolve(msg as T);
-    });
-    worker.on('error', (err) => {
-      if (!settled) { settled = true; reject(err); }
-    });
-    worker.on('exit', (code) => {
-      if (!settled) {
-        if (code === 0) resolve({ status: 'success' } as any);
-        else reject(new Error(`Worker stopped with exit code ${code}`));
+        child.on('exit', () => clearTimeout(timer));
       }
-    });
+    }
   });
 }
 
