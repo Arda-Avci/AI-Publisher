@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Language } from '../types.js';
+import { ColorGraderPanel } from './ColorGraderPanel.js';
 
 interface ClipSegment {
   id: string;
@@ -482,26 +483,7 @@ export function ClipperPanel({ language, t, onShowToast }: ClipperPanelProps) {
             </div>
 
             {/* Color Grading */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#9CA3AF' }}>
-                {language === 'tr' ? 'Renk Derecelendirme (Faz E)' : 'Color Grading (Phase E)'}
-              </label>
-              <input
-                type="text"
-                value={colorGrading}
-                onChange={e => setColorGrading(e.target.value)}
-                placeholder="Warm Cinematic, Cyberpunk Neon, Vintage..."
-                style={{
-                  padding: '6px 8px',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '4px',
-                  color: 'white',
-                  fontSize: '11px',
-                  outline: 'none',
-                }}
-              />
-            </div>
+            <ColorGraderPanel value={colorGrading} onChange={setColorGrading} language={language} />
           </div>
 
           <button

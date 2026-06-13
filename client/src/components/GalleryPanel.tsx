@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type React from 'react';
-import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap, Beaker, ChevronDown, ChevronUp, Monitor, Video } from 'lucide-react';
+import { RefreshCw, Trash2, Share2, Loader, Cpu, Zap, Beaker, ChevronDown, ChevronUp, Monitor, Video, TrendingUp } from 'lucide-react';
+import { CoverSelector } from './CoverSelector.js';
 import type { Job, UserCredits } from '../types.js';
 
 interface ColabStatusData {
@@ -49,6 +50,8 @@ interface GalleryPanelProps {
   onSetMetaYtDesc: (v: string) => void;
   onSetMetaYtTags: (v: string) => void;
   onSaveMetaAndPublish: () => void;
+  onAnalyzeViralScore?: (jobId: number) => void;
+  onSelectCover?: (jobId: number, path: string) => void;
   t: (key: string, params?: Record<string, any>) => string;
 }
 
@@ -68,7 +71,7 @@ export function GalleryPanel({
   progressMsg, progressPercent, userCredits,
   onSelectJob, onRefreshJobs, onCancelJob, onDeleteJob,
   onSetMetaYtTitle, onSetMetaYtDesc, onSetMetaYtTags,
-  onSaveMetaAndPublish, t,
+  onSaveMetaAndPublish, onAnalyzeViralScore, onSelectCover, t,
 }: GalleryPanelProps) {
   const [systemLogEntries, setSystemLogEntries] = useState<SystemLogEntry[]>([
     {
@@ -166,7 +169,7 @@ export function GalleryPanel({
         )}
         {showMeta && (
           <MetaEditor
-            status={selectedJob.status}
+            job={selectedJob}
             ytTitle={metaYtTitle}
             ytDesc={metaYtDesc}
             ytTags={metaYtTags}
@@ -175,6 +178,8 @@ export function GalleryPanel({
             onSetYtDesc={onSetMetaYtDesc}
             onSetYtTags={onSetMetaYtTags}
             onSave={onSaveMetaAndPublish}
+            onAnalyzeViralScore={onAnalyzeViralScore}
+            onSelectCover={onSelectCover}
           />
         )}
       </div>
@@ -401,13 +406,34 @@ function ProgressTracker({
 }
 
 function MetaEditor({
-  status, ytTitle, ytDesc, ytTags, isSaving,
+  job, ytTitle, ytDesc, ytTags, isSaving,
   onSetYtTitle, onSetYtDesc, onSetYtTags, onSave,
+  onAnalyzeViralScore, onSelectCover,
 }: {
-  status: string; ytTitle: string; ytDesc: string; ytTags: string; isSaving: boolean;
+  job: Job; ytTitle: string; ytDesc: string; ytTags: string; isSaving: boolean;
   onSetYtTitle: (v: string) => void; onSetYtDesc: (v: string) => void; onSetYtTags: (v: string) => void;
   onSave: () => void;
+  onAnalyzeViralScore?: (jobId: number) => void;
+  onSelectCover?: (jobId: number, path: string) => void;
 }) {
+  const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [selectedCover, setSelectedCover] = useState('');
+
+  useEffect(() => {
+    if (job.cover_images) {
+      try {
+        const parsed = JSON.parse(job.cover_images);
+        if (Array.isArray(parsed)) setCoverImages(parsed);
+      } catch {}
+    }
+    if (job.cover_image_path) setSelectedCover(job.cover_image_path);
+  }, [job.cover_images, job.cover_image_path]);
+
+  const handleSelectCover = (path: string) => {
+    setSelectedCover(path);
+    if (onSelectCover) onSelectCover(job.id, path);
+  };
+
   return (
     <div className="glass" style={{
       padding: '15px', borderRadius: '10px', border: '1px solid var(--border)',
@@ -415,7 +441,7 @@ function MetaEditor({
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)' }}>SOSYAL MEDYA KOPYALARI</h4>
-        {status === 'awaiting_approval' && (
+        {job.status === 'awaiting_approval' && (
           <span style={{
             fontSize: '9px', background: 'var(--warning)', color: '#0b0f19',
             padding: '2px 5px', borderRadius: '3px', fontWeight: 'bold', fontFamily: 'var(--font-mono)',
@@ -424,6 +450,30 @@ function MetaEditor({
           </span>
         )}
       </div>
+
+      {job.viral_score !== null && job.viral_score !== undefined && (
+        <div style={{
+          background: 'rgba(0, 242, 254, 0.1)', border: '1px solid #00F2FE',
+          padding: '8px 12px', borderRadius: '6px', fontWeight: 'bold',
+          color: '#00F2FE', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px',
+        }}>
+          <TrendingUp size={14} /> AI Viralite Skoru: {job.viral_score} / 100
+        </div>
+      )}
+
+      {onAnalyzeViralScore && (
+        <button onClick={() => onAnalyzeViralScore!(job.id)}
+          style={{
+            background: 'linear-gradient(135deg, #FF007F, #7F00FF)', border: 'none',
+            color: 'white', padding: '8px', borderRadius: '6px', cursor: 'pointer',
+            fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          }}>
+          <TrendingUp size={12} /> AI Viralite Analizi Yap
+        </button>
+      )}
+
+      {onSelectCover && <CoverSelector coverImages={coverImages} selectedCover={selectedCover} onSelect={handleSelectCover} />}
+
       <MetaField label="Video Başlığı (YouTube)">
         <input type="text" value={ytTitle} onChange={e => onSetYtTitle(e.target.value)} style={inputStyle} />
       </MetaField>
@@ -440,7 +490,7 @@ function MetaEditor({
         style={{ width: '100%', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
       >
         {isSaving ? <Loader size={12} className="pulse" /> : <Share2 size={12} />}
-        {isSaving ? 'Kaydediliyor...' : (status === 'awaiting_approval' ? 'Onayla ve Yayınla' : 'Metinleri Kaydet ve Paylaş')}
+        {isSaving ? 'Kaydediliyor...' : (job.status === 'awaiting_approval' ? 'Onayla ve Yayınla' : 'Metinleri Kaydet ve Paylaş')}
       </button>
     </div>
   );

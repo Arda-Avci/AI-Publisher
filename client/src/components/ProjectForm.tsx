@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send, Loader, Wand2 } from 'lucide-react';
 import type { ProductionTemplate, TtsProvider, Platform, UserCredits } from '../types.js';
 import { TemplatePreview } from './TemplatePreview.js';
+import { ColorGraderPanel } from './ColorGraderPanel.js';
 
 interface ProjectFormProps {
   selectedModel: string;
@@ -461,14 +462,8 @@ export function ProjectForm(props: ProjectFormProps) {
             </select>
           </Field>
 
-          <Field label="Renk Derecelendirme (Gelecek Faz)" labelStyle={labelStyle}>
-            <input
-              type="text"
-              value={props.colorGrading}
-              onChange={(e) => props.onSetColorGrading(e.target.value)}
-              placeholder="Örn: warm_cinema, cyberpunk, neon_mor"
-              style={inputStyle}
-            />
+          <Field label="Renk Derecelendirme" labelStyle={labelStyle}>
+            <ColorGraderPanel value={props.colorGrading} onChange={props.onSetColorGrading} compact />
           </Field>
 
           <Divider />

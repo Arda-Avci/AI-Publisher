@@ -26,6 +26,7 @@ export interface Job {
   tts_voice?: string;
   model_type?: string;
   has_shorts?: number;
+  viral_score?: number | null;
 }
 
 export interface Scene {

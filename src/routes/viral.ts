@@ -25,7 +25,7 @@ const router = Router();
  */
 router.post('/hook', requireAuth, async (req, res) => {
   try {
-    const { video_path } = req.body;
+    const { video_path, platform } = req.body;
 
     if (!video_path) {
       res.status(400).json({ error: 'video_path is required' });
@@ -41,11 +41,25 @@ router.post('/hook', requireAuth, async (req, res) => {
       return;
     }
 
+    const validPlatforms = ['youtube', 'tiktok', 'x', 'meta', 'all'] as const;
+    const targetPlatform = validPlatforms.includes(platform) ? platform : 'youtube';
+
     const result = await analyzeHookQuality(videoAbsPath);
+
+    // Per-platform scoring: adjust the AI's score based on platform-specific factors
+    const platformScores = targetPlatform === 'all'
+      ? {
+          youtube: Math.round(result.score * 1.0),
+          tiktok: Math.round(result.score * 1.1),      // TikTok rewards hook-heavy content
+          x: Math.round(result.score * 0.85),            // X needs punchier hooks
+          meta: Math.round(result.score * 0.95),          // Meta in between
+        }
+      : { [targetPlatform as string]: result.score };
 
     res.json({
       success: true,
-      data: result
+      data: result,
+      platform_scores: platformScores,
     });
   } catch (err: any) {
     Logger.error('[viral] Hook analysis error', err);
@@ -351,6 +365,42 @@ router.post('/emotion', requireAuth, async (req, res) => {
   } catch (err: any) {
     Logger.error('[viral] Emotion captions error', err);
     res.status(500).json({ error: err.message || 'Emotion caption processing failed' });
+  }
+});
+
+// ── /api/v1/viral/batch-marketing ─────────────────────────────────────────────
+
+/**
+ * POST /api/v1/viral/batch-marketing
+ * Generate titles + hashtags for all platforms in one call
+ */
+router.post('/batch-marketing', requireAuth, async (req, res) => {
+  try {
+    const { topic, content } = req.body;
+
+    if (!topic) {
+      res.status(400).json({ error: 'topic is required' });
+      return;
+    }
+
+    const platforms: Array<'youtube' | 'tiktok' | 'x' | 'meta'> = ['youtube', 'tiktok', 'x', 'meta'];
+    const [titleResult, ...hashtagResults] = await Promise.all([
+      generateViralTitles(topic, 3),
+      ...platforms.map((p: any) => generateHashtags(content || topic, p)),
+    ]);
+
+    const results: Record<string, any> = {};
+    platforms.forEach((p, i) => {
+      results[p] = {
+        titles: (titleResult as any)?.titles?.slice(0, 2) || [],
+        hashtags: (hashtagResults[i] as any)?.hashtags || [],
+      };
+    });
+
+    res.json({ success: true, data: results });
+  } catch (err: any) {
+    Logger.error('[viral] Batch marketing error', err);
+    res.status(500).json({ error: err.message || 'Batch marketing failed' });
   }
 });
 

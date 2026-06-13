@@ -92,6 +92,21 @@ export async function embedSubtitles(
   const alignment = position === 'top' ? 'top' : position === 'center' ? 'center' : 'bottom';
   const marginV = position === 'top' ? marginY : position === 'bottom' ? marginY : 'h/2';
 
+  // Video boyutlarını al (original_size Windows FFmpeg bug fix için)
+  let videoWidth = 1920, videoHeight = 1080;
+  try {
+    const { stdout } = await runFFmpeg('ffprobe', [
+      '-v', 'error', '-select_streams', 'v:0',
+      '-show_entries', 'stream=width,height',
+      '-of', 'csv=s=x:p=0', videoPath
+    ], 15000);
+    const dims = stdout?.trim();
+    if (dims) {
+      const [w, h] = dims.split('x').map(Number);
+      if (w && h) { videoWidth = w; videoHeight = h; }
+    }
+  } catch { /* use defaults */ }
+
   // Build force_style string for libass
   const forceStyle = [
     `FontName=${fontFamily}`,
@@ -105,7 +120,8 @@ export async function embedSubtitles(
   ].join(',');
 
   const srtEscaped = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-  const vf = `subtitles=${srtEscaped}:force_style='${forceStyle}'`;
+  // original_size Windows FFmpeg libass bug fix
+  const vf = `subtitles=${srtEscaped}:force_style='${forceStyle}':original_size=${videoWidth}x${videoHeight}`;
 
   const args = [
     '-y',
@@ -271,16 +287,50 @@ export async function generateSrtFromWhisper(
     const text = seg.text?.trim();
     if (!text) continue;
 
-    // Word-wrap long text
-    const lines = wrapText(text, maxCharsPerLine);
+    // Prefer word-level timestamps when available
+    if (seg.words && seg.words.length > 0) {
+      let lineWords: WhisperWord[] = [];
+      let lineText = '';
+      for (const w of seg.words) {
+        const candidate = lineText ? lineText + ' ' + w.word : w.word;
+        if (candidate.length <= maxCharsPerLine) {
+          lineWords.push(w);
+          lineText = candidate;
+        } else {
+          if (lineWords.length > 0) {
+            entries.push({
+              index: index++,
+              startTime: lineWords[0].start,
+              endTime: lineWords[lineWords.length - 1].end,
+              text: lineText,
+            });
+          }
+          lineWords = [w];
+          lineText = w.word;
+        }
+      }
+      if (lineWords.length > 0) {
+        entries.push({
+          index: index++,
+          startTime: lineWords[0].start,
+          endTime: lineWords[lineWords.length - 1].end,
+          text: lineText,
+        });
+      }
+    } else {
+      // Fallback: segment-level word-wrap
+      const lines = wrapText(text, maxCharsPerLine);
+      const wordDuration = (seg.end - seg.start) / Math.max(lines.join(' ').split(/\s+/).length, 1);
 
-    for (const line of lines) {
-      entries.push({
-        index: index++,
-        startTime: seg.start,
-        endTime: seg.end,
-        text: line,
-      });
+      for (const line of lines) {
+        const wordsInLine = line.split(/\s+/).length;
+        entries.push({
+          index: index++,
+          startTime: seg.start,
+          endTime: seg.end, // approximate
+          text: line,
+        });
+      }
     }
   }
 

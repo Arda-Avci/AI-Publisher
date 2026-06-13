@@ -10,6 +10,7 @@ import { startVideoQueueWorker } from './queue.js';
 import { startGarbageCollector } from './lib/cleanup.js';
 import { initRabbitMQ } from './lib/rabbitmq.js';
 import { startPublishQueueWorker } from './lib/publish-queue.js';
+import { startClipQueueWorker } from './lib/clip-queue.js';
 import { i18nMiddleware } from './middleware/i18n.js';
 import { Logger } from './lib/logger.js';
 import { csrfMiddleware } from './middleware/csrf.js';
@@ -49,6 +50,9 @@ import templatesRouter from './routes/templates.js';
 import beatSyncRouter from './routes/beatSync.js';
 import helpVideosRouter from './routes/helpVideos.js';
 import storyChatRouter from './routes/storyChat.js';
+import colorGradeRouter from './routes/colorGrade.js';
+import dubbingRouter from './routes/dubbing.js';
+import viralRouter from './routes/viral.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -119,11 +123,9 @@ app.use(themeMiddleware);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/videolar', express.static(path.join(process.cwd(), 'videolar')));
 
-// React build çıktısını serve et (production'da Express üzerinden)
+// React build çıktısını serve et
 const clientDist = path.join(process.cwd(), 'client', 'dist');
-if (process.env.NODE_ENV === 'production' || process.env.SERVE_REACT === 'true') {
-  app.use(express.static(clientDist));
-}
+app.use(express.static(clientDist));
 
 // Register all routes
 registerAuthRoutes(app);
@@ -160,6 +162,9 @@ app.use('/api/v1/templates', templatesRouter);
 app.use('/api/v1/beatsync', beatSyncRouter);
 app.use('/api/v1/help-videos', helpVideosRouter);
 app.use('/api/v1/story', storyChatRouter);
+app.use('/api/v1/color', colorGradeRouter);
+app.use('/api/v1/dubbing', dubbingRouter);
+app.use('/api/v1/viral', viralRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {
@@ -170,13 +175,13 @@ app.get('/api/v1/csrf', (req, res) => {
 app.use(errorHandler);
 
 // React SPA catch-all: API olmayan tüm GET isteklerinde React index.html serve et
-if (process.env.NODE_ENV === 'production' || process.env.SERVE_REACT === 'true') {
-  const reactIndex = path.join(clientDist, 'index.html');
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/login') || req.path.startsWith('/logout')) return;
-    res.sendFile(reactIndex);
+const reactIndex = path.join(clientDist, 'index.html');
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/login') || req.path.startsWith('/logout')) return;
+  res.sendFile(reactIndex, (err) => {
+    if (err) res.status(404).send('Not found');
   });
-}
+});
 
 // Sunucu Başlatma
 async function startServer() {
@@ -196,6 +201,7 @@ async function startServer() {
     startGarbageCollector();
     startVideoQueueWorker();
     startPublishQueueWorker();
+    startClipQueueWorker();
 
     // Pipecat bridge sunucusu — multi-agent voice/video pipeline
     import('./services/pipecatBridge.js').then(({ pipecatBridge }) => {

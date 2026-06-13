@@ -6,54 +6,58 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
+import { db } from '../db.js';
+import { sendToQueue, CLIP_JOBS_QUEUE } from '../lib/rabbitmq.js';
 import { viralAnalyzer, videoClipper, ClipSegment, ClipJob } from '../services/clipper/index.js';
 import { smartCropper } from '../services/clipper/smartCropper.js';
 import { subtitleMixer } from '../services/clipper/subtitleMixer.js';
 import { splitScreenVertical, splitScreenHorizontal, splitScreenGrid, overlayMascot, overlayMascotWithAnimation, pipOverlay, SplitScreenOptions, OverlayPosition, AnimationType, PipPosition } from '../services/clipper/splitScreenService.js';
-import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs-extra';
 
 const router = Router();
 
-// In-memory clip job storage
-const clipJobs: Map<string, ClipJob> = new Map();
-
 /**
  * POST /api/v1/clipper/extract
- * Extract viral segments from a video
+ * Extract viral segments from a video via RabbitMQ queue
  */
 router.post('/extract', requireAuth, async (req, res) => {
   try {
-    const { videoPath, videoId, minDuration, maxDuration, targetCount } = req.body;
+    const { videoPath, title, minDuration, maxDuration, targetCount } = req.body;
 
     if (!videoPath) {
       return res.status(400).json({ error: 'videoPath is required' });
     }
 
-    // Check if video exists
     if (!await fs.pathExists(videoPath)) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
-    const jobId = uuidv4();
-    const job: ClipJob = {
-      id: jobId,
-      videoId: videoId || 0,
-      userId: req.session.userId!,
-      sourceVideoPath: videoPath,
-      segments: [],
-      status: 'processing',
-      createdAt: new Date(),
-    };
+    const result = await db.run(
+      `INSERT INTO clip_jobs (user_id, source_video_path, title, status)
+       VALUES ($1, $2, $3, 'pending') RETURNING id`,
+      [req.session.userId, videoPath, title || '']
+    );
+    const clipJobId = result.lastID || (result as any)?.id || 0;
 
-    clipJobs.set(jobId, job);
-    Logger.info(`[Clipper] Starting extraction job ${jobId} for ${videoPath}`);
+    Logger.info(`[Clipper] Clip job #${clipJobId} created for ${videoPath}`);
 
-    // Start async processing
-    processExtraction(jobId, videoPath, { minDuration, maxDuration, targetCount });
+    try {
+      await sendToQueue(CLIP_JOBS_QUEUE, {
+        clipJobId,
+        userId: req.session.userId,
+        videoPath,
+        title: title || '',
+        minDuration: minDuration || 30,
+        maxDuration: maxDuration || 90,
+        targetCount: targetCount || 5,
+      });
+    } catch (queueErr) {
+      Logger.warn('[Clipper] Queue unavailable, processing inline:', queueErr);
+      processInlineExtraction(clipJobId, videoPath, { minDuration, maxDuration, targetCount, title });
+    }
 
-    res.status(201).json({ jobId, status: 'processing' });
+    res.status(201).json({ jobId: clipJobId, status: 'pending' });
   } catch (error) {
     Logger.error('[Clipper] Extraction failed:', error);
     res.status(500).json({ error: 'Extraction failed' });
@@ -62,27 +66,36 @@ router.post('/extract', requireAuth, async (req, res) => {
 
 /**
  * GET /api/v1/clipper/list
- * List all clips for current user
+ * List all clip jobs for current user
  */
 router.get('/list', requireAuth, async (req, res) => {
   try {
-    const userJobs = Array.from(clipJobs.values())
-      .filter(job => job.userId === req.session.userId)
-      .map(job => ({
-        id: job.id,
-        videoId: job.videoId,
-        segments: job.segments.map(s => ({
-          id: s.id,
-          startTime: s.startTime,
-          endTime: s.endTime,
-          duration: s.duration,
-          score: s.score,
-        })),
-        status: job.status,
-        createdAt: job.createdAt,
-      }));
+    const rows = await db.all(
+      'SELECT id, source_video_path, title, status, segments, overall_score, created_at, completed_at FROM clip_jobs WHERE user_id = $1 ORDER BY id DESC',
+      [req.session.userId]
+    );
 
-    res.json({ clips: userJobs });
+    const parseSegments = (row: any) => {
+      if (!row.segments) return [];
+      const segs = typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments;
+      return Array.isArray(segs) ? segs.map((s: any) => ({
+        id: s.id, startTime: s.startTime, endTime: s.endTime,
+        duration: s.duration, score: s.score,
+      })) : [];
+    };
+
+    const clips = rows.map((row: any) => ({
+      id: row.id,
+      videoPath: row.source_video_path,
+      title: row.title,
+      status: row.status,
+      overallScore: row.overall_score,
+      segments: parseSegments(row),
+      createdAt: row.created_at,
+      completedAt: row.completed_at,
+    }));
+
+    res.json({ clips });
   } catch (error) {
     Logger.error('[Clipper] List failed:', error);
     res.status(500).json({ error: 'Failed to list clips' });
@@ -95,13 +108,31 @@ router.get('/list', requireAuth, async (req, res) => {
  */
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    const jobId = req.params.id as string;
-    const job = clipJobs.get(jobId);
-    if (!job || job.userId !== req.session.userId) {
+    const jobId = parseInt(String(req.params.id), 10);
+    const row = await db.get(
+      'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
+      [jobId, req.session.userId]
+    );
+    if (!row) {
       return res.status(404).json({ error: 'Clip not found' });
     }
 
-    res.json({ clip: job });
+    const segments = row.segments
+      ? (typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments)
+      : [];
+
+    res.json({
+      clip: {
+        id: row.id,
+        videoPath: row.source_video_path,
+        title: row.title,
+        status: row.status,
+        overallScore: row.overall_score,
+        segments,
+        createdAt: row.created_at,
+        completedAt: row.completed_at,
+      }
+    });
   } catch (error) {
     Logger.error('[Clipper] Get failed:', error);
     res.status(500).json({ error: 'Failed to get clip' });
@@ -114,13 +145,16 @@ router.get('/:id', requireAuth, async (req, res) => {
  */
 router.post('/:id/export', requireAuth, async (req, res) => {
   try {
-    const jobId = req.params.id as string;
-    const job = clipJobs.get(jobId);
-    if (!job || job.userId !== req.session.userId) {
+    const jobId = parseInt(String(req.params.id), 10);
+    const row = await db.get(
+      'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
+      [jobId, req.session.userId]
+    );
+    if (!row) {
       return res.status(404).json({ error: 'Clip not found' });
     }
 
-    if (job.status !== 'completed') {
+    if (row.status !== 'completed') {
       return res.status(400).json({ error: 'Clip extraction not completed' });
     }
 
@@ -130,14 +164,19 @@ router.post('/:id/export', requireAuth, async (req, res) => {
       addSubtitles = true,
       addMusic = false,
       musicPath,
+      useFaceTracking = false,
     } = req.body;
 
-    const outputDir = path.join(process.cwd(), 'videolar', `clip_${job.id}`);
+    const segments: ClipSegment[] = row.segments
+      ? (typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments)
+      : [];
+
+    const outputDir = path.join(process.cwd(), 'videolar', `clip_${row.id}`);
     await fs.ensureDir(outputDir);
 
     const selectedSegments = segmentIds
-      ? job.segments.filter(s => segmentIds.includes(s.id))
-      : job.segments;
+      ? segments.filter((s: ClipSegment) => segmentIds.includes(s.id))
+      : segments;
 
     const outputPaths: string[] = [];
 
@@ -145,15 +184,24 @@ router.post('/:id/export', requireAuth, async (req, res) => {
       const clipPath = path.join(outputDir, `clip_${segment.id}.mp4`);
 
       try {
-        // Crop segment to target aspect ratio
-        let currentPath = await videoClipper.cropSegment(
-          job.sourceVideoPath,
-          clipPath,
-          segment,
-          { aspectRatio }
-        );
+        let currentPath: string;
 
-        // Add subtitles if requested
+        if (useFaceTracking) {
+          currentPath = await videoClipper.cropSegmentWithFaceTracking(
+            row.source_video_path,
+            clipPath,
+            segment,
+            { aspectRatio }
+          );
+        } else {
+          currentPath = await videoClipper.cropSegment(
+            row.source_video_path,
+            clipPath,
+            segment,
+            { aspectRatio }
+          );
+        }
+
         if (addSubtitles) {
           const withSubsPath = clipPath.replace('.mp4', '_subs.mp4');
           await videoClipper.generateSubtitles(currentPath, withSubsPath, [
@@ -162,7 +210,6 @@ router.post('/:id/export', requireAuth, async (req, res) => {
           currentPath = withSubsPath;
         }
 
-        // Add music if requested
         if (addMusic && musicPath) {
           const withMusicPath = clipPath.replace('.mp4', '_music.mp4');
           await videoClipper.mixMusic(currentPath, musicPath, withMusicPath);
@@ -175,8 +222,10 @@ router.post('/:id/export', requireAuth, async (req, res) => {
       }
     }
 
-    job.outputPaths = outputPaths;
-    res.json({ jobId: job.id, outputPaths });
+    await db.run('UPDATE clip_jobs SET output_paths = $1 WHERE id = $2',
+      [JSON.stringify(outputPaths), row.id]);
+
+    res.json({ jobId: row.id, outputPaths });
   } catch (error) {
     Logger.error('[Clipper] Export failed:', error);
     res.status(500).json({ error: 'Export failed' });
@@ -570,72 +619,59 @@ router.post('/generate-srt', requireAuth, async (req, res) => {
 /**
  * Process video extraction asynchronously
  */
-async function processExtraction(
-  jobId: string,
+async function processInlineExtraction(
+  clipJobId: number,
   videoPath: string,
   options: {
     minDuration?: number;
     maxDuration?: number;
     targetCount?: number;
+    title?: string;
   }
 ): Promise<void> {
-  const job = clipJobs.get(jobId);
-  if (!job) return;
-
   try {
-    // Real transcription using our new timestamp transcriber (Whisper/Gemini fallback)
+    await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['processing', clipJobId]);
+
     let transcription;
     try {
       const { transcribeVideoAudioWithTimestamps } = await import('../lib/audio-transcriber.js');
       const result = await transcribeVideoAudioWithTimestamps(videoPath);
-      Logger.info(`[Clipper] Transcription completed successfully. Text length: ${result.text.length}, Segment count: ${result.segments.length}`);
       transcription = {
         text: result.text,
         segments: result.segments,
-        language: result.language || 'tr'
+        language: result.language || 'tr',
       };
-    } catch (transcribeError) {
-      Logger.warn('[Clipper] Transcription failed, using mock placeholder:', transcribeError);
-      transcription = generateMockTranscription();
+    } catch {
+      Logger.warn('[Clipper] Transcription failed, using mock');
+      transcription = {
+        text: 'Mock transcript for testing. This video discusses interesting topics.',
+        segments: [
+          { start: 0, end: 5, text: 'First segment of the video' },
+          { start: 5, end: 10, text: 'Second segment with exciting content' },
+          { start: 10, end: 15, text: 'Third segment going viral' },
+          { start: 15, end: 20, text: 'Fourth segment amazing part' },
+          { start: 20, end: 25, text: 'Fifth segment with shocking revelation' },
+        ],
+        language: 'tr',
+      };
     }
 
     const result = await viralAnalyzer.analyze(transcription, {
       minDuration: options.minDuration || 30,
       maxDuration: options.maxDuration || 90,
       targetCount: options.targetCount || 5,
+      title: options.title,
     });
 
-    job.segments = result.segments;
-    job.status = 'completed';
-    job.completedAt = new Date();
+    await db.run(
+      'UPDATE clip_jobs SET segments = $1, overall_score = $2, top_reason = $3, status = $4, completed_at = CURRENT_TIMESTAMP WHERE id = $5',
+      [JSON.stringify(result.segments), result.overallScore, result.topReason, 'completed', clipJobId]
+    );
 
-    Logger.info(`[Clipper] Job ${jobId} completed: ${result.segments.length} segments found`);
+    Logger.info(`[Clipper] Job ${clipJobId} completed (inline): ${result.segments.length} segments`);
   } catch (error) {
-    Logger.error(`[Clipper] Job ${jobId} failed:`, error);
-    job.status = 'failed';
+    Logger.error(`[Clipper] Job ${clipJobId} failed (inline):`, error);
+    await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['failed', clipJobId]);
   }
 }
-
-/**
- * Generate mock transcription (placeholder for Whisper integration)
- */
-function generateMockTranscription() {
-  const segments = [
-    { start: 0, end: 45, text: 'Hey everyone, welcome back to my channel!' },
-    { start: 45, end: 90, text: "Today I'm going to show you something amazing that will blow your mind!" },
-    { start: 90, end: 135, text: "This is honestly the best thing I've ever seen. You won't believe it!" },
-    { start: 135, end: 180, text: 'Let me explain step by step how this works.' },
-    { start: 180, end: 225, text: 'Number one: always start with the basics.' },
-    { start: 225, end: 270, text: 'Number two: practice makes perfect.' },
-    { start: 270, end: 315, text: 'And finally, number three: never give up!' },
-    { start: 315, end: 360, text: "If you enjoyed this video, don't forget to like and subscribe!" },
-  ];
-
-  return {
-    text: segments.map(s => s.text).join(' '),
-    segments,
-    language: 'en',
-  };
-}
-
 export default router;

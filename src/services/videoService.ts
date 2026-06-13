@@ -605,7 +605,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   await fs.writeFile(assPath, assHeader + events.join('\n'), 'utf-8');
 }
 
-// ── YENİ: Kinetik Altyazı Gömme Filtresi ──
+// ── Kinetik Altyazı Gömme Filtresi (v2: original_size fix) ──
 export async function applyKineticSubtitles(
   videoPath: string,
   srtPath: string,
@@ -619,12 +619,30 @@ export async function applyKineticSubtitles(
 
   await convertSrtToKineticAss(srtPath, assPath, primaryColor, secondaryColor, fontName);
 
-  // FFmpeg ass filtresi ile altyazıyı videoya gömüyoruz
+  // Video boyutlarını al (original_size Windows FFmpeg bug fix için)
+  let videoWidth = 1920, videoHeight = 1080;
+  try {
+    const { stdout } = await runInWorker<WorkerResult>('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath], 15000);
+    const dims = stdout?.trim();
+    if (dims) {
+      const [w, h] = dims.split('x').map(Number);
+      if (w && h) { videoWidth = w; videoHeight = h; }
+    }
+  } catch { /* use defaults */ }
+
+  // ASS header'ını video çözünürlüğüne göre güncelle (PlayResX/Y)
+  const assContent = await fs.readFile(assPath, 'utf-8');
+  const updatedAss = assContent
+    .replace(/PlayResX: \d+/, `PlayResX: ${videoWidth}`)
+    .replace(/PlayResY: \d+/, `PlayResY: ${videoHeight}`);
+  await fs.writeFile(assPath, updatedAss, 'utf-8');
+
+  // FFmpeg ass filtresi ile altyazıyı videoya göm (original_size ile)
   const assFilterPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
   const args = [
     '-y',
     '-i', videoPath,
-    '-vf', `ass=${assFilterPath}`,
+    '-vf', `ass=${assFilterPath}:original_size=${videoWidth}x${videoHeight}`,
     '-c:a', 'copy',
     outputPath
   ];

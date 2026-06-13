@@ -43,6 +43,12 @@ export interface TranscriptionResult {
     start: number;
     end: number;
     text: string;
+    words?: Array<{
+      word: string;
+      start: number;
+      end: number;
+      confidence: number;
+    }>;
   }>;
   language: string;
 }

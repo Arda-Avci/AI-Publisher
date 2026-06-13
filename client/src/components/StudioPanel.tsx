@@ -424,6 +424,10 @@ function TalkShowPanel() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TalkShowResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sportotoWeek, setSportotoWeek] = useState('');
+  const [sportotoData, setSportotoData] = useState<any>(null);
+  const [sportotoLoading, setSportotoLoading] = useState(false);
+  const [producing, setProducing] = useState(false);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -450,6 +454,47 @@ function TalkShowPanel() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFetchSportoto = async () => {
+    const week = parseInt(sportotoWeek, 10);
+    if (isNaN(week) || week < 1) return;
+    setSportotoLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/talkshow/sportoto/${week}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Sportoto verisi alınamadı');
+      setSportotoData(json.data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSportotoLoading(false);
+    }
+  };
+
+  const handleProduceVideo = async () => {
+    const week = parseInt(sportotoWeek, 10);
+    if (isNaN(week) || week < 1) return;
+    setProducing(true);
+    try {
+      const res = await fetch(`/api/v1/talkshow/sportoto/${week}/produce`, { method: 'POST' });
+      const json = await res.json();
+      if (json.success) {
+        alert(`Hafta ${week} talk show video üretimi başladı!`);
+      } else {
+        throw new Error(json.error);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setProducing(false);
+    }
+  };
+
+  const speakerColors: Record<string, string> = {
+    Moderator: '#F59E0B', Yorumcu: '#06B6D4', Futbolcu: '#10B981',
+    Kumarbaz: '#F43F5E', TeknikDirektor: '#60A5FA',
   };
 
   const inputGlassStyle: React.CSSProperties = {
@@ -542,6 +587,53 @@ function TalkShowPanel() {
         </div>
       )}
 
+      {/* ── Sportoto Entegrasyonu ── */}
+      <div className="glass" style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '12px' }}>
+          🏆 Sportoto Talk Show (Haftalık)
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+          <div style={{ flex: '1' }}>
+            <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Hafta No</label>
+            <input value={sportotoWeek} onChange={e => setSportotoWeek(e.target.value)} style={inputGlassStyle} placeholder="Örn: 42" />
+          </div>
+          <button onClick={handleFetchSportoto} disabled={sportotoLoading} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }}>
+            {sportotoLoading ? 'Yükleniyor...' : 'Discussion Getir'}
+          </button>
+          {sportotoData && (
+            <button onClick={handleProduceVideo} disabled={producing} className="btn" style={{
+              padding: '8px 16px', fontSize: '12px', background: 'linear-gradient(135deg, #FF007F, #7F00FF)', color: 'white',
+            }}>
+              {producing ? 'Üretiliyor...' : 'Video Üret'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {sportotoData && (
+        <div className="glass" style={{ borderRadius: '10px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 'bold', color: 'var(--gold)' }}>
+            {sportotoData.title} ({sportotoData.total_utterances} yorum)
+          </div>
+          <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {sportotoData.utterances.map((u: any, i: number) => (
+              <div key={i} style={{
+                padding: '8px 12px', borderRadius: '6px',
+                borderLeft: `3px solid ${speakerColors[u.speaker] || '#666'}`,
+                background: 'rgba(255,255,255,0.02)',
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 'bold', color: speakerColors[u.speaker] || '#666', marginBottom: '2px' }}>
+                  {u.speaker} {u.match_id ? `(Maç #${u.match_id})` : ''}
+                </div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', lineHeight: '18px' }}>
+                  {u.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{
         position: 'sticky', bottom: 0, left: 0, right: 0,
         padding: '12px 16px', background: 'var(--bg-card)',
@@ -549,7 +641,7 @@ function TalkShowPanel() {
         borderRadius: '10px', textAlign: 'center', fontSize: '11px',
         color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
       }}>
-        Bir spor konusu girin ve AI uzmanlarının analizini dinleyin
+        AI futbol yorumcularının analizlerini dinleyin veya Sportoto haftalık discussion'ı izleyin
       </div>
     </div>
   );

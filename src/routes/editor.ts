@@ -1,4 +1,5 @@
 import express, { Application, Request, Response } from 'express';
+import path from 'path';
 import { colab } from '../lib/colab-manager.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
@@ -216,6 +217,88 @@ export function registerEditorRoutes(app: Application): void {
       } catch (err: any) {
         Logger.error('❌ generate-image proxy hatası:', err);
         return res.status(500).json({ success: false, error: err.message || 'SUNUCU_HATASI' });
+      }
+    }
+  );
+
+  // ─── 4. Akıllı Reframe (16:9 → 9:16) ─────────────────────────────────────
+  app.post(
+    '/api/v1/editor/reframe',
+    mediumLimiter,
+    requireAuth,
+    async (req: Request, res: Response) => {
+      const { videoPath, useFaceTracking = true, startTime = 0, duration } = req.body;
+
+      if (!videoPath) {
+        return res.status(400).json({ success: false, error: 'videoPath gerekli' });
+      }
+
+      const fs = await import('fs-extra');
+      if (!(await fs.pathExists(videoPath))) {
+        return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
+      }
+
+      const outputPath = path.join(process.cwd(), 'videolar', `reframe_${Date.now()}.mp4`);
+      const outputFilename = path.basename(outputPath);
+
+      try {
+        if (useFaceTracking) {
+          const { videoClipper } = await import('../services/clipper/index.js');
+          const segment = {
+            id: `reframe-${Date.now()}`,
+            startTime,
+            endTime: duration ? startTime + duration : startTime + 30,
+            duration: duration || 30,
+            score: 100,
+            reason: 'Smart reframe',
+            highlights: [],
+          };
+          await videoClipper.cropSegmentWithFaceTracking(videoPath, outputPath, segment, {
+            aspectRatio: '9:16',
+            outputWidth: 1080,
+            outputHeight: 1920,
+          });
+        } else {
+          const { autoReframeHorizontalToVertical } = await import('../services/autoReframe.js');
+          await autoReframeHorizontalToVertical(videoPath, outputPath, 'center');
+        }
+
+        res.json({ success: true, url: `/videolar/${outputFilename}`, outputPath });
+      } catch (err: any) {
+        Logger.error('❌ reframe hatası:', err);
+        res.status(500).json({ success: false, error: err.message || 'REFAME_HATASI' });
+      }
+    }
+  );
+
+  // ─── 5. Studio Sound Ses İyileştirme ──────────────────────────────────────
+  app.post(
+    '/api/v1/editor/enhance-audio',
+    mediumLimiter,
+    requireAuth,
+    async (req: Request, res: Response) => {
+      const { videoPath, denoise = true, equalize = true, deecho = true, levelDb = -3 } = req.body;
+
+      if (!videoPath) {
+        return res.status(400).json({ success: false, error: 'videoPath gerekli' });
+      }
+
+      const fs = await import('fs-extra');
+      if (!(await fs.pathExists(videoPath))) {
+        return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
+      }
+
+      const outputPath = path.join(process.cwd(), 'videolar', `enhanced_${Date.now()}.mp4`);
+      const outputFilename = path.basename(outputPath);
+
+      try {
+        const { enhanceVideoAudio } = await import('../services/studioSound.js');
+        await enhanceVideoAudio(videoPath, outputPath, { denoise, equalize, deecho, levelDb });
+
+        res.json({ success: true, url: `/videolar/${outputFilename}`, outputPath });
+      } catch (err: any) {
+        Logger.error('❌ enhance-audio hatası:', err);
+        res.status(500).json({ success: false, error: err.message || 'SES_HATASI' });
       }
     }
   );

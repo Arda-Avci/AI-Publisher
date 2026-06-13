@@ -206,7 +206,7 @@ describe('Clipper & Whisper Integration Tests', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.jobId).toBeDefined();
-    expect(res.body.status).toBe('processing');
+    expect(res.body.status).toBe('pending');
 
     // Asenkron akışın tamamlanması için kısa bir süre bekleyelim
     await new Promise(resolve => setTimeout(resolve, 500));

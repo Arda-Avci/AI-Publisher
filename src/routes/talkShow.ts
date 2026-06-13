@@ -1,9 +1,14 @@
 import { Router, Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs-extra';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { orchestrateTalkShow } from '../services/talkShow/orchestrator.js';
 import { OrchestratorInput } from '../services/talkShow/types.js';
 import { Logger } from '../lib/logger.js';
+import { fetchWeeklyDiscussion, discussionToScenes } from '../services/talkShow/sportotoBridge.js';
+import type { SportotoDiscussion } from '../services/talkShow/sportotoBridge.js';
+import { produceTalkShowVideo } from '../services/talkShow/videoProducer.js';
 
 export const talkShowRouter = Router();
 
@@ -42,6 +47,75 @@ talkShowRouter.post('/orchestrate', mediumLimiter, requireAuth, async (req: Requ
   } catch (err: any) {
     Logger.error('[TalkShow] orchestrate error:', err);
     res.status(500).json({ success: false, error: err?.message || 'Orchestrator hatası' });
+  }
+});
+
+/**
+ * GET /api/v1/talkshow/sportoto/:week
+ * Sportoto projesinden haftalık tartışma programını çeker.
+ */
+talkShowRouter.get('/sportoto/:week', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+  try {
+    const weekNumber = parseInt(String(req.params.week), 10);
+    if (isNaN(weekNumber) || weekNumber < 1) {
+      return res.status(400).json({ success: false, error: 'Geçersiz hafta numarası' });
+    }
+
+    const discussion = await fetchWeeklyDiscussion(weekNumber);
+    const scenes = discussionToScenes(discussion);
+
+    res.json({
+      success: true,
+      data: {
+        title: discussion.title,
+        sportoto_week: discussion.sportoto_week,
+        total_utterances: discussion.total_utterances,
+        utterances: discussion.utterances,
+        scenes,
+      },
+    });
+  } catch (err: any) {
+    Logger.error('[TalkShow] Sportoto fetch error:', err);
+    res.status(502).json({ success: false, error: `Sportoto bağlantı hatası: ${err.message}` });
+  }
+});
+
+/**
+ * POST /api/v1/talkshow/sportoto/:week/produce
+ * Sportoto tartışma programını video olarak üretir.
+ */
+talkShowRouter.post('/sportoto/:week/produce', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+  try {
+    const weekNumber = parseInt(String(req.params.week), 10);
+    if (isNaN(weekNumber) || weekNumber < 1) {
+      return res.status(400).json({ success: false, error: 'Geçersiz hafta numarası' });
+    }
+
+    const discussion = await fetchWeeklyDiscussion(weekNumber);
+    const outputDir = path.join(process.cwd(), 'videolar');
+    await fs.ensureDir(outputDir);
+    const outputPath = path.join(outputDir, `talkshow_week_${weekNumber}_${Date.now()}.mp4`);
+
+    // Async production (arka planda)
+    produceTalkShowVideo(discussion, outputPath)
+      .then((finalPath) => {
+        Logger.info(`[TalkShow] Video produced: ${finalPath}`);
+      })
+      .catch((err) => {
+        Logger.error(`[TalkShow] Video production failed:`, err);
+      });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Hafta ${weekNumber} talk show video üretimi başladı`,
+        outputPath,
+        utterances: discussion.utterances.length,
+      },
+    });
+  } catch (err: any) {
+    Logger.error('[TalkShow] Video production error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

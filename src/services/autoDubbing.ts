@@ -181,38 +181,24 @@ export async function stretchAudioToDuration(
   const currentDuration = parseFloat(durStr.trim()) || 1;
 
   if (Math.abs(currentDuration - targetDuration) < 0.1) {
-    // Duration already close enough
     await fs.copy(audioPath, outputPath);
     return;
   }
 
-  // Use rubberband via atempo for time stretching (up to ~50% speed change)
-  // For larger changes, use rubberband directly
-  const tempoRatio = currentDuration / targetDuration;
+  // Use FFmpeg rubberband filter (pitch-preserving time stretch)
+  // Supports 0.25x–4.0x range unlike atempo which changes pitch
+  const tempoRatio = Math.max(0.25, Math.min(4.0, currentDuration / targetDuration));
+  const filter = `rubberband=tempo=${tempoRatio.toFixed(3)}`;
 
-  if (tempoRatio > 0.5 && tempoRatio < 2.0) {
-    // Use atempo for moderate changes
-    const filter = `atempo=${tempoRatio.toFixed(3)}`;
-    await runFFmpeg('ffmpeg', [
-      '-y',
-      '-i', audioPath,
-      '-af', filter,
-      '-c:a', 'pcm_s16le',
-      outputPath
-    ]);
-  } else {
-    // For larger changes, use setpts + atempo combination
-    const filter = `atempo=${Math.min(Math.max(tempoRatio, 0.5), 2.0).toFixed(3)}`;
-    await runFFmpeg('ffmpeg', [
-      '-y',
-      '-i', audioPath,
-      '-af', filter,
-      '-c:a', 'pcm_s16le',
-      outputPath
-    ]);
-  }
+  await runFFmpeg('ffmpeg', [
+    '-y',
+    '-i', audioPath,
+    '-af', filter,
+    '-c:a', 'pcm_s16le',
+    outputPath
+  ]);
 
-  Logger.info('[autoDubbing] Audio stretched', {
+  Logger.info('[autoDubbing] Audio stretched (pitch-preserving rubberband)', {
     originalDuration: currentDuration,
     targetDuration,
     outputPath

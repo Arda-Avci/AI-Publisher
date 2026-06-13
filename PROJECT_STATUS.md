@@ -171,7 +171,7 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | Paralel Track | İçerik | Durum |
 |---|---|---|
 | **B — CI/CD** | GitHub Actions — otomatik typecheck + test (`.github/workflows/ci.yml`) | ✅ Tamam |
-| **C — React Migration** | Express template → React/Vite bileşen tabanlı mimariye geçiş başlangıcı | ⏳ Başlanacak |
+| **C — React Migration** | Express template → React/Vite bileşen tabanlı mimariye geçiş başlangıcı | ✅ Tamam |
 | **A — E2E Testler** | Chat-to-Edit, ViMax, Pipecat, B-Roll, Kokoro TTS entegrasyon testleri (20/20) | ✅ Tamam |
 
 ### Sprint 5 (Hafta 9-10) — Frontend Modüler Refactor & Type-Güvenliği
@@ -242,6 +242,21 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 | **Top Yuvarlak AI Talk-Show (S3.B)** | Sportoto API entegrasyonu gerektiriyor, harici bağımlılık yüksek |
 | **Docker Compose** | Bu geliştirme makinesinde Docker çalışmıyor |
 | **Faz C-H v2 Geliştirmeleri (7 Job)** | React Migration (S4.C) sonrası başlanmak üzere [`docs/Sprint_18_Roadmap.md`](./docs/Sprint_18_Roadmap.md) dosyasına taşındı |
+
+---
+
+---
+
+## ✅ Sprint 4.C — Çıktılar (React Migration) (13 Haziran 2026)
+
+- **React Router Kurulumu:** `react-router-dom` eklendi, `BrowserRouter` ile `main.tsx` sarmalandı. App.tsx artık `<Routes>` kullanıyor: `/login` rotası için `LoginPage`, `/*` rotası için LandingPage (çıkış) / Dashboard (giriş).
+- **LoginPage Bileşeni (Yeni):** `client/src/components/LoginPage.tsx` — Express HTML template'inin React karşılığı. Türkçe/İngilizce dil desteği, form validasyonu, hata gösterimi. POST `/login` API'si ile çalışır.
+- **SettingsModal Bileşeni (Yeni):** `client/src/components/SettingsModal.tsx` — 5 sekmeli (Appearance, Language, Account, Production, Characters) tam ayarlar modalı. Tema seçimi (9 tema), dil değiştirme, profil resmi yükleme, üretim ayarları (grid pozisyonu, anlatıcı tonu, YouTube API key, lip-sync, end screen, brand kit, voice cloning), karakter yönetimi (ekleme, SD avatar üretme, silme).
+- **CoverSelector Bileşeni (Yeni):** `client/src/components/CoverSelector.tsx` — Tamamlanmış projeler için kapak fotoğrafı seçici. 3'lü grid, görsel önizleme, seçili kapak vurgusu.
+- **GalleryPanel Güncellemesi:** `MetaEditor` bileşenine `CoverSelector` entegrasyonu, viral skor gösterimi ve AI Viralite Analizi butonu eklendi.
+- **Express Template Temizliği:** `src/routes/auth.ts` GET `/login` artık redirect ediyor (React SPA'ya). `src/routes/dashboard.ts` GET `/` pasifleştirildi. Kullanılmayan `buildLoginHTML`/`buildDashboardHTML` import'ları kaldırıldı.
+- **Server.ts Güncellemesi:** React SPA (`client/dist`) artık her ortamda serve ediliyor (NODE_ENV kontrolü kaldırıldı). Catch-all route her zaman aktif.
+- **Doğrulama:** `tsc --noEmit` 0 hata, `vite build` 801ms başarılı, 165/165 Vitest testi yeşil.
 
 ---
 

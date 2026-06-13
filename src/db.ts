@@ -195,6 +195,21 @@ export async function initDatabase() {
       production_template TEXT DEFAULT 'cinematic'
     );
 
+    CREATE TABLE IF NOT EXISTS clip_jobs (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      source_video_path TEXT NOT NULL,
+      source_video_id TEXT,
+      title TEXT,
+      status TEXT DEFAULT 'pending',
+      segments JSONB,
+      overall_score REAL,
+      top_reason TEXT,
+      output_paths JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      completed_at TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS audit_log (
       id SERIAL PRIMARY KEY,
       user_id INTEGER,

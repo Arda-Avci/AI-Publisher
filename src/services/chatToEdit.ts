@@ -11,6 +11,7 @@ import {
   applySmartAudioDucking,
   applySpatialAudioMix,
 } from './videoService.js';
+import { applyColorGrade, parseColorCommand } from './colorGrader.js';
 import path from 'path';
 import fs from 'fs-extra';
 
@@ -32,6 +33,7 @@ export const EditOperationSchema = z.object({
       'add_pings',
       'add_subtitles',
       'duck_audio',
+      'color_grade',
     ]),
     targetScene: z.number().optional(),
     params: z.record(z.string(), z.any()).optional(),
@@ -99,6 +101,7 @@ Kullanılabilir Operasyonlar:
 - add_pings: Callout ping sesleri ekleme
 - add_subtitles: Altyazı ekleme
 - duck_audio: Konuşma sırasında müzik kısma
+- color_grade: Renk derecelendirme (parametre: command = "sıcak sinematik tonlar", "neon mor", "vintage", "yüksek kontrast" gibi doğal dil komutu)
 
 Her operasyon için:
 - type: Operasyon tipi (yukarıdakilerden biri)
@@ -255,6 +258,17 @@ export async function applyEditOperations(
           if (sfxPath && await fs.pathExists(sfxPath)) {
             const outPath = path.join(tempDir, `sfx_${scene.sceneNumber}_${Date.now()}.mp4`);
             await applySpatialAudioMix(scene.videoPath, sfxPath, positionX, outPath);
+            results.push(outPath);
+          }
+          break;
+        }
+
+        case 'color_grade': {
+          const command = (p.command as string) || '';
+          const grade = command ? parseColorCommand(command) : undefined;
+          if (grade) {
+            const outPath = path.join(tempDir, `color_${scene.sceneNumber}_${Date.now()}.mp4`);
+            await applyColorGrade(scene.videoPath, grade, outPath);
             results.push(outPath);
           }
           break;

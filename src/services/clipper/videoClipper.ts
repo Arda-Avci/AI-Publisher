@@ -89,8 +89,8 @@ export class VideoClipper {
   }
 
   /**
-   * Crop a video segment using face tracking - segments video into chunks
-   * based on stable face positions and applies appropriate crop to each chunk
+   * Crop a video segment using adaptive face tracking v2
+   * Multi-face support, confidence-based smoothing, scene change detection
    */
   async cropSegmentWithFaceTracking(
     inputPath: string,
@@ -100,87 +100,69 @@ export class VideoClipper {
       aspectRatio?: '9:16' | '16:9' | '1:1';
       outputWidth?: number;
       outputHeight?: number;
+      multiFace?: boolean;
+      smoothWindow?: number;
+      sceneChangeThreshold?: number;
     } = {}
   ): Promise<string> {
-    const { aspectRatio = '9:16', outputWidth = 1080, outputHeight = 1920 } = options;
+    const {
+      aspectRatio = '9:16', outputWidth = 1080, outputHeight = 1920,
+      multiFace = true, smoothWindow = 5, sceneChangeThreshold = 0.3,
+    } = options;
 
-    Logger.info(`[VideoClipper] Face-tracking crop for segment ${segment.id}: ${segment.startTime}s - ${segment.endTime}s`);
+    Logger.info(`[VideoClipper-v2] Adaptive face-tracking crop ${segment.id}: ${segment.startTime}s-${segment.endTime}s`);
 
-    // Ensure output directory exists
     await fs.ensureDir(path.dirname(outputPath));
 
     try {
-      // Get video dimensions
       const [videoWidth, videoHeight] = await this.getVideoDimensions(inputPath);
 
-      // Run face tracking to get per-frame positions
       const faceResult: FaceTrackResult = await faceTracker.trackFaces(inputPath, {
         startTime: segment.startTime,
         duration: segment.duration,
       });
 
-      // If no faces detected or not enough data, fall back to center crop
       if (faceResult.frames.length === 0 || faceResult.frames.every((f: { confidence: number }) => f.confidence === 0)) {
-        Logger.warn('[VideoClipper] No faces detected, falling back to center crop');
+        Logger.warn('[VideoClipper-v2] No faces, fallback to center crop');
         return this.cropSegment(inputPath, outputPath, segment, { aspectRatio, faceTracking: false });
       }
 
-      // Get stable segments from face tracking data
+      // Smooth crop positions with moving average window
+      const smoothed = this.smoothCropFrames(faceResult.frames, smoothWindow);
+
+      // Detect scene changes (large position jumps)
+      const sceneChanges = this.detectSceneChanges(smoothed, videoWidth, sceneChangeThreshold);
+
+      // Get stable segments incorporating scene changes
       const stableSegments = await faceTracker.getStableSegments(inputPath, {
         startTime: segment.startTime,
         duration: segment.duration,
-        stabilityThreshold: 50,
+        stabilityThreshold: Math.round(videoWidth * 0.05),
         minSegmentDuration: 0.5,
       });
 
-      // If only one stable segment or not enough variation, use simple approach
-      if (stableSegments.length <= 1) {
-        const avgFrame = faceResult.frames.reduce((acc: { cropX: number; cropY: number; count: number }, f: { cropX: number; cropY: number; confidence: number }) => {
-          if (f.confidence > 0) {
-            acc.cropX += f.cropX;
-            acc.cropY += f.cropY;
-            acc.count++;
-          }
-          return acc;
-        }, { cropX: 0, cropY: 0, count: 0 });
+      // Merge stable segments with scene change boundaries
+      const mergedSegments = this.mergeSceneChanges(stableSegments, sceneChanges, segment);
 
-        if (avgFrame.count > 0) {
-          avgFrame.cropX = Math.round(avgFrame.cropX / avgFrame.count);
-          avgFrame.cropY = Math.round(avgFrame.cropY / avgFrame.count);
-        }
-
-        const cropFilter = this.buildFaceCropFilter(
-          avgFrame.cropX || videoWidth / 2,
-          avgFrame.cropY || videoHeight / 2,
-          videoWidth,
-          videoHeight,
-          aspectRatio,
-          outputWidth,
-          outputHeight
-        );
-
+      if (mergedSegments.length <= 1) {
+        const avgX = Math.round(smoothed.reduce((a: number, f: { cropX: number }) => a + f.cropX, 0) / smoothed.length);
+        const avgY = Math.round(smoothed.reduce((a: number, f: { cropY: number }) => a + f.cropY, 0) / smoothed.length);
+        const cropFilter = this.buildFaceCropFilter(avgX || videoWidth / 2, avgY || videoHeight / 2, videoWidth, videoHeight, aspectRatio, outputWidth, outputHeight);
         return this.runCropCommand(inputPath, outputPath, segment, cropFilter);
       }
 
-      // Multiple stable segments - need to use segment-based approach with FFmpeg
-      // For each segment, create a cropped clip then concatenate
       const tempDir = path.join(path.dirname(outputPath), 'temp_face_track_' + uuidv4());
       await fs.ensureDir(tempDir);
-
       const clipPaths: string[] = [];
 
-      for (let i = 0; i < stableSegments.length; i++) {
-        const seg = stableSegments[i];
+      for (let i = 0; i < mergedSegments.length; i++) {
+        const seg = mergedSegments[i];
         const clipPath = path.join(tempDir, `segment_${i}.mp4`);
 
-        const cropFilter = this.buildFaceCropFilter(
-          seg.cropX,
-          seg.cropY,
-          videoWidth,
-          videoHeight,
-          aspectRatio,
-          outputWidth,
-          outputHeight
+        const cropFilter = this.buildMultiFaceCropFilter(
+          seg.cropX, seg.cropY, seg.confidence || 0.5,
+          videoWidth, videoHeight, aspectRatio, outputWidth, outputHeight,
+          multiFace
         );
 
         const segArgs = [
@@ -197,32 +179,142 @@ export class VideoClipper {
         clipPaths.push(clipPath);
       }
 
-      // Concatenate all segments
       const concatListPath = path.join(tempDir, 'concat.txt');
-      const concatContent = clipPaths.map(p => `file '${p}'`).join('\n');
-      await fs.writeFile(concatListPath, concatContent, 'utf-8');
+      await fs.writeFile(concatListPath, clipPaths.map(p => `file '${p}'`).join('\n'), 'utf-8');
 
-      const concatArgs = [
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', concatListPath,
-        '-c', 'copy',
-        '-y',
-        outputPath,
-      ];
+      await runInWorker('ffmpeg', [
+        '-f', 'concat', '-safe', '0', '-i', concatListPath,
+        '-c', 'copy', '-y', outputPath,
+      ], 120000);
 
-      await runInWorker('ffmpeg', concatArgs, 120000);
-
-      // Cleanup temp directory
       await fs.remove(tempDir);
-
-      Logger.info(`[VideoClipper] Face-tracking crop completed: ${outputPath}`);
+      Logger.info(`[VideoClipper-v2] Adaptive face-tracking crop completed: ${outputPath}`);
       return outputPath;
     } catch (error) {
-      Logger.error(`[VideoClipper] Face-tracking crop failed:`, error);
-      // Fall back to regular crop on error
+      Logger.error(`[VideoClipper-v2] Face-tracking crop failed, falling back:`, error);
       return this.cropSegment(inputPath, outputPath, segment, { aspectRatio, faceTracking: false });
     }
+  }
+
+  /**
+   * Apply moving average smoothing to face tracking frames
+   */
+  private smoothCropFrames(frames: Array<{ cropX: number; cropY: number; confidence: number }>, windowSize: number): Array<{ cropX: number; cropY: number; confidence: number }> {
+    if (frames.length <= windowSize) return frames;
+    const result: Array<{ cropX: number; cropY: number; confidence: number }> = [];
+    for (let i = 0; i < frames.length; i++) {
+      const start = Math.max(0, i - Math.floor(windowSize / 2));
+      const end = Math.min(frames.length, i + Math.ceil(windowSize / 2));
+      const window = frames.slice(start, end);
+      const sumX = window.reduce((a: number, f: { cropX: number }) => a + f.cropX, 0);
+      const sumY = window.reduce((a: number, f: { cropY: number }) => a + f.cropY, 0);
+      result.push({
+        cropX: Math.round(sumX / window.length),
+        cropY: Math.round(sumY / window.length),
+        confidence: frames[i].confidence,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Detect scene changes by analyzing face position jumps
+   */
+  private detectSceneChanges(
+    frames: Array<{ cropX: number; cropY: number; confidence: number }>,
+    videoWidth: number,
+    thresholdRatio: number
+  ): number[] {
+    const changes: number[] = [];
+    const threshold = videoWidth * thresholdRatio;
+    for (let i = 1; i < frames.length; i++) {
+      const dx = Math.abs(frames[i].cropX - frames[i - 1].cropX);
+      const dy = Math.abs(frames[i].cropY - frames[i - 1].cropY);
+      if (dx > threshold || dy > threshold) {
+        changes.push(i);
+      }
+    }
+    return changes;
+  }
+
+  /**
+   * Merge face-tracking stable segments with scene change boundaries
+   */
+  private mergeSceneChanges(
+    stableSegments: Array<{ startTime: number; endTime: number; cropX: number; cropY: number }>,
+    sceneChanges: number[],
+    segment: ClipSegment
+  ): Array<{ startTime: number; endTime: number; cropX: number; cropY: number; confidence?: number }> {
+    if (sceneChanges.length === 0) return stableSegments;
+
+    const frameDuration = segment.duration / Math.max(sceneChanges[sceneChanges.length - 1] + 1, 1);
+    const boundaries = sceneChanges.map(idx => segment.startTime + idx * frameDuration);
+
+    const merged: Array<{ startTime: number; endTime: number; cropX: number; cropY: number; confidence?: number }> = [];
+    for (const seg of stableSegments) {
+      const splitPoints = boundaries.filter(b => b > seg.startTime && b < seg.endTime);
+      if (splitPoints.length === 0) {
+        merged.push(seg);
+      } else {
+        let prevStart = seg.startTime;
+        for (const point of [...splitPoints, seg.endTime]) {
+          const matchingFrames = stableSegments.filter(
+            s => s.startTime >= prevStart && s.endTime <= point
+          );
+          const avgX = matchingFrames.length > 0
+            ? Math.round(matchingFrames.reduce((a, s) => a + s.cropX, 0) / matchingFrames.length)
+            : seg.cropX;
+          merged.push({
+            startTime: prevStart,
+            endTime: point,
+            cropX: avgX,
+            cropY: seg.cropY,
+            confidence: 0.5,
+          });
+          prevStart = point;
+        }
+      }
+    }
+    return merged.length > 0 ? merged : stableSegments;
+  }
+
+  /**
+   * Build crop filter with adaptive padding based on face confidence
+   */
+  private buildMultiFaceCropFilter(
+    faceX: number, faceY: number, confidence: number,
+    videoWidth: number, videoHeight: number,
+    targetRatio: '9:16' | '16:9' | '1:1',
+    outputWidth: number, outputHeight: number,
+    multiFace: boolean
+  ): string {
+    let cropW: number, cropH: number;
+    switch (targetRatio) {
+      case '9:16':
+        cropH = videoHeight;
+        cropW = Math.round(videoHeight * (9 / 16));
+        break;
+      case '16:9':
+        cropW = videoWidth;
+        cropH = Math.round(videoWidth * (9 / 16));
+        break;
+      case '1:1':
+        cropW = cropH = Math.min(videoWidth, videoHeight);
+        break;
+      default:
+        cropW = videoWidth;
+        cropH = videoHeight;
+    }
+
+    // Adaptive padding: more padding when confidence is low (uncertain face position)
+    const paddingRatio = multiFace ? 0.15 : 0.08;
+    const confidencePadding = Math.max(0, 1 - confidence) * 0.1;
+    const totalPadding = paddingRatio + confidencePadding;
+
+    const paddedW = Math.round(cropW * (1 + totalPadding));
+    const adjustedCropX = Math.max(0, Math.min(videoWidth - paddedW, Math.round(faceX - paddedW / 2)));
+
+    return `crop=${paddedW}:${cropH}:${adjustedCropX}:0,scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2`;
   }
 
   /**

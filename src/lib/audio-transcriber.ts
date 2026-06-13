@@ -9,6 +9,12 @@ export interface TranscriptionSegment {
   start: number;
   end: number;
   text: string;
+  words?: Array<{
+    word: string;
+    start: number;
+    end: number;
+    confidence: number;
+  }>;
 }
 
 export interface TranscriptionResult {
@@ -66,9 +72,15 @@ export async function transcribeVideoAudioWithTimestamps(
           const resData = await response.json() as any;
           if (resData && resData.status === 'success') {
             console.log(`[INFO] Colab deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`);
+            const segments = (resData.segments || []).map((s: any) => ({
+              start: s.start,
+              end: s.end,
+              text: s.text,
+              words: s.words || undefined,
+            }));
             return {
               text: resData.text,
-              segments: resData.segments || [],
+              segments,
               language: resData.language || language
             };
           }
@@ -108,7 +120,20 @@ export async function transcribeVideoAudioWithTimestamps(
                 properties: {
                   start: { type: "NUMBER" },
                   end: { type: "NUMBER" },
-                  text: { type: "STRING" }
+                  text: { type: "STRING" },
+                  words: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        word: { type: "STRING" },
+                        start: { type: "NUMBER" },
+                        end: { type: "NUMBER" },
+                        confidence: { type: "NUMBER" }
+                      },
+                      required: ["word", "start", "end"]
+                    }
+                  }
                 },
                 required: ["start", "end", "text"]
               }

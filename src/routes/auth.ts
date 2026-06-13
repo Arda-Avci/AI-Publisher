@@ -1,7 +1,6 @@
 import { Application, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { db } from '../db.js';
-import { buildLoginHTML } from '../views/login.js';
 import { authLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
 import { encryptUsername } from '../lib/crypto.js';
@@ -12,11 +11,8 @@ import { encryptUsername } from '../lib/crypto.js';
 export function registerAuthRoutes(app: Application): void {
   // Login Rotaları
   app.get('/login', (req, res) => {
-    // Cache kontrolünü devre dışı bırak — tasarım değişiklikleri anında yansısın
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.send(buildLoginHTML(req.t, res.locals.themeStyles, req.lang, res.locals.csrfToken));
+    // React SPA'ya yönlendir
+    res.redirect('/');
   });
 
   app.post('/login', authLimiter, async (req, res) => {
@@ -39,6 +35,20 @@ export function registerAuthRoutes(app: Application): void {
       logAudit({ userId: null, action: 'auth.login.failed', details: { username }, req });
       res.status(401).json({ success: false, error: req.t?.invalidLogin || 'Geçersiz kullanıcı adı veya şifre' });
     }
+  });
+
+  // Session bilgisi — React uygulamasının giriş durumunu kontrol etmesi için
+  app.get('/api/v1/session', (req, res) => {
+    if (!req.session.userId) {
+      res.json({ userId: null });
+      return;
+    }
+    res.json({
+      userId: req.session.userId,
+      lang: req.session.lang || 'tr',
+      theme: req.session.theme || 'default',
+      isDark: req.session.isDark !== undefined ? req.session.isDark : true,
+    });
   });
 
   app.get('/logout', (req, res) => {

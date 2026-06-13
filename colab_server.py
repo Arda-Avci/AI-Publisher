@@ -735,14 +735,24 @@ def transcribe_audio_internal(audio_path: str, language: str = "tr", model_size:
         result_segments = []
         full_text = []
         for seg in segments:
+            word_list = []
+            if hasattr(seg, 'words') and seg.words:
+                for w in seg.words:
+                    word_list.append({
+                        "word": w.word,
+                        "start": round(w.start, 2),
+                        "end": round(w.end, 2),
+                        "confidence": round(getattr(w, 'probability', 1.0), 3)
+                    })
             result_segments.append({
                 "start": round(seg.start, 2),
                 "end": round(seg.end, 2),
-                "text": seg.text.strip()
+                "text": seg.text.strip(),
+                "words": word_list if word_list else None
             })
             full_text.append(seg.text.strip())
             
-        print("✅ Deşifre başarıyla tamamlandı (faster-whisper).")
+        print(f"✅ Deşifre başarıyla tamamlandı (faster-whisper). Segment: {len(result_segments)}, Word-level: {sum(1 for s in result_segments if s['words'])}")
         return {
             "status": "success",
             "text": " ".join(full_text),

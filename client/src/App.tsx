@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Header } from './components/Header.js';
 import { ProjectForm } from './components/ProjectForm.js';
 import { StudioPanel } from './components/StudioPanel.js';
 import { GalleryPanel } from './components/GalleryPanel.js';
 import { PhotoEditor } from './components/PhotoEditor.js';
 import { LandingPage } from './components/LandingPage.js';
+import { LoginPage } from './components/LoginPage.js';
+import { SettingsModal } from './components/SettingsModal.js';
 import { CharacterSelectorModal, extractCharacterNames } from './components/CharacterSelectorModal.js';
 import type { Scene } from './components/Timeline.js';
 import type { OpportunityVideo } from './components/Opportunities.js';
@@ -17,6 +20,7 @@ import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
 import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
+import { CoverSelector } from './components/CoverSelector.js';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -63,8 +67,9 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState('Publisher Cinematic V3');
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [camIntensity, setCamIntensity] = useState(0.75);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Gelecek fazlar için form state'leri
+  // Future phase states
   const [dubbingLang, setDubbingLang] = useState('none');
   const [subtitleStyle, setSubtitleStyle] = useState('dynamic_hormozi');
   const [colorGrading, setColorGrading] = useState('');
@@ -202,117 +207,126 @@ export default function App() {
   const handleSelectJob = (job: Job) => { setSelectedJob(job); setMetaYtTitle(job.yt_title || ''); setMetaYtDesc(job.yt_desc || ''); setMetaYtTags(job.yt_tags || ''); };
   const togglePlatform = (p: Platform) => setTargetPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
 
-  if (!isLoggedIn) return <LandingPage onLogin={handleLoginDirect} authError={authError} setAuthError={setAuthError} language={language} setLanguage={setLanguage} t={t} />;
+  const handleSelectCover = async (jobId: number, path: string) => {
+    try { await fetch(`/save-meta/${jobId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ cover_image_path: path }) }); } catch {}
+  };
+
+  const handleAnalyzeViralScore = async (jobId: number) => {
+    try {
+      const r = await fetch(`/api/v1/viral-score/${jobId}`, { method: 'POST', headers: { 'x-csrf-token': csrfToken } });
+      const d = await r.json();
+      if (d.success) { fetchJobs(); alert(`AI Viralite Skoru: ${d.score}/100`); }
+      else alert('Viralite analizi hatası: ' + d.error);
+    } catch (e: any) { alert('Hata: ' + e.message); }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
-      <Header language={language} theme={theme} isDark={isDark} activeTab={activeTab}
-        userCredits={userCredits} onSetTheme={setTheme} onToggleDark={() => setIsDark(!isDark)}
-        onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-        onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t} />
+    <Routes>
+      <Route path="/login" element={
+        !isLoggedIn ? (
+          <LoginPage language={language} setLanguage={setLanguage}
+            onLogin={handleLoginDirect} authError={authError} setAuthError={setAuthError} />
+        ) : <Navigate to="/" replace />
+      } />
+      <Route path="/*" element={
+        !isLoggedIn ? (
+          <LandingPage onLogin={handleLoginDirect} authError={authError}
+            setAuthError={setAuthError} language={language} setLanguage={setLanguage} t={t} />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
+            <Header language={language} theme={theme} isDark={isDark} activeTab={activeTab}
+              userCredits={userCredits} onSetTheme={setTheme} onToggleDark={() => setIsDark(!isDark)}
+              onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+              onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t} />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <aside style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'rgba(24,24,27,0.3)', overflowY: 'auto', zIndex: 10 }}>
-          <ProjectForm masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
-            ttsProvider={ttsProvider} ttsVoice={ttsVoice} productionTemplate={productionTemplate}
-            hasShorts={hasShorts} hasSubtitles={hasSubtitles} brandKitEnabled={brandKitEnabled}
-            kineticSubtitles={kineticSubtitles} autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
-            targetPlatforms={targetPlatforms} formLoading={formLoading} userCredits={userCredits}
-            onSetMasterPrompt={setMasterPrompt} onSetProductionNotes={setProductionNotes}
-            onSetCharacterFeatures={setCharacterFeatures} onSetTtsProvider={setTtsProvider}
-            onSetTtsVoice={setTtsVoice} onSetProductionTemplate={setProductionTemplate}
-            onSetHasShorts={setHasShorts} onSetHasSubtitles={setHasSubtitles}
-            onSetBrandKitEnabled={setBrandKitEnabled} onSetKineticSubtitles={setKineticSubtitles}
-            onSetAutoSfxPlacement={setAutoSfxPlacement} onSetAudioDucking={setAudioDucking}
-            onTogglePlatform={togglePlatform} onSetSelectedFile={setSelectedFile}
-            onSetSelectedMusicFile={setSelectedMusicFile} onSubmit={handleSubmitJob} t={t}
-            selectedModel={selectedModel} onSetSelectedModel={setSelectedModel}
-            aspectRatio={aspectRatio} onSetAspectRatio={setAspectRatio}
-            camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
-            dubbingLang={dubbingLang} onSetDubbingLang={setDubbingLang}
-            subtitleStyle={subtitleStyle} onSetSubtitleStyle={setSubtitleStyle}
-            colorGrading={colorGrading} onSetColorGrading={setColorGrading} />
-        </aside>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              <aside style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'rgba(24,24,27,0.3)', overflowY: 'auto', zIndex: 10 }}>
+                <ProjectForm masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
+                  ttsProvider={ttsProvider} ttsVoice={ttsVoice} productionTemplate={productionTemplate}
+                  hasShorts={hasShorts} hasSubtitles={hasSubtitles} brandKitEnabled={brandKitEnabled}
+                  kineticSubtitles={kineticSubtitles} autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
+                  targetPlatforms={targetPlatforms} formLoading={formLoading} userCredits={userCredits}
+                  onSetMasterPrompt={setMasterPrompt} onSetProductionNotes={setProductionNotes}
+                  onSetCharacterFeatures={setCharacterFeatures} onSetTtsProvider={setTtsProvider}
+                  onSetTtsVoice={setTtsVoice} onSetProductionTemplate={setProductionTemplate}
+                  onSetHasShorts={setHasShorts} onSetHasSubtitles={setHasSubtitles}
+                  onSetBrandKitEnabled={setBrandKitEnabled} onSetKineticSubtitles={setKineticSubtitles}
+                  onSetAutoSfxPlacement={setAutoSfxPlacement} onSetAudioDucking={setAudioDucking}
+                  onTogglePlatform={togglePlatform} onSetSelectedFile={setSelectedFile}
+                  onSetSelectedMusicFile={setSelectedMusicFile} onSubmit={handleSubmitJob} t={t}
+                  selectedModel={selectedModel} onSetSelectedModel={setSelectedModel}
+                  aspectRatio={aspectRatio} onSetAspectRatio={setAspectRatio}
+                  camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
+                  dubbingLang={dubbingLang} onSetDubbingLang={setDubbingLang}
+                  subtitleStyle={subtitleStyle} onSetSubtitleStyle={setSubtitleStyle}
+                  colorGrading={colorGrading} onSetColorGrading={setColorGrading} />
+              </aside>
 
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-primary)', backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, background: 'rgba(99,102,241,0.05)', borderRadius: '50%', filter: 'blur(100px)', transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0 }} />
-          <div style={{ height: 40, background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 4, zIndex: 1 }}>
-            {mainTabs.map(tab => (
-              <button key={tab} onClick={() => setMainTab(tab)}
-                style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: mainTab === tab ? 600 : 400,
-                  background: mainTab === tab ? 'var(--accent-light)' : 'transparent', color: mainTab === tab ? 'var(--accent)' : 'var(--text-muted)',
-                  fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>{tab}</button>
-            ))}
+              <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-primary)', backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, background: 'rgba(99,102,241,0.05)', borderRadius: '50%', filter: 'blur(100px)', transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0 }} />
+                <div style={{ height: 40, background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 4, zIndex: 1 }}>
+                  {mainTabs.map(tab => (
+                    <button key={tab} onClick={() => setMainTab(tab)}
+                      style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: mainTab === tab ? 600 : 400,
+                        background: mainTab === tab ? 'var(--accent-light)' : 'transparent', color: mainTab === tab ? 'var(--accent)' : 'var(--text-muted)',
+                        fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>{tab}</button>
+                  ))}
+                  <div style={{ flex: 1 }} />
+                  <button onClick={() => setSettingsOpen(true)}
+                    style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer', fontSize: 11, background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>
+                    ⚙️ Ayarlar
+                  </button>
+                </div>
+                <StudioPanel activeTab={mainTab === 'Stüdyo' ? 'create' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Talk-Show' ? 'groupchat' : 'create'}
+                  selectedJob={selectedJob} scenes={scenes} progressMsg={progressMsg} progressPercent={progressPercent}
+                  etaSeconds={etaSeconds} csrfToken={csrfToken} onSetSelectedJob={setSelectedJob}
+                  onUpdateScenes={handleUpdateScenes} onRegenerateScene={handleRegenerateScene}
+                  onAddScene={handleAddScene} onDeleteScene={handleDeleteScene}
+                  onSelectScene={(s: Scene) => setEditingImageScene(s)} onUseAsPrompt={handleUseAsPrompt} t={t}
+                  masterPrompt={masterPrompt} onSetMasterPrompt={setMasterPrompt}
+                  onSubmit={handleSubmitJob} formLoading={formLoading} mainTab={mainTab} />
+
+                {mainTab === 'Örnekler' && (<ExamplesPanel language={language} t={t} />)}
+                {mainTab === 'AI Asistan' && (<AIStoryAssistant language={language} onApplyPrompts={(prompts) => { setMasterPrompt(prompts.masterPrompt); }} />)}
+                {mainTab === 'Canvas' && (<CanvasPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
+                {mainTab === 'API Keys' && (<ApiKeyManager language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
+                {mainTab === 'Batch' && (<BatchUpload language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
+                {mainTab === 'Clipper' && (<ClipperPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
+                {mainTab === 'Yayın Planla' && (<SchedulePublishPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
+
+                <HelpVideoPanel feature={mainTab === 'Stüdyo' ? 'studio' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Canvas' ? 'canvas' : mainTab === 'Batch' ? 'batch' : mainTab === 'Karakterler' ? 'characters' : mainTab === 'API Keys' ? 'api_keys' : 'studio'} language={language} />
+              </main>
+
+              <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>
+                <GalleryPanel jobs={jobs} selectedJob={selectedJob} metaYtTitle={metaYtTitle} metaYtDesc={metaYtDesc} metaYtTags={metaYtTags}
+                  isMetaSaving={isMetaSaving} progressMsg={progressMsg} progressPercent={progressPercent}
+                  onSelectJob={handleSelectJob} onRefreshJobs={fetchJobs} onCancelJob={handleCancelJob}
+                  onDeleteJob={handleDeleteJob} onSetMetaYtTitle={setMetaYtTitle} onSetMetaYtDesc={setMetaYtDesc}
+                  onSetMetaYtTags={setMetaYtTags} onSaveMetaAndPublish={handleSaveMetaAndPublish}
+                  userCredits={userCredits} t={t}
+                  onAnalyzeViralScore={handleAnalyzeViralScore}
+                  onSelectCover={handleSelectCover} />
+              </aside>
+            </div>
+
+            {editingImageScene && (
+              <PhotoEditor imageUrl={editingImageScene.image_path || `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect fill="#131a2c" width="400" height="400"/><text x="200" y="200" text-anchor="middle" fill="#8e9bb4" font-family="sans-serif" font-size="14">Sahne Görseli Yok</text></svg>')}`}
+                onClose={() => setEditingImageScene(null)}
+                onSave={async (url: string) => { const updated = scenes.map(s => s.id === editingImageScene.id ? { ...s, image_path: url } : s); handleUpdateScenes(updated); setEditingImageScene(null); }} />
+            )}
+
+            {charModalOpen && (
+              <CharacterSelectorModal isOpen={charModalOpen} onClose={() => { setCharModalOpen(false); setCharPendingFormData(null); }}
+                onConfirm={handleCharModalConfirm} detectedNames={charDetectedNames} existingCharacters={existingCharacters} csrfToken={csrfToken} />
+            )}
+
+            <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)}
+              language={language} theme={theme} isDark={isDark} csrfToken={csrfToken}
+              onSetTheme={setTheme} onToggleDark={() => setIsDark(!isDark)}
+              onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')} t={t} />
           </div>
-          <StudioPanel activeTab={mainTab === 'Stüdyo' ? 'create' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Talk-Show' ? 'groupchat' : 'create'}
-            selectedJob={selectedJob} scenes={scenes} progressMsg={progressMsg} progressPercent={progressPercent}
-            etaSeconds={etaSeconds} csrfToken={csrfToken} onSetSelectedJob={setSelectedJob}
-            onUpdateScenes={handleUpdateScenes} onRegenerateScene={handleRegenerateScene}
-            onAddScene={handleAddScene} onDeleteScene={handleDeleteScene}
-            onSelectScene={(s: Scene) => setEditingImageScene(s)} onUseAsPrompt={handleUseAsPrompt} t={t}
-            masterPrompt={masterPrompt} onSetMasterPrompt={setMasterPrompt}
-            onSubmit={handleSubmitJob} formLoading={formLoading} mainTab={mainTab} />
-
-          {mainTab === 'Örnekler' && (
-            <ExamplesPanel language={language} t={t} />
-          )}
-
-          {mainTab === 'AI Asistan' && (
-            <AIStoryAssistant
-              language={language}
-              onApplyPrompts={(prompts) => {
-                setMasterPrompt(prompts.masterPrompt);
-              }}
-            />
-          )}
-
-          {mainTab === 'Canvas' && (
-            <CanvasPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
-          )}
-
-          {mainTab === 'API Keys' && (
-            <ApiKeyManager language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
-          )}
-
-          {mainTab === 'Batch' && (
-            <BatchUpload language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
-          )}
-
-          {mainTab === 'Clipper' && (
-            <ClipperPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
-          )}
-
-          {mainTab === 'Yayın Planla' && (
-            <SchedulePublishPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />
-          )}
-
-          {/* Help Video Panel - shows contextual help for each section */}
-          <HelpVideoPanel
-            feature={mainTab === 'Stüdyo' ? 'studio' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Canvas' ? 'canvas' : mainTab === 'Batch' ? 'batch' : mainTab === 'Karakterler' ? 'characters' : mainTab === 'API Keys' ? 'api_keys' : 'studio'}
-            language={language}
-          />
-        </main>
-
-        <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>
-          <GalleryPanel jobs={jobs} selectedJob={selectedJob} metaYtTitle={metaYtTitle} metaYtDesc={metaYtDesc} metaYtTags={metaYtTags}
-            isMetaSaving={isMetaSaving} progressMsg={progressMsg} progressPercent={progressPercent}
-            onSelectJob={handleSelectJob} onRefreshJobs={fetchJobs} onCancelJob={handleCancelJob}
-            onDeleteJob={handleDeleteJob} onSetMetaYtTitle={setMetaYtTitle} onSetMetaYtDesc={setMetaYtDesc}
-            onSetMetaYtTags={setMetaYtTags} onSaveMetaAndPublish={handleSaveMetaAndPublish}
-            userCredits={userCredits} t={t} />
-        </aside>
-      </div>
-
-      {editingImageScene && (
-        <PhotoEditor imageUrl={editingImageScene.image_path || `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect fill="#131a2c" width="400" height="400"/><text x="200" y="200" text-anchor="middle" fill="#8e9bb4" font-family="sans-serif" font-size="14">Sahne Görseli Yok</text></svg>')}`}
-          onClose={() => setEditingImageScene(null)}
-          onSave={async (url: string) => { const updated = scenes.map(s => s.id === editingImageScene.id ? { ...s, image_path: url } : s); handleUpdateScenes(updated); setEditingImageScene(null); }} />
-      )}
-
-      {charModalOpen && (
-        <CharacterSelectorModal isOpen={charModalOpen} onClose={() => { setCharModalOpen(false); setCharPendingFormData(null); }}
-          onConfirm={handleCharModalConfirm} detectedNames={charDetectedNames} existingCharacters={existingCharacters} csrfToken={csrfToken} />
-      )}
-    </div>
+        )
+      } />
+    </Routes>
   );
 }

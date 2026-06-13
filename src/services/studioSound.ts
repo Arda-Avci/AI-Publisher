@@ -20,6 +20,8 @@ export interface StudioSoundOptions {
   denoise?: boolean;
   /** Apply audio equalization (default: false) */
   equalize?: boolean;
+  /** Apply echo/reverb reduction (default: true) */
+  deecho?: boolean;
   /** Output level in dB (default: -3) */
   levelDb?: number;
 }
@@ -30,6 +32,7 @@ export interface StudioSoundOptions {
 const DEFAULT_OPTIONS: StudioSoundOptions = {
   denoise: true,
   equalize: false,
+  deecho: true,
   levelDb: -3
 };
 
@@ -66,6 +69,12 @@ export async function enhanceAudio(
   // Adaptive denoise
   if (opts.denoise) {
     filterParts.push('afftdn=nr=10:nf=-20');
+  }
+
+  // Echo/reverb reduction (anlmdn for stationary noise + dynaudnorm for dynamic range)
+  if (opts.deecho) {
+    filterParts.push('anlmdn=s=7:p=0.005');
+    filterParts.push('dynaudnorm=g=15:f=150');
   }
 
   // Equalization curve (broadcast-ready tilt)
@@ -127,6 +136,11 @@ export async function enhanceVideoAudio(
 
   if (opts.denoise) {
     filterParts.push('afftdn=nr=10:nf=-20');
+  }
+
+  if (opts.deecho) {
+    filterParts.push('anlmdn=s=7:p=0.005');
+    filterParts.push('dynaudnorm=g=15:f=150');
   }
 
   if (opts.equalize) {
