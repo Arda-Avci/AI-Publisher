@@ -48,7 +48,7 @@ export class VideoClipper {
     await fs.ensureDir(path.dirname(outputPath));
 
     // Calculate crop dimensions based on aspect ratio
-    const cropFilter = this.calculateCropFilter(inputPath, aspectRatio, trackCenter);
+    const cropFilter = await this.calculateCropFilter(inputPath, aspectRatio, trackCenter);
 
     // Build FFmpeg command
     const startTime = segment.startTime;
@@ -84,14 +84,13 @@ export class VideoClipper {
   /**
    * Calculate FFmpeg crop filter based on aspect ratio and face tracking
    */
-  private calculateCropFilter(
+  private async calculateCropFilter(
     inputPath: string,
     targetRatio: '9:16' | '16:9' | '1:1',
     _trackCenter?: { x: number; y: number }
-  ): string {
-    // For now, simple center crop
+  ): Promise<string> {
     // Face tracking would require OpenCV integration
-    const [width, height] = this.getVideoDimensions(inputPath);
+    const [width, height] = await this.getVideoDimensions(inputPath);
 
     let cropW: number, cropH: number;
 
@@ -120,12 +119,28 @@ export class VideoClipper {
   }
 
   /**
-   * Get video dimensions (placeholder - would need ffprobe)
+   * Get video dimensions using ffprobe
    */
-  private getVideoDimensions(_inputPath: string): [number, number] {
-    // Default to 1920x1080
-    // In real implementation, use ffprobe to get actual dimensions
-    return [1920, 1080];
+  private async getVideoDimensions(inputPath: string): Promise<[number, number]> {
+    try {
+      const { runInWorker } = await import('../videoService.js');
+      const { stdout } = await runInWorker('ffprobe', [
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height',
+        '-of', 'csv=s=x:p=0',
+        inputPath,
+      ], 30000);
+
+      const dims = stdout?.trim();
+      if (dims) {
+        const [w, h] = dims.split('x').map(Number);
+        if (w && h) return [w, h];
+      }
+    } catch (error) {
+      Logger.warn('[VideoClipper] Failed to get video dimensions via ffprobe:', error);
+    }
+    return [1920, 1080]; // Fallback to default
   }
 
   /**
