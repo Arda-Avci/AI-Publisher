@@ -36,7 +36,7 @@ export interface PostCropOptions {
 /**
  * Format time for SRT subtitles (HH:MM:SS,mmm)
  */
-function formatSRTTime(seconds: number): string {
+export function formatSRTTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);

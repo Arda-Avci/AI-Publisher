@@ -335,6 +335,7 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Gelecek Fazlar Parametre Entegrasyonu:** Hem `ProjectForm.tsx` (Sol form) hem de `ClipperPanel.tsx` (Kırpıcı formu) bileşenlerine gelecek fazlarda (Faz D, E, F, G) backend'i yazılacak olan **Çok Dilli Dublaj Dili** (Select), **Altyazı Animasyon Stili ve Efektleri** (Select: bounce, pulse, shake) ve **Renk Derecelendirme Promptu** (Input) alanları eklendi. Bu alanlar state olarak tutulup `/create-job` veya `/extract` API'lerine gönderilen `FormData` ve JSON gövdelerine başarıyla entegre edildi.
 - **App.tsx Sekme Orkestrasyonu:** `client/src/App.tsx` ana bileşenindeki `mainTabs` listesine 'Clipper' ve 'Yayın Planla' sekmeleri eklenerek dinamik render ve form resetleme mantıkları kuruldu.
 - **Derleme ve Tip Doğrulaması:** Tip kontrolleri (`tsc -b && tsc --noEmit`) ve üretim derlemesi (`vite build`) **sıfır hatayla** başarıyla tamamlandı. Vitest test paketi (`npx vitest run`) ile **75/75 testin tamamı yeşilde kaldı**.
+- **Test Onarımı ve Genişletme (13 Haziran 2026 - kritik):** `crypto.ts` modül seviyesindeki `scryptSync` çağrısı lazy init'e dönüştürülerek 4 test suite'inin Worker OOM ile çökmesi engellendi. Vitest config'ine `execArgv: --max-old-space-size=4096` eklenerek Windows'da modül yükleme OOM'ları kalıcı çözüldü. `test_editor_services.spec.ts` güncellenerek 13 testin tamamı güncel API'e uyarlandı (autoCutVideo, applyColorGrade, findWordTimestamps, applyBeatSyncCuts vb.). `test_dubbing_viral.spec.ts`'ye `ai`, `ai-provider` ve `ai-utils` mock'ları eklenerek AI timeout'ları çözüldü. `real_integration.spec.ts`'de `import.meta.url` → `process.cwd()` ve `musicPath` tip düzeltmesi yapıldı. **Toplam 165 testin tamamı yeşil, tsc --noEmit sıfır hata, ESLint sıfır uyarı.**
 
 ---
 
@@ -342,4 +343,23 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Genel Scroll ve Layout Çakışma Düzeltmesi:** `StudioPanel.tsx` içerisinde 'Stüdyo' dışındaki tab'lerde (AI Asistan, Canvas, Clipper vb.) video önizlemesi ve prompt formunun tekrar render edilerek diğer panellerin üzerine binmesi ve sayfa yüksekliğini aşarak scroll'un çalışmamasına yol açması engellendi (null dönülerek temizlendi).
 - **Premium Scrollbar Tasarımı:** `index.css` içerisindeki webkit-scrollbar genişliği `8px` yapılarak modern, premium bir tasarım ve kolay kullanılabilirlik sağlandı.
 - **TypeScript Tip Hatalarının Giderilmesi:** `LandingPage.tsx` dosyasındaki relative import hatası (LandingPageAnimations.js eksik uzantısı), `helpVideos.ts` dosyasındaki db metot adları ve dönüş tipleri, `storyBibleService.ts`, `storyChatService.ts` ve `templatePromptService.ts` dosyalarındaki implicit any ve fallback model zinciri tip uyuşmazlıkları giderilerek tür güvenliği tam olarak sağlandı.
+
+---
+
+## ✅ Sprint 17 — Çıktılar (Code Review, Security Audit & Test Onarımı) (13 Haziran 2026 - v5.9)
+- **Security Audit:** Tüm kod tabanı `code-security-audit` skill'i ile tarandı. Hardcoded secret bulunamadı. SQL injection yok (parameterized queries). XSS yok. CORS wildcard yok. npm audit'te kalan 10 vuln (3 critical, 4 high, 3 moderate) tamamı `iyzipay` ve `yt-search` transitive bağımlılıkları — production etkilemez, breaking change gerektirir.
+- **Test Onarımı (6 dosyada 11 hata → 165/165 yeşil):**
+  - `crypto.ts`: `scryptSync` module-level → `getKey()` lazy init (4 suite "Deriving bits failed" çökmesi)
+  - `vitest.config.ts`: `execArgv: ['--max-old-space-size=4096']` (Windows OOM)
+  - `videoClipper.ts`: `filterPath()` helper ile Windows FFmpeg subtitles filter yol sorunu
+  - `postCropService.ts`: `formatSRTTime` export
+  - `faceTracker.ts`: `chunkStableSegments` export
+  - `test_editor_services.spec.ts`: güncel API'ye uygun yeniden yazım (autoCutVideo, applyColorGrade, findWordTimestamps)
+  - `test_dubbing_viral.spec.ts`: AI mockları (ai, ai-provider, ai-utils) timeout önlemi
+  - `real_integration.spec.ts`: `import.meta.url` → `process.cwd()`, `musicPath: ''`, SubtitleMixer servis düzeltmeleri
+- **TypeScript:** `tsc --noEmit` sıfır hata
+- **ESLint:** `npm run check:lint` sıfır uyarı
+- **Vitest:** 14 test dosyası, 165/165 test başarıyla geçti
+
+
 

@@ -47,7 +47,7 @@ interface StableSegment {
 /**
  * Chunk frames into stable segments where face position doesn't change significantly
  */
-function chunkStableSegments(frames: CropFrame[], threshold: number = 50, minDuration: number = 0.5): StableSegment[] {
+export function chunkStableSegments(frames: CropFrame[], threshold: number = 50, minDuration: number = 0.5): StableSegment[] {
   if (frames.length === 0) return [];
 
   const segments: StableSegment[] = [];

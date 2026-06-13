@@ -12,6 +12,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { faceTracker, FaceTrackerService } from '../faceTracker.js';
 import type { FaceTrackResult } from '../faceTracker.js';
 
+// FFmpeg filter path helper — relative from CWD avoids Windows drive-letter colon
+function filterPath(p: string): string {
+  return path.relative(process.cwd(), p).replace(/\\/g, '/');
+}
+
 const DEFAULT_CONFIG: ClipperConfig = {
   minSegmentDuration: 30,
   maxSegmentDuration: 90,
@@ -369,10 +374,11 @@ export class VideoClipper {
     const srtPath = outputPath.replace(/\.\w+$/, '.srt');
     await fs.writeFile(srtPath, srtContent, 'utf-8');
 
-    // Burn subtitles into video using FFmpeg
+    // Burn subtitles into video using FFmpeg (use relative path to avoid Windows drive-letter colon)
+    const srtFilterPath = filterPath(srtPath);
     const args = [
       '-i', inputPath,
-      '-vf', `subtitles=${srtPath}`,
+      '-vf', `subtitles=${srtFilterPath}`,
       '-c:a', 'copy',
       '-y',
       outputPath,
