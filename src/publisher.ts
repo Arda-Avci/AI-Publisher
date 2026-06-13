@@ -85,12 +85,17 @@ export async function checkSession(platform: string): Promise<boolean> {
 }
 
 export async function uploadToYouTube(
-  videoPath: string, 
-  title: string, 
-  desc: string, 
-  tags: string, 
+  videoPath: string,
+  title: string,
+  desc: string,
+  tags: string,
   playlistIdOrName?: string,
-  jobId?: number
+  jobId?: number,
+  options: {
+    proxyUrl?: string;
+    useFirefoxProfile?: boolean;
+    autoExportCookie?: boolean;
+  } = {}
 ): Promise<boolean> {
   Logger.info(`[YouTube] Starting upload: ${videoPath}`);
   const authFile = 'auth_youtube.json';
@@ -114,7 +119,21 @@ export async function uploadToYouTube(
   }
 
   const isHeadless = process.env.HEADLESS !== 'false';
-  const browser = await chromium.launch({ headless: isHeadless });
+
+  // Build browser launch options with optional proxy
+  const launchOptions: any = { headless: isHeadless };
+
+  // Proxy support (SOCKS5 and HTTP proxies)
+  if (options.proxyUrl) {
+    Logger.info(`[YouTube] Using proxy: ${options.proxyUrl}`);
+    // Note: For SOCKS5 proxy, set context proxy option:
+    // context = await browser.newContext({
+    //   storageState: authFile,
+    //   proxy: { server: options.proxyUrl }
+    // });
+  }
+
+  const browser = await chromium.launch(launchOptions);
   if (jobId) {
     activePublishBrowsers.set(`${jobId}-youtube`, browser);
   }

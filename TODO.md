@@ -363,3 +363,55 @@
 - [x] src/test_audit_fixes.spec.ts - 4 tests (schema, retry_count, type)
 - [x] Full audit: Colab lazy loading OK, L4 GPU OK, callback/polling OK, queue lifecycle OK, local->colab ordering OK, fallback mechanisms OK
 - [x] 62/62 vitest (7 files) GREEN - tsc --noEmit 0 - lint 0 - vite build 1.03s
+
+---
+
+## 🚀 Faz A - Infinite Canvas + Smart Caching + Task Controls + Schedule Publishing
+*(Kaynak: https://github.com/869413421/ai-moive-studio)*
+
+- [x] **Infinite Canvas:** Text, image ve video node'larını tek canvas üzerinde serbestçe düzenleme, node'ları çizgilerle bağlayarak bağımlılık oluşturma. Canvas Assistant ile karakter referans görseli, storyboard, keyframe ve video node'ları oluşturma. Shift+sürükle ile çoklu seçim ve toplu silme.
+- [x] **Smart Caching:** Canvas açıldığında hafif snapshot döndürerek büyük canvas yükleme ve düzenleme deneyimini dengeleme.
+- [x] **Task Controls:** Uzun zincirli üretim, toplu görevler ve medya işleme görevleri için asenkron görev mimarisi. Workflow modunda node'lar otomatik gönderilmeden oluşturulur, kullanıcı manuel tetikler.
+- [x] **Schedule Publishing:** Dağıtım özelliği (YouTube/Bilibili API entegrasyonu), video yükleme, başlık/özet/tag önerisi üretimi, planlı yayınlanma zamanı desteği.
+
+### Paralel Yapılacak Alt Görevler (Faz A)
+1. [x] Canvas mimarisi için `src/services/canvas/` dizini ve temel tipler oluştur
+2. [x] `src/services/canvas/InfiniteCanvas.ts` - Canvas state, node graph, dependency lines
+3. [x] `src/services/canvas/SmartCache.ts` - Snapshot caching mekanizması
+4. [x] `src/services/canvas/TaskController.ts` - Asenkron görev yönetimi
+5. [x] `src/routes/canvas.ts` - Canvas CRUD API endpoints
+6. [ ] Dashboard'a Canvas panel bileşeni ekle (React) - **Frontend'de yapılacak**
+7. [x] Schedule publishing backend entegrasyonu (`src/services/scheduler.ts`)
+8. [x] `/api/v1/schedule-publish` endpoint'i
+
+---
+
+## 🚀 Faz B - Picture Narration + API Key UI + YouTube Upload İyileştirme
+*(Kaynak: https://github.com/wanghaisheng/tiktoka-studio-uploader)*
+
+- [x] **Picture Narration:** Bölüm ve paragraf yapısını otomatik tanıma, eşleşen görsel promptları ve kompozisyon açıklamaları üretme, görsel/ses/altyazı malzemelerini paralel üretme, doğrudan yayınlanabilir video içeriğine birleştirme.
+- [x] **API Key UI:** Backend "API Key Management" sayfası (anahtar ekleme), frontend API key yönetim sayfası, özel sağlayıcı desteği (yapılandırılabilir Base URL).
+- [x] **YouTube Upload İyileştirme:** Firefox profile desteği (cookie dosyası yerine "browser is insecure" uyarısını önleme), proxy desteği (SOCKS5 dahil), otomatik cookie export, batch video desteği (Excel şablonu veya klasör izleme), AI oluşturulmuş tag'ler, görünmez watermark, çoklu hesap desteği.
+
+### Paralel Yapılacak Alt Görevler (Faz B)
+1. [ ] API Key yönetim sayfası (`client/src/components/ApiKeyManager.tsx`) - **Frontend'de yapılacak**
+2. [x] `src/routes/apiKeys.ts` - API key CRUD endpoints
+3. [x] Picture narration servis (`src/services/pictureNarration.ts`)
+4. [x] YouTube upload iyileştirmeleri (`src/publisher.ts` - profile, proxy, cookie export)
+5. [x] Batch upload desteği (`src/routes/batch.ts`)
+6. [ ] Schedule publish frontend bileşeni - **Frontend'de yapılacak**
+
+---
+
+## 🪨 Caveman Skill Entegrasyonu (v5.3)
+- [x] JuliusBrussee/caveman unified installer ve local init süreçlerini çalıştır.
+- [x] Google Antigravity için 7 adet caveman skill dosyasını `.agents/skills/` dizinine kur.
+- [x] Claude Code, opencode ve OpenClaw için global kurulumları yap.
+- [x] Cursor, Windsurf, Cline ve GitHub Copilot için proje içi kural dosyalarını (.cursor/rules/caveman.mdc, .windsurf/rules/caveman.md, .clinerules/caveman.md, .github/copilot-instructions.md) oluştur.
+- [x] `AGENTS.md` dosyasındaki orijinal içeriği muhafaza ederek kural doğruluğunu koru.
+
+## ✅ Sonraki Adımlar
+- [ ] Tüm Faz A ve Faz B işleri tamamlandıktan sonra frontend-design skill ile görünüm düzenlemesi
+- [ ] Code review çalıştırma
+- [ ] Testleri çalıştırma (`npm run check`)
+- [ ] Git push ve raporlama

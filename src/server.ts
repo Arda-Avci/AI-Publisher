@@ -40,6 +40,9 @@ import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
 import { talkShowRouter } from './routes/talkShow.js';
 import colabStatusRouter from './routes/colabStatus.js';
+import canvasRouter from './routes/canvas.js';
+import apiKeysRouter from './routes/apiKeys.js';
+import batchRouter from './routes/batch.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -142,6 +145,9 @@ app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);
 app.use('/api/v1/colab', colabStatusRouter);
+app.use('/api/v1/canvas', canvasRouter);
+app.use('/api/v1/api-keys', apiKeysRouter);
+app.use('/api/v1/batch', batchRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {
