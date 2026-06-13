@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { Logger } from '../lib/logger.js';
 import { broadcastProgress } from '../lib/redis.js';
 import WebSocket from 'ws';
@@ -50,6 +51,7 @@ class PipecatBridge {
   private statusCallbacks: Map<string, StatusCallback[]> = new Map();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private scriptPath: string;
+  private _wsWarned = false;
 
   constructor(config: PipecatConfig = {}) {
     this.port = config.port || 8765;
@@ -69,6 +71,12 @@ class PipecatBridge {
   async start(): Promise<void> {
     if (this.process) {
       Logger.warn('[Pipecat] Server already running');
+      return;
+    }
+
+    // Pipecat Python script yoksa sessizce atla
+    if (!fs.existsSync(this.scriptPath)) {
+      Logger.info(`[Pipecat] Script bulunamadı, atlanıyor: ${this.scriptPath}`);
       return;
     }
 
@@ -154,18 +162,21 @@ class PipecatBridge {
       });
 
       this.ws.on('close', () => {
-        Logger.info('[Pipecat] WebSocket disconnected');
         this.ws = null;
-
+        // Sadece process hala çalışıyorsa yeniden bağlan, yoksa sessizce dur
         if (this.process) {
           this.reconnectTimer = setTimeout(() => {
             this.connectWebSocket();
-          }, 2000);
+          }, 5000);
         }
       });
 
-      this.ws.on('error', (err) => {
-        Logger.warn(`[Pipecat] WebSocket error: ${err.message}`);
+      this.ws.on('error', () => {
+        // İlk hatada bir kere uyar, sonra sessizce bekle (close tetiklenecek)
+        if (!this._wsWarned) {
+          Logger.warn('[Pipecat] WebSocket bağlantısı kurulamadı (Pipecat Python sunucusu çalışmıyor olabilir)');
+          this._wsWarned = true;
+        }
       });
     } catch (err: any) {
       Logger.warn(`[Pipecat] WebSocket connect failed: ${err.message}`);

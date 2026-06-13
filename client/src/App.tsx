@@ -87,9 +87,16 @@ export default function App() {
   const handleLoginDirect = async (u: string, p: string) => {
     setAuthError('');
     try {
-      const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ username: u, password: p }) });
-      const d = await r.json();
-      if (d.success) { setIsLoggedIn(true); fetchSession(); } else { setAuthError(d.error || 'Giriş başarısız.'); throw new Error(d.error); }
+      const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ username: u, password: p }), redirect: 'manual' });
+      if (r.status === 302 || r.status === 200) {
+        // 302 = redirect (başarılı), 200 = JSON success
+        setIsLoggedIn(true);
+        fetchSession();
+      } else {
+        const d = r.status === 401 ? { success: false, error: 'Geçersiz kullanıcı adı veya şifre' } : await r.json().catch(() => ({ success: false, error: 'Giriş başarısız' }));
+        setAuthError(d.error || 'Giriş başarısız.');
+        throw new Error(d.error);
+      }
     } catch (e: any) { setAuthError(e.message || 'Sunucu hatası.'); throw e; }
   };
 

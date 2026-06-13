@@ -141,6 +141,11 @@ app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);
 app.use('/api/v1/colab', colabStatusRouter);
 
+// CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
+app.get('/api/v1/csrf', (req, res) => {
+  res.json({ csrfToken: req.session.csrfToken || '' });
+});
+
 // Global error handler (last)
 app.use(errorHandler);
 
