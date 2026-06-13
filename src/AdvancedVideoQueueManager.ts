@@ -119,13 +119,14 @@ export class AdvancedVideoQueueManager {
         sceneText: scenes[i].text
       });
 
+      const _PORT = process.env.PORT || 3016;
       const payload = {
         scene: scenes[i],
         init_image: lastFrameBase64, // Akilli sahne surekliligi kilit karesi
         chunk_info: `${currentChunkIndex}/${totalChunks}`,
         callback_url: process.env.PUBLIC_URL 
           ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
-          : `http://localhost:3010/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+          : `http://localhost:${_PORT}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
       };
 
       try {
