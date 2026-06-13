@@ -56,6 +56,9 @@ export default function App() {
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [camIntensity, setCamIntensity] = useState(0.75);
 
+  const mainTabs = ['Stüdyo', 'Galeri', 'Talk-Show', 'Karakterler'] as const;
+  const [mainTab, setMainTab] = useState<typeof mainTabs[number]>('Stüdyo');
+
   const t = useCallback((key: string, params?: Record<string, any>) => {
     let text = translations[key] || key;
     if (params) Object.entries(params).forEach(([k, v]) => text = text.replace(new RegExp(`{{${k}}}`, 'g'), String(v)));
@@ -185,9 +188,6 @@ export default function App() {
   const togglePlatform = (p: Platform) => setTargetPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
 
   if (!isLoggedIn) return <LandingPage onLogin={handleLoginDirect} authError={authError} setAuthError={setAuthError} language={language} setLanguage={setLanguage} t={t} />;
-
-  const mainTabs = ['Stüdyo', 'Galeri', 'Talk-Show', 'Karakterler'] as const;
-  const [mainTab, setMainTab] = useState<typeof mainTabs[number]>('Stüdyo');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
