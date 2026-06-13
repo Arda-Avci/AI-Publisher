@@ -168,7 +168,7 @@ async function startServer() {
     const { startNgrokTunnel } = await import('./lib/ngrok-tunnel.js');
     await startNgrokTunnel(Number(PORT));
   } catch (err: any) {
-    Logger.warn('Node.js ngrok tüneli başlatılamadı:', err);
+    Logger.debug('Node.js ngrok tüneli başlatılamadı (atlanabilir):', (err as Error)?.message || err);
   }
 
   app.listen(Number(PORT), '127.0.0.1', () => {
