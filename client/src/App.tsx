@@ -87,13 +87,14 @@ export default function App() {
   const handleLoginDirect = async (u: string, p: string) => {
     setAuthError('');
     try {
-      const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ username: u, password: p }), redirect: 'manual' });
-      if (r.status === 302 || r.status === 200) {
-        // 302 = redirect (başarılı), 200 = JSON success
+      const r = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+      const d = await r.json();
+      if (d.success) {
         setIsLoggedIn(true);
-        fetchSession();
+        if (d.theme) setTheme(d.theme);
+        if (d.lang) setLanguage(d.lang);
+        if (d.isDark !== undefined) setIsDark(d.isDark);
       } else {
-        const d = r.status === 401 ? { success: false, error: 'Geçersiz kullanıcı adı veya şifre' } : await r.json().catch(() => ({ success: false, error: 'Giriş başarısız' }));
         setAuthError(d.error || 'Giriş başarısız.');
         throw new Error(d.error);
       }
@@ -190,18 +191,14 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
-      <Header
-        language={language} theme={theme} isDark={isDark} activeTab={activeTab}
+      <Header language={language} theme={theme} isDark={isDark} activeTab={activeTab}
         userCredits={userCredits} onSetTheme={setTheme} onToggleDark={() => setIsDark(!isDark)}
         onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-        onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t}
-      />
+        onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* LEFT SIDEBAR — w-72 (288px) */}
         <aside style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'rgba(24,24,27,0.3)', overflowY: 'auto', zIndex: 10 }}>
-          <ProjectForm
-            masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
+          <ProjectForm masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
             ttsProvider={ttsProvider} ttsVoice={ttsVoice} productionTemplate={productionTemplate}
             hasShorts={hasShorts} hasSubtitles={hasSubtitles} brandKitEnabled={brandKitEnabled}
             kineticSubtitles={kineticSubtitles} autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
@@ -216,69 +213,48 @@ export default function App() {
             onSetSelectedMusicFile={setSelectedMusicFile} onSubmit={handleSubmitJob} t={t}
             selectedModel={selectedModel} onSetSelectedModel={setSelectedModel}
             aspectRatio={aspectRatio} onSetAspectRatio={setAspectRatio}
-            camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
-          />
+            camIntensity={camIntensity} onSetCamIntensity={setCamIntensity} />
         </aside>
 
-        {/* MAIN PANEL — flex: 1 */}
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-primary)', backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
-          {/* Accent glow */}
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, background: 'rgba(99,102,241,0.05)', borderRadius: '50%', filter: 'blur(100px)', transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0 }} />
-          
-          {/* Tab bar */}
           <div style={{ height: 40, background: 'var(--bg-primary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 4, zIndex: 1 }}>
             {mainTabs.map(tab => (
               <button key={tab} onClick={() => setMainTab(tab)}
-                style={{
-                  padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: mainTab === tab ? 600 : 400,
-                  background: mainTab === tab ? 'var(--accent-light)' : 'transparent',
-                  color: mainTab === tab ? 'var(--accent)' : 'var(--text-muted)',
-                  fontFamily: 'var(--font-sans)', transition: 'all 0.2s',
-                }}
-              >{tab}</button>
+                style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: mainTab === tab ? 600 : 400,
+                  background: mainTab === tab ? 'var(--accent-light)' : 'transparent', color: mainTab === tab ? 'var(--accent)' : 'var(--text-muted)',
+                  fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>{tab}</button>
             ))}
           </div>
-
-          {/* Content area */}
-          <StudioPanel
-            activeTab={mainTab === 'Stüdyo' ? 'create' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Talk-Show' ? 'groupchat' : 'create'}
+          <StudioPanel activeTab={mainTab === 'Stüdyo' ? 'create' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Talk-Show' ? 'groupchat' : 'create'}
             selectedJob={selectedJob} scenes={scenes} progressMsg={progressMsg} progressPercent={progressPercent}
-            etaSeconds={etaSeconds} csrfToken={csrfToken}
-            onSetSelectedJob={setSelectedJob}
+            etaSeconds={etaSeconds} csrfToken={csrfToken} onSetSelectedJob={setSelectedJob}
             onUpdateScenes={handleUpdateScenes} onRegenerateScene={handleRegenerateScene}
             onAddScene={handleAddScene} onDeleteScene={handleDeleteScene}
-            onSelectScene={(s: Scene) => setEditingImageScene(s)} onUseAsPrompt={handleUseAsPrompt}
-            t={t}
+            onSelectScene={(s: Scene) => setEditingImageScene(s)} onUseAsPrompt={handleUseAsPrompt} t={t}
             masterPrompt={masterPrompt} onSetMasterPrompt={setMasterPrompt}
-            onSubmit={handleSubmitJob} formLoading={formLoading}
-            mainTab={mainTab}
-          />
+            onSubmit={handleSubmitJob} formLoading={formLoading} mainTab={mainTab} />
         </main>
 
-        {/* RIGHT SIDEBAR — w-80 (320px) */}
         <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>
-          <GalleryPanel
-            jobs={jobs} selectedJob={selectedJob} metaYtTitle={metaYtTitle} metaYtDesc={metaYtDesc} metaYtTags={metaYtTags}
+          <GalleryPanel jobs={jobs} selectedJob={selectedJob} metaYtTitle={metaYtTitle} metaYtDesc={metaYtDesc} metaYtTags={metaYtTags}
             isMetaSaving={isMetaSaving} progressMsg={progressMsg} progressPercent={progressPercent}
             onSelectJob={handleSelectJob} onRefreshJobs={fetchJobs} onCancelJob={handleCancelJob}
             onDeleteJob={handleDeleteJob} onSetMetaYtTitle={setMetaYtTitle} onSetMetaYtDesc={setMetaYtDesc}
             onSetMetaYtTags={setMetaYtTags} onSaveMetaAndPublish={handleSaveMetaAndPublish}
-            userCredits={userCredits} t={t}
-          />
+            userCredits={userCredits} t={t} />
         </aside>
       </div>
 
       {editingImageScene && (
         <PhotoEditor imageUrl={editingImageScene.image_path || `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect fill="#131a2c" width="400" height="400"/><text x="200" y="200" text-anchor="middle" fill="#8e9bb4" font-family="sans-serif" font-size="14">Sahne Görseli Yok</text></svg>')}`}
           onClose={() => setEditingImageScene(null)}
-          onSave={async (url: string) => { const updated = scenes.map(s => s.id === editingImageScene.id ? { ...s, image_path: url } : s); handleUpdateScenes(updated); setEditingImageScene(null); }}
-        />
+          onSave={async (url: string) => { const updated = scenes.map(s => s.id === editingImageScene.id ? { ...s, image_path: url } : s); handleUpdateScenes(updated); setEditingImageScene(null); }} />
       )}
 
       {charModalOpen && (
         <CharacterSelectorModal isOpen={charModalOpen} onClose={() => { setCharModalOpen(false); setCharPendingFormData(null); }}
-          onConfirm={handleCharModalConfirm} detectedNames={charDetectedNames} existingCharacters={existingCharacters} csrfToken={csrfToken}
-        />
+          onConfirm={handleCharModalConfirm} detectedNames={charDetectedNames} existingCharacters={existingCharacters} csrfToken={csrfToken} />
       )}
     </div>
   );
