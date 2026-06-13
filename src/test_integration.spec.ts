@@ -194,8 +194,8 @@ describe('AI-Publisher System Integration Tests', () => {
       .post('/login')
       .send({ username: 'admin', password: 'admin123' });
 
-    expect(res.status).toBe(302);
-    expect(res.headers['location']).toBe('/');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
     
     const cookies = res.headers['set-cookie'];
     expect(cookies).toBeDefined();

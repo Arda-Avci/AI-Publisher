@@ -276,7 +276,7 @@ describe('Sprint 4.A — E2E Özellik Testleri', () => {
     app.use('/api/v1/broll', bRollRouter);
 
     const loginRes = await request(app).post('/login').send({ username: 'admin', password: 'admin123' });
-    expect(loginRes.status).toBe(302);
+    expect(loginRes.status).toBe(200);
     const cookies = loginRes.headers['set-cookie'];
     expect(cookies).toBeDefined();
     authCookie = cookies[0].split(';')[0];

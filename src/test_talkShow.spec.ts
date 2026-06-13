@@ -74,7 +74,7 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
     app.use('/api/v1/talkshow', talkShowRouter);
 
     const loginRes = await request(app).post('/login').send({ username: 'admin', password: 'admin123' });
-    expect(loginRes.status).toBe(302);
+    expect(loginRes.status).toBe(200);
     authCookie = loginRes.headers['set-cookie'][0].split(';')[0];
   });
 

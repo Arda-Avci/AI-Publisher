@@ -113,7 +113,7 @@ describe('Video Differentiation System Integration Tests', () => {
       .post('/login')
       .send({ username: 'admin', password: 'admin123' });
 
-    expect(res.status).toBe(302);
+    expect(res.status).toBe(200);
     const cookies = res.headers['set-cookie'];
     expect(cookies).toBeDefined();
     authCookie = cookies[0].split(';')[0];

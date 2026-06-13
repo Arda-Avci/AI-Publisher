@@ -28,10 +28,10 @@ export function registerAuthRoutes(app: Application): void {
       if (user.preferred_language) req.session.lang = user.preferred_language;
       if (user.selected_theme) req.session.theme = user.selected_theme;
       logAudit({ userId: user.id, action: 'auth.login.success', req });
-      res.redirect('/');
+      res.json({ success: true, userId: user.id });
     } else {
       logAudit({ userId: null, action: 'auth.login.failed', details: { username }, req });
-      res.send(buildLoginHTML(req.t, res.locals.themeStyles, req.lang, res.locals.csrfToken).replace('</form>', `<div class="error">${req.t.invalidLogin}</div></form>`));
+      res.status(401).json({ success: false, error: req.t?.invalidLogin || 'Geçersiz kullanıcı adı veya şifre' });
     }
   });
 
