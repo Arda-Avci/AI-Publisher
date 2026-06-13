@@ -410,8 +410,20 @@
 - [x] Cursor, Windsurf, Cline ve GitHub Copilot için proje içi kural dosyalarını (.cursor/rules/caveman.mdc, .windsurf/rules/caveman.md, .clinerules/caveman.md, .github/copilot-instructions.md) oluştur.
 - [x] `AGENTS.md` dosyasındaki orijinal içeriği muhafaza ederek kural doğruluğunu koru.
 
+## 🚀 Faz C - Otonom Kırpıcı ve Clipping Motoru (SamurAIGPT Benzeri)
+- [ ] **Otonom Segmentasyon & Highlight Analizi:** Whisper transkripti ve LLM (Gemini 2.5 Flash) ile uzun yatay videoların en viral olabilecek 30-60 saniyelik kısımlarını belirleyen analiz motorunun yazılması.
+- [ ] **Akıllı 9:16 Kırpıcı (Smart Cropper):** FFmpeg ve OpenCV yardımıyla yatay videonun konuşmacıyı veya merkez odak noktasını otomatik takip ederek (face tracking/crop) dikey Shorts formatına getirilmesi.
+- [ ] **Altyazı & Ses Miksajı:** Kırpılan bölümlere otomatik altyazı gömülmesi ve arka plan müzik miksajının yapılması.
+- [ ] **Toplu İşleme & API Entegrasyonu:** `/api/v1/clipper/extract` ve `/api/v1/clipper/list` rotalarıyla sistemin asenkron kuyruğa (RabbitMQ) entegre edilmesi.
+- [ ] **A/B Split Screen & Maskot Overlay (SaarD00 Benzeri):** İzleyici retention'ını artırmak amacıyla dikey bölünmüş ekran (FFmpeg `vstack` ile üstte AI video, altta Minecraft/ASMR) ve şeffaf maskot/avatar bindirme şablonunun entegre edilmesi.
+
+## 🚀 Faz D - Akıllı Kurgu ve Yerelleştirme Entegrasyonları (Montage-AI / FunClip / KrillinAI Benzeri)
+- [ ] **Müzik Ritmine Göre Otomatik Kesim (Beat-Synced Cuts):** FFmpeg ve ses analiz modülleriyle, sahnelerin kurgu geçişlerini arka plan müziğinin ritmine (BPM ve peak noktaları) göre otomatik senkronize eden motorun yazılması.
+- [ ] **Transkript Tabanlı Kurgu (Transcript-Based Editing):** Panel üzerinden transkript metnindeki kelimelerin silinmesiyle, videonun o saniyelerdeki kısımlarının FFmpeg ile otonom kırpılıp birleştirilmesi.
+- [ ] **Çok Dilli Otomatik Dublaj (Auto-Dubbing):** Whisper transkriptinin çevrilmesi, XTTS-v2 ses klonlama ile hedef dilde seslendirilmesi ve rubberband ile video süresine göre esnetilip dublajlanması.
+
 ## ✅ Sonraki Adımlar
-- [ ] Tüm Faz A ve Faz B işleri tamamlandıktan sonra frontend-design skill ile görünüm düzenlemesi
+- [ ] Tüm Faz A, Faz B ve Faz C işleri tamamlandıktan sonra frontend-design skill ile görünüm düzenlemesi
 - [ ] Code review çalıştırma
 - [ ] Testleri çalıştırma (`npm run check`)
 - [ ] Git push ve raporlama

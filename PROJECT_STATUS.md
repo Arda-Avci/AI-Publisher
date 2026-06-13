@@ -231,6 +231,9 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 |---|---|
 | **Top Yuvarlak AI Talk-Show (S3.B)** | Sportoto API entegrasyonu gerektiriyor, harici bağımlılık yüksek |
 | **Docker Compose** | Bu geliştirme makinesinde Docker çalışmıyor |
+| **Otonom Clipping Motoru (Faz C)** | Uzun yatay videoları analiz edip dikey Shorts formatında kırpacak otonom motor planlandı |
+| **A/B Split Screen & Maskot (Faz C)** | Bölünmüş ekran ve logo/maskot yerleşimi retention artırımı için planlandı |
+| **Akıllı Kurgu & Dublaj (Faz D)** | Ritime göre kesim (beat-sync), transkript kurgusu ve otomatik dublaj planlandı |
 
 ---
 

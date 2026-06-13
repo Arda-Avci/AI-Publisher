@@ -93,8 +93,6 @@ export async function uploadToYouTube(
   jobId?: number,
   options: {
     proxyUrl?: string;
-    useFirefoxProfile?: boolean;
-    autoExportCookie?: boolean;
   } = {}
 ): Promise<boolean> {
   Logger.info(`[YouTube] Starting upload: ${videoPath}`);
@@ -119,25 +117,19 @@ export async function uploadToYouTube(
   }
 
   const isHeadless = process.env.HEADLESS !== 'false';
-
-  // Build browser launch options with optional proxy
-  const launchOptions: any = { headless: isHeadless };
-
-  // Proxy support (SOCKS5 and HTTP proxies)
-  if (options.proxyUrl) {
-    Logger.info(`[YouTube] Using proxy: ${options.proxyUrl}`);
-    // Note: For SOCKS5 proxy, set context proxy option:
-    // context = await browser.newContext({
-    //   storageState: authFile,
-    //   proxy: { server: options.proxyUrl }
-    // });
-  }
-
-  const browser = await chromium.launch(launchOptions);
+  const browser = await chromium.launch({ headless: isHeadless });
   if (jobId) {
     activePublishBrowsers.set(`${jobId}-youtube`, browser);
   }
-  const context = await browser.newContext({ storageState: authFile });
+
+  // Build context options with optional proxy
+  const contextOptions: Record<string, unknown> = { storageState: authFile };
+  if (options.proxyUrl) {
+    Logger.info(`[YouTube] Using proxy: ${options.proxyUrl}`);
+    contextOptions.proxy = { server: options.proxyUrl };
+  }
+
+  const context = await browser.newContext(contextOptions as Parameters<typeof browser.newContext>[0]);
   const page = await context.newPage();
   try {
     await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle' });
