@@ -16,6 +16,11 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction) 
     return next();
   }
 
+  // API çağrılarını (JSON body) CSRF'den muaf tut — CORS + session cookie zaten koruyor
+  if (req.headers['content-type']?.includes('json') || req.xhr) {
+    return next();
+  }
+
   // State değiştiren istekleri (POST, PUT, DELETE, PATCH) doğrula
   const token = req.body?.csrfToken || req.headers['x-csrf-token'];
 
