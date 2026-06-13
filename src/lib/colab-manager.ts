@@ -115,7 +115,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           if (err.response) {
             this.startHealthChecks();
           } else {
-            this.setStatus('error', envUrl, `Belirtilen COLAB_URL bağlantısı başarısız: ${err.message}`);
+            this.setStatus('error', envUrl, `COLAB_URL connection failed: ${err.message}`);
           }
         });
     }
@@ -140,7 +140,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           this.startHealthChecks();
           return { ngrokUrl: envUrl };
         }
-        console.warn(`[WARN] Mevcut COLAB_URL bağlantısı başarısız (${err.message}). Otomatik olarak yeni Colab sunucusu başlatılıyor...`);
+        console.warn(`[WARN] Existing COLAB_URL connection failed (${err.message}). Starting new Colab server...`);
         this.state.status = 'starting';
       }
     }

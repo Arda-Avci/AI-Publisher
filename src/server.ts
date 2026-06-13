@@ -18,6 +18,7 @@ import { themeMiddleware } from './middleware/theme.js';
 import { utf8Middleware } from './middleware/utf8.js';
 import { errorHandler } from './middleware/error.js';
 import { registerAuthRoutes } from './routes/auth.js';
+import { registerAuthSetupRoutes } from './routes/authSetup.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerPublishRoutes } from './routes/publish.js';
@@ -120,6 +121,7 @@ registerAuthRoutes(app);
 registerDashboardRoutes(app);
 registerJobRoutes(app);
 registerPublishRoutes(app);
+registerAuthSetupRoutes(app);
 registerProgressRoutes(app);
 registerSettingsRoutes(app);
 registerOpportunityRoutes(app);
@@ -168,7 +170,7 @@ async function startServer() {
     const { startNgrokTunnel } = await import('./lib/ngrok-tunnel.js');
     await startNgrokTunnel(Number(PORT));
   } catch (err: any) {
-    Logger.debug('Node.js ngrok tüneli başlatılamadı (atlanabilir):', (err as Error)?.message || err);
+    Logger.warn('Node.js ngrok tüneli başlatılamadı:', (err as Error)?.stack || (err as Error)?.message || err);
   }
 
   app.listen(Number(PORT), '127.0.0.1', () => {

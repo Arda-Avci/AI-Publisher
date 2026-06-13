@@ -55,11 +55,11 @@ export async function translateText(text: string, targetLang: SupportedLang): Pr
   // Metin uzunsa (2000 karakterden fazla), parçalara bölerek çeviriyoruz.
   const MAX_CHUNK_SIZE = 2000;
   if (text.length > MAX_CHUNK_SIZE) {
-    console.log(`[AI] Metin uzun (${text.length} karakter). Çeviri için parçalara bölünüyor...`);
+    console.log(`[AI] Text too long (${text.length} chars). Splitting for translation...`);
     const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
     const translatedChunks = [];
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`[AI] Çeviri parçası ${i + 1}/${chunks.length} işleniyor...`);
+      console.log(`[AI] Translating chunk ${i + 1}/${chunks.length}...`);
       const translated = await translateText(chunks[i], targetLang);
       translatedChunks.push(translated);
     }
@@ -130,11 +130,11 @@ export async function rewriteTranscript(
   // Metin uzunsa (2000 karakterden fazla), parçalara bölerek özgünleştiriyoruz.
   const MAX_CHUNK_SIZE = 2000;
   if (translatedTranscript.length > MAX_CHUNK_SIZE) {
-    console.log(`[AI] Metin uzun (${translatedTranscript.length} karakter). Özgünleştirme için parçalara bölünüyor...`);
+    console.log(`[AI] Text too long (${translatedTranscript.length} chars). Splitting for rewrite...`);
     const chunks = splitTextIntoChunks(translatedTranscript, MAX_CHUNK_SIZE);
     const rewrittenChunks = [];
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`[AI] Özgünleştirme parçası ${i + 1}/${chunks.length} işleniyor...`);
+      console.log(`[AI] Rewriting chunk ${i + 1}/${chunks.length}...`);
       const rewritten = await rewriteTranscript(chunks[i], targetLang);
       rewrittenChunks.push(rewritten);
     }

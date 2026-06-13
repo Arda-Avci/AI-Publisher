@@ -92,10 +92,10 @@ export async function uploadToYouTube(
   playlistIdOrName?: string,
   jobId?: number
 ): Promise<boolean> {
-  Logger.info(`YouTube yükleme başlatılıyor: ${videoPath}`);
+  Logger.info(`[YouTube] Starting upload: ${videoPath}`);
   const authFile = 'auth_youtube.json';
   if (!await fs.pathExists(authFile)) {
-    Logger.error(`YouTube yetkilendirme dosyası bulunamadı: ${authFile}`);
+    Logger.error(`[YouTube] Auth file not found: ${authFile}`);
     return false;
   }
 
@@ -106,7 +106,7 @@ export async function uploadToYouTube(
       const job: VideoJob | undefined = await db.get('SELECT cover_image_path FROM video_jobs WHERE id = ?', [jobId]);
       if (job && job.cover_image_path && await fs.pathExists(job.cover_image_path)) {
         coverImagePath = job.cover_image_path;
-        Logger.info(`YouTube için özel kapak resmi saptandı: ${coverImagePath}`);
+        Logger.info(`[YouTube] Custom thumbnail found: ${coverImagePath}`);
       }
     } catch (dbErr) {
       Logger.warn('YouTube kapak resmi sorgulanırken hata oluştu:', dbErr);

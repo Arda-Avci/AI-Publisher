@@ -77,7 +77,7 @@ export function registerPublishRoutes(app: Application): void {
         return res.json({
           success: false,
           error: 'AUTH_MISSING',
-          message: authFile + ' bulunamadi. Playwright oturum cerezi eksik — video otomatik yayinlanamayacak.',
+          message: `Auth file '${authFile}' not found. Please connect your ${platform} account in Settings first.`,
           authFile
         });
       }

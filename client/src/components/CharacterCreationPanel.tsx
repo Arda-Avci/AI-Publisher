@@ -231,10 +231,11 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
       setLoading(true);
       const res = await fetch('/api/v1/characters', { credentials: 'include' });
       if (res.ok) {
-        const json: { data: Character[] } = await res.json();
-        const data: Character[] = json.data;
-        setCharacters(data);
-        onCharactersChange?.(data);
+        const json = await res.json();
+        if (Array.isArray(json.data)) {
+          setCharacters(json.data);
+          onCharactersChange?.(json.data);
+        }
       }
     } catch {
       /* server may be offline */

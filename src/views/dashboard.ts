@@ -118,7 +118,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       : '';
 
     var startBtn = isPending
-      ? '<button onclick="window.loadJobIntoForm(' + job.id + ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ Düzenle</button><button onclick="startJob(' + job.id + ')" class="start-btn">▶ Kuyruğa Ekle</button>'
+      ? '<button onclick="window.loadJobIntoForm(' + job.id + ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ ' + (t.btnEdit) + '</button><button onclick="startJob(' + job.id + ')" class="start-btn">▶ ' + (t.btnQueueAdd) + '</button>'
       : '';
 
     var cancelBtn = (isProcessing || isPending || isProcessingPhase1 || isAwaitingApproval)
@@ -157,7 +157,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <div class="progress-bar-container">
             <div class="progress-bar-fill" id="progress-fill-${job.id}" style="width: ${job.progress_percent}%"></div>
           </div>
-          <p class="status-msg" id="status-msg-${job.id}">Tahmini Bitme Süresi: ${job.estimated_minutes ? job.estimated_minutes.toFixed(1) : '?'} dakika</p>
+          <p class="status-msg" id="status-msg-${job.id}">' + (t.labelEstimatedTime) + ': ${job.estimated_minutes ? job.estimated_minutes.toFixed(1) : '?'} ' + (t.labelMinutesUnit) + '</p>
         ` : ''}
 
         <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
@@ -242,7 +242,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
 
           coverSelectorHTML = `
             <div class="cover-selector-section" style="margin-bottom: 1.5rem; margin-top: 1rem;">
-              <h5 style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">🖼️ Kapak Fotoğrafı Seçimi</h5>
+              <h5 style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">🖼️ ' + (t.labelCoverPhotoSelect) + '</h5>
               <div class="cover-options-grid" style="
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
@@ -261,8 +261,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
     return `
       <div class="job-card completed-job-card" id="job-card-${job.id}">
         <div class="job-header">
-          <h3>Proje #${job.id}</h3>
-          <span class="status-badge status-${job.status}">Tamamlandı</span>
+          <h3>' + (t.labelProject) + ' #${job.id}</h3>
+          <span class="status-badge status-${job.status}">' + (t.labelCompletedStatus) + '</span>
         </div>
         <p class="prompt"><strong>Prompt:</strong> ${escapeHtml(job.master_prompt || '')}</p>
         
@@ -1097,7 +1097,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   </label>
                   <label class="checkbox-item">
                     <input type="checkbox" name="brand_kit_enabled" value="1">
-                    💼 Marka Kiti Aktif
+                    💼 ${t.labelBrandKitActive}
                   </label>
                   <label class="checkbox-item">
                     <input type="checkbox" name="kinetic_subtitles" value="1">
