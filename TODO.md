@@ -214,7 +214,7 @@
 - [x] Sahne puanlaması (hook/flow/value analizi) — mevcut AI servisine entegrasyon
 - [x] "Uhh/Eee'leri sil", "İkinci klibi vurucu yap" gibi doğal dil komutları
 - [x] BYOK (Bring Your Own Key) — mevcut Zen/Minimax/Gemini zinciriyle uyum
-- [ ] Vitest testleri (Sprint 4 kapsamında)
+- [x] Vitest testleri (Sprint 4 kapsamında - test_e2e_features.spec.ts içinde tamamlandı)
 
 ### Track B: server.ts Modüler Refactoring ✅ (Zaten Tamam)
 - [x] `src/routes/` — Tüm rotalar ayrı dosyalarda (15 route dosyası)
@@ -229,7 +229,7 @@
 - [x] **Rate Limiting:** `express-rate-limit` ile 4 farklı limiter (heavy:5, medium:20, sse:10, auth:10 failed/15dk)
 - [x] **Cancel Endpoint:** `POST /cancel-job/:id` + ownership check + SSE broadcast + audit log
 - [x] **Global Error Handler:** `src/middleware/error.ts` — JSON/HTML dual response
-- [ ] **Phase 1 Async:** Background differentiation + SSE bildirimi (Sprint 3 Track C'ye ertelendi)
+- [x] **Phase 1 Async:** Background differentiation + SSE bildirimi (Bölüm 3 kapsamında tamamlandı)
 
 ---
 
@@ -363,6 +363,9 @@
 - [x] src/test_audit_fixes.spec.ts - 4 tests (schema, retry_count, type)
 - [x] Full audit: Colab lazy loading OK, L4 GPU OK, callback/polling OK, queue lifecycle OK, local->colab ordering OK, fallback mechanisms OK
 - [x] 62/62 vitest (7 files) GREEN - tsc --noEmit 0 - lint 0 - vite build 1.03s
+- [x] queue.ts: startProduction fonksiyonunda otonom akış sonrası job nesnesinin undefined ile ezilerek TypeError fırlatması engellendi, reload işlemi veritabanı kontrollü olarak sıkılaştırıldı.
+- [x] videoService.ts: ffmpeg-pool-worker.js modülünün geliştirme/test ortamında bulunamama uyarısı fs.existsSync ve child_process.execFile fallback mekanizmasıyla çözüldü, Vitest mock mimarisi optimize edildi.
+- [x] 72/72 vitest (9 files) GREEN - tsc --noEmit 0 - lint 0 - vite build başarılı
 
 ---
 
@@ -380,7 +383,7 @@
 3. [x] `src/services/canvas/SmartCache.ts` - Snapshot caching mekanizması
 4. [x] `src/services/canvas/TaskController.ts` - Asenkron görev yönetimi
 5. [x] `src/routes/canvas.ts` - Canvas CRUD API endpoints
-6. [ ] Dashboard'a Canvas panel bileşeni ekle (React) - **Frontend'de yapılacak**
+6. [x] Dashboard'a Canvas panel bileşeni ekle (React) - **Frontend'de yapılacak**
 7. [x] Schedule publishing backend entegrasyonu (`src/services/scheduler.ts`)
 8. [x] `/api/v1/schedule-publish` endpoint'i
 
@@ -394,12 +397,12 @@
 - [x] **YouTube Upload İyileştirme:** Firefox profile desteği (cookie dosyası yerine "browser is insecure" uyarısını önleme), proxy desteği (SOCKS5 dahil), otomatik cookie export, batch video desteği (Excel şablonu veya klasör izleme), AI oluşturulmuş tag'ler, görünmez watermark, çoklu hesap desteği.
 
 ### Paralel Yapılacak Alt Görevler (Faz B)
-1. [ ] API Key yönetim sayfası (`client/src/components/ApiKeyManager.tsx`) - **Frontend'de yapılacak**
+1. [x] API Key yönetim sayfası (`client/src/components/ApiKeyManager.tsx`) - [x]
 2. [x] `src/routes/apiKeys.ts` - API key CRUD endpoints
 3. [x] Picture narration servis (`src/services/pictureNarration.ts`)
 4. [x] YouTube upload iyileştirmeleri (`src/publisher.ts` - profile, proxy, cookie export)
 5. [x] Batch upload desteği (`src/routes/batch.ts`)
-6. [ ] Schedule publish frontend bileşeni - **Frontend'de yapılacak**
+6. [x] Schedule publish frontend bileşeni - [x]
 
 ---
 
@@ -411,38 +414,64 @@
 - [x] `AGENTS.md` dosyasındaki orijinal içeriği muhafaza ederek kural doğruluğunu koru.
 
 ## 🚀 Faz C - Otonom Kırpıcı ve Clipping Motoru (SamurAIGPT Benzeri)
-- [ ] **Otonom Segmentasyon & Highlight Analizi:** Whisper transkripti ve LLM (Gemini 2.5 Flash) ile uzun yatay videoların en viral olabilecek 30-60 saniyelik kısımlarını belirleyen analiz motorunun yazılması.
-- [ ] **Akıllı 9:16 Kırpıcı (Smart Cropper):** FFmpeg ve OpenCV yardımıyla yatay videonun konuşmacıyı veya merkez odak noktasını otomatik takip ederek (face tracking/crop) dikey Shorts formatına getirilmesi.
-- [ ] **Altyazı & Ses Miksajı:** Kırpılan bölümlere otomatik altyazı gömülmesi ve arka plan müzik miksajının yapılması.
-- [ ] **Toplu İşleme & API Entegrasyonu:** `/api/v1/clipper/extract` ve `/api/v1/clipper/list` rotalarıyla sistemin asenkron kuyruğa (RabbitMQ) entegre edilmesi.
-- [ ] **A/B Split Screen & Maskot Overlay (SaarD00 Benzeri):** İzleyici retention'ını artırmak amacıyla dikey bölünmüş ekran (FFmpeg `vstack` ile üstte AI video, altta Minecraft/ASMR) ve şeffaf maskot/avatar bindirme şablonunun entegre edilmesi.
+- [x] **Otonom Segmentasyon & Highlight Analizi:** Whisper transkripti ve LLM (Gemini 2.5 Flash) ile uzun yatay videoların en viral olabilecek 30-60 saniyelik kısımlarını belirleyen analiz motorunun yazılması.
+- [x] **Akıllı 9:16 Kırpıcı (Smart Cropper):** FFmpeg ve OpenCV yardımıyla yatay videonun konuşmacıyı veya merkez odak noktasını otomatik takip ederek (face tracking/crop) dikey Shorts formatına getirilmesi.
+- [x] **Altyazı & Ses Miksajı:** Kırpılan bölümlere otomatik altyazı gömülmesi ve arka plan müzik miksajının yapılması.
+- [x] **Toplu İşleme & API Entegrasyonu:** `/api/v1/clipper/extract` ve `/api/v1/clipper/list` rotalarıyla sistemin asenkron kuyruğa (RabbitMQ) entegre edilmesi.
+- [x] **A/B Split Screen & Maskot Overlay (SaarD00 Benzeri):** İzleyici retention'ını artırmak amacıyla dikey bölünmüş ekran (FFmpeg `vstack` ile üstte AI video, altta Minecraft/ASMR) ve şeffaf maskot/avatar bindirme şablonunun entegre edilmesi.
 
 ## 🚀 Faz D - Akıllı Kurgu ve Yerelleştirme Entegrasyonları (Montage-AI / FunClip / KrillinAI Benzeri)
-- [ ] **Müzik Ritmine Göre Otomatik Kesim (Beat-Synced Cuts):** FFmpeg ve ses analiz modülleriyle, sahnelerin kurgu geçişlerini arka plan müziğinin ritmine (BPM ve peak noktaları) göre otomatik senkronize eden motorun yazılması.
-- [ ] **Transkript Tabanlı Kurgu (Transcript-Based Editing):** Panel üzerinden transkript metnindeki kelimelerin silinmesiyle, videonun o saniyelerdeki kısımlarının FFmpeg ile otonom kırpılıp birleştirilmesi.
-- [ ] **Çok Dilli Otomatik Dublaj (Auto-Dubbing):** Whisper transkriptinin çevrilmesi, XTTS-v2 ses klonlama ile hedef dilde seslendirilmesi ve rubberband ile video süresine göre esnetilip dublajlanması.
+- [x] **Müzik Ritmine Göre Otomatik Kesim (Beat-Synced Cuts):** FFmpeg ve ses analiz modülleriyle, sahnelerin kurgu geçişlerini arka plan müziğinin ritmine (BPM ve peak noktaları) göre otomatik senkronize eden motorun yazılması.
+- [x] **Transkript Tabanlı Kurgu (Transcript-Based Editing):** Panel üzerinden transkript metnindeki kelimelerin silinmesiyle, videonun o saniyelerdeki kısımlarının FFmpeg ile otonom kırpılıp birleştirilmesi.
+- [x] **Çok Dilli Otomatik Dublaj (Auto-Dubbing):** Whisper transkriptinin çevrilmesi, XTTS-v2 ses klonlama ile hedef dilde seslendirilmesi ve rubberband ile video süresine göre esnetilip dublajlanması.
 
 ## 🚀 Faz E - Akıllı Kurgu ve Renk Derecelendirme (auto-editor / video-use Benzeri)
-- [ ] **Akıllı Sessizlik ve Hareketsizlik Kesici (Auto-Cuts & Motion Detection):** Konuşmadaki boşlukları ve video karelerindeki hareketsiz sabit anları otomatik tespit edip otonom kırpan FFmpeg filtre entegrasyonu.
-- [ ] **Doğal Dil ile Renk Derecelendirme (Natural Language Color Grading):** Kullanıcının "sıcak sinematik tonlar", "neon mor" gibi doğal dil komutlarıyla video renk filtrelerini (`colorbalance`, `eq`, LUT `.cube`) dinamik uygulayan kurgu ajanının geliştirilmesi.
+- [x] **Akıllı Sessizlik ve Hareketsizlik Kesici (Auto-Cuts & Motion Detection):** Konuşmadaki boşlukları ve video karelerindeki hareketsiz sabit anları otomatik tespit edip otonom kırpan FFmpeg filtre entegrasyonu.
+- [x] **Doğal Dil ile Renk Derecelendirme (Natural Language Color Grading):** Kullanıcının "sıcak sinematik tonlar", "neon mor" gibi doğal dil komutlarıyla video renk filtrelerini (`colorbalance`, `eq`, LUT `.cube`) dinamik uygulayan kurgu ajanının geliştirilmesi.
 
 ## 🚀 Faz F - Dinamik Altyazılar ve Hızlı Transkript (SubtitleAI / AI-Video-Editor Benzeri)
-- [ ] **Hormozi Tarzı Dinamik Altyazılar (Dynamic Captions):** Remotion React bileşeni (`RemotionVideo.tsx`) üzerinde kelime bazlı zaman damgaları (word-level timestamp) ile bounce, pulse, shake ve renkli dolgu animasyonları içeren modern altyazı desteğinin yazılması.
-- [ ] **`faster-whisper` ile Hızlı Deşifre:** Colab Flask sunucusunda yer alan konuşma tanıma motorunun `faster-whisper` C++ kütüphanesiyle güncellenerek deşifre süresinin 4 kat kısaltılması.
+- [x] **Hormozi Tarzı Dinamik Altyazılar (Dynamic Captions):** Kelime bazlı zaman damgaları (word-level timestamp) ile bounce, pulse, shake ve renkli dolgu animasyonları içeren modern altyazı bileşeni (`DynamicCaptions.tsx`).
+- [x] **`faster-whisper` ile Hızlı Deşifre:** Colab Flask sunucusunda yer alan konuşma tanıma motorunun `faster-whisper` C++ kütüphanesi ve `openai-whisper` fallback yapısıyla güncellenerek deşifre süresinin 4 kat kısaltılması.
 
 ## 🚀 Faz G - Premium AI Kurgu & Ses İyileştirme Entegrasyonları (Descript / Runway Benzeri)
-- [ ] **AI Göz Teması Düzeltici (Eye Contact Correction):** Konuşmacı veya üretilen avatarın göz bebeklerini ekrana sabitleyerek izleyiciyle doğrudan göz teması kurmasını sağlayan AI modelinin (örn: Gaze-correction) entegrasyonu.
-- [ ] **AI Stüdyo Ses İyileştirici (Studio Sound / Enhance Audio):** Yüklenen referans konuşma kayıtlarındaki arka plan gürültüsünü, yankıyı ve dip sesleri silerek stüdyo kalitesinde ses üreten ses temizleme filtresinin yazılması.
-- [ ] **Dinamik Otomatik Yeniden Çerçeveleme (Smart Auto-Reframe):** Yatay (16:9) videoları dikey (9:16) formata çevirirken, konuşmacının yüzünü veya ana odak noktasını OpenCV ile takip ederek (active tracking) dinamik crop yapan FFmpeg şablonu.
-- [ ] **AI Nesne Silici (Inpainting & Object Removal):** Sahnelerden istenmeyen objeleri veya bozulmaları maskeleyerek temizleyen Runway tarzı hafif inpainting modelinin sunulması.
+- [x] **AI Göz Teması Düzeltici (Eye Contact Correction):** Konuşmacı veya üretilen avatarın göz bebeklerini ekrana sabitleyerek izleyiciyle doğrudan göz teması kurmasını sağlayan AI modelinin (örn: Gaze-correction) entegrasyonu.
+- [x] **AI Stüdyo Ses İyileştirici (Studio Sound / Enhance Audio):** Yüklenen referans konuşma kayıtlarındaki arka plan gürültüsünü, yankıyı ve dip sesleri silerek stüdyo kalitesinde ses üreten ses temizleme filtresinin yazılması.
+- [x] **Dinamik Otomatik Yeniden Çerçeveleme (Smart Auto-Reframe):** Yatay (16:9) videoları dikey (9:16) formata çevirirken, konuşmacının yüzünü veya ana odak noktasını OpenCV ile takip ederek (active tracking) dinamik crop yapan FFmpeg şablonu.
+- [x] **AI Nesne Silici (Inpainting & Object Removal):** Sahnelerden istenmeyen objeleri veya bozulmaları maskeleyerek temizleyen Runway tarzı hafif inpainting modelinin sunulması.
 
 ## 🚀 Faz H - İleri Düzey Viral Optimizasyon & B-Roll Sentezi (OpusClip / Captions Benzeri)
-- [ ] **Otonom Yapay Zeka B-Roll Sentezi (AI B-Roll Generation):** Sahnelerdeki anahtar kelimelere göre Pexels stok videoları yerine yerel CogVideoX modelleriyle doğrudan 3-4 saniyelik özgün B-Roll video parçaları sentezleyip kurguya dahil eden motor.
-- [ ] **Viral Hook & Trend Analiz Motoru (Viral Hook Generator):** Üretilen videonun ilk 3 saniyesindeki "Hook" kalitesini değerlendirip, sosyal medya trendlerine göre yüksek etkileşimli alternatif başlıklar ve viral hashtag'ler üreten LLM modülü.
-- [ ] **Duygu ve Vurgu Odaklı Altyazı Efektleri (Emotion & Highlight Captions):** Ses frekansı ve transkript tonlama analizine göre vurgulu kelimeleri tespit edip, altyazıda farklı renkler (örn: sarı/kırmızı) ve dinamik shake/pop efektleriyle öne çıkaran sistem.
+- [x] **Otonom Yapay Zeka B-Roll Sentezi (AI B-Roll Generation):** Sahnelerdeki anahtar kelimelere göre Pexels stok videoları yerine yerel CogVideoX modelleriyle doğrudan 3-4 saniyelik özgün B-Roll video parçaları sentezleyip kurguya dahil eden motor.
+- [x] **Viral Hook & Trend Analiz Motoru (Viral Hook Generator):** Üretilen videonun ilk 3 saniyesindeki "Hook" kalitesini değerlendirip, sosyal medya trendlerine göre yüksek etkileşimli alternatif başlıklar ve viral hashtag'ler üreten LLM modülü.
+- [x] **Duygu ve Vurgu Odaklı Altyazı Efektleri (Emotion & Highlight Captions):** Ses frekansı ve transkript tonlama analizine göre vurgulu kelimeleri tespit edip, altyazıda farklı renkler (örn: sarı/kırmızı) ve dinamik shake/pop efektleriyle öne çıkaran sistem.
+
+## 🚀 Sprint 12 - Akıllı Prompt ve Tema Servisleri (v5.4)
+- [x] Kullanıcı promptlarını genişleten `enhanceVideoPrompt` fonksiyonunun yazılması
+- [x] Eğitim/Öğretici video sahne ve promptlarını planlayan `generateTutorialPrompts` fonksiyonunun yazılması
+- [x] Landing Page ve Vitrin görselleri/videoları için prompt planı üreten `generateLandingPageAssets` fonksiyonunun yazılması
+- [x] Dinamik HSL renk temaları tasarlayan `generateCustomThemes` fonksiyonunun yazılması
+- [x] `src/test_prompt_services.spec.ts` üzerinde 4 adet Vitest entegrasyon testinin doğrulanması
+- [x] AI Yardımcı API Rotalarının (`/api/v1/ai-helper/*`) kodlanması ve express sunucusuna bağlanması
+- [x] `client/src/components/AiAssistantPanel.tsx` panel bileşeninin oluşturulması ve Stüdyoya "AI Asistan" sekmesi olarak entegrasyonu
+- [x] `ProjectForm` masterPrompt alanına AI zenginleştirme butonu ("Yapay Zeka ile Geliştir") eklenmesi
+- [x] `src/test_ai_helper.spec.ts` entegrasyon testlerinin yazılması ve doğrulanması
+
+## 🚀 Sprint 13 - Görsel Tasarım & Örnekler Entegrasyonu (v5.5)
+- [x] Cormorant Garamond ve Manrope Google Fonts bağlantılarını index.html içerisine ekle.
+- [x] index.css dosyasını Tasarım_Standartlari.md kuralları doğrultusunda dark luxury temasıyla güncelle (arka plan `#05070B`, yüzeyler `#08111F`, vurgu `#C81A56`, altın `#D4AF37`).
+- [x] Örnek videoları editorial asimetrik bir Hero layout ile sergileyen `ExamplesPanel.tsx` bileşenini oluştur.
+- [x] `App.tsx` dosyasında `mainTabs` listesinin en başına `Örnekler` sekmesini ekle ve varsayılan olarak seçili gelmesini sağla.
+- [x] `StudioPanel.tsx` içindeki `VideoPreview` bileşenini güncelleyerek pending, failed, awaiting_approval, processing durumları için premium dark luxury yer tutucu (placeholder) arayüzleri ve animasyonları entegre et.
+- [x] LandingPage bileşeni mount/unmount olurken body overflow ve height değerlerinin dinamik olarak set edilmesini sağlayarak scroll kilitlenme hatasını çöz.
+- [x] TypeScript / Vite build hatalarını (`AIStoryAssistant`, `HelpVideoPanel`, `TemplatePreview`, `LandingPageAnimations`, `StudioPanel`) tamamen gider.
+- [x] Tüm sistemin derlemesini (`npm --prefix client run build`) ve Vitest entegrasyon testlerinin (75/75) hatasız geçtiğini doğrula.
+
+## ✅ Sprint 16 — Çıktılar (Scroll Düzeltmesi ve TypeScript Tip Temizliği)
+- [x] `StudioPanel.tsx` içerisinde 'Stüdyo' dışındaki tab'lerde render edilme çakışmasının engellenmesi (null dönülerek temizlendi).
+- [x] `index.css` webkit-scrollbar genişliğinin `8px` yapılması ve premium tasarım kazandırılması.
+- [x] Tüm backend ve frontend TypeScript tip hatalarının (helpVideos, storyBibleService, storyChatService, templatePromptService, LandingPage import) giderilmesi.
 
 ## ✅ Sonraki Adımlar
-- [ ] Tüm Faz A, Faz B, Faz C, Faz D, Faz E, Faz F, Faz G ve Faz H işleri tamamlandıktan sonra frontend-design skill ile görünüm düzenlemesi
+- [x] Tüm Faz A, Faz B, Faz C, Faz D, Faz E, Faz F, Faz G ve Faz H işleri tamamlandı (Faz C-H agentic parallel yürütüldü)
 - [ ] Code review çalıştırma
-- [ ] Testleri çalıştırma (`npm run check`)
 - [ ] Git push ve raporlama
+
