@@ -105,7 +105,7 @@ export interface Character {
   updated_at?: string;
 }
 
-export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar';
+export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar' | 'cogvideox5b' | 'cogvideox2b';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
 export type Language = 'tr' | 'en';

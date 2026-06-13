@@ -53,7 +53,28 @@ interface ProjectFormProps {
 
 const MODELS = ['Publisher Cinematic V3', 'Anime Diffusion (Hızlı)', 'Zen-M3 Realism'];
 const RATIOS = ['16:9', '9:16', '1:1'] as const;
-const TEMPLATES: ProductionTemplate[] = ['cinematic', 'dynamic', 'simple', 'pixar'];
+const TEMPLATES: Array<{ key: ProductionTemplate; model: string; speed: string }> = [
+  { key: 'cinematic', model: 'HunyuanVideo', speed: '⭐⭐' },
+  { key: 'dynamic', model: 'Wan 2.1', speed: '⭐⭐' },
+  { key: 'simple', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
+  { key: 'pixar', model: 'Wan 2.1', speed: '⭐⭐' },
+];
+
+const MODEL_MAP: Record<string, { key: ProductionTemplate; model: string; speed: string }> = {
+  cinematic: { key: 'cinematic', model: 'HunyuanVideo', speed: '⭐⭐' },
+  dynamic: { key: 'dynamic', model: 'Wan 2.1', speed: '⭐⭐' },
+  simple: { key: 'simple', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
+  pixar: { key: 'pixar', model: 'Wan 2.1', speed: '⭐⭐' },
+};
+
+const ALL_MODELS = [
+  { value: 'cinematic', label: 'Sinematik Hikaye', model: 'HunyuanVideo', speed: '⭐⭐' },
+  { value: 'dynamic', label: 'Dinamik Sosyal Medya', model: 'Wan 2.1', speed: '⭐⭐' },
+  { value: 'simple', label: 'Hızlı & Basit Render', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
+  { value: 'pixar', label: 'Pixar Animasyon', model: 'Wan 2.1', speed: '⭐⭐' },
+  { value: 'cogvideox5b' as ProductionTemplate, label: 'CogVideoX-5b (Varsayılan)', model: 'CogVideoX-5b', speed: '⭐⭐⭐' },
+  { value: 'cogvideox2b' as ProductionTemplate, label: 'CogVideoX-2b (Hızlı)', model: 'CogVideoX-2b', speed: '⭐⭐⭐⭐' },
+];
 
 function TemplateCard({
   tpl, isSelected, onSelect, t,
@@ -63,6 +84,7 @@ function TemplateCard({
 }) {
   const titleKey = `template${tpl.charAt(0).toUpperCase() + tpl.slice(1)}`;
   const descKey = `${titleKey}Desc`;
+  const modelInfo = MODEL_MAP[tpl];
   return (
     <div
       onClick={onSelect}
@@ -87,6 +109,11 @@ function TemplateCard({
         <span style={{ fontSize: '12px', fontWeight: 'bold', color: isSelected ? 'white' : 'var(--text-muted)' }}>
           {t(titleKey) || tpl.toUpperCase()}
         </span>
+        {modelInfo && (
+          <span style={{ fontSize: '9px', color: 'var(--gold)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>
+            {modelInfo.model} {modelInfo.speed}
+          </span>
+        )}
       </div>
       <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0, paddingLeft: '22px' }}>
         {t(descKey) || ''}
@@ -345,12 +372,28 @@ export function ProjectForm(props: ProjectFormProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {TEMPLATES.map((tpl) => (
                 <TemplateCard
-                  key={tpl} tpl={tpl}
-                  isSelected={props.productionTemplate === tpl}
-                  onSelect={() => props.onSetProductionTemplate(tpl)}
+                  key={tpl.key} tpl={tpl.key}
+                  isSelected={props.productionTemplate === tpl.key}
+                  onSelect={() => props.onSetProductionTemplate(tpl.key)}
                   t={props.t}
                 />
               ))}
+              <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  Model (Gelişmiş)
+                </label>
+                <select value={props.productionTemplate}
+                  onChange={e => props.onSetProductionTemplate(e.target.value as ProductionTemplate)}
+                  style={{
+                    width: '100%', padding: '6px 8px', borderRadius: 4,
+                    border: '1px solid var(--border)', background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)', fontSize: 11, fontFamily: 'var(--font-mono)',
+                  }}>
+                  {ALL_MODELS.map(m => (
+                    <option key={m.value} value={m.value}>{m.label} — {m.model} {m.speed}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             {/* Template Preview Panel */}
             <div style={{ marginTop: '12px' }}>

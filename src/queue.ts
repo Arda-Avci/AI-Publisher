@@ -491,13 +491,17 @@ async function startProduction(job: VideoJob) {
         }
       }
 
-      let modelType = 'CogVideoX-2b';
+      let modelType = 'CogVideoX-5b';
       if (job.production_template === 'cinematic') {
         modelType = 'HunyuanVideo';
       } else if (job.production_template === 'dynamic' || job.production_template === 'pixar') {
         modelType = 'Wan2.1';
       } else if (job.production_template === 'simple') {
         modelType = 'LTX-Video';
+      } else if (job.production_template === 'cogvideox5b' || job.model_type === 'CogVideoX-5b') {
+        modelType = 'CogVideoX-5b';
+      } else if (job.production_template === 'cogvideox2b') {
+        modelType = 'CogVideoX-2b';
       } else if (job.model_type) {
         modelType = job.model_type;
       }

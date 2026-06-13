@@ -60,6 +60,8 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
     dynamic: 'linear-gradient(135deg, #1c1917 0%, #44403c 50%, #1c1917 100%)',
     simple: 'linear-gradient(135deg, #172554 0%, #1e3a5f 50%, #172554 100%)',
     pixar: 'linear-gradient(135deg, #052e16 0%, #14532d 50%, #052e16 100%)',
+    cogvideox5b: 'linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #1e1b4b 100%)',
+    cogvideox2b: 'linear-gradient(135deg, #1e1b4b 0%, #6b21a8 50%, #1e1b4b 100%)',
   };
 
   const templateIcons: Record<ProductionTemplate, string> = {
@@ -67,6 +69,8 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
     dynamic: '⚡',
     simple: '📝',
     pixar: '🎨',
+    cogvideox5b: '🎥',
+    cogvideox2b: '🎥',
   };
 
   if (loading) {
