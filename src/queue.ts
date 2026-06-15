@@ -155,19 +155,53 @@ async function startProduction(job: VideoJob) {
           }
         };
       } else {
-        Logger.info('[PRODUCTION] Calling AI generateStudioScenes...');
-        try {
-          object = await generateStudioScenes(job);
-          Logger.info('[PRODUCTION] AI generateStudioScenes succeeded', { sceneCount: object.scenes.length });
-        } catch (aiErr) {
-          Logger.error('AI generateStudioScenes HATASI', aiErr);
-          Logger.info('Job detayları:', {
-            master_prompt: job.master_prompt,
-            production_notes: job.production_notes,
-            character_features: job.character_features,
-            transcript: job.transcript?.substring(0, 200)
-          });
-          throw aiErr;
+        if (job.storyboard_enabled === 1) {
+          Logger.info('[PRODUCTION] Using Storyboard Agent pipeline...');
+          try {
+            const { integrateWithJob } = await import('./services/storyboardAgent/index.js');
+            const sbResult = await integrateWithJob(job, (stage, pct) => {
+              broadcast(job.id, { stageKey: 'stageStoryboard', storyboardStage: stage, percent: 5 + Math.floor(pct * 0.05) });
+            });
+            object = {
+              scenes: sbResult.scenes.map((s: any) => ({
+                sceneNumber: s.sceneNumber,
+                videoPrompt: s.videoPrompt,
+                speechText: s.speechText,
+                sfxPrompt: s.sfxPrompt,
+                cameraMotion: s.cameraMotion || 'none',
+              })),
+              marketing: {
+                ytTitle: sbResult.script.title.slice(0, 80),
+                ytDesc: sbResult.script.logline,
+                ytTags: '',
+                ttDesc: '',
+                ttTags: '',
+                xDesc: '',
+                xTags: '',
+                metaDesc: '',
+                metaTags: '',
+              },
+            };
+            Logger.info('[PRODUCTION] Storyboard Agent succeeded', { sceneCount: object.scenes.length });
+          } catch (sbErr) {
+            Logger.error('Storyboard Agent HATASI, generateStudioScenes fallback:', sbErr);
+            object = await generateStudioScenes(job);
+          }
+        } else {
+          Logger.info('[PRODUCTION] Calling AI generateStudioScenes...');
+          try {
+            object = await generateStudioScenes(job);
+            Logger.info('[PRODUCTION] AI generateStudioScenes succeeded', { sceneCount: object.scenes.length });
+          } catch (aiErr) {
+            Logger.error('AI generateStudioScenes HATASI', aiErr);
+            Logger.info('Job detayları:', {
+              master_prompt: job.master_prompt,
+              production_notes: job.production_notes,
+              character_features: job.character_features,
+              transcript: job.transcript?.substring(0, 200)
+            });
+            throw aiErr;
+          }
         }
       }
 
@@ -1035,7 +1069,7 @@ async function startProduction(job: VideoJob) {
     broadcast(job.id, { stageKey: 'stageFinalMontage', percent: 90 });
 
     const fName = `film_${job.id}_${Date.now()}.mp4`;
-    const fPath = path.join(process.cwd(), 'videolar', fName);
+    let fPath = path.join(process.cwd(), 'videolar', fName);
 
     // Concat with crossfade transition
     Logger.info('Sahneler crossfade gecisleriyle birlestiriliyor...', { finalScenes });
@@ -1144,6 +1178,56 @@ async function startProduction(job: VideoJob) {
         }
       } catch (shortsErr) {
         Logger.warn('Shorts/Dikey dönüşüm hatası:', shortsErr);
+      }
+    }
+
+    // ── 4A: Smart Dubbing Stage (after final montage, before completion) ──
+    if (job.dubbing_enabled === 1 && job.dubbing_lang) {
+      Logger.info('[DUBBING] Starting smart dubbing pipeline...', { targetLang: job.dubbing_lang });
+      await db.run(
+        "UPDATE video_jobs SET current_stage = 'Dublaj Yapılıyor', progress_percent = 96 WHERE id = ?",
+        [job.id]
+      );
+      broadcast(job.id, { stageKey: 'stageDubbing', percent: 96, message: 'Seslendirme çevirisi yapılıyor...' });
+
+      try {
+        const { autoDub } = await import('./services/autoDubbing.js');
+        const dubbingOutputPath = path.join(
+          process.cwd(), 'videolar',
+          `dubbed_${job.id}_${Date.now()}.mp4`
+        );
+
+        const dubResult = await autoDub(fPath, {
+          sourceLang: job.dubbing_source_lang || 'tr',
+          targetLang: job.dubbing_lang,
+          voice: job.dubbing_voice || 'Claribel Dervla',
+          outputPath: dubbingOutputPath,
+        });
+
+        // Replace final path with dubbed version
+        const originalPath = fPath;
+        fPath = dubbingOutputPath;
+        try { await fs.remove(originalPath); } catch { /* ignore */ }
+
+        await db.run(
+          "UPDATE video_jobs SET dubbing_status = ?, dubbing_output_path = ?, progress_percent = 97 WHERE id = ?",
+          ['completed', dubbingOutputPath, job.id]
+        );
+
+        broadcast(job.id, {
+          stageKey: 'stageDubbing', percent: 97,
+          message: `Dublaj tamamlandı: ${job.dubbing_lang}`,
+          lipSyncApplied: dubResult.lipSyncApplied
+        });
+
+        Logger.info('[DUBBING] Pipeline complete', { targetLang: job.dubbing_lang, lipSync: dubResult.lipSyncApplied });
+      } catch (dubErr) {
+        Logger.warn('[DUBBING] Pipeline failed, continuing with original audio:', dubErr);
+        await db.run(
+          "UPDATE video_jobs SET dubbing_status = ?, progress_percent = 97 WHERE id = ?",
+          ['failed', job.id]
+        );
+        broadcast(job.id, { stageKey: 'stageDubbing', percent: 97, message: 'Dublaj başarısız, orijinal ses ile devam ediliyor' });
       }
     }
 

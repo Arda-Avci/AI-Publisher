@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { Logger } from './logger.js';
 
 let trMessages: Record<string, string> = {};
 let enMessages: Record<string, string> = {};
@@ -13,7 +14,7 @@ export function loadServerTranslations() {
     enMessages = fs.readJsonSync(path.join(base, 'en.json'));
     loaded = true;
   } catch (err) {
-    console.error('[i18n] Failed to load locale files:', err);
+    Logger.error('[i18n] Failed to load locale files', err);
   }
 }
 
@@ -37,6 +38,7 @@ export const STAGE_KEYS = {
   COVER_SYNTHESIS: 'stageCoverSynthesis',
   SCENE_GENERATING: 'stageSceneGenerating',
   SHORTS_CONVERSION: 'stageShortsConversion',
+  DUBBING: 'stageDubbing',
   COMPLETED: 'stageCompleted',
   CANCELLED: 'stageCancelled',
   ERROR: 'stageError',

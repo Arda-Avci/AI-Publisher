@@ -327,6 +327,12 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_prompt TEXT;');
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles_style TEXT DEFAULT 'bounce';");
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS transcript_word_timings TEXT;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS storyboard_enabled INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_enabled INTEGER DEFAULT 0;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_voice TEXT DEFAULT 'Claribel Dervla';");
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_source_lang TEXT DEFAULT 'tr';");
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_status TEXT;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_output_path TEXT;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS music_volume REAL DEFAULT 0.2;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS speaker VARCHAR(50);');
 

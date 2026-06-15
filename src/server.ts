@@ -57,6 +57,8 @@ import colorGradeRouter from './routes/colorGrade.js';
 import dubbingRouter from './routes/dubbing.js';
 import viralRouter from './routes/viral.js';
 import transcriptEditorRouter from './routes/transcriptEditor.js';
+import aiStudioRouter from './routes/aiStudio.js';
+import storyboardRouter from './routes/storyboard.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -173,6 +175,8 @@ app.use('/api/v1/color', colorGradeRouter);
 app.use('/api/v1/dubbing', dubbingRouter);
 app.use('/api/v1/viral', viralRouter);
 app.use('/api/v1/transcript', transcriptEditorRouter);
+app.use('/api/v1/studio', aiStudioRouter);
+app.use('/api/v1/storyboard', storyboardRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

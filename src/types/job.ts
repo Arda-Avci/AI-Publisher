@@ -54,6 +54,14 @@ export interface VideoJob {
   background_music_path?: string;
   retry_count?: number;
 
+  dubbing_enabled?: number;
+  dubbing_voice?: string;
+  dubbing_source_lang?: string;
+  dubbing_status?: string;
+  dubbing_output_path?: string;
+
+  storyboard_enabled?: number;
+
   // v6.0 Grup 1
   niche_profile?: string;
   niche_enabled?: number;

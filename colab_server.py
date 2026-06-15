@@ -1297,6 +1297,180 @@ def inpaint_image():
             del pipe
         flush_memory()
 
+@app.route("/api/v1/eye-contact", methods=["POST"])
+def api_eye_contact():
+    """Video üzerindeki göz temasını düzeltir (Gaze-correction)."""
+    data = request.get_json(force=True) or {}
+    video_path = data.get("video_path")
+    output_path = data.get("output_path")
+    
+    if not video_path or not output_path:
+        return jsonify({"error": "video_path ve output_path parametreleri zorunludur"}), 400
+        
+    print(f"👁️ [eye-contact] Başlatılıyor... Video: {video_path}")
+    
+    if not os.path.exists(video_path):
+        return jsonify({"error": f"Video dosyası bulunamadı: {video_path}"}), 400
+        
+    try:
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+        
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise RuntimeError("Video dosyası OpenCV ile açılamadı")
+            
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        
+        temp_out = f"/content/gaze_temp_{uuid.uuid4().hex[:8]}.mp4"
+        out = cv2.VideoWriter(temp_out, fourcc, fps, (width, height))
+        
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+                
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+            
+            for (x, y, w, h) in faces:
+                roi_gray = gray[y:y+h, x:x+w]
+                roi_color = frame[y:y+h, x:x+w]
+                
+                eyes = eye_cascade.detectMultiScale(roi_gray)
+                for (ex, ey, ew, eh) in eyes:
+                    eye_roi = roi_color[ey:ey+eh, ex:ex+ew]
+                    eye_gray = roi_gray[ey:ey+eh, ex:ex+ew]
+                    
+                    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(eye_gray)
+                    center_x, center_y = ew // 2, eh // 2
+                    pupil_x, pupil_y = min_loc
+                    
+                    dx = center_x - pupil_x
+                    dy = center_y - pupil_y
+                    
+                    if abs(dx) > 1 or abs(dy) > 1:
+                        M = np.float32([[1, 0, dx * 0.3], [0, 1, dy * 0.3]])
+                        roi_color[ey:ey+eh, ex:ex+ew] = cv2.warpAffine(eye_roi, M, (ew, eh), borderMode=cv2.BORDER_REPLICATE)
+            
+            out.write(frame)
+            
+        cap.release()
+        out.write(None)
+        out.release()
+        
+        import subprocess
+        cmd_audio = [
+            "ffmpeg", "-y", "-i", temp_out, "-i", video_path,
+            "-map", "0:v:0", "-map", "1:a:0?", "-c:v", "copy", "-c:a", "aac",
+            "-shortest", output_path
+        ]
+        subprocess.run(cmd_audio, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        if os.path.exists(temp_out):
+            os.unlink(temp_out)
+            
+        print(f"👁️ [eye-contact] Tamamlandı. Çıkış: {output_path}")
+        return jsonify({"status": "success", "output_path": output_path})
+        
+    except Exception as e:
+        print(f"❌ [eye-contact] Hatası: {e}")
+        try:
+            import shutil
+            shutil.copyfile(video_path, output_path)
+            return jsonify({"status": "success", "output_path": output_path, "note": f"Fallback applied due to error: {e}"})
+        except Exception as copy_e:
+            return jsonify({"error": f"Gaze correction failed and fallback copy failed: {copy_e}"}), 500
+
+@app.route("/api/v1/inpaint", methods=["POST"])
+def api_video_inpaint():
+    """Video üzerindeki istenmeyen nesneleri maskelere göre siler (Inpainting)."""
+    data = request.get_json(force=True) or {}
+    video_path = data.get("video_path")
+    mask_regions = data.get("mask_regions", [])
+    output_path = data.get("output_path")
+    
+    if not video_path or not output_path:
+        return jsonify({"error": "video_path ve output_path parametreleri zorunludur"}), 400
+        
+    print(f"🎨 [inpaint] Başlatılıyor... Video: {video_path}, Maske Sayısı: {len(mask_regions)}")
+    
+    if not os.path.exists(video_path):
+        return jsonify({"error": f"Video dosyası bulunamadı: {video_path}"}), 400
+        
+    if not mask_regions:
+        try:
+            import shutil
+            shutil.copyfile(video_path, output_path)
+            return jsonify({"status": "success", "output_path": output_path})
+        except Exception as copy_e:
+            return jsonify({"error": str(copy_e)}), 500
+            
+    try:
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise RuntimeError("Video dosyası OpenCV ile açılamadı")
+            
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        
+        temp_out = f"/content/inpaint_temp_{uuid.uuid4().hex[:8]}.mp4"
+        out = cv2.VideoWriter(temp_out, fourcc, fps, (width, height))
+        
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+                
+            mask = np.zeros((height, width), dtype=np.uint8)
+            
+            for region in mask_regions:
+                rx = int(region.get("x", 0) * width)
+                ry = int(region.get("y", 0) * height)
+                rw = int(region.get("width", 0) * width)
+                rh = int(region.get("height", 0) * height)
+                
+                rx = max(0, min(width - 1, rx))
+                ry = max(0, min(height - 1, ry))
+                rw = max(1, min(width - rx, rw))
+                rh = max(1, min(height - ry, rh))
+                
+                cv2.rectangle(mask, (rx, ry), (rx + rw, ry + rh), 255, -1)
+                
+            inpainted_frame = cv2.inpaint(frame, mask, 3, cv2.INPAINT_TELEA)
+            out.write(inpainted_frame)
+            
+        cap.release()
+        out.release()
+        
+        import subprocess
+        cmd_audio = [
+            "ffmpeg", "-y", "-i", temp_out, "-i", video_path,
+            "-map", "0:v:0", "-map", "1:a:0?", "-c:v", "copy", "-c:a", "aac",
+            "-shortest", output_path
+        ]
+        subprocess.run(cmd_audio, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        if os.path.exists(temp_out):
+            os.unlink(temp_out)
+            
+        print(f"🎨 [inpaint] Tamamlandı. Çıkış: {output_path}")
+        return jsonify({"status": "success", "output_path": output_path})
+        
+    except Exception as e:
+        print(f"❌ [inpaint] Hatası: {e}")
+        try:
+            import shutil
+            shutil.copyfile(video_path, output_path)
+            return jsonify({"status": "success", "output_path": output_path, "note": f"Fallback applied due to error: {e}"})
+        except Exception as copy_e:
+            return jsonify({"error": f"Inpainting failed and fallback copy failed: {copy_e}"}), 500
+
 @app.route("/generate-image", methods=["POST"])
 def generate_image_route():
     """Flux veya DreamShaper kullanarak sıfırdan referans görsel / kapak üretir."""
@@ -1804,10 +1978,15 @@ def localize_dubbing():
         if not os.path.exists(local_video_path) and os.path.exists(LAST_VIDEO_PATH):
             local_video_path = LAST_VIDEO_PATH
         
-        # apply_lipsync fonksiyonu colab_server.py başlangıcında tanımlıdır.
-        apply_lipsync(local_video_path, out_audio_path, out_video_path)
+        # apply_lipsync_internal: Wav2Lip ile gerçek lip-sync uygula
+        lipsync_result = apply_lipsync_internal(local_video_path, out_audio_path)
+        if lipsync_result.get("success") and lipsync_result.get("output_path"):
+            import shutil
+            shutil.copyfile(lipsync_result["output_path"], out_video_path)
+        else:
+            raise RuntimeError(lipsync_result.get("error", "Lip-sync atlandı"))
     except Exception as lip_e:
-        print(f"⚠️ Lip-sync dublaj hatası: {lip_e}")
+        print(f"⚠️ Lip-sync dublaj hatası, FFmpeg fallback: {lip_e}")
         import subprocess
         subprocess.run([
             "ffmpeg", "-y", "-i", local_video_path, "-i", out_audio_path,
@@ -1853,6 +2032,8 @@ def generate_avatar():
     if not avatar_prompt:
         return jsonify({"error": "avatar_prompt zorunludur"}), 400
 
+    style = data.get("style", "realistic")
+
     try:
         flush_memory()
         print("🎨 Karakter avatarı için Stable Diffusion (DreamShaper 8) yükleniyor...")
@@ -1862,8 +2043,13 @@ def generate_avatar():
             low_cpu_mem_usage=True
         )
         pipe.to("cuda")
-        
-        print("🎨 Karakter avatarı üretiliyor...")
+
+        if style == "animatic":
+            avatar_prompt = f"Pixar style animated character portrait, colorful cartoon headshot, {avatar_prompt}, vibrant gradient background, 3D render style"
+        else:
+            avatar_prompt = f"Cinematic portrait profile picture, high quality realistic headshot of {avatar_prompt}, solid dark background, professional lighting"
+
+        print(f"🎨 Karakter avatarı üretiliyor (style={style})...")
         with torch.inference_mode():
             img = pipe(prompt=avatar_prompt, num_inference_steps=25, height=512, width=512).images[0]
             
@@ -1888,6 +2074,183 @@ def generate_avatar():
     except Exception as exc:
         print(f"❌ Avatar üretimi başarısız: {exc}")
         flush_memory()
+        return jsonify({"error": str(exc)}), 500
+
+
+# ── MUSETALK: SESLİ AVATAR (Talking Head) ─────────────────────────────────────
+MUSETALK_MODEL = None
+MUSETALK_DIR = "/content/MuseTalk"
+
+def load_musetalk():
+    global MUSETALK_MODEL
+    if MUSETALK_MODEL is not None:
+        return MUSETALK_MODEL if MUSETALK_MODEL else None
+    try:
+        import sys
+        if MUSETALK_DIR not in sys.path:
+            sys.path.insert(0, MUSETALK_DIR)
+        print("🎭 MuseTalk modeli yükleniyor...")
+        from musetalk.utils import MuseTalkWrapper
+        MUSETALK_MODEL = MuseTalkWrapper()
+        print("[INFO] MuseTalk modeli yüklendi")
+        return MUSETALK_MODEL
+    except Exception as e:
+        print(f"[WARN] MuseTalk yüklenemedi: {e}")
+        MUSETALK_MODEL = False
+        return None
+
+@app.route("/api/v1/musetalk", methods=["POST"])
+def musetalk_endpoint():
+    global last_activity
+    last_activity = time.time()
+    try:
+        if "face" not in request.files or "audio" not in request.files:
+            return jsonify({"error": "face (image) ve audio (wav) gerekli"}), 400
+
+        face_file = request.files["face"]
+        audio_file = request.files["audio"]
+        bbox = request.form.get("bbox", "")  # optional: x1,y1,x2,y2
+
+        face_path = "/content/temp_mt_face.jpg"
+        audio_path = "/content/temp_mt_audio.wav"
+        face_file.save(face_path)
+        audio_file.save(audio_path)
+
+        model = load_musetalk()
+        if not model:
+            return jsonify({
+                "error": "MuseTalk modeli yüklenemedi",
+                "skipped": True
+            }), 503
+
+        output_path = "/content/temp_mt_output.mp4"
+        try:
+            if bbox and len(bbox.split(",")) == 4:
+                coords = tuple(int(x.strip()) for x in bbox.split(","))
+                model.generate(face_path, audio_path, output_path, bbox=coords)
+            else:
+                model.generate(face_path, audio_path, output_path)
+            if os.path.exists(output_path):
+                with open(output_path, "rb") as f:
+                    data = f.read()
+                for p in [face_path, audio_path, output_path]:
+                    if os.path.exists(p): os.remove(p)
+                return data, 200, {"Content-Type": "video/mp4"}
+        except Exception as gen_err:
+            print(f"❌ MuseTalk generation error: {gen_err}")
+            for p in [face_path, audio_path]:
+                if os.path.exists(p): os.remove(p)
+            return jsonify({"error": f"MuseTalk error: {str(gen_err)}"}), 500
+    except Exception as exc:
+        print(f"❌ MuseTalk endpoint error: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/v1/musetalk/preload", methods=["POST"])
+def musetalk_preload():
+    """Pre-load MuseTalk model without generating video."""
+    try:
+        model = load_musetalk()
+        if model:
+            return jsonify({"status": "success", "message": "MuseTalk model loaded"}), 200
+        else:
+            return jsonify({"status": "error", "message": "MuseTalk could not be loaded"}), 503
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── AI STUDIO: SMART REFRAME ──────────────────────────────────────────────────
+@app.route("/api/v1/studio/smart-reframe", methods=["POST"])
+def studio_smart_reframe():
+    global last_activity
+    last_activity = time.time()
+    try:
+        if "video" not in request.files:
+            return jsonify({"error": "video gerekli"}), 400
+        video = request.files["video"]
+        options = request.form.get("options", "{}")
+        opts = json.loads(options) if isinstance(options, str) else options
+
+        input_path = "/content/temp_reframe_input.mp4"
+        video.save(input_path)
+
+        output_path = "/content/temp_reframe_output.mp4"
+        target_w = opts.get("outputWidth", 1080)
+        target_h = opts.get("outputHeight", 1920)
+
+        import subprocess
+        cmd = [
+            "ffmpeg", "-y", "-i", input_path,
+            "-vf", f"crop={target_w}:{target_h}:(in_w-{target_w})/2:(in_h-{target_h})/2",
+            "-c:a", "aac", "-c:v", "h264_nvenc", "-preset", "fast",
+            output_path
+        ]
+        subprocess.run(cmd, check=True, capture_output=True)
+
+        with open(output_path, "rb") as f:
+            data = f.read()
+        for p in [input_path, output_path]:
+            if os.path.exists(p): os.remove(p)
+        return data, 200, {"Content-Type": "video/mp4"}
+    except Exception as exc:
+        print(f"❌ Smart reframe hatasi: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+
+# ── AI STUDIO: STUDIO SOUND ───────────────────────────────────────────────────
+@app.route("/api/v1/studio/studio-sound", methods=["POST"])
+def studio_sound():
+    global last_activity
+    last_activity = time.time()
+    try:
+        if "video" not in request.files:
+            return jsonify({"error": "video gerekli"}), 400
+        video = request.files["video"]
+        options = request.form.get("options", "{}")
+        opts = json.loads(options) if isinstance(options, str) else options
+
+        input_path = "/content/temp_sound_input.mp4"
+        video.save(input_path)
+
+        output_path = "/content/temp_sound_output.mp4"
+
+        denoise = opts.get("denoise", True)
+        deecho = opts.get("deecho", True)
+        equalize = opts.get("equalize", False)
+        level_db = opts.get("levelDb", -3)
+
+        filter_parts = [
+            "highpass=f=200",
+            "lowpass=f=3000",
+        ]
+        if denoise:
+            filter_parts.append("afftdn=nr=10:nf=-20")
+        if deecho:
+            filter_parts.append("anlmdn=s=7:p=0.005")
+            filter_parts.append("dynaudnorm=g=15:f=150")
+        if equalize:
+            filter_parts.append("equalizer=f=3000:t=h:width_type=s:width=0.5:g=2")
+            filter_parts.append("equalizer=f=300:t=h:width_type=s:width=0.5:g=-1")
+        filter_parts.append(f"loudnorm=I={level_db}:LRA=11:TP={level_db + 1}")
+
+        filter_chain = ",".join(filter_parts)
+
+        import subprocess
+        cmd = [
+            "ffmpeg", "-y", "-i", input_path,
+            "-af", filter_chain,
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+            output_path
+        ]
+        subprocess.run(cmd, check=True, capture_output=True)
+
+        with open(output_path, "rb") as f:
+            data = f.read()
+        for p in [input_path, output_path]:
+            if os.path.exists(p): os.remove(p)
+        return data, 200, {"Content-Type": "video/mp4"}
+    except Exception as exc:
+        print(f"❌ Studio sound hatasi: {exc}")
         return jsonify({"error": str(exc)}), 500
 
 
