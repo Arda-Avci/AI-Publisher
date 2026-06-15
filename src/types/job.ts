@@ -53,6 +53,18 @@ export interface VideoJob {
   audio_ducking?: number;
   background_music_path?: string;
   retry_count?: number;
+
+  // v6.0 Grup 1
+  niche_profile?: string;
+  niche_enabled?: number;
+  split_layout?: string;
+  split_enabled?: number;
+  color_grade_preset?: string;
+  color_grade_enabled?: number;
+  sd_flux_enabled?: number;
+  sd_flux_prompt?: string;
+  kinetic_subtitles_style?: string;
+  transcript_word_timings?: string;
 }
 
 export interface VideoScene {

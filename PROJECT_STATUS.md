@@ -18,6 +18,11 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **TypeScript:** `tsc --noEmit` sıfır hata ile doğrulandı.
 
 ## Yapılan İyileştirmeler (Yeni S5+)
+- **Premium AI Kurgu & Ses İyileştirme ve Viral Entegrasyonlar (Yeni - v5.7):** Göz teması düzeltme (`/api/v1/eye-contact`), video inpainting (`/api/v1/inpaint` OpenCV Telea) endpoint'leri Google Colab Flask sunucusuna (`colab_server.py`) entegre edildi. OpenCV yüz takibi yapabilen Node.js worker köprüsü (`face-track-worker.ts`) ve `face-track-worker.py` resim/normalizasyon güncellemeleri tamamlandı. Video inpainting rotasındaki çakışma giderilerek `/api/v1/editor/inpaint-video` yapıldı. Frontend `GalleryPanel.tsx` (`MetaEditor`) arayüzüne Göz Düzeltme, Stüdyo Sesi, Smart Reframe ve Nesne Silme araçlarından oluşan "AI Premium Kurgu Araçları" paneli eklenerek uçtan uca entegrasyon sağlandı.
+- **Test Süreci ve Mock Kararlılığı İyileştirmeleri (Yeni - v5.8):** Geliştirme sürecinde `src/` ve `tests/` dizinlerinde biriken eski/stale `.js` derleme dosyaları temizlenerek Vitest testlerinin doğrudan `.ts` dosyaları üzerinden çalışması sağlandı. `src/test_characters.spec.ts` dosyasındaki çoklu karakter lip-sync ve tag parsing testinin mock Colab ortamındaki çakışması `process.env.MOCK_COLAB` değişkeninin test süresince dinamik kapatılıp açılmasıyla giderildi. Projedeki tüm entegrasyon ve birim testleri (216/216 test) başarıyla yeşile döndürüldü.
+- **Colab Mocking ve Yerel FFmpeg Üretim Katmanı (Yeni - v5.6):** `MOCK_COLAB=true` çevre değişkeniyle çalışan, Google Colab GPU sunucusu yokken dahi iş kuyruğunu ve montaj aşamasını pürüzsüz işleten bir mock katmanı kuruldu. Kapaklar, sahne videoları, sesleri ve altyazıları FFmpeg ile yerel olarak dinamik şekilde (üzerinde sahne metinleri ve karakter vurgusuyla) üretilip birleştirilmektedir.
+- **Frontend Sidebar Dinamik Görünürlüğü (Yeni - v5.6):** `client/src/App.tsx` dosyasında yapılan optimizasyonla, sol `ProjectForm` ve sağ `GalleryPanel` sidebar'ları yalnızca `Stüdyo` ve `Galeri` sekmelerinde aktif kılınmış, diğer tüm sekmelerde gizlenerek tam ekran (full-width) premium bir UX sunulmuştur.
+- **20 Adet Çok Sahneli Gerçekçi Demo Video Tohumlaması (Yeni - v5.6):** `scripts/seed-demo-videos.ts` betiği güncellenerek eksik `demo_base.mp4` ve `test_bg_music.mp3` dosyalarını FFmpeg ile otomatik üretmesi sağlandı. 10 saniye ile 1 dakika arasında değişen sürelerde (2-10 sahne), farklı konularda (Borsa, Gezi, Pixar vb.) ve `@me` ya da `@sibel` karakter vurgulu 20 adet gerçekçi proje veritabanına ve diske tohumlandı.
 - **SaaS Kredilendirme Sistemi ve Kredi Geçmişi (Yeni):** `users` tablosuna `credits`, `monthly_credit_limit` ve `credit_reset_date` eklenerek SaaS abonelik mimarisi kuruldu. Video sentezi (sahne başına 10 kredi), kapak sentezi (5 kredi) ve video özgünleştirme (15 kredi) işlemleri için kredi düşüm ve `credit_transactions` tablosuna transaction loglama mekanizmaları entegre edildi. Herhangi bir asenkron kuyruk hatasında veya kullanıcı iptalinde kredilerin tam olarak iade edilmesi (`refundCredits`) sağlanarak bakiye tutarlılığı garanti altına alındı.
 - **Dinamik i18n & Çeviri API'si (Yeni):** Frontend üzerindeki tüm hardcoded metinler ve diller temizlendi. `/api/v1/locales` API rotası üzerinden `tr.json` / `en.json` dosyaları dinamik olarak yüklenerek istemciye servis edilmeye başlandı. Arayüzde regex tabanlı parametre yerleştirme desteğiyle dinamik i18n yapısı tamamlandı.
 - **Timeline Sahneleri ve Kamera Hareketi Şablonları (Yeni):** Arayüzden seçilebilen hazır kamera hareket şablonlarının (Zoom In/Out, Pan Left/Right, Breathing) prompt mühendisliğiyle VRAM harcamadan Colab diffusers video üretimine aktarılması sağlandı. `video_scenes` tablosunu destekleyen, sahnelerin durumunu asenkron kuyrukta tutan ve tekil sahne yeniden üretme (`regenerate`), ekleme, silme, sıralama işlemlerini yöneten API rotaları (`src/routes/jobs.ts`) entegre edildi. Kuyrukta (`src/queue.ts`) tamamlanmış sahnelerin disk kontrolüyle atlanması sağlanarak tekli sahne yenilemede 10 kata yakın hız optimizasyonu elde edildi.
@@ -85,6 +90,20 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Güvenlik Başlıkları Entegre Edildi:** Dinamik CSP başlığı, dynamic script nonce ve callback webhook korumaları başarıyla sisteme entegre edildi.
 - **Colab Sunucu Başlatma Hata Giderimi (NameError Fix) (Yeni):** `colab_server.py` dosyasının başlatılması sırasında oluşan `NameError: name 'health' is not defined` hatasını gidermek amacıyla, main bloğundaki `health._start_time` satırı kaldırıldı. Sunucu açılış zamanı modül yüklenirken en üstte `server_start_time` olarak başarıyla tanımlandığı için Flask sunucusu artık sorunsuz bir şekilde başlatılabilmektedir.
 
+## Pre-Production Denetim Sonuçları (14 Haziran 2026)
+- **Client Build Düzeltildi:** `App.tsx` (kullanılmayan `CoverSelector` import'u), `ColorGraderPanel.tsx` (kullanılmayan `Thermometer` import'u) ve `DynamicCaptions.tsx` (kullanılmayan `useState`, `duration` ve `verbatimModuleSyntax` uyumlu `import type` düzeltmesi) başarıyla onarıldı. `vite build` 1.14s'de başarıyla tamamlanıyor.
+- **CI/CD Bellek Yönetimi:** `.github/workflows/ci.yml` dosyasına `NODE_OPTIONS: "--max-old-space-size=4096"` eklenerek Node.js OOM çökmesi önlendi.
+- **Doğrulama:** Backend `tsc --noEmit` sıfır hata, Client `tsc -b && vite build` sıfır hata, ESLint sıfır hata, 102/102 Vitest testi yeşil.
+- **Güvenlik Denetimi:** API key sızıntısı yok, `@ts-ignore` kalıntısı yok, FIXME/HACK yok. CSP, CSRF, XSS, session cookie güvenliği aktif ve doğrulanmış.
+- **Teknik Borç Temizliği (14 Haziran 2026):** 7 TODO kalıntısı (aiBroll, eyeContact, inpainting, pictureNarration, batch) temizlendi; gerçek Colab endpoint çağrıları ve publisher entegrasyonu yapıldı. 32 dosyada ~158 `console.*` çağrısı `Logger.info/warn/error` API'sine dönüştürüldü (2 dashboardScripts client-side çağrısı korundu). `vi.mock("axios")` hoisting uyarısı 5 test dosyasında çözüldü. `.gitignore` `*.md` → `/*.md` daraltıldı (CLAUDE.md artık tracked). Vitest config teardownTimeout eklendi. **189/189 test yeşil, tsc 0 hata.**
+- **AI_PUBLISHER_API_KEY Entegrasyon Fix (14 Haziran 2026):** AI Publisher ↔ Sportoto arası API key entegrasyonu tamamlandı. Paylaşılan anahtar `.env` dosyalarına eklendi. Her iki projede de log warning + hata mesajı iyileştirmesi yapıldı. Plan dökümü: `docs/AI_PUBLISHER_API_KEY_FIX.md`.
+
+## Colab Script Denetimi (14 Haziran 2026)
+- **Kritik Bug Düzeltildi — `NameError: apply_lipsync`:** `colab_server.py` `/localize-dubbing` rotasında `apply_lipsync()` fonksiyonu çağrılıyordu ancak bu fonksiyon dosyada mevcut değildi. Doğru isim `apply_lipsync_internal()` olup imzası farklıydı (3 parametre yerine 2 zorunlu parametre). Düzeltme sonrası Wav2Lip lip-sync başarıyla uygulanabiliyor, başarısız olursa FFmpeg fallback devreye giriyor.
+- **Kritik Eksiklik Düzeltildi — `coqui-tts` Paketi:** `colab_setup.py` kurulum betiğinde XTTS-v2 ses klonlama modelinin kullandığı `coqui-tts` paketi ne import kontrol listesinde ne de `pip install` komutlarında yer alıyordu. Bu durum XTTS-v2'nin hiçbir zaman çalışmamasına neden oluyordu. `coqui-tts` ve `espeak-ng` sistem bağımlılıkları kurulum betiğine eklendi.
+- **24 Endpoint Doğrulandı:** Tüm Flask rotaları (`/health`, `/generate-media`, `/generate-covers`, `/generate-avatar`, `/transcribe`, `/localize-dubbing`, `/generate-broll`, `/shutdown` vb.) kod düzeyinde doğrulandı.
+- **Potansiyel Uyarılar Belgelendi:** Callback fonksiyonlarındaki dosya tanıtıcı sızıntısı ve RealESRGAN model/scale uyumsuzluğu not edildi.
+
 
 ## Yapılan Testler ve Doğrulama
 - **Görsel E2E Tarayıcı Testleri (Yeni):** Playwright kullanılarak headful modda çalışan `scripts/run-e2e.ts` betiği eklendi. Kullanıcı giriş akışı, tema değiştirme, ayarlar menüsü sekmeleri, Fırsatlar Hunisi ve yeni proje formu doldurma adımları görsel olarak ve başarıyla otomatik test edildi.
@@ -103,6 +122,68 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **Otomatik Model Seçimi ve Wan 2.1 Entegrasyonu (12 Haziran 2026 - v4.7):** Video Jobs tablosundaki `production_template` kolonunun seçimine göre `cinematic` (HunyuanVideo), `dynamic` (Wan 2.1), `simple` (LTX-Video) modellerinin otomatik olarak seçilip arka planda asenkron kuyrukta işletilmesi sağlandı. Teknik dropdown seçici arayüzden kaldırılarak yerine modern şablon seçici kartlar ve dinamik i18n açıklamaları eklendi. `tsc` tip denetimi sıfır hata ile doğrulandı.
 - **Otonom Temizlik, Erken Polling Çıkışı ve Ses Klonlama Entegrasyonu (12 Haziran 2026 - v4.8):** Sahne 1 üretimi bittiğinde `job.material_path` dosyasını diskten anında silen optimizasyon eklendi. Polling döngüsünde callback ile push edilen dosyalar tamamlandığında beklemeden erken sonlandırmayı sağlayan early exit mantığı entegre edildi. Colab tarafına lazy XTTS-v2 yükleme, base64 referans ses ve Edge-TTS fallback dublaj/TTS desteği eklendi. Node.js backend'de `users` tablosuna `personal_voice_base64` kolonu, ayarlar paneline referans ses dosyası yükleme ve kuyruktan Colab'a otomatik ses base64 yollama özellikleri tamamlandı. Kurulum rehberi (`KURULUM_VE_GEREKSINIMLER.md`) oluşturuldu, `README.md` ve `CLAUDE.md` şemaları güncellendi. Vitest ile 18/18 testin tamamı başarıyla yeşile döndürülmüştü.
 - **Colab Hızlı Başlatma, Otonom Kapanma ve Yeni Entegrasyon Testleri (12 Haziran 2026 - v4.9):** Google Colab sunucusunun fatura maliyetlerini düşürmek için kuyruk bittiğinde veya el ile durdurulduğunda Colab VM'ini unassign (`google.colab.runtime.unassign()`) eden `/shutdown` endpoint'i ve ColabManager entegrasyonu tamamlandı. Sunucu başlatma süresini 10 kat hızlandırmak için `pip` yerine `uv pip install --system --prefer-binary` geçişi yapıldı. iyzico webhook doğrulamaları, timeline amix müzik miksajı ve çoklu karakter lipsync tag parsing akışlarını mock'layıp doğrulayan yeni Vitest entegrasyon test dosyası (`src/test_characters.spec.ts`) yazıldı. Tüm testler (22/22) başarıyla yeşillendi.
+
+---
+
+## v6.0 — Mimari Kararlar (15 Haziran 2026)
+
+| Karar | Seçim | Gerekçe |
+|---|---|---|
+| **Cloud** | **GCP** | T4 GPU $0.16/hr (AWS $0.53), Gemini native, TPU opsiyonu |
+| **Ödeme** | **Iyzico** | Stripe TR'de desteklenmez, Iyzico %2.39+0.25TL taksit+subscription |
+| **Avatar/Lip-Sync** | **MuseTalk + Wav2Lip** | Self-hosted Colab'da, HeyGen/Tavus ($54+/ay) yerine $0 |
+| **Video Kişiselleştirme** | **Remotion** | Zaten projede var, Tavus yerine ücretsiz |
+| **Görsel Kaynak** | **SD/Flux (Colab)** | Pexels rate limit yok, API bağımlılığı yok |
+| **LLM** | **Gemini (birincil) + Minimax M3 (fallback)** | Google AI Ultra abonelik mevcut |
+| **TalkShow** | OpenRouter + ZEN free modeller | Çoklu karakter halüsinasyon önleme |
+| **DeepSeek** | KALDIRILDI | Kullanılmıyor |
+
+Detaylı roadmap: `docs/v6_roadmap/README.md`
+
+## v6.0 — Kalan İşler (Sprint 18 Roadmap'ten 6 Job)
+
+Sprint 18'den kalan 6 Job (24 özellik) v6.0 planına entegre edildi:
+
+| Job | Özellik | Faz/Track | Mevcut Servis |
+|---|---|---|---|
+| **Job-2** | Split Screen + MuseTalk Avatar | **Faz 3B** | Yeni (MuseTalk Colab) |
+| **Job-3** | Smart Dubbing (beat-sync+transkript+dublaj) | **Faz 4A** | ✅ `beatSyncEditor.ts`, `transcriptEditor.ts`, `autoDubbing.ts` |
+| **Job-4** | Cut & Color Agent | **Faz 3C** | ✅ `colorGrader.ts`, `chatToEdit.ts` |
+| **Job-5** | Dynamic Subtitles + faster-whisper | **Faz 4B** | ✅ `DynamicCaptions.tsx`, `subtitleRenderer.ts` |
+| **Job-6** | AI Studio (eye contact+sound+reframe+inpaint) | **Faz 4C** | ✅ Colab endpoint'leri mevcut |
+| **Job-7** | Viral Engine (B-Roll+hook+hashtag) | **Faz 5A** | ✅ `aiBroll.ts`, `viralHookGenerator.ts` |
+
+Toplam: 6 Job × 4 özellik = 24 özellik. Servislerin çoğu mevcut, sadece queue/UI bağlantısı gerekli.
+
+Önerilen işleme sırası: **Job-5 (hızlı kazanım) → Job-4 (kolay) → Job-3 (orta) → Job-7 → Job-6 → Job-2**
+
+### Faz 7 — Testing & QA (Yeni)
+
+| Track | Odak | Araç | Hedef |
+|---|---|---|---|
+| **7A** | Statik Analiz & Kod Kalitesi | ESLint, tsc strict, custom script | 0 warning, 0 hardcoded string |
+| **7B** | Birim Testleri | Vitest | ~98 test, tüm servisler |
+| **7C** | Entegrasyon Testleri | Colab mock + Express | Full pipeline, queue, SSE, routes |
+| **7D** | E2E Testleri | Playwright | Kullanıcı akışları, publishing |
+| **7E** | CI Altyapı | GitHub Actions, coverage | >%80 branch, 3 platform |
+
+Detay: `docs/v6_roadmap/Faz_7_Testing_QA.md`
+
+### Grup 1 Uygulama Durumu (15 Haziran 2026)
+
+| Track | Durum | Yapılan |
+|---|---|---|
+| **1B** | ✅ Tamam | `src/services/nicheProfile.ts` + `src/routes/niche.ts` — 3 built-in niche (gaming, comedy, education) + AI analysis fallback |
+| **1C** | ✅ Tamam | `queue.ts` — SD/Flux pre-scene image gen (Flux + DreamShaper), Colab endpoint zaten mevcuttu |
+| **3B** | ✅ Tamam (Split) | `src/services/splitScreen.ts` + `src/routes/splitScreen.ts` — 5 layout (50/50, 70/30, 60/40, 30/70, 40/60), 4 position (top/bottom/left/right) |
+| **3B** | ⏳ Kısmi (MuseTalk) | Split screen hazır; MuseTalk Colab endpoint'i sonraki iterasyonda eklenecek |
+| **3C** | ✅ Tamam | `queue.ts` — color grade post-processing stage, 7 preset (warm_cinematic, cool_moody, cinematic, neon_purple, vintage_warm, desaturated, high_contrast) |
+| **4B** | ✅ Tamam | `queue.ts` — `kinetic_subtitles_style` desteği (bounce/pulse/shake/pop/wave), `videoService.ts` — ASS converter style parametresi |
+| **1A** | ⏳ Kısmi | Template prompt servisi mevcut; SwiftClip 32 template genişletmesi sonraki iterasyonda |
+| **DB** | ✅ Tamam | 10 yeni kolon: niche_profile, niche_enabled, split_layout, split_enabled, color_grade_preset, color_grade_enabled, sd_flux_enabled, sd_flux_prompt, kinetic_subtitles_style, transcript_word_timings |
+| **Compile** | ✅ Geçti | `tsc --noEmit` 0 hata |
+
+Kalan Grup 1: MuseTalk Colab endpoint (3B), SwiftClip 32 template genişletmesi (1A)
 
 ---
 
@@ -260,6 +341,50 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 
 ---
 
+## ✅ Sprint 4B — ScriptEngine + Script Routes Tests (14 Haziran 2026)
+- **Test Dosyası:** `src/test_scripts.spec.ts` — 27 test, 4 describe bloğu
+- **1. AI Methods (real class + spyOn):** `generateOutline` (structured scenes), `generateDialogue` (dialogue text)
+- **2. generateFullScript (real class + mocked AI):** creates script+segments in DB, throws for non-existent show
+- **3. CRUD operations (real class, DB):** listScripts, getScript (with segments + null), updateScript (with null), updateSegment (with null), deleteScript (with false)
+- **4. REST API (spy on exports):** 14 endpoint test — POST generate (reject + success), GET list, GET by id (with 404), PUT update (with 404), PUT segment (with 404 + mismatch), POST regenerate (with 400), DELETE (with 404), 401 unauthenticated
+- **Mock Mimarisi:** `rate-limit`, `audit`, `redis` mock'ları module-level. ScriptEngine metodlarına doğrudan `vi.spyOn`. Route handler'larda export edilen `scriptEngine` singleton'ı kullanıldı.
+- **Önemli:** Stale `.js` derlemeleri vitest'i `.ts` kaynakları yerine compiled JS'e yönlendiriyordu — testlerde sorun yaşanırsa `src/routes/scripts.js` ve `src/services/talkShow/scriptEngine.js` temizlenmeli.
+- **Sonuç:** `tsc --noEmit` 0 hata, 27/27 vitest yeşil.
+
+---
+
+## ✅ Sprint 3B — Sportoto Bridge + Script Engine Entegrasyonu (14 Haziran 2026)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — DiscussionSource** | Interface (SportotoSource + StubSource), refactored sportotoBridge.ts | ✅ Tamam |
+| **B — Script Engine Entegrasyonu** | `ScriptEngine.generateFromDiscussion()` — Sportoto utterance'larını AI ile zenginleştirip script'e dönüştürür | ✅ Tamam |
+| **C — Endpoint** | `POST /sportoto/:week/generate-script` — Sportoto → ScriptEngine pipeline | ✅ Tamam |
+
+**Yeni Dosyalar:**
+- `src/services/talkShow/discussionSource.ts` — `DiscussionSource` interface, `SportotoUtterance`/`SportotoDiscussion` tipleri, `StubSource` sınıfı
+- `src/services/talkShow/sportotoBridge.ts` — `SportotoSource` class (DiscussionSource implementasyonu), geriye uyumlu `fetchWeeklyDiscussion` fonksiyonu korundu
+
+**Değişen Dosyalar:**
+- `src/services/talkShow/scriptEngine.ts` — `generateFromDiscussion()` metodu eklendi
+- `src/routes/talkShow.ts` — `POST /sportoto/:week/generate-script` endpoint'i, `DiscussionSource` tip import'ı
+- `src/services/talkShow/videoProducer.ts` — `SportotoDiscussion` import'ı `discussionSource.ts`'e yönlendirildi
+
+**Mimari:**
+```
+StudioPanel (React) → POST /sportoto/:week/generate-script
+  → SportotoSource.fetchWeeklyDiscussion()  (Sportoto API)
+  → ScriptEngine.generateFromDiscussion()   (utterance → AI zenginleştirme → DB)
+  → scripts + script_segments tablolarına yazılır
+```
+- `DiscussionSource` interface: hem gerçek Sportoto API (SportotoSource) hem test/mock (StubSource) aynı arayüzden kullanılabilir
+- `StubSource` deterministik hash tabanlı mock veri üretir — CI/test ortamlarında çalışır
+- `generateFromDiscussion()` her utterance'ı karakter eşlemesi yaparak AI ile zenginleştirir, scene_type'ı pozisyona göre belirler (opening/talk/closing)
+
+**Doğrulama:** `tsc --noEmit` 0 hata, 43/43 vitest (27 Sprint4B + 16 Sprint9) yeşil.
+
+---
+
 ## ✅ Sprint 4.A — Çıktılar (E2E Testler)
 - **E2E Test Suite:** `src/test_e2e_features.spec.ts` — 4 ana modül için 20 entegrasyon testi:
   - **vibeclip Chat-to-Edit:** `parse`, `apply`, `score`, geçersiz komut
@@ -370,5 +495,323 @@ Bu proje, otonom çoklu sosyal medya destekli AI video üretim ve pazarlama plat
 - **ESLint:** `npm run check:lint` sıfır uyarı
 - **Vitest:** 14 test dosyası, 165/165 test başarıyla geçti
 
+---
 
+## ✅ Sprint 4A — Frontend TalkShowEditor (14 Haziran 2026)
 
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Config Screen** | Gösteri seç/oluştur, karakter listesi, platform checkboxes, script oluşturma butonu | ✅ Tamam |
+| **B — Edit Screen** | Script segment listesi, inline dialogue edit, regenerate butonu, produce video | ✅ Tamam |
+| **C — Progress Screen** | SSE progress bar, stage indicator, job durumu, tamamlanma bildirimi | ✅ Tamam |
+
+**Yeni Dosyalar:**
+- `client/src/components/TalkShowEditor.tsx` — 3 ekranlı Talk-Show editörü:
+  - Config: mevcut gösteriler dropdown, yeni gösteri oluşturma, karakter seçimi, platform checkboxes
+  - Edit: script seçici, segment kartları (scene_type badge, karakter adı, dialogue_text + inline edit, regenerate butonu)
+  - Progress: SSE EventSource ile canlı ilerleme, progress bar, yüzde, stageKey
+
+**Değişen Dosyalar:**
+- `client/src/components/StudioPanel.tsx` — Inline `TalkShowPanel` (648 satır) kaldırıldı, `<TalkShowEditor />` ile değiştirildi
+- `client/src/types.ts` — `Script`, `ScriptSegment`, `ScriptWithSegments` tipleri eklendi
+
+**Kullanıcı Akışı:**
+```
+Talk-Show sekmesi
+  → Config: mevcut gösteri seç veya yeni oluştur
+  → "AI ile Script Oluştur" → POST /scripts/generate
+  → Edit: segmentleri görüntüle, düzenle, yeniden üret
+  → "Video Üret" → POST /scripts/:id/produce → queue başlar
+  → Progress: SSE ile canlı takip (%0 → %100)
+  → Tamamlandı: "Yeni Proje" butonu
+```
+
+**Doğrulama:** `tsc --noEmit` 0 hata, `vite build` başarılı, 43/43 vitest yeşil.
+
+---
+
+## ✅ Sprint 3A — Video Producer (Script → Video Pipeline) (14 Haziran 2026)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Script→Video Adapter** | `scriptToVideoAdapter.ts` — ScriptSegment[] → video_scenes + video_jobs | ✅ Tamam |
+| **B — API Endpoint** | `POST /scripts/:scriptId/produce` — script onayı sonrası kuyruğa ekleme | ✅ Tamam |
+| **C — Scene Composer** | sceneComposer.ts (BGM, crossfade, avatar overlay) zaten kullanıma hazır | ✅ Tamam |
+
+**Yeni Dosyalar:**
+- `src/services/talkShow/scriptToVideoAdapter.ts` — `scriptToVideo()` fonksiyonu:
+  - `buildVideoPrompt()`: ScriptSegment içeriğinden video promptu oluşturur (scene_type + karakter özellikleri + camera_instruction)
+  - `createVideoJob()`: video_jobs tablosuna kayıt ekler
+  - `insertScenes()`: ScriptSegment[] → video_scenes satırlarına dönüştürür
+  - `mapCameraInstruction()`: Kamera hareketini queue'ya uygun formata normalize eder
+
+**Değişen Dosyalar:**
+- `src/routes/scripts.ts` — `POST /scripts/:scriptId/produce` endpoint'i eklendi
+
+**Mimari:**
+```
+POST /scripts/:scriptId/produce
+  → scriptEngine.getScript() script + segmentler
+  → scriptToVideoAdapter.scriptToVideo()
+    → createVideoJob()     (video_jobs tablosu)
+    → insertScenes()       (video_scenes tablosu, queue skip AI planning)
+    → checkQueue()         (kuyruk tetiklenir)
+```
+- Queue.ts zaten `video_scenes` önceden doldurulmuşsa AI planlamayı atlar (line 139, 216)
+- sceneComposer.ts `compose()` zaten BGM (`backgroundMusicPath`), crossfade (`concatScenes`), avatar overlay (`buildSceneFilter`) destekler
+- Mevcut queue pipeline'ı her sahne için Colab video + TTS üretir, FFmpeg ile miksler
+
+**Doğrulama:** `tsc --noEmit` 0 hata, 43/43 vitest yeşil.
+
+---
+
+## ✅ Sprint 2B — Avatar Style Transfer (14 Haziran 2026)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Colab Avatar Pipeline** | `/generate-avatar` endpoint'ine `style` parametresi (realistic/animatic), prompt mühendisliği | ✅ Tamam |
+| **B — PhotoEditor Entegrasyonu** | CharacterCreationPanel + SettingsModal'da PhotoEditor'a avatar yönlendirme | ✅ Tamam |
+| **C — avatar_source UI** | AI/upload kaynak ayırımı gösterimi, stiller arası toggle | ✅ Tamam |
+
+**Değişen Dosyalar:**
+- `colab_server.py` — `/generate-avatar`: `style` parametresi, realistic/animatic prompt seçimi
+- `src/routes/characters.ts` — `POST /generate-avatar`: `avatar_style` body parametresi Colab'a iletilir
+- `client/src/components/CharacterCreationPanel.tsx` — Avatar stil toggle, AI üret butonu, PhotoEditor entegrasyonu, avatar_source gösterimi
+- `client/src/components/SettingsModal.tsx` — Avatar stil toggle, PhotoEditor entegrasyonu
+
+**Akış:**
+```
+Kullanıcı stil seçer (Gerçekçi / Animatik)
+  → "AI Üret" butonu → POST /characters/generate-avatar (avatar_style ile)
+  → Colab DreamShaper 8 (style'a göre prompt seçimi)
+  → Base64 döner → önizleme + "Düzenle" butonu
+  → PhotoEditor (arka plan kaldırma, bölgesel inpaint)
+  → Kaydet → characters tablosuna yazılır
+```
+
+**Doğrulama:** `tsc --noEmit` 0 hata, 43/43 vitest yeşil.
+
+---
+
+## ✅ Top Yuvarlak AI Talk-Show MVP — Per-Agent Model Routing + Video (14 Haziran 2026)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Model Routing** | Maç Yorumcusu→Gemini, Eski Futbolcu→Claude, Kumarbaz→DeepSeek, DataScout→Zen | ✅ Tamam |
+| **B — Video Pipeline** | `orchestrateToVideo.ts` — FFmpeg drawtext scene render, concat, BGM mix | ✅ Tamam |
+| **C — Endpoint** | `POST /talkshow/orchestrate/video` — orchestrator + video tek çağrıda | ✅ Tamam |
+
+**Yeni Dosyalar:**
+- `src/services/talkShow/orchestratorToVideo.ts` — `orchestrateToVideo()`:
+  - Her ajan mesajı için renkli drawtext sahnesi (karakter adı + konuşma metni)
+  - concat ile tüm sahneleri birleştirme
+  - Opsiyonel background music mix (afade + volume 0.15)
+  - Temp dosya temizliği
+
+**Değişen Dosyalar:**
+- `src/services/talkShow/orchestrator.ts` — `AGENT_META` provider routing (zen→gemini/claude/deepseek/zen), `aiGenerate()` model dispatch
+- `src/routes/talkShow.ts` — `POST /orchestrate/video` endpoint'i
+
+**Agent→Model Haritası:**
+| Agent | Provider | API Key |
+|---|---|---|
+| Meta-Orchestrator (Sunucu) | Zen chain | Yok (ücretsiz) |
+| Maç Yorumcusu | Gemini 2.5 Flash | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Eski Futbolcu | Claude (MiniMax M3) | `ANTHROPIC_API_KEY` |
+| Kumarbaz | DeepSeek | `DEEPSEEK_API_KEY` |
+| İstihbarat Subayı | Zen chain | Yok (ücretsiz) |
+- Anahtar yoksa Zen chain fallback kullanılır
+
+**Doğrulama:** `tsc --noEmit` 0 hata, 43/43 vitest yeşil.
+
+---
+
+## ✅ Sprint 2A — Script Engine (14 Haziran 2026)
+
+| Paralel Track | İçerik | Durum |
+|---|---|---|
+| **A — Script Engine** | Showrunner LLM (outline) + per-character LLM (dialogue) + CRUD API + DB tabloları | ✅ Tamam |
+
+**Yeni Dosyalar:**
+- `src/types/script.ts` — `Script`, `ScriptSegment`, `ScriptWithSegments`, `ScriptStatus`, `SceneType` tipleri
+- `src/services/talkShow/scriptEngine.ts` — `ScriptEngine` sınıfı:
+  - `generateOutline()`: Showrunner LLM (model chain → `generateObject` + Zod) ile sahne planı çıkarır
+  - `generateDialogue()`: Per-character LLM dispatch (`llm_provider`/`llm_model`'a göre `google`/`zen`/`claude`/`deepseek`)
+  - `generateFullScript()`: Outline → per-scene dialogue → DB kaydetme pipeline'ı
+  - `regenerateSegment()`: Tek segment yeniden üretme
+  - CRUD: `listScripts`, `getScript`, `updateScript`, `deleteScript`, `updateSegment`
+- `src/routes/scripts.ts` — 7 endpoint (`scriptsRouter`, `/api/v1/talkshow` altında mount):
+  - `POST /scripts/generate` — Full script üretimi
+  - `GET /:showId/scripts` — Show'a ait scriptleri listele
+  - `GET /scripts/:scriptId` — Script detay + segmentler
+  - `PUT /scripts/:scriptId` — Script meta güncelleme
+  - `DELETE /scripts/:scriptId` — Script silme
+  - `PUT /scripts/:scriptId/segments/:segmentId` — Segment düzenleme
+  - `POST /scripts/:scriptId/regenerate/:segmentId` — Segment yeniden üretme
+
+**Değişen Dosyalar:**
+- `src/db.ts` — `scripts` + `script_segments` tabloları eklendi (CREATE TABLE + foreign keys)
+- `src/server.ts` — `scriptsRouter` import ve `/api/v1/talkshow` altında mount
+
+**Doğrulama:** `tsc --noEmit` 0 hata, ESLint 0 uyarı.
+
+**Mimari Notlar:**
+- Showrunner: mevcut model chain'i kullanır (Zen → Minimax → Gemini), `generateObject` + `OutlineSchema` (Zod) ile yapılandırılmış çıktı
+- Karakter diyalogları: `character.llm_provider`'a göre otomatik model dispatch:
+  - `zen` → chain'den ilk model
+  - `gemini` → `@ai-sdk/google`
+  - `claude` → `@ai-sdk/anthropic` (Minimax üzerinden)
+  - `deepseek` → `@ai-sdk/openai` (DeepSeek API)
+  - Herhangi bir hata durumunda fallback mesaj kullanılır (servis kesintisiz)
+- `generateObject` için `skipZenModels=true` (Zen response_format desteklemez)
+
+---
+
+## Sprint 1 v2 — Clipper ViralAnalyzer & Token Tracking (15 Haziran 2026)
+
+**Job-1: Otonom Clipper v2 — Feature 1 tamamlandı**
+
+### Yapılan Değişiklikler
+
+**1. ViralAnalyzer v2 — Gemini 2.5 Flash Structured Output**
+- `src/services/clipper/viralAnalyzer.ts` — Tam yeniden yazım
+- `generateText` + regex JSON parsing → `generateObject` + Zod şeması (ViralAnalysisSchema)
+- Tek LLM çağrısı ile hem segment skorları hem metadata (caption, hashtags, highlights) üretiliyor
+- Geliştirilmiş Türkçe viral analiz prompt'u: duygusal analiz, hook kalitesi, trend uyumu, paylaşılabilirlik
+- Keyword fallback iyileştirildi: Puan ağırlıklı Türkçe kelime dağarcığı (+15/e +10/e +8/e)
+
+**2. Token Tracker — Model Bazlı Token Kullanım Takibi**
+- `src/lib/token-tracker.ts` — Yeni dosya
+- Her model için promptTokens, completionTokens, totalTokens, callCount takibi
+- `tokenTracker.getSnapshot()` ile anlık özet, `tokenTracker.logSummary()` ile loglama
+- `ViralAnalyzer.getLastTokenUsage()` ile son çağrının detayları
+
+**3. Testler**
+- `src/test_clipper_v2.spec.ts` — 12 test (ViralAnalyzer v2 + TokenTracker)
+- Mevcut `test_clipper_services.spec.ts` — 14 test (SmartCropper, SubtitleMixer, SplitScreen) sağlam
+
+### Doğrulama
+- `npx tsc --noEmit` — 0 hata ✅
+- `npx vitest run` — 228/228 test geçti ✅
+- 17 test dosyasının tamamı yeşil ✅
+
+### Dosya Yapısı
+```
+src/
+├── lib/token-tracker.ts          (YENİ — token usage tracker)
+├── services/clipper/viralAnalyzer.ts  (YENİDEN YAZILDI — Zod + generateObject)
+└── test_clipper_v2.spec.ts       (YENİ — 12 test)
+```
+
+---
+
+## Sprint 1 v2 — Feature 2: Per-Frame Dinamik Yüz Takibi (15 Haziran 2026)
+
+**Job-1: Otonom Clipper v2 — Feature 2 tamamlandı**
+
+### Yapılan Değişiklikler
+
+**1. PerFrameCropper Servisi**
+- `src/services/clipper/perFrameCropper.ts` — Yeni dosya
+- faceTracker'dan gelen per-frame CropFrame[] verisini alır
+- Cubic ease-in-out interpolasyon ile yumuşak keyframe'ler oluşturur
+- Videoyu 0.5sn chunk'lara böler, her birini ayrı ayrı kırpar ve birleştirir
+- Yüz bulunamadığında merkez kırpma fallback'i
+
+**2. SmartCropper.cropPerFrame()**
+- `src/services/clipper/smartCropper.ts` — `cropPerFrame()` metodu eklendi
+- Lazy import ile perFrameCropper modülünü yükler
+- Tüm SmartCropOptions parametrelerini destekler
+
+**3. Exports**
+- `src/services/clipper/index.ts` — `cropPerFrame` ve ilgili tipler export edildi
+
+**4. Testler**
+- `src/test_clipper_v2.spec.ts` — 15 test (3 yeni perFrameCropper testi)
+
+### Doğrulama
+- `npx tsc --noEmit` — 0 hata ✅
+- `npx vitest run` — 231/231 test geçti ✅
+- 17 test dosyasının tamamı yeşil ✅
+
+### Dosya Yapısı
+```
+src/
+├── lib/token-tracker.ts              (YENİ)
+├── services/clipper/
+│   ├── perFrameCropper.ts            (YENİ — per-frame dynamic crop)
+│   ├── smartCropper.ts               (GÜNCELLENDİ — cropPerFrame eklendi)
+│   ├── viralAnalyzer.ts              (YENİDEN YAZILDI)
+│   └── index.ts                      (GÜNCELLENDİ — export eklendi)
+└── test_clipper_v2.spec.ts           (GÜNCELLENDİ — 15 test)
+```
+
+---
+
+## Sprint 1 v2 — Feature 3: Otomatik Altyazı & BGM (15 Haziran 2026)
+
+**Job-1: Otonom Clipper v2 — Feature 3 tamamlandı**
+
+### Yapılan Değişiklikler
+
+**1. autoSubtitleBgm Servisi**
+- `src/services/clipper/autoSubtitleBgm.ts` — Yeni dosya
+- `autoProcessClip()` fonksiyonu: SRT üret → altyazı göm → BGM bul/üret → ses-bandırma → miksle → temizle
+- Kelime bazlı SRT: segment.suggestedCaption'dan kelime时间 damgalı SRT üretir
+- Otomatik BGM: musicPath verilmezse sessiz döngü üretir (FFmpeg anullsrc)
+- Ses bandırma (ducking): konuşmayan kısımlarda BGM sesini otomatik artırır
+
+**2. Clipper Route — POST /:id/auto**
+- `src/routes/clipper.ts` — Yeni endpoint
+- Tek istekle tüm pipeline: kırp + altyazı + BGM + ducking
+- faceTracking desteği, segment seçimi, stil özelleştirme
+
+**3. Testler**
+- `src/test_clipper_v2.spec.ts` — 18 test (3 yeni autoSubtitleBgm testi)
+
+### Doğrulama
+- `npx tsc --noEmit` — 0 hata ✅
+- `npx vitest run` — 234/234 test geçti ✅
+
+---
+
+## Sprint 1 v2 — Feature 4: RabbitMQ Kuyruk Entegrasyonu (15 Haziran 2026)
+
+**Job-1: Otonom Clipper v2 — Feature 4 tamamlandı (TAMAM)**
+
+### Yapılan Değişiklikler
+
+**1. DB Migration**
+- `src/db.ts` — clip_jobs tablosuna 3 sütun eklendi: `retry_count`, `priority`, `max_retries`
+
+**2. ClipQueue — Retry + Priority**
+- `src/lib/clip-queue.ts` — Yeniden yazıldı
+- `sendClipToQueue()`: Priority ile kuyruğa ekleme (RabbitMQ message priority)
+- `retryClipJob()`: Başarısız işleri exponential backoff ile yeniden kuyruğa ekleme
+- Worker: Hata durumunda `retry_count < max_retries` kontrolü ile otomatik retry
+- Enhanced SSE progress: transcribe → analyze → retry → complete/error aşamaları
+
+**3. Clipper Routes — Priority + Retry + SSE Progress**
+- `src/routes/clipper.ts` — Güncellendi
+- `/extract`: `priority` parametresi eklendi (1=en yüksek, 10=en düşük)
+- `POST /:id/retry`: Başarısız clip işini yeniden kuyruğa ekle
+- `GET /progress/:id`: SSE ile clip job ilerleme durumunu stream et
+
+**4. Testler**
+- `src/test_clipper_v2.spec.ts` — 28 test (10 yeni: sendClipToQueue, retryClipJob, route tests)
+
+### Doğrulama
+- `npx tsc --noEmit` — 0 hata ✅
+- `npx vitest run` — 244/244 test geçti ✅
+- 17 test dosyasının tamamı yeşil ✅
+
+### Dosya Yapısı
+```
+src/
+├── db.ts                              (GÜNCELLENDİ — clip_jobs migration)
+├── lib/clip-queue.ts                  (YENİDEN YAZILDI — retry + priority)
+├── routes/clipper.ts                  (GÜNCELLENDİ — priority, retry, SSE progress)
+└── test_clipper_v2.spec.ts            (GÜNCELLENDİ — 28 test)
+```
+
+### Job-1 Özeti: 4/4 özellik tamamlandı ✅

@@ -2,6 +2,7 @@ import { Pool, PoolConfig } from 'pg';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import { encryptUsername } from './lib/crypto.js';
+import { Logger } from './lib/logger.js';
 
 dotenv.config();
 
@@ -234,9 +235,9 @@ export async function initDatabase() {
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
     const hashedPassword = await bcrypt.hash(adminPass, 10);
     await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedUsername, hashedPassword]);
-    console.log('[INFO] Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
+    Logger.info('Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
   } else {
-    console.log('[INFO] PostgreSQL Veritabanı hazır.');
+    Logger.info('PostgreSQL Veritabanı hazır.');
   }
 
   // Schema migrations
@@ -314,25 +315,41 @@ export async function initDatabase() {
 
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS background_music_path TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;');
+
+  // v6.0 Grup 1 columns
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS niche_profile TEXT;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS niche_enabled INTEGER DEFAULT 0;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_layout TEXT DEFAULT '50/50';");
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_enabled INTEGER DEFAULT 0;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_preset TEXT DEFAULT 'none';");
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_enabled INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_enabled INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_prompt TEXT;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles_style TEXT DEFAULT 'bounce';");
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS transcript_word_timings TEXT;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS music_volume REAL DEFAULT 0.2;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS speaker VARCHAR(50);');
 
-  // Characters table for Talk-Show & story consistency
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS characters (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      name VARCHAR(100) NOT NULL,
-      description TEXT DEFAULT '',
-      slug VARCHAR(100) NOT NULL,
-      role_archetype VARCHAR(50) DEFAULT 'supporting',
-      reference_image_base64 TEXT,
-      tts_voice_id VARCHAR(100) DEFAULT '',
-      voice_provider VARCHAR(20) DEFAULT 'edge',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  // Clip queue: retry, priority support
+  await db.exec('ALTER TABLE clip_jobs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE clip_jobs ADD COLUMN IF NOT EXISTS priority INTEGER DEFAULT 5;');
+  await db.exec('ALTER TABLE clip_jobs ADD COLUMN IF NOT EXISTS max_retries INTEGER DEFAULT 3;');
+
+  // Characters table Talk-Show columns migration (second schema)
+  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS slug VARCHAR(100) NOT NULL DEFAULT \'\'');
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS role_archetype VARCHAR(50) DEFAULT 'supporting'");
+  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS reference_image_base64 TEXT');
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS tts_voice_id VARCHAR(100) DEFAULT ''");
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS voice_provider VARCHAR(20) DEFAULT 'edge'");
+  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+  // Sprint 3.B Talk-Show character extensions
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(20) DEFAULT 'zen'");
+  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_model VARCHAR(100)');
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_style VARCHAR(20) DEFAULT 'realistic'");
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_source VARCHAR(20) DEFAULT 'upload'");
+  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#00F2FE'");
+  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS relationships TEXT');
 
   // Credit system migrations: admin flag + model-based pricing
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;');
@@ -452,5 +469,42 @@ export async function initDatabase() {
       parent_version_id INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+  `);
+
+  // Sprint 2A: Script Engine tables for AI Talk-Show
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS scripts (
+      id SERIAL PRIMARY KEY,
+      show_id INTEGER NOT NULL REFERENCES video_jobs(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'draft',
+      scene_count INTEGER DEFAULT 0,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS script_segments (
+      id SERIAL PRIMARY KEY,
+      script_id INTEGER NOT NULL REFERENCES scripts(id) ON DELETE CASCADE,
+      scene_number INTEGER NOT NULL,
+      scene_type TEXT DEFAULT 'talk',
+      character_id INTEGER REFERENCES characters(id) ON DELETE SET NULL,
+      character_name TEXT,
+      dialogue_text TEXT DEFAULT '',
+      camera_instruction TEXT DEFAULT '',
+      duration_seconds REAL DEFAULT 6.0,
+      order_index INTEGER NOT NULL,
+      metadata JSONB DEFAULT '{}'
+    );
+  `);
+
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_scripts_show_id ON scripts(show_id);
+    CREATE INDEX IF NOT EXISTS idx_scripts_user_status ON scripts(user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_script_segments_script_order ON script_segments(script_id, order_index);
   `);
 }

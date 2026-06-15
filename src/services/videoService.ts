@@ -10,6 +10,7 @@ export interface FFmpegCommand {
 }
 
 import { Worker } from 'worker_threads';
+import { Logger } from '../lib/logger.js';
 
 const __dirnameStr = __dirname;
 
@@ -25,12 +26,17 @@ export function runInWorker<T = WorkerResult>(
   args: string[],
   timeoutMs = 30000
 ): Promise<T> {
+  let finalArgs = [...args];
+  if (cmd === 'ffmpeg' && !finalArgs.includes('-threads')) {
+    finalArgs = ['-threads', '1', ...finalArgs];
+  }
+
   return new Promise((resolve, reject) => {
     const workerJsPath = path.join(__dirnameStr, '..', 'workers', 'ffmpeg-pool-worker.js');
     const hasJsFile = fs.existsSync(workerJsPath);
 
     if (hasJsFile) {
-      const worker = new Worker(workerJsPath, { workerData: { cmd, args, timeoutMs } });
+      const worker = new Worker(workerJsPath, { workerData: { cmd, args: finalArgs, timeoutMs } });
       let settled = false;
 
       worker.on('message', (msg: any) => {
@@ -51,7 +57,7 @@ export function runInWorker<T = WorkerResult>(
       // Geliştirme veya test ortamında (derlenmiş JS yokken), FFmpeg harici bir process olduğundan
       // ana thread'i bloke etmeden doğrudan child_process.execFile ile çalıştır
       const { execFile } = require('child_process');
-      const child = execFile(cmd, args, (error: any, stdout: string, stderr: string) => {
+      const child = execFile(cmd, finalArgs, (error: any, stdout: string, stderr: string) => {
         if (error) {
           resolve({
             status: 'error',
@@ -95,11 +101,11 @@ export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<
   for (let i = 0; i < commands.length; i++) {
     const { cmd, args, timeoutMs = 30000 } = commands[i];
     try {
-      console.log(`[INFO] FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
+      Logger.info(`FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
       await runFFmpeg(cmd, args, timeoutMs);
       return;
     } catch (err: any) {
-      console.warn(`[WARN] FFmpeg Coworker deneme ${i + 1} başarısız oldu. Hata: ${err.message}`);
+      Logger.warn(`FFmpeg Coworker deneme ${i + 1} başarısız oldu. Hata: ${err.message}`);
       if (i === commands.length - 1) {
         throw err;
       }
@@ -288,7 +294,7 @@ export async function extractReferenceFrame(videoPath: string): Promise<string> 
       return `data:image/png;base64,${base64}`;
     }
   } catch (err) {
-    console.error('[ERROR] extractReferenceFrame failed:', err);
+    Logger.error('extractReferenceFrame failed', err);
   } finally {
     if (await fs.pathExists(tempOutput)) {
       await fs.remove(tempOutput);
@@ -356,7 +362,7 @@ export async function extractReferenceFrameAtTime(videoPath: string, timestampSe
       return `data:image/png;base64,${base64}`;
     }
   } catch (err) {
-    console.error('[ERROR] extractReferenceFrameAtTime failed:', err);
+    Logger.error('extractReferenceFrameAtTime failed', err);
   } finally {
     if (await fs.pathExists(tempOutput)) {
       await fs.remove(tempOutput);
@@ -372,7 +378,7 @@ export async function extractLastFrame(videoPath: string): Promise<string> {
     const targetTime = Math.max(0, dur - 0.15);
     return await extractReferenceFrameAtTime(videoPath, targetTime);
   } catch (err) {
-    console.error('[ERROR] extractLastFrame failed, using default fallback:', err);
+    Logger.error('extractLastFrame failed, using default fallback', err);
     return await extractReferenceFrame(videoPath);
   }
 }
@@ -411,7 +417,7 @@ export async function concatVideosWithCrossfade(
   // Validate durations. If any video is shorter than transDur * 2, fallback to concat demuxer (normal concat)
   const canXFade = durations.every(d => d > transDur * 2);
   if (!canXFade) {
-    console.warn('[WARN] Videolar crossfade icin cok kisa, normal concat uygulaniyor.');
+    Logger.warn('Videolar crossfade icin cok kisa, normal concat uygulaniyor.');
     const txt = path.join(path.dirname(outputPath), `temp_concat_${Date.now()}.txt`);
     await fs.writeFile(txt, videoPaths.map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'));
     try {
@@ -525,13 +531,14 @@ function formatSecondsToAssTime(seconds: number): string {
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
 }
 
-// Helper: SRT dosyasını Alex Hormozi stili kinetik ASS dosyasına dönüştür
+// Helper: SRT dosyasını kinetik ASS dosyasına dönüştür (v6.0 — style parameter)
 export async function convertSrtToKineticAss(
   srtPath: string,
   assPath: string,
-  primaryColor = '#00F2FE', // Neon Cyan
-  secondaryColor = '#FFFFFF', // Beyaz
-  fontName = 'Arial'
+  primaryColor = '#00F2FE',
+  secondaryColor = '#FFFFFF',
+  fontName = 'Arial',
+  animStyle: 'bounce' | 'pulse' | 'shake' | 'pop' | 'wave' = 'bounce'
 ): Promise<void> {
   const content = await fs.readFile(srtPath, 'utf-8');
   const blocks = content.split(/\r?\n\r?\n/);
@@ -543,13 +550,23 @@ export async function convertSrtToKineticAss(
       const r = cleaned.substring(0, 2);
       const g = cleaned.substring(2, 4);
       const b = cleaned.substring(4, 6);
-      return `&H00${b}${g}${r}&`; // ASS formatı AABBGGRR (Blue Green Red)
+      return `&H00${b}${g}${r}&`;
     }
     return '&H00FFFFFF&';
   };
 
   const assPrimary = hexToAssColor(primaryColor);
   const assSecondary = hexToAssColor(secondaryColor);
+
+  const styleTags: Record<string, string> = {
+    bounce: '\\fscx125\\fscy125',
+    pulse: '\\fscx140\\fscy140',
+    shake: '\\fscx110\\fscy110\\frx5\\fry3',
+    pop: '\\fscx150\\fscy150\\bord3',
+    wave: '\\fscx120\\fscy120\\frx10'
+  };
+
+  const activeStyle = styleTags[animStyle] || styleTags.bounce;
 
   for (const block of blocks) {
     const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -574,10 +591,8 @@ export async function convertSrtToKineticAss(
 
       const textParts = words.map((w, idx) => {
         if (idx === i) {
-          // Aktif kelimeyi büyüt ve primary renkte yap
-          return `{\\fscx125\\fscy125\\c${assPrimary}\\b1}${w}{\\r}`;
+          return `{\\c${assPrimary}\\b1${activeStyle}}${w}{\\r}`;
         } else {
-          // Diğer kelimeleri normal boyutta ve secondary renkte yap
           return `{\\c${assSecondary}\\b0}${w}`;
         }
       });
@@ -757,6 +772,38 @@ export async function applySpatialAudioMix(
     outputPath
   ];
 
+  await runFFmpegWithFallback([
+    { cmd: 'ffmpeg', args }
+  ]);
+}
+
+// ── v6.0 3C: Color Grade Filter (preset wrapper) ──
+const COLOR_PRESETS: Record<string, string> = {
+  warm_cinematic: 'eq=brightness=0.0:contrast=1.1:saturation=1.15:gamma_r=1.1:gamma_g=1.0:gamma_b=0.9,colorbalance=rh=0.1:gh=0.05:bh=-0.1:rm=0.08:gm=0.03:bm=-0.06',
+  cool_moody: 'eq=brightness=0.0:contrast=1.05:saturation=1.1:gamma_r=0.9:gamma_g=1.0:gamma_b=1.1,colorbalance=rh=-0.1:gh=-0.05:bh=0.1:rm=-0.06:gm=-0.03:bm=0.08',
+  cinematic: 'eq=brightness=-0.05:contrast=1.2:saturation=0.9:gamma_r=1.05:gamma_g=1.0:gamma_b=0.95,colorbalance=rh=0.05:gh=0.03:bh=0.0:rm=0.03:gm=0.02:bm=-0.02',
+  neon_purple: 'eq=brightness=0.05:contrast=1.4:saturation=1.8:gamma_r=1.2:gamma_g=1.0:gamma_b=1.3,colorbalance=rh=0.1:gh=-0.05:bh=0.2:rm=0.15:gm=0.0:bm=0.25',
+  vintage_warm: 'eq=brightness=-0.1:contrast=0.9:saturation=0.7:gamma_r=1.0:gamma_g=0.95:gamma_b=0.85,colorbalance=rh=0.15:gh=0.1:bh=0.05:rm=0.1:gm=0.08:bm=0.0',
+  desaturated: 'eq=brightness=0.0:contrast=1.0:saturation=0.3:gamma_r=1.0:gamma_g=1.0:gamma_b=1.0',
+  high_contrast: 'eq=brightness=0.0:contrast=1.6:saturation=1.2,colorbalance=rh=0.05:gh=0.02:bh=-0.02:rm=0.03:gm=0.01:bm=-0.01'
+};
+
+export async function applyColorGradeFilter(
+  inputPath: string,
+  outputPath: string,
+  presetName: string
+): Promise<void> {
+  const filter = COLOR_PRESETS[presetName];
+  if (!filter) {
+    throw new Error(`Unknown color preset: ${presetName}`);
+  }
+  const args = [
+    '-y', '-i', inputPath,
+    '-vf', filter,
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+    '-c:a', 'copy',
+    outputPath
+  ];
   await runFFmpegWithFallback([
     { cmd: 'ffmpeg', args }
   ]);

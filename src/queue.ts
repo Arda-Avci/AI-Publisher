@@ -10,7 +10,8 @@ import {
   applyVideoDifferentiationFilters,
   concatVideosWithCrossfade,
   extractLastFrame,
-  convertSrtToKineticAss
+  convertSrtToKineticAss,
+  applyColorGradeFilter
 } from './services/videoService.js';
 import { VideoJob } from './types/job.js';
 import { generateStudioScenes } from './services/aiService.js';
@@ -324,40 +325,55 @@ async function startProduction(job: VideoJob) {
         await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = 12 WHERE id = ?", [STAGE_KEYS.COVER_SYNTHESIS, job.id]);
         broadcast(job.id, { stageKey: 'stageCoverSynthesis', percent: 12 });
 
-        const coverPrompt = `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`;
-        Logger.info('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
-
-        const coverResponse = await axios.post(`${COLAB_URL}/generate-covers`, {
-          cover_prompt: coverPrompt,
-          job_id: job.id,
-          callback_url: process.env.PUBLIC_URL 
-            ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
-            : `http://localhost:${process.env.PORT || 3016}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-        });
-        Logger.info('[PRODUCTION] Cover generation request sent', { status: coverResponse.status });
-
-        // 3 kapağı da indir ve yerel sunucuya kaydet
         const coverPaths: string[] = [];
-        for (let i = 0; i < 3; i++) {
-          const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
-          if (await fs.pathExists(coverDest)) {
-            Logger.info(`Kapak ${i} lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.`, { dest: coverDest });
-            coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
-            continue;
-          }
-          Logger.info(`Kapak ${i} indiriliyor...`, { url: `${COLAB_URL}/download/cover/${i}`, dest: coverDest });
-          try {
-            const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/${i}`, responseType: 'stream' });
-            const wCover = fs.createWriteStream(coverDest);
-            resCover.data.pipe(wCover);
-            await new Promise((resolve, reject) => {
-              wCover.on('finish', resolve);
-              wCover.on('error', reject);
+
+        if (process.env.MOCK_COLAB === 'true') {
+          Logger.info('[MOCK] Generating mock cover images via FFmpeg...');
+          const colors = ['0x08111F', '0x1A2E40', '0x00F2FE'];
+          const { exec } = require('child_process');
+          for (let i = 0; i < 3; i++) {
+            const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
+            const cmd = `ffmpeg -y -f lavfi -i "color=c=${colors[i]}:s=1280x720:d=1" -vframes 1 "${coverDest}"`;
+            await new Promise<void>((r) => {
+              exec(cmd, () => r());
             });
             coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
-            Logger.info(`Kapak ${i} başarıyla indirildi`, { dest: coverDest });
-          } catch (dlErr) {
-            Logger.warn(`Kapak ${i} indirilirken hata oluştu:`, dlErr);
+          }
+        } else {
+          const coverPrompt = `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`;
+          Logger.info('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
+
+          const coverResponse = await axios.post(`${COLAB_URL}/generate-covers`, {
+            cover_prompt: coverPrompt,
+            job_id: job.id,
+            callback_url: process.env.PUBLIC_URL 
+              ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
+              : `http://localhost:${process.env.PORT || 3016}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+          });
+          Logger.info('[PRODUCTION] Cover generation request sent', { status: coverResponse.status });
+
+          // 3 kapağı da indir ve yerel sunucuya kaydet
+          for (let i = 0; i < 3; i++) {
+            const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
+            if (await fs.pathExists(coverDest)) {
+              Logger.info(`Kapak ${i} lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.`, { dest: coverDest });
+              coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
+              continue;
+            }
+            Logger.info(`Kapak ${i} indiriliyor...`, { url: `${COLAB_URL}/download/cover/${i}`, dest: coverDest });
+            try {
+              const resCover = await axios({ method: 'GET', url: `${COLAB_URL}/download/cover/${i}`, responseType: 'stream' });
+              const wCover = fs.createWriteStream(coverDest);
+              resCover.data.pipe(wCover);
+              await new Promise((resolve, reject) => {
+                wCover.on('finish', resolve);
+                wCover.on('error', reject);
+              });
+              coverPaths.push(`/uploads/cover_${job.id}_${i}.jpg`);
+              Logger.info(`Kapak ${i} başarıyla indirildi`, { dest: coverDest });
+            } catch (dlErr) {
+              Logger.warn(`Kapak ${i} indirilirken hata oluştu:`, dlErr);
+            }
           }
         }
 
@@ -401,6 +417,37 @@ async function startProduction(job: VideoJob) {
         });
       });
     };
+
+    // 1C: SD/Flux cover image generation (pre-scene)
+    if (job.sd_flux_enabled === 1) {
+      Logger.info('[SD/FLUX] Generating cover image via Colab...');
+      const sdPrompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
+      let generatedPath = '';
+      if (process.env.MOCK_COLAB === 'true') {
+        const mockImg = path.join(process.cwd(), 'uploads', `sd_flux_${job.id}.png`);
+        const { exec } = require('child_process');
+        await new Promise<void>((r) => exec(`ffmpeg -y -f lavfi -i "color=c=0x08111F:s=1024x1024:d=1" "${mockImg}"`, () => r()));
+        generatedPath = mockImg;
+      } else {
+        try {
+          const resp = await axios.post(`${COLAB_URL}/generate-image`, {
+            prompt: sdPrompt,
+            model_type: job.model_type === 'flux' ? 'flux' : 'dreamshaper'
+          }, { responseType: 'arraybuffer', timeout: 120000 });
+          const imgPath = path.join(process.cwd(), 'uploads', `sd_flux_${job.id}_${Date.now()}.png`);
+          await fs.writeFile(imgPath, Buffer.from(resp.data));
+          generatedPath = imgPath;
+        } catch (sdErr) {
+          Logger.warn('[SD/FLUX] Generation failed, proceeding without generated image:', sdErr);
+        }
+      }
+      if (generatedPath && !job.material_path) {
+        const relativePath = `/uploads/${path.basename(generatedPath)}`;
+        await db.run('UPDATE video_jobs SET material_path = ? WHERE id = ?', [relativePath, job.id]);
+        job.material_path = relativePath;
+        Logger.info('[SD/FLUX] Cover image set as material_path:', relativePath);
+      }
+    }
 
     Logger.info('[PRODUCTION] Stage 3: Scene generation starting', { totalScenes });
     for (const scene of dbScenes) {
@@ -550,34 +597,45 @@ async function startProduction(job: VideoJob) {
         detectedCharacters: Object.keys(characterImages)
       });
 
-      const response = await axios.post(`${COLAB_URL}/generate-media`, {
-        scene_number: scene.scene_number,
-        video_prompt: finalPrompt,
-        speech_text: scene.speech_text,
-        sfx_prompt: scene.sfx_prompt,
-        character_features: '',
-        reference_image_base64: referenceImageBase64,
-        source_video_id: sendSourceVideoId,
-        user_image_path: job.material_path,
-        apply_lipsync: applyLipsync,
-        job_id: job.id,
-        video_model: modelType,
-        tts_provider: job.tts_provider || 'xtts',
-        tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
-        reference_audio_base64: speakerAudioBase64,
-        character_images: characterImages,
-        speaker: currentSpeaker,
-        callback_url: process.env.PUBLIC_URL 
-          ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
-          : `http://localhost:${process.env.PORT || 3016}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-      }, { timeout: 600000 });
+      let taskId = `mock_task_${scene.scene_number}_${Date.now()}`;
+      let taskStatus = 'processing';
+      let taskData: any = null;
 
-      const taskId = response.data?.task_id;
-      if (!taskId) {
-        Logger.error('Colab task_id DÖNMEDİ', response.data);
-        throw new Error('Colab task_id dönmedi.');
+      if (process.env.MOCK_COLAB === 'true') {
+        Logger.info(`[MOCK] Mocking media generation for Scene ${scene.scene_number}...`);
+        taskStatus = 'success';
+        taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
+      } else {
+        const response = await axios.post(`${COLAB_URL}/generate-media`, {
+          scene_number: scene.scene_number,
+          video_prompt: finalPrompt,
+          speech_text: scene.speech_text,
+          sfx_prompt: scene.sfx_prompt,
+          character_features: '',
+          reference_image_base64: referenceImageBase64,
+          source_video_id: sendSourceVideoId,
+          user_image_path: job.material_path,
+          apply_lipsync: applyLipsync,
+          job_id: job.id,
+          video_model: modelType,
+          tts_provider: job.tts_provider || 'xtts',
+          tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
+          reference_audio_base64: speakerAudioBase64,
+          character_images: characterImages,
+          speaker: currentSpeaker,
+          callback_url: process.env.PUBLIC_URL 
+            ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
+            : `http://localhost:${process.env.PORT || 3016}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+        }, { timeout: 600000 });
+
+        const receivedId = response.data?.task_id;
+        if (!receivedId) {
+          Logger.error('Colab task_id DÖNMEDİ', response.data);
+          throw new Error('Colab task_id dönmedi.');
+        }
+        taskId = receivedId;
+        Logger.info('[PRODUCTION] Colab task started', { taskId, status: response.data?.status });
       }
-      Logger.info('[PRODUCTION] Colab task started', { taskId, status: response.data?.status });
 
       const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.scene_number}.mp4`);
       const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.scene_number}.wav`);
@@ -587,8 +645,6 @@ async function startProduction(job: VideoJob) {
       // Colab task durumunu logla
       await db.run("UPDATE video_jobs SET colab_task_id = ? WHERE id = ?", [taskId, job.id]);
 
-      let taskStatus = 'processing';
-      let taskData: any = null;
       let attempt = 0;
       const taskStartTime = Date.now();
       let dynamicTimeoutMs = 720000; // Başlangıçta varsayılan 12 dakika
@@ -690,29 +746,58 @@ async function startProduction(job: VideoJob) {
       const hasSubtitle = taskData?.has_subtitle || false;
       Logger.info('[PRODUCTION] Scene completed, downloading files', { hasSubtitle });
 
-      if (!await fs.pathExists(tV)) {
-        Logger.info('[PRODUCTION] Downloading video...', { url: `${COLAB_URL}/download/video` });
-        await dl(`${COLAB_URL}/download/video`, tV);
-      } else {
-        Logger.info('[PRODUCTION] Video already local (pushed via callback), skipping download.', { tV });
-      }
+      if (process.env.MOCK_COLAB === 'true') {
+        Logger.info('[MOCK] Generating mock scene files via FFmpeg...');
+        const { exec } = require('child_process');
+        
+        // 1. Mock Video (6 sn)
+        if (!await fs.pathExists(tV)) {
+          const escText = (scene.video_prompt || '').replace(/'/g, "'\\\\''").slice(0, 50);
+          const cmd = `ffmpeg -y -f lavfi -i "color=c=0x08111F:s=1280x720:d=6:r=24" -vf "drawtext=text='Scene ${scene.scene_number} - ${escText}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2" -c:v libx264 "${tV}"`;
+          await new Promise<void>((r) => exec(cmd, () => r()));
+        }
 
-      if (!await fs.pathExists(tS)) {
-        Logger.info('[PRODUCTION] Downloading speech...', { url: `${COLAB_URL}/download/speech` });
-        await dl(`${COLAB_URL}/download/speech`, tS);
-      } else {
-        Logger.info('[PRODUCTION] Speech already local (pushed via callback), skipping download.', { tS });
-      }
+        // 2. Mock Speech (6 sn)
+        if (!await fs.pathExists(tS)) {
+          const cmd = `ffmpeg -y -f lavfi -i "anullsrc=r=16000:cl=mono" -t 6 "${tS}"`;
+          await new Promise<void>((r) => exec(cmd, () => r()));
+        }
 
-      if (!await fs.pathExists(tE)) {
-        Logger.info('[PRODUCTION] Downloading SFX...', { url: `${COLAB_URL}/download/sfx` });
-        await dl(`${COLAB_URL}/download/sfx`, tE);
+        // 3. Mock SFX (6 sn)
+        if (!await fs.pathExists(tE)) {
+          const cmd = `ffmpeg -y -f lavfi -i "anullsrc=r=16000:cl=mono" -t 6 "${tE}"`;
+          await new Promise<void>((r) => exec(cmd, () => r()));
+        }
       } else {
-        Logger.info('[PRODUCTION] SFX already local (pushed via callback), skipping download.', { tE });
+        if (!await fs.pathExists(tV)) {
+          Logger.info('[PRODUCTION] Downloading video...', { url: `${COLAB_URL}/download/video` });
+          await dl(`${COLAB_URL}/download/video`, tV);
+        } else {
+          Logger.info('[PRODUCTION] Video already local (pushed via callback), skipping download.', { tV });
+        }
+
+        if (!await fs.pathExists(tS)) {
+          Logger.info('[PRODUCTION] Downloading speech...', { url: `${COLAB_URL}/download/speech` });
+          await dl(`${COLAB_URL}/download/speech`, tS);
+        } else {
+          Logger.info('[PRODUCTION] Speech already local (pushed via callback), skipping download.', { tS });
+        }
+
+        if (!await fs.pathExists(tE)) {
+          Logger.info('[PRODUCTION] Downloading SFX...', { url: `${COLAB_URL}/download/sfx` });
+          await dl(`${COLAB_URL}/download/sfx`, tE);
+        } else {
+          Logger.info('[PRODUCTION] SFX already local (pushed via callback), skipping download.', { tE });
+        }
       }
 
       let srtFile = '';
-      if (hasSubtitle && job.has_subtitles !== 0) {
+      if (process.env.MOCK_COLAB === 'true') {
+        if (scene.speech_text && job.has_subtitles !== 0) {
+          srtFile = tSRT;
+          fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`);
+        }
+      } else if (hasSubtitle && job.has_subtitles !== 0) {
         if (await fs.pathExists(tSRT)) {
           Logger.info('[PRODUCTION] Subtitle already local (pushed via callback), skipping download.', { tSRT });
           srtFile = tSRT;
@@ -741,8 +826,11 @@ async function startProduction(job: VideoJob) {
         const primaryColor = user?.brand_primary_color || '#00F2FE';
         const secondaryColor = user?.brand_secondary_color || '#FFFFFF';
         const fontName = user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial';
+        const validStyles = ['bounce', 'pulse', 'shake', 'pop', 'wave'] as const;
+        const rawStyle = job.kinetic_subtitles_style || 'bounce';
+        const animStyle = validStyles.includes(rawStyle as any) ? rawStyle as typeof validStyles[number] : 'bounce';
         try {
-          await convertSrtToKineticAss(srtFile, tempAssFile, primaryColor, secondaryColor, fontName);
+          await convertSrtToKineticAss(srtFile, tempAssFile, primaryColor, secondaryColor, fontName, animStyle);
           finalSubtitleFile = tempAssFile;
         } catch (assErr) {
           Logger.warn('Kinetik altyazı ASS dosyasına dönüştürülemedi:', assErr);
@@ -844,6 +932,19 @@ async function startProduction(job: VideoJob) {
           { cmd: 'ffmpeg', args: libx264Args },
           { cmd: 'ffmpeg', args: defArgs }
         ]);
+
+        // 3C: Color Grade post-processing
+        if (job.color_grade_enabled === 1 && job.color_grade_preset && job.color_grade_preset !== 'none') {
+          Logger.info('[COLOR GRADE] Applying grade', { preset: job.color_grade_preset, scene: scene.scene_number });
+          const gradedPath = mS.replace('.mp4', '_graded.mp4');
+          try {
+            await applyColorGradeFilter(mS, gradedPath, job.color_grade_preset);
+            await fs.move(gradedPath, mS, { overwrite: true });
+            Logger.info('[COLOR GRADE] Applied successfully');
+          } catch (gradeErr) {
+            Logger.warn('[COLOR GRADE] Failed, skipping:', gradeErr);
+          }
+        }
       } finally {
         if (srtFile && fs.existsSync(srtFile)) {
           fs.removeSync(srtFile);

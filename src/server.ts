@@ -36,10 +36,13 @@ import { registerChatToEditRoutes } from './routes/chatToEdit.js';
 import { registerViMaxRoutes } from './routes/viMax.js';
 import { registerPipecatRoutes } from './routes/pipecat.js';
 import { bRollRouter } from './routes/bRoll.js';
+import { nicheRouter } from './routes/niche.js';
+import { splitRouter } from './routes/splitScreen.js';
 import { paymentsRouter } from './routes/payments.js';
 import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
 import { talkShowRouter } from './routes/talkShow.js';
+import { scriptsRouter } from './routes/scripts.js';
 import colabStatusRouter from './routes/colabStatus.js';
 import canvasRouter from './routes/canvas.js';
 import apiKeysRouter from './routes/apiKeys.js';
@@ -53,6 +56,7 @@ import storyChatRouter from './routes/storyChat.js';
 import colorGradeRouter from './routes/colorGrade.js';
 import dubbingRouter from './routes/dubbing.js';
 import viralRouter from './routes/viral.js';
+import transcriptEditorRouter from './routes/transcriptEditor.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -148,7 +152,10 @@ registerPipecatRoutes(app);
 
 // API Rotaları
 app.use('/api/v1/broll', bRollRouter);
+app.use('/api/v1', nicheRouter);
+app.use('/api/v1', splitRouter);
 app.use('/api/v1/talkshow', talkShowRouter);
+app.use('/api/v1/talkshow', scriptsRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);
@@ -165,6 +172,7 @@ app.use('/api/v1/story', storyChatRouter);
 app.use('/api/v1/color', colorGradeRouter);
 app.use('/api/v1/dubbing', dubbingRouter);
 app.use('/api/v1/viral', viralRouter);
+app.use('/api/v1/transcript', transcriptEditorRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {
@@ -176,8 +184,7 @@ app.use(errorHandler);
 
 // React SPA catch-all: API olmayan tüm GET isteklerinde React index.html serve et
 const reactIndex = path.join(clientDist, 'index.html');
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/') || req.path.startsWith('/login') || req.path.startsWith('/logout')) return;
+app.get(/^\/(?!api|login|logout)(.*)/, (req, res) => {
   res.sendFile(reactIndex, (err) => {
     if (err) res.status(404).send('Not found');
   });
