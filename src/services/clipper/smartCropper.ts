@@ -24,6 +24,7 @@ import type {
   SmartCropOptions,
   SmartCropResult,
 } from '../../types/clipper.js';
+import type { PerFrameCropResult } from './perFrameCropper.js';
 
 const __dirnameStr = __dirname;
 
@@ -464,6 +465,26 @@ export class SmartCropper {
       Logger.warn('[SmartCropper] ffprobe dimensions failed:', err);
     }
     return [1920, 1080];
+  }
+
+  /**
+   * Per-frame dinamik yüz takibi ile kare kare kırpma (v2).
+   * Her chunk için interpolasyonlu yüz konumu kullanarak akıcı hareket sağlar.
+   */
+  async cropPerFrame(
+    inputPath: string,
+    outputPath: string,
+    options: {
+      aspectRatio?: CropAspectRatio;
+      outputWidth?: number;
+      outputHeight?: number;
+      chunkDuration?: number;
+      fallbackToCenter?: boolean;
+      smoothingWindow?: number;
+    } = {}
+  ): Promise<import('./perFrameCropper.js').PerFrameCropResult> {
+    const { cropPerFrame: cropPerFrameFn } = await import('./perFrameCropper.js');
+    return cropPerFrameFn(inputPath, outputPath, options);
   }
 }
 

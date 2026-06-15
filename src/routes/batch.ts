@@ -9,6 +9,7 @@ import { Logger } from '../lib/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs-extra';
+import { uploadToYouTube, uploadToTikTok, uploadToX, uploadToMeta } from '../publisher.js';
 
 const router = Router();
 
@@ -53,7 +54,9 @@ router.post('/upload', requireAuth, async (req, res) => {
     batchJobs.set(job.id, job);
 
     // Start processing in background
-    processBatchJob(job.id, files, platform, schedule);
+    processBatchJob(job.id, files, platform, schedule).catch(err =>
+      Logger.error('[batch] Background processing failed', err)
+    );
 
     res.status(201).json({ job });
   } catch (error) {
@@ -104,7 +107,9 @@ router.post('/from-folder', requireAuth, async (req, res) => {
 
     // Start processing
     const fullPaths = videoFiles.map(f => path.join(folderPath, f));
-    processBatchJob(job.id, fullPaths, platform, schedule);
+    processBatchJob(job.id, fullPaths, platform, schedule).catch(err =>
+      Logger.error('[batch] Background processing failed', err)
+    );
 
     res.status(201).json({ job });
   } catch (error) {
@@ -194,10 +199,32 @@ async function processBatchJob(
     if ((job as BatchJob).status === 'cancelled') break;
 
     try {
-      // TODO: Connect to actual publishing logic
-      // For now, just simulate processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      job.processedVideos++;
+      let success = false;
+      switch (platform) {
+        case 'youtube': {
+          const title = path.basename(file, path.extname(file));
+          success = await uploadToYouTube(file, title, '', '');
+          break;
+        }
+        case 'tiktok':
+          success = await uploadToTikTok(file, '', '');
+          break;
+        case 'x':
+          success = await uploadToX(file, '', '');
+          break;
+        case 'meta':
+          success = await uploadToMeta(file, '', '');
+          break;
+        default:
+          Logger.warn(`Unknown platform: ${platform}, skipping file ${file}`);
+          success = false;
+      }
+      if (success) {
+        job.processedVideos++;
+      } else {
+        job.failedVideos++;
+        Logger.error(`Failed to publish ${file} to ${platform}`);
+      }
     } catch (error) {
       job.failedVideos++;
       Logger.error(`Failed to process file ${file}:`, error);

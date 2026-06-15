@@ -11,6 +11,68 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 
+// axios çağrılarını mock'layalım
+vi.mock('axios', () => {
+  const mockAxiosInstance = vi.fn((config) => {
+    // Default call returns a mock stream compatible with file downloads (res.data.pipe)
+    const mockStream = {
+      pipe: (destWritable: any) => {
+        destWritable.write('mock binary data');
+        destWritable.end();
+      },
+      on: (event: string, cb: any) => {
+        if (event === 'data') cb('mock binary data');
+        if (event === 'end') cb();
+      }
+    };
+    return Promise.resolve({ data: mockStream });
+  });
+
+  (mockAxiosInstance as any).get = vi.fn((url) => {
+    if (url.includes('/verify-libs')) {
+      return Promise.resolve({ data: { success: true, report: { diffusers: true } } });
+    }
+    if (url.includes('/health')) {
+      return Promise.resolve({
+        data: {
+          status: 'healthy',
+          memory: { gpu_total_gb: 16, gpu_used_gb: 4 },
+          gpu_utilization: { gpu_pct: 25 },
+          runtime: { uptime_seconds: 100 }
+        }
+      });
+    }
+    if (url.includes('/status') || url.includes('/generate-status')) {
+      return Promise.resolve({
+        data: {
+          status: 'success',
+          stage: 'done',
+          stagePercent: 100,
+          message: 'Tamamlandı'
+        }
+      });
+    }
+    return Promise.resolve({ data: {} });
+  });
+
+  (mockAxiosInstance as any).post = vi.fn().mockResolvedValue({
+    data: { task_id: 'mock_task_id', status: 'success' }
+  });
+
+  (mockAxiosInstance as any).create = vi.fn(() => mockAxiosInstance);
+  (mockAxiosInstance as any).interceptors = {
+    request: { use: vi.fn(), eject: vi.fn() },
+    response: { use: vi.fn(), eject: vi.fn() }
+  };
+
+  return {
+    default: mockAxiosInstance,
+    get: (mockAxiosInstance as any).get,
+    post: (mockAxiosInstance as any).post,
+    create: (mockAxiosInstance as any).create
+  };
+});
+
 // iyzico SDK'sını mock'la
 vi.mock('iyzipay', () => {
   return {
@@ -114,68 +176,6 @@ vi.mock('./lib/colab-manager.js', () => {
       on: vi.fn(),
       off: vi.fn()
     }
-  };
-});
-
-// axios çağrılarını mock'layalım
-vi.mock('axios', () => {
-  const mockAxiosInstance = vi.fn((config) => {
-    // Default call returns a mock stream compatible with file downloads (res.data.pipe)
-    const mockStream = {
-      pipe: (destWritable: any) => {
-        destWritable.write('mock binary data');
-        destWritable.end();
-      },
-      on: (event: string, cb: any) => {
-        if (event === 'data') cb('mock binary data');
-        if (event === 'end') cb();
-      }
-    };
-    return Promise.resolve({ data: mockStream });
-  });
-
-  (mockAxiosInstance as any).get = vi.fn((url) => {
-    if (url.includes('/verify-libs')) {
-      return Promise.resolve({ data: { success: true, report: { diffusers: true } } });
-    }
-    if (url.includes('/health')) {
-      return Promise.resolve({
-        data: {
-          status: 'healthy',
-          memory: { gpu_total_gb: 16, gpu_used_gb: 4 },
-          gpu_utilization: { gpu_pct: 25 },
-          runtime: { uptime_seconds: 100 }
-        }
-      });
-    }
-    if (url.includes('/status') || url.includes('/generate-status')) {
-      return Promise.resolve({
-        data: {
-          status: 'success',
-          stage: 'done',
-          stagePercent: 100,
-          message: 'Tamamlandı'
-        }
-      });
-    }
-    return Promise.resolve({ data: {} });
-  });
-
-  (mockAxiosInstance as any).post = vi.fn().mockResolvedValue({
-    data: { task_id: 'mock_task_id', status: 'success' }
-  });
-
-  (mockAxiosInstance as any).create = vi.fn(() => mockAxiosInstance);
-  (mockAxiosInstance as any).interceptors = {
-    request: { use: vi.fn(), eject: vi.fn() },
-    response: { use: vi.fn(), eject: vi.fn() }
-  };
-
-  return {
-    default: mockAxiosInstance,
-    get: (mockAxiosInstance as any).get,
-    post: (mockAxiosInstance as any).post,
-    create: (mockAxiosInstance as any).create
   };
 });
 
@@ -369,7 +369,12 @@ describe('iyzico Webhook, Timeline Müzik Miksajı ve Çoklu Karakter Lipsync Te
       await db.run("UPDATE video_jobs SET status = 'pending' WHERE id = ?", [jobId]);
 
       // checkQueue tetikleyelim
-      await checkQueue();
+      process.env.MOCK_COLAB = 'false';
+      try {
+        await checkQueue();
+      } finally {
+        process.env.MOCK_COLAB = 'true';
+      }
 
       // Colab'a fırlatılan generate-media payload'ını doğrula
       const generateMediaCall = mockPost.mock.calls.find(call => call[0].includes('/generate-media'));

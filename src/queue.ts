@@ -1032,6 +1032,21 @@ async function startProduction(job: VideoJob) {
       finalScenes.push(mS);
       await db.run("UPDATE video_jobs SET completed_scenes = ? WHERE id = ?", [scene.scene_number, job.id]);
 
+      // 2B: Apply any pending edit operations to this scene
+      try {
+        const pendingEdits = await db.all(
+          `SELECT id FROM edit_queue WHERE job_id = ? AND status = 'pending' AND (target_scene IS NULL OR target_scene = ?)`,
+          [job.id, scene.scene_number]
+        );
+        if (pendingEdits.length > 0) {
+          Logger.info('[EditQueue] Applying pending edits to scene', { scene: scene.scene_number, count: pendingEdits.length });
+          const { applyPendingEditsToScene } = await import('./services/editQueue.js');
+          await applyPendingEditsToScene(job.id, scene.scene_number, mS);
+        }
+      } catch (editErr) {
+        Logger.warn('[EditQueue] Scene edit failed, continuing:', editErr);
+      }
+
       // Sahne 1 başarıyla tamamlandığında yüklenen materyali erkenden sil
       if (scene.scene_number === 1 && job.material_path) {
         try {

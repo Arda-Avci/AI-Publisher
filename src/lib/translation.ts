@@ -9,6 +9,7 @@ import { getAIModelChain } from './ai-provider.js';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
 import { withFallbackAndRetry } from './ai-utils.js';
+import { Logger } from './logger.js';
 
 // Languages we expose in the UI. Keep the same set as the front-end.
 export const SUPPORTED_LANGS = ['tr', 'en', 'de', 'fr', 'es'] as const;
@@ -55,11 +56,11 @@ export async function translateText(text: string, targetLang: SupportedLang): Pr
   // Metin uzunsa (2000 karakterden fazla), parçalara bölerek çeviriyoruz.
   const MAX_CHUNK_SIZE = 2000;
   if (text.length > MAX_CHUNK_SIZE) {
-    console.log(`[AI] Text too long (${text.length} chars). Splitting for translation...`);
+    Logger.info(`[AI] Text too long (${text.length} chars). Splitting for translation...`);
     const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
     const translatedChunks = [];
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`[AI] Translating chunk ${i + 1}/${chunks.length}...`);
+      Logger.info(`[AI] Translating chunk ${i + 1}/${chunks.length}...`);
       const translated = await translateText(chunks[i], targetLang);
       translatedChunks.push(translated);
     }
@@ -113,7 +114,7 @@ export async function translateTitleAndDesc(
     } as any), getAIModelChain()) as any;
     return object;
   } catch (err) {
-    console.error('[WARN] translateTitleAndDesc failed, falling back to sequential translateText:', err);
+    Logger.warn('translateTitleAndDesc failed, falling back to sequential translateText', err);
     const tTitle = await translateText(title, targetLang);
     const tDesc = await translateText(desc, targetLang);
     return { title: tTitle, desc: tDesc };
@@ -130,11 +131,11 @@ export async function rewriteTranscript(
   // Metin uzunsa (2000 karakterden fazla), parçalara bölerek özgünleştiriyoruz.
   const MAX_CHUNK_SIZE = 2000;
   if (translatedTranscript.length > MAX_CHUNK_SIZE) {
-    console.log(`[AI] Text too long (${translatedTranscript.length} chars). Splitting for rewrite...`);
+    Logger.info(`[AI] Text too long (${translatedTranscript.length} chars). Splitting for rewrite...`);
     const chunks = splitTextIntoChunks(translatedTranscript, MAX_CHUNK_SIZE);
     const rewrittenChunks = [];
     for (let i = 0; i < chunks.length; i++) {
-      console.log(`[AI] Rewriting chunk ${i + 1}/${chunks.length}...`);
+      Logger.info(`[AI] Rewriting chunk ${i + 1}/${chunks.length}...`);
       const rewritten = await rewriteTranscript(chunks[i], targetLang);
       rewrittenChunks.push(rewritten);
     }

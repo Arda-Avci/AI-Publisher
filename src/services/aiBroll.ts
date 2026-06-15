@@ -66,14 +66,9 @@ export async function generateBroll(
   try {
     Logger.info('[aiBroll] Generating B-Roll via Colab', { keywords: keywordStr, duration, outputPath });
 
-    // TODO: Colab endpoint `/generate-broll` not yet fully implemented
-    // Expected payload: {
-    //   keywords: string[],
-    //   duration: number,
-    //   output_path: string,
-    //   model?: string
-    // }
-    // Expected response: { status: 'success', output_path: string, task_id: string }
+    // Endpoint `/generate-broll` implemented in colab_server.py (line 1679)
+    // Payload: { keywords, duration, output_path, model? }
+    // Response: { status, output_path, task_id }
 
     const response = await axios.post(
       `${colabUrl}/generate-broll`,

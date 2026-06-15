@@ -1,24 +1,5 @@
-/**
- * Sportoto → AI Publisher Bridge
- * Sportoto projesindeki tartışma programı verisini çeker,
- * AI Publisher video pipeline'ına besler.
- */
-
 import { Logger } from '../../lib/logger.js';
-
-export interface SportotoUtterance {
-  speaker: string;
-  text: string;
-  match_id: number | null;
-  sequence_order: number;
-}
-
-export interface SportotoDiscussion {
-  title: string;
-  sportoto_week: number;
-  utterances: SportotoUtterance[];
-  total_utterances: number;
-}
+import { DiscussionSource, SportotoDiscussion } from './discussionSource.js';
 
 export interface SportotoConfig {
   baseUrl: string;
@@ -30,69 +11,83 @@ const DEFAULT_CONFIG: SportotoConfig = {
   apiKey: process.env.SPORTOTO_API_KEY || '',
 };
 
-/**
- * Sportoto API'den haftalık tartışma programını çeker.
- */
-export async function fetchWeeklyDiscussion(
-  weekNumber: number,
-  config: SportotoConfig = DEFAULT_CONFIG
-): Promise<SportotoDiscussion> {
-  const url = `${config.baseUrl}/predictions/discussion/weekly/${weekNumber}/publish`;
+export class SportotoSource implements DiscussionSource {
+  readonly name = 'sportoto';
+  private config: SportotoConfig;
 
-  Logger.info(`[SportotoBridge] Fetching discussion for week ${weekNumber} from ${url}`);
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (config.apiKey) {
-    headers['x-api-key'] = config.apiKey;
+  constructor(config: SportotoConfig = DEFAULT_CONFIG) {
+    this.config = config;
   }
 
-  try {
-    const params = new URLSearchParams();
-    if (config.apiKey) params.set('api_key', config.apiKey);
-    const fullUrl = config.apiKey ? `${url}?${params.toString()}` : url;
+  async fetchWeeklyDiscussion(weekNumber: number): Promise<SportotoDiscussion> {
+    const url = `${this.config.baseUrl}/predictions/discussion/weekly/${weekNumber}/publish`;
 
-    const response = await fetch(fullUrl, { headers });
-
-    if (!response.ok) {
-      throw new Error(`Sportoto API hatası: ${response.status} ${response.statusText}`);
+    if (!this.config.apiKey) {
+      Logger.warn('[SportotoSource] SPORTOTO_API_KEY .env\'de tanımlı değil. API key auth çalışmaz.');
     }
 
-    const data: SportotoDiscussion = await response.json();
+    Logger.info(`[SportotoSource] Fetching discussion for week ${weekNumber} from ${url}`);
 
-    Logger.info(`[SportotoBridge] Fetched discussion: "${data.title}" with ${data.total_utterances} utterances`);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.config.apiKey) {
+      headers['x-api-key'] = this.config.apiKey;
+    }
 
-    return data;
-  } catch (error: any) {
-    Logger.error(`[SportotoBridge] Failed to fetch discussion: ${error.message}`);
-    throw error;
+    try {
+      const params = new URLSearchParams();
+      if (this.config.apiKey) params.set('api_key', this.config.apiKey);
+      const fullUrl = this.config.apiKey ? `${url}?${params.toString()}` : url;
+
+      const response = await fetch(fullUrl, { headers });
+
+      if (!response.ok) {
+        throw new Error(`Sportoto API hatası: ${response.status} ${response.statusText}`);
+      }
+
+      const data: SportotoDiscussion = await response.json();
+
+      Logger.info(`[SportotoSource] Fetched discussion: "${data.title}" with ${data.total_utterances} utterances`);
+
+      return data;
+    } catch (error: any) {
+      Logger.error(`[SportotoSource] Failed to fetch discussion: ${error.message}`);
+      throw error;
+    }
   }
 }
 
-/**
- * Tartışma programını AI Publisher talk-show formatına dönüştürür.
- * Her utterance'ı bir konuşma bölümü olarak yapılandırır.
- */
+export async function fetchWeeklyDiscussion(
+  weekNumber: number,
+  config?: SportotoConfig
+): Promise<SportotoDiscussion> {
+  const source = new SportotoSource(config);
+  return source.fetchWeeklyDiscussion(weekNumber);
+}
+
+const SPEAKER_VOICE_MAP: Record<string, { ttsVoice: string; name: string; color: string }> = {
+  Moderator: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Moderatör', color: '#F59E0B' },
+  Yorumcu: { ttsVoice: 'tr-TR-EmelNeural', name: 'Yorumcu', color: '#06B6D4' },
+  Futbolcu: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Futbolcu', color: '#10B981' },
+  Kumarbaz: { ttsVoice: 'tr-TR-EmelNeural', name: 'Kumarbaz', color: '#F43F5E' },
+  TeknikDirektor: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Teknik Direktör', color: '#60A5FA' },
+};
+
 export function discussionToScenes(
   discussion: SportotoDiscussion
 ): Array<{
   sceneNumber: number;
   speaker: string;
+  originalSpeaker: string;
   text: string;
+  ttsVoice: string;
+  color: string;
   matchId: number | null;
   duration: number;
 }> {
-  const SPEAKER_VOICE_MAP: Record<string, { ttsVoice: string; name: string; color: string }> = {
-    Moderator: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Moderatör', color: '#F59E0B' },
-    Yorumcu: { ttsVoice: 'tr-TR-EmelNeural', name: 'Yorumcu', color: '#06B6D4' },
-    Futbolcu: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Futbolcu', color: '#10B981' },
-    Kumarbaz: { ttsVoice: 'tr-TR-EmelNeural', name: 'Kumarbaz', color: '#F43F5E' },
-    TeknikDirektor: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Teknik Direktör', color: '#60A5FA' },
-  };
-
-  const WPM = 150; // average words per minute for TTS pacing
-  const scenes = discussion.utterances.map((u, idx) => {
+  const WPM = 150;
+  return discussion.utterances.map((u, idx) => {
     const voiceConfig = SPEAKER_VOICE_MAP[u.speaker] || SPEAKER_VOICE_MAP.Moderator;
     const wordCount = u.text.split(/\s+/).length;
     const duration = Math.max(3, Math.ceil(wordCount / WPM * 60));
@@ -108,6 +103,4 @@ export function discussionToScenes(
       duration,
     };
   });
-
-  return scenes;
 }

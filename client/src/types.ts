@@ -93,6 +93,17 @@ export interface TalkShowResult {
   durationMs: number;
 }
 
+export type LlmProvider = 'zen' | 'gemini' | 'claude' | 'deepseek';
+export type AvatarStyle = 'realistic' | 'animatic';
+export type AvatarSource = 'ai' | 'upload';
+export type RelationshipType = 'friendly' | 'neutral' | 'antagonistic' | 'respectful';
+
+export interface CharacterRelationship {
+  characterId: number;
+  type: RelationshipType;
+  notes?: string;
+}
+
 export interface Character {
   id: number;
   name: string;
@@ -101,6 +112,12 @@ export interface Character {
   voice_provider: 'edge' | 'openai' | 'xtts';
   voice_id: string;
   reference_image?: string;
+  llm_provider?: LlmProvider;
+  llm_model?: string;
+  avatar_style?: AvatarStyle;
+  avatar_source?: AvatarSource;
+  color?: string;
+  relationships?: CharacterRelationship[];
   created_at?: string;
   updated_at?: string;
 }
@@ -110,3 +127,33 @@ export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
 export type Language = 'tr' | 'en';
 export type Tab = 'create' | 'gallery' | 'opportunities' | 'groupchat' | 'canvas' | 'apikeys' | 'batch';
+
+export interface Script {
+  id: number;
+  show_id: number;
+  user_id: number;
+  title: string;
+  status: 'draft' | 'generating' | 'completed' | 'error';
+  scene_count: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScriptSegment {
+  id: number;
+  script_id: number;
+  scene_number: number;
+  scene_type: 'opening' | 'talk' | 'reaction' | 'wide' | 'closing';
+  character_id: number | null;
+  character_name: string | null;
+  dialogue_text: string;
+  camera_instruction: string;
+  duration_seconds: number;
+  order_index: number;
+  metadata: Record<string, unknown>;
+}
+
+export interface ScriptWithSegments extends Script {
+  segments: ScriptSegment[];
+}

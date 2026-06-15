@@ -329,6 +329,19 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS transcript_word_timings TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS storyboard_enabled INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_enabled INTEGER DEFAULT 0;');
+
+  // Edit queue table
+  await db.exec(`CREATE TABLE IF NOT EXISTS edit_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    command TEXT NOT NULL,
+    operations TEXT,
+    target_scene INTEGER,
+    status TEXT DEFAULT 'pending',
+    snapshot_path TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_voice TEXT DEFAULT 'Claribel Dervla';");
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_source_lang TEXT DEFAULT 'tr';");
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_status TEXT;');

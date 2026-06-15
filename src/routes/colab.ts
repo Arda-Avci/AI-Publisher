@@ -4,6 +4,7 @@ import { colab } from '../lib/colab-manager.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter, sseLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
+import { Logger } from '../lib/logger.js';
 
 const upload = multer({ dest: 'uploads/' }); // Geçici kayıt klasörü
 
@@ -26,14 +27,14 @@ export function registerColabRoutes(app: Application): void {
     const expectedToken = process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026';
 
     if (token !== expectedToken) {
-      console.warn(`[WARN] Yetkisiz callback isteği reddedildi!`);
+      Logger.warn('Yetkisiz callback isteği reddedildi!');
       return res.status(403).json({ success: false, error: 'Unauthorized callback token' });
     }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     if (status === 'error') {
-      console.error(`❌ Colab'den hata raporu geldi: [Type: ${type || 'video'}] ${message}`);
+      Logger.error(`Colab'den hata raporu geldi: [Type: ${type || 'video'}] ${message}`);
       return res.status(200).json({ received: true });
     }
 
@@ -42,14 +43,14 @@ export function registerColabRoutes(app: Application): void {
       const path = await import('path');
 
       if (type === 'covers' || (!type && files['cover_0'])) {
-        console.log(`✅ Kapak tasarımları callback ile geldi! Job: ${job_id}`);
+        Logger.info(`Kapak tasarımları callback ile geldi! Job: ${job_id}`);
         for (let i = 0; i < 3; i++) {
           const fileField = `cover_${i}`;
           const file = files[fileField]?.[0];
           if (file) {
             const dest = path.join(process.cwd(), 'uploads', `cover_${job_id}_${i}.jpg`);
             await fs.move(file.path, dest, { overwrite: true });
-            console.log(`💾 Kapak ${i} kaydedildi: ${dest}`);
+            Logger.info(`Kapak ${i} kaydedildi: ${dest}`);
           }
         }
       } else {
@@ -58,31 +59,31 @@ export function registerColabRoutes(app: Application): void {
         const subtitleFile = files['subtitle']?.[0];
         const sfxFile = files['sfx']?.[0];
 
-        console.log(`✅ Sahne medyaları callback ile geldi! Job: ${job_id}, Scene: ${scene_number}`);
+        Logger.info(`Sahne medyaları callback ile geldi! Job: ${job_id}, Scene: ${scene_number}`);
 
         if (videoFile) {
           const destV = path.join(process.cwd(), 'videolar', `tv_${job_id}_${scene_number}.mp4`);
           await fs.move(videoFile.path, destV, { overwrite: true });
-          console.log(`💾 Video kaydedildi: ${destV}`);
+          Logger.info(`Video kaydedildi: ${destV}`);
         }
         if (speechFile) {
           const destS = path.join(process.cwd(), 'videolar', `ts_${job_id}_${scene_number}.wav`);
           await fs.move(speechFile.path, destS, { overwrite: true });
-          console.log(`💾 Konuşma kaydedildi: ${destS}`);
+          Logger.info(`Konuşma kaydedildi: ${destS}`);
         }
         if (sfxFile) {
           const destE = path.join(process.cwd(), 'videolar', `te_${job_id}_${scene_number}.wav`);
           await fs.move(sfxFile.path, destE, { overwrite: true });
-          console.log(`💾 SFX kaydedildi: ${destE}`);
+          Logger.info(`SFX kaydedildi: ${destE}`);
         }
         if (subtitleFile) {
           const destSRT = path.join(process.cwd(), 'videolar', `srt_${job_id}_${scene_number}.srt`);
           await fs.move(subtitleFile.path, destSRT, { overwrite: true });
-          console.log(`💾 Altyazı kaydedildi: ${destSRT}`);
+          Logger.info(`Altyazı kaydedildi: ${destSRT}`);
         }
       }
     } catch (err) {
-      console.error('❌ Callback dosyalarını kaydederken hata:', err);
+      Logger.error('Callback dosyalarını kaydederken hata', err);
     }
 
     res.status(200).json({ received: true });

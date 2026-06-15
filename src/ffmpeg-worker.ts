@@ -2,6 +2,7 @@ import { parentPort, workerData } from 'worker_threads';
 import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Logger } from './lib/logger.js';
 
 const { videoPath, subtitlePath, logoBase64, outputPath, userTitle, titlePosition } = workerData;
 
@@ -25,7 +26,7 @@ function getFfmpegMatrixPosition(position: string): string {
 
 async function startComposition() {
   try {
-    console.log("🎬 [FFMPEG WORKER] Kompozisyon islemi baslatildi.");
+    Logger.info("🎬 [FFMPEG WORKER] Kompozisyon islemi baslatildi.");
     
     const tempLogoPath = path.join(__dirname, `brand_logo_${Date.now()}.png`);
     const cleanBase64 = logoBase64.replace(/^data:image\/png;base64,/, "");

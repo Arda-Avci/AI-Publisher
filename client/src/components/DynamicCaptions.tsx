@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { SubtitleWord, WordAnimationType } from './SubtitleWord.js';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { SubtitleWord } from './SubtitleWord.js';
+import type { WordAnimationType } from './SubtitleWord.js';
 
 /**
  * Word with timing info — shape accepted by DynamicCaptions
@@ -15,8 +16,6 @@ interface DynamicCaptionsProps {
   words: CaptionWord[];
   /** Current playback time in seconds */
   currentTime: number;
-  /** Total video duration in seconds */
-  duration: number;
   /** Animation style for highlighted words */
   animationType?: WordAnimationType;
   /** Color for the currently active/highlighted word */
@@ -61,7 +60,6 @@ interface DynamicCaptionsProps {
 export const DynamicCaptions: React.FC<DynamicCaptionsProps> = ({
   words,
   currentTime,
-  duration,
   animationType = 'bounce',
   highlightColor = '#FFD700',
   baseColor = '#FFFFFF',

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import fs from 'fs-extra';
 import path from 'path';
 import { db } from '../db.js';
+import { Logger } from '../lib/logger.js';
 
 // Extend Express Request interface to include lang and t
 declare global {
@@ -29,7 +30,7 @@ export async function i18nMiddleware(req: Request, res: Response, next: NextFunc
   try {
     loadTranslations();
   } catch (err) {
-    console.error('[ERROR] Translation files could not be loaded:', err);
+    Logger.error('Translation files could not be loaded', err);
   }
 
   // Varsayılan dili seans üzerinden al, yoksa 'tr' olsun

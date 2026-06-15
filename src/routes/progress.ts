@@ -3,6 +3,7 @@ import { sseLimiter } from '../middleware/rate-limit.js';
 import { db } from '../db.js';
 import { redisSub } from '../lib/redis.js';
 import { Application, Request, Response } from 'express';
+import { Logger } from '../lib/logger.js';
 
 /**
  * SSE progress route: GET /progress/:id.
@@ -88,7 +89,7 @@ export function registerProgressRoutes(app: Application): void {
           try {
             res.write(`data: ${message}\n\n`);
           } catch (err) {
-            console.error('[progress SSE] Failed to write to client:', err);
+            Logger.error('Failed to write to client', err);
           }
         }
       });
@@ -115,7 +116,7 @@ export function registerProgressRoutes(app: Application): void {
         subscriber.quit().catch(() => {});
       });
     } catch (err: any) {
-      console.error('[progress SSE] error:', err);
+      Logger.error('SSE error', err);
       if (!res.headersSent) {
         try {
           return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });

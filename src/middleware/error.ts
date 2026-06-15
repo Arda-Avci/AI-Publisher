@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Global error handler.
@@ -9,7 +10,7 @@ import { Request, Response, NextFunction } from 'express';
  */
  
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction): void {
-  console.error('[ERROR] Unhandled error:', err);
+  Logger.error('Unhandled error', err);
   if (res.headersSent) {
     return;
   }

@@ -7,11 +7,16 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
-import { sendToQueue, CLIP_JOBS_QUEUE } from '../lib/rabbitmq.js';
+import { sendClipToQueue, retryClipJob } from '../lib/clip-queue.js';
 import { viralAnalyzer, videoClipper, ClipSegment, ClipJob } from '../services/clipper/index.js';
 import { smartCropper } from '../services/clipper/smartCropper.js';
 import { subtitleMixer } from '../services/clipper/subtitleMixer.js';
+import { autoProcessClip } from '../services/clipper/autoSubtitleBgm.js';
+import { generateText } from 'ai';
+import { getAIModelChain } from '../lib/ai-provider.js';
 import { splitScreenVertical, splitScreenHorizontal, splitScreenGrid, overlayMascot, overlayMascotWithAnimation, pipOverlay, SplitScreenOptions, OverlayPosition, AnimationType, PipPosition } from '../services/clipper/splitScreenService.js';
+import { broadcastProgress } from '../lib/redis.js';
+import Redis from 'ioredis';
 import path from 'path';
 import fs from 'fs-extra';
 
@@ -23,7 +28,7 @@ const router = Router();
  */
 router.post('/extract', requireAuth, async (req, res) => {
   try {
-    const { videoPath, title, minDuration, maxDuration, targetCount } = req.body;
+    const { videoPath, title, minDuration, maxDuration, targetCount, priority } = req.body;
 
     if (!videoPath) {
       return res.status(400).json({ error: 'videoPath is required' });
@@ -33,31 +38,34 @@ router.post('/extract', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
+    const jobPriority = Math.min(10, Math.max(1, Number(priority) || 5));
+
     const result = await db.run(
-      `INSERT INTO clip_jobs (user_id, source_video_path, title, status)
-       VALUES ($1, $2, $3, 'pending') RETURNING id`,
-      [req.session.userId, videoPath, title || '']
+      `INSERT INTO clip_jobs (user_id, source_video_path, title, status, priority)
+       VALUES ($1, $2, $3, 'pending', $4) RETURNING id`,
+      [req.session.userId, videoPath, title || '', jobPriority]
     );
     const clipJobId = result.lastID || (result as any)?.id || 0;
 
-    Logger.info(`[Clipper] Clip job #${clipJobId} created for ${videoPath}`);
+    Logger.info(`[Clipper] Clip job #${clipJobId} created for ${videoPath} (priority=${jobPriority})`);
 
     try {
-      await sendToQueue(CLIP_JOBS_QUEUE, {
+      await sendClipToQueue({
         clipJobId,
-        userId: req.session.userId,
+        userId: req.session.userId!,
         videoPath,
         title: title || '',
         minDuration: minDuration || 30,
         maxDuration: maxDuration || 90,
         targetCount: targetCount || 5,
+        priority: jobPriority,
       });
     } catch (queueErr) {
       Logger.warn('[Clipper] Queue unavailable, processing inline:', queueErr);
       processInlineExtraction(clipJobId, videoPath, { minDuration, maxDuration, targetCount, title });
     }
 
-    res.status(201).json({ jobId: clipJobId, status: 'pending' });
+    res.status(201).json({ jobId: clipJobId, status: 'pending', priority: jobPriority });
   } catch (error) {
     Logger.error('[Clipper] Extraction failed:', error);
     res.status(500).json({ error: 'Extraction failed' });
@@ -140,6 +148,91 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/v1/clipper/:id/retry
+ * Başarısız clip işini yeniden kuyruğa ekle
+ */
+router.post('/:id/retry', requireAuth, async (req, res) => {
+  try {
+    const jobId = parseInt(String(req.params.id), 10);
+    const retried = await retryClipJob(jobId, req.session.userId!);
+
+    if (!retried) {
+      const row: any = await db.get(
+        'SELECT id, status, retry_count, max_retries FROM clip_jobs WHERE id = $1 AND user_id = $2',
+        [jobId, req.session.userId]
+      );
+      if (!row) return res.status(404).json({ error: 'Clip not found' });
+      if (row.status !== 'failed') return res.status(400).json({ error: 'Only failed jobs can be retried' });
+      return res.status(400).json({ error: 'Max retries exceeded' });
+    }
+
+    res.json({ jobId, status: 'pending', message: 'Job requeued for retry' });
+  } catch (error) {
+    Logger.error('[Clipper] Retry failed:', error);
+    res.status(500).json({ error: 'Retry failed' });
+  }
+});
+
+/**
+ * GET /api/v1/clipper/progress/:id
+ * SSE ile clip job ilerleme durumunu stream et
+ */
+router.get('/progress/:id', requireAuth, async (req, res) => {
+  const jobId = parseInt(String(req.params.id), 10);
+  if (isNaN(jobId)) {
+    return res.status(400).json({ error: 'Invalid job ID' });
+  }
+
+  // Ownership kontrolü
+  const row = await db.get(
+    'SELECT id, status FROM clip_jobs WHERE id = $1 AND user_id = $2',
+    [jobId, req.session.userId]
+  );
+  if (!row) {
+    return res.status(404).json({ error: 'Clip not found' });
+  }
+
+  // SSE header'ları
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  res.write(`data: ${JSON.stringify({ event: 'connected', jobId, status: row.status })}\n\n`);
+
+  // Redis pub/sub ile dinle
+  const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+  const subscriber = new Redis(REDIS_URL);
+  const channel = `job_progress:${jobId}`;
+
+  await subscriber.subscribe(channel);
+
+  subscriber.on('message', (_ch: string, message: string) => {
+    res.write(`data: ${message}\n\n`);
+
+    // Job tamamlandığında bağlantıyı kapat
+    try {
+      const data = JSON.parse(message);
+      if (data.event === 'clip-complete' || data.event === 'clip-error') {
+        setTimeout(() => {
+          subscriber.unsubscribe();
+          subscriber.quit();
+          res.end();
+        }, 1000);
+      }
+    } catch {}
+  });
+
+  // Client bağlantıyı kapatırsa temizle
+  req.on('close', () => {
+    subscriber.unsubscribe().catch(() => {});
+    subscriber.quit().catch(() => {});
+  });
+});
+
+/**
  * POST /api/v1/clipper/:id/export
  * Export clips with optional processing (crop, subtitles, music)
  */
@@ -203,16 +296,26 @@ router.post('/:id/export', requireAuth, async (req, res) => {
         }
 
         if (addSubtitles) {
-          const withSubsPath = clipPath.replace('.mp4', '_subs.mp4');
-          await videoClipper.generateSubtitles(currentPath, withSubsPath, [
-            { start: 0, end: segment.duration, text: segment.suggestedCaption || '' },
-          ]);
-          currentPath = withSubsPath;
-        }
+          // Generate word-level SRT from viral caption
+          const srtPath = clipPath.replace('.mp4', '.srt');
+          await generateWordLevelSrt(segment, srtPath);
 
-        if (addMusic && musicPath) {
+          const withSubsPath = clipPath.replace('.mp4', '_subs.mp4');
+          await subtitleMixer.process(currentPath, {
+            srtPath,
+            outputPath: withSubsPath,
+            subtitleStyle: { primaryColor: '#FFFFFF', bold: true },
+            musicPath: addMusic && musicPath ? musicPath : undefined,
+            musicVolume: 0.15,
+          });
+          currentPath = withSubsPath;
+        } else if (addMusic && musicPath) {
           const withMusicPath = clipPath.replace('.mp4', '_music.mp4');
-          await videoClipper.mixMusic(currentPath, musicPath, withMusicPath);
+          await subtitleMixer.process(currentPath, {
+            outputPath: withMusicPath,
+            musicPath,
+            musicVolume: 0.15,
+          });
           currentPath = withMusicPath;
         }
 
@@ -231,6 +334,162 @@ router.post('/:id/export', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Export failed' });
   }
 });
+
+/**
+ * POST /api/v1/clipper/:id/auto
+ * Otomatik pipeline: altyazı üret + BGM miks (tek istek)
+ */
+router.post('/:id/auto', requireAuth, async (req, res) => {
+  try {
+    const jobId = parseInt(String(req.params.id), 10);
+    const row = await db.get(
+      'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
+      [jobId, req.session.userId]
+    );
+    if (!row) {
+      return res.status(404).json({ error: 'Clip not found' });
+    }
+
+    if (row.status !== 'completed') {
+      return res.status(400).json({ error: 'Clip extraction not completed' });
+    }
+
+    const {
+      segmentIds,
+      aspectRatio = '9:16',
+      useFaceTracking = false,
+      autoSubtitle = true,
+      autoBgm = true,
+      musicPath,
+      musicVolume = 0.12,
+      subtitleStyle,
+    } = req.body;
+
+    const segments: ClipSegment[] = row.segments
+      ? (typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments)
+      : [];
+
+    const outputDir = path.join(process.cwd(), 'videolar', `clip_${row.id}`);
+    await fs.ensureDir(outputDir);
+
+    const selectedSegments = segmentIds
+      ? segments.filter((s: ClipSegment) => segmentIds.includes(s.id))
+      : segments;
+
+    const results: Array<{
+      segmentId: string;
+      outputPath: string;
+      srtPath: string;
+      subtitlesEmbedded: boolean;
+      bgmMixed: boolean;
+      duckingApplied: boolean;
+    }> = [];
+
+    for (const segment of selectedSegments) {
+      const clipPath = path.join(outputDir, `auto_${segment.id}.mp4`);
+
+      try {
+        // 1. Kırp
+        let croppedPath: string;
+        if (useFaceTracking) {
+          croppedPath = await videoClipper.cropSegmentWithFaceTracking(
+            row.source_video_path, clipPath, segment, { aspectRatio }
+          );
+        } else {
+          croppedPath = await videoClipper.cropSegment(
+            row.source_video_path, clipPath, segment, { aspectRatio }
+          );
+        }
+
+        // 2. Otomatik altyazı + BGM
+        const finalPath = clipPath.replace('.mp4', '_final.mp4');
+        const result = await autoProcessClip(croppedPath, finalPath, segment, {
+          subtitle: autoSubtitle ? {
+            subtitleStyle: subtitleStyle || { primaryColor: '#FFFFFF', bold: true },
+            maxCharsPerLine: 35,
+            position: 'bottom',
+          } : undefined,
+          bgm: autoBgm ? {
+            musicPath,
+            musicVolume,
+            duckingEnabled: true,
+            duckingThresholdDb: -18,
+          } : undefined,
+        });
+
+        results.push({
+          segmentId: segment.id,
+          outputPath: result.outputPath,
+          srtPath: result.srtPath,
+          subtitlesEmbedded: result.subtitlesEmbedded,
+          bgmMixed: result.bgmMixed,
+          duckingApplied: result.duckingApplied,
+        });
+      } catch (err) {
+        Logger.error('[Clipper] Auto process failed for segment ' + segment.id + ':', err);
+      }
+    }
+
+    const outputPaths = results.map(r => r.outputPath);
+    await db.run('UPDATE clip_jobs SET output_paths = $1 WHERE id = $2',
+      [JSON.stringify(outputPaths), row.id]);
+
+    res.json({ jobId: row.id, results });
+  } catch (error) {
+    Logger.error('[Clipper] Auto process failed:', error);
+    res.status(500).json({ error: 'Auto process failed' });
+  }
+});
+
+/**
+ * Generate word-level SRT entries from a segment caption using AI timestamps
+ */
+async function generateWordLevelSrt(
+  segment: ClipSegment,
+  outputPath: string
+): Promise<string> {
+  const caption = segment.suggestedCaption || '';
+  if (!caption.trim()) return outputPath;
+  const words = caption.split(/\s+/).filter(Boolean);
+  const duration = segment.endTime - segment.startTime;
+  const secPerWord = duration / Math.max(words.length, 1);
+
+  // SRT timestamp formatter: seconds -> HH:MM:SS,mmm
+  const fmtSrt = (s: number): string => {
+    const hh = Math.floor(s / 3600);
+    const mm = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const secs = ss.toFixed(3).replace('.', ',');
+    return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${secs.padStart(7,'0')}`;
+  };
+
+  try {
+    const { generateText } = await import('ai');
+    const response = await generateText({
+      model: getAIModelChain()[0],
+      prompt: `Given a Turkish caption "${caption}" with ${words.length} words and ${duration.toFixed(1)}s total, generate word-level timestamps as JSON array: [{ "word": "Bu", "start": 0.0, "end": 0.4 }, ...]. Return ONLY valid JSON array.`,
+      system: 'You are a timestamp generator for Turkish subtitles. Return ONLY valid JSON arrays.',
+    });
+    const match = response.text.match(/\[[\s\S]*?\]/);
+    if (match) {
+      const wordData = JSON.parse(match[0]) as Array<{ word: string; start: number; end: number }>;
+      const lines: string[] = [];
+      wordData.forEach((w, i) => {
+        lines.push(`${i+1}\n${fmtSrt(w.start)} --> ${fmtSrt(w.end)}\n${w.word}\n`);
+      });
+      await fs.writeFile(outputPath, lines.join('\n'), 'utf-8');
+      return outputPath;
+    }
+  } catch {}
+
+  // Fallback: even spacing
+  const lines: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    lines.push(`${i+1}\n${fmtSrt(i * secPerWord)} --> ${fmtSrt((i + 1) * secPerWord)}\n${words[i]}\n`);
+  }
+  await fs.writeFile(outputPath, lines.join('\n'), 'utf-8');
+  return outputPath;
+}
 
 /**
  * POST /api/v1/clipper/split-screen

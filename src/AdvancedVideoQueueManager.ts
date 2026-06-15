@@ -7,6 +7,7 @@ import { withFallbackAndRetry } from './lib/ai-utils.js';
 import { generateObject } from 'ai';
 import { transcribeVideoAudio } from './lib/audio-transcriber.js';
 import { z } from 'zod';
+import { Logger } from './lib/logger.js';
 
 export interface ProjectTask {
   id: string;
@@ -42,7 +43,7 @@ export class AdvancedVideoQueueManager {
   public async fetchTranscriptWithFallback(videoUrl: string): Promise<string> {
     // 1. ADIM: Lightweight Scraper (youtube-transcript)
     try {
-      console.log('[TRANSCRIPT] Step 1: youtube-transcript starting...');
+      Logger.info('Step 1: youtube-transcript starting...');
       const { YoutubeTranscript } = require('youtube-transcript');
       const pieces = await YoutubeTranscript.fetchTranscript(videoUrl, { lang: 'tr' });
       if (pieces && pieces.length > 0) {
@@ -50,13 +51,13 @@ export class AdvancedVideoQueueManager {
       }
       throw new Error('Scraper returned empty content.');
     } catch (scraperError: any) {
-      console.warn(`[TRANSCRIPT] Scraper failed: ${scraperError.message}. Trying YouTube Data API...`);
+      Logger.warn(`Scraper failed: ${scraperError.message}. Trying YouTube Data API...`);
 
       // 2. ADIM: Resmi YouTube Data API v3 (Captions) Fallback
       try {
         return await this.getResmiYouTubeCaption(videoUrl);
       } catch (apiError: any) {
-        console.error(`[TRANSCRIPT] YouTube API failed: ${apiError.message}. Last resort: Gemini 2.5 Flash Audio Transcribe...`);
+        Logger.error(`YouTube API failed: ${apiError.message}. Last resort: Gemini 2.5 Flash Audio Transcribe...`);
 
         // 3. ADIM: Download audio + Gemini Flash transcription
         return await this.transcribeAudioWithGeminiFlash(videoUrl);
@@ -98,13 +99,13 @@ Output JSON format:
     try {
       return await this.callLLM('zen-free', prompt);
     } catch (e: any) {
-      console.warn(`[LLM] Zen Free limit reached or error: ${e.message}. Falling back to MiniMax-M3...`);
+      Logger.warn(`Zen Free limit reached or error: ${e.message}. Falling back to MiniMax-M3...`);
 
       // 2. FALLBACK (INSURANCE): MiniMax-M3
       try {
         return await this.callLLM('minimax-m3', prompt);
       } catch (m3Error: any) {
-        console.error(`[LLM] MiniMax-M3 error: ${m3Error.message}. Last resort: Gemini 2.5 Flash...`);
+        Logger.error(`MiniMax-M3 error: ${m3Error.message}. Last resort: Gemini 2.5 Flash...`);
 
         // 3. LAST RESORT: Gemini 2.5 Flash
         return await this.callLLM('gemini-2.5-flash', prompt);
@@ -119,7 +120,7 @@ Output JSON format:
     let lastFrameBase64: string | null = null;
     const totalChunks = scenes.length;
 
-    console.log(`[RENDER] Micro-chunk render loop started. Total chunks: ${totalChunks}`);
+    Logger.info(`Micro-chunk render loop started. Total chunks: ${totalChunks}`);
 
     for (let i = 0; i < totalChunks; i++) {
       const currentChunkIndex = i + 1;
@@ -145,18 +146,18 @@ Output JSON format:
         const renderResult = await this.postToColabNgrok(payload);
         lastFrameBase64 = await this.extractLastFrameAsBase64(renderResult.videoPath);
       } catch (renderError: any) {
-        console.error(`[RENDER] Chunk ${currentChunkIndex} failed: ${renderError.message}`);
+        Logger.error(`Chunk ${currentChunkIndex} failed: ${renderError.message}`);
         throw renderError;
       }
     }
-    console.log('[RENDER] All micro-chunks completed successfully.');
+    Logger.info('All micro-chunks completed successfully.');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // PRIVATE: Gerçek LLM çağrısı — model chain + fallback + retry
   // ─────────────────────────────────────────────────────────────────────────
   private async callLLM(provider: string, prompt: string): Promise<any> {
-    console.log(`[LLM CALL] Provider: ${provider}`);
+    Logger.info(`Provider: ${provider}`);
     const models = getAIModelChain();
 
     const { object } = await withFallbackAndRetry((model) => {
@@ -252,7 +253,7 @@ Output JSON format:
     const tempAudioPath = path.join(process.cwd(), 'temp_audio_' + Date.now() + '.mp3');
 
     try {
-      console.log('[TRANSCRIPT] Downloading YouTube audio for Gemini transcription...');
+      Logger.info('Downloading YouTube audio for Gemini transcription...');
 
       await new Promise<void>((resolve, reject) => {
         const ytdlp = exec(
@@ -260,7 +261,7 @@ Output JSON format:
           { timeout: 120000 },
           (err, stdout, stderr) => {
             if (err) {
-              console.warn('[TRANSCRIPT] yt-dlp failed, trying direct ffmpeg stream...');
+              Logger.warn('yt-dlp failed, trying direct ffmpeg stream...');
               reject(err);
             } else {
               resolve();
@@ -318,7 +319,7 @@ Output JSON format:
         throw new Error('No transcript returned from Gemini audio transcription.');
       }
 
-      console.log('[TRANSCRIPT] Gemini audio transcription completed successfully.');
+      Logger.info('Gemini audio transcription completed successfully.');
       return text.trim();
     } finally {
       // Cleanup temp file
@@ -329,7 +330,7 @@ Output JSON format:
   }
 
   private emitSSEProgress(id: string, data: any) {
-    console.log(`[SSE PUSH] Project: ${id} -> ${JSON.stringify(data)}`);
+    Logger.info(`Project: ${id} -> ${JSON.stringify(data)}`);
   }
 
   private async postToColabNgrok(payload: any): Promise<{ videoPath: string }> {

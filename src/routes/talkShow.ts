@@ -7,7 +7,9 @@ import { orchestrateTalkShow } from '../services/talkShow/orchestrator.js';
 import { OrchestratorInput } from '../services/talkShow/types.js';
 import { Logger } from '../lib/logger.js';
 import { fetchWeeklyDiscussion, discussionToScenes } from '../services/talkShow/sportotoBridge.js';
-import type { SportotoDiscussion } from '../services/talkShow/sportotoBridge.js';
+import type { SportotoDiscussion, DiscussionSource } from '../services/talkShow/discussionSource.js';
+import { scriptEngine } from './scripts.js';
+import { orchestrateToVideo } from '../services/talkShow/orchestratorToVideo.js';
 import { produceTalkShowVideo } from '../services/talkShow/videoProducer.js';
 
 export const talkShowRouter = Router();
@@ -116,6 +118,76 @@ talkShowRouter.post('/sportoto/:week/produce', mediumLimiter, requireAuth, async
   } catch (err: any) {
     Logger.error('[TalkShow] Video production error:', err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+talkShowRouter.post('/orchestrate/video', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+  try {
+    const err = validateMatch(req.body);
+    if (err) return res.status(400).json({ success: false, error: err });
+
+    const input: OrchestratorInput = {
+      topic: req.body.topic,
+      match: req.body.match,
+      rounds: req.body.rounds ?? 3,
+      language: req.body.language ?? 'tr',
+      useApiFootball: req.body.useApiFootball ?? false,
+      characters: req.body.characters,
+    };
+
+    const result = await orchestrateTalkShow(input);
+    const outputDir = path.join(process.cwd(), 'videolar');
+    await fs.ensureDir(outputDir);
+    const outputPath = path.join(outputDir, `orchestrate_${Date.now()}.mp4`);
+
+    const videoResult = await orchestrateToVideo({
+      result,
+      outputPath,
+    });
+
+    Logger.info(`[TalkShow] Orchestrate video produced: ${videoResult.outputPath}`);
+
+    res.json({
+      success: true,
+      data: {
+        videoPath: videoResult.outputPath,
+        totalDuration: videoResult.totalDuration,
+        sceneCount: videoResult.sceneCount,
+        transcript: result.transcript,
+        consensus: result.consensus,
+        summary: result.summary,
+      },
+    });
+  } catch (err: any) {
+    Logger.error('[TalkShow] Orchestrate video error:', err);
+    res.status(500).json({ success: false, error: err.message || 'Video üretimi başarısız.' });
+  }
+});
+
+talkShowRouter.post('/sportoto/:week/generate-script', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+  try {
+    const weekNumber = parseInt(String(req.params.week), 10);
+    if (isNaN(weekNumber) || weekNumber < 1) {
+      return res.status(400).json({ success: false, error: 'Geçersiz hafta numarası' });
+    }
+
+    const { show_id } = req.body;
+    if (!show_id) {
+      return res.status(400).json({ success: false, error: 'show_id zorunludur.' });
+    }
+
+    const discussion = await fetchWeeklyDiscussion(weekNumber);
+    const userId = req.session.userId!;
+
+    const script = await scriptEngine.generateFromDiscussion(Number(show_id), userId, discussion);
+
+    Logger.info(`[TalkShow] Sportoto script generated: scriptId=${script.id}, week=${weekNumber}`);
+
+    res.json({ success: true, data: script });
+  } catch (err: any) {
+    Logger.error('[TalkShow] Sportoto script generation error:', err);
+    const status = err.message.includes('not found') || err.message.includes('No characters') ? 400 : 500;
+    res.status(status).json({ success: false, error: err.message || 'Script oluşturulamadı.' });
   }
 });
 

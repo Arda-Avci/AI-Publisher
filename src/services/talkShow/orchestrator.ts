@@ -7,6 +7,9 @@
  */
 
 import { getAIModelChain } from '../../lib/ai-provider.js';
+import { google } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
 import { Logger } from '../../lib/logger.js';
 import {
@@ -26,12 +29,12 @@ import {
 
 const ROUNDS_DEFAULT = 3;
 
-const AGENT_META: Record<AgentRole, { name: string; model: string }> = {
-  meta_orchestrator: { name: 'Sunucu', model: 'zen' },
-  match_analyst:     { name: 'Maç Yorumcusu', model: 'zen' },
-  former_player:     { name: 'Eski Futbolcu', model: 'zen' },
-  bookmaker:         { name: 'Kumarbaz', model: 'zen' },
-  data_scout:        { name: 'İstihbarat Subayı', model: 'zen' },
+const AGENT_META: Record<AgentRole, { name: string; provider: string }> = {
+  meta_orchestrator: { name: 'Sunucu', provider: 'zen' },
+  match_analyst:     { name: 'Maç Yorumcusu', provider: 'gemini' },
+  former_player:     { name: 'Eski Futbolcu', provider: 'claude' },
+  bookmaker:         { name: 'Kumarbaz', provider: 'deepseek' },
+  data_scout:        { name: 'İstihbarat Subayı', provider: 'zen' },
 };
 
 function getAgentName(role: AgentRole, characters?: OrchestratorInput['characters']): string {
@@ -206,12 +209,35 @@ function consensusFromTranscript(transcript: AgentMessage[]): OrchestratorResult
   };
 }
 
-async function aiGenerate(system: string, prompt: string, deps: Required<OrchestratorDeps>): Promise<string> {
+async function aiGenerate(role: AgentRole, system: string, prompt: string, deps: Required<OrchestratorDeps>): Promise<string> {
   if (!deps.useAI) throw new Error('AI disabled');
-  const models = getAIModelChain();
-  if (models.length === 0) throw new Error('No AI models available');
+  const provider = AGENT_META[role]?.provider || 'zen';
+
+  let model: any;
+  if (provider === 'gemini') {
+    model = google('gemini-2.5-flash');
+  } else if (provider === 'claude') {
+    if (process.env.ANTHROPIC_API_KEY) {
+      const baseURL = (process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic').replace(/\/+$/, '') + '/v1';
+      model = createAnthropic({ baseURL, apiKey: process.env.ANTHROPIC_API_KEY })('MiniMax-M3');
+    } else {
+      model = getAIModelChain()[0];
+    }
+  } else if (provider === 'deepseek') {
+    if (process.env.DEEPSEEK_API_KEY) {
+      model = createOpenAI({ baseURL: 'https://api.deepseek.com/v1', apiKey: process.env.DEEPSEEK_API_KEY } as any)('deepseek-chat');
+    } else {
+      model = getAIModelChain()[0];
+    }
+  } else {
+    const models = getAIModelChain();
+    model = models[0];
+  }
+
+  if (!model) throw new Error('No AI model available for this agent');
+
   const res = await deps.generateText({
-    model: models[0],
+    model,
     system,
     prompt,
     abortSignal: AbortSignal.timeout(20000),
@@ -256,7 +282,7 @@ async function runAgent(
   ].filter(Boolean).join('\n');
 
   try {
-    const text = await aiGenerate(systemPromptFor(role), prompt, deps);
+    const text = await aiGenerate(role, systemPromptFor(role), prompt, deps);
     return {
       ...baseFallback,
       content: text.trim().slice(0, 480),

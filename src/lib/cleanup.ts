@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { Logger } from './logger.js';
 
 /**
  * Sweeps the specified directories for files older than maxAgeMs and deletes them.
@@ -26,16 +27,16 @@ export async function cleanupOldFiles(directories: string[], maxAgeMs: number = 
             deletedCount++;
           }
         } catch (fileErr) {
-          console.warn(`[WARN] Dosya silinemedi (Garbage Collector): ${filePath}`, fileErr);
+          Logger.warn(`Dosya silinemedi (Garbage Collector): ${filePath}`, fileErr);
         }
       }
     } catch (dirErr) {
-      console.warn(`[WARN] Dizin okunamadı (Garbage Collector): ${dirPath}`, dirErr);
+      Logger.warn(`Dizin okunamadı (Garbage Collector): ${dirPath}`, dirErr);
     }
   }
 
   if (deletedCount > 0) {
-    console.log(`[INFO] Garbage Collector: ${deletedCount} adet eski geçici dosya temizlendi.`);
+    Logger.info(`Garbage Collector: ${deletedCount} adet eski geçici dosya temizlendi.`);
   }
 }
 
@@ -47,17 +48,17 @@ export function startGarbageCollector(
   intervalMs: number = 12 * 60 * 60 * 1000, // Every 12 hours
   maxAgeMs: number = 24 * 60 * 60 * 1000 // 24 hours
 ): void {
-  console.log(`[INFO] Garbage Collector başlatıldı. Hedef dizinler: ${directories.join(', ')}`);
+  Logger.info(`Garbage Collector başlatıldı. Hedef dizinler: ${directories.join(', ')}`);
   
   // İlk temizliği hemen yap
   cleanupOldFiles(directories, maxAgeMs).catch(err => {
-    console.error('[ERROR] Garbage Collector ilk temizlik hatası:', err);
+    Logger.error('Garbage Collector ilk temizlik hatası', err);
   });
 
   // Belirli aralıklarla tekrarla
   setInterval(() => {
     cleanupOldFiles(directories, maxAgeMs).catch(err => {
-      console.error('[ERROR] Garbage Collector temizlik hatası:', err);
+      Logger.error('Garbage Collector temizlik hatası', err);
     });
   }, intervalMs);
 }

@@ -4,6 +4,7 @@
  */
 import { getDashboardStyles } from './dashboardStyles.js';
 import { getDashboardScripts } from './dashboardScripts.js';
+import { Logger } from '../lib/logger.js';
 
 export function escapeHtml(str: string): string {
   if (!str) return '';
@@ -254,7 +255,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           `;
         }
       } catch (e) {
-        console.warn('Cover images JSON parse hatası:', e);
+        Logger.warn('Cover images JSON parse hatası', e);
       }
     }
 

@@ -98,14 +98,10 @@ export async function inpaintObjects(
       regionCount: maskRegions.length
     });
 
-    // TODO: Colab endpoint `/api/v1/inpaint` not yet implemented in colab_setup.py
-    // Expected payload: {
-    //   video_path: string,
-    //   mask_regions: Array<{x, y, width, height, label?}>
-    //   output_path: string,
-    //   strength?: number
-    // }
-    // Expected response: { status: 'success', output_path: string }
+    // Note: Colab has `/inpaint-image` for image inpainting only (colab_server.py:1244).
+    // Video inpainting endpoint `/api/v1/inpaint` is future work.
+    // Payload: { video_path, mask_regions, output_path, strength? }
+    // Response: { status, output_path }
 
     const response = await axios.post(
       `${colabUrl}/api/v1/inpaint`,

@@ -1,5 +1,6 @@
 import { generateText, generateObject } from 'ai';
 import { disabledZenModels } from './ai-provider.js';
+import { Logger } from './logger.js';
 
 /**
  * Exponential backoff with jitter and fallback mechanism for AI API calls.
@@ -21,7 +22,7 @@ export async function withFallbackAndRetry<T>(
 
     // Skip Zen models for structured output (generateObject) — they don't support response_format
     if (isZenModel && skipZenModels) {
-      console.log(`[AI] Skipping Zen model "${modelId}" — not compatible with structured output.`);
+      Logger.info(`[AI] Skipping Zen model "${modelId}" — not compatible with structured output.`);
       continue;
     }
 
@@ -32,7 +33,7 @@ export async function withFallbackAndRetry<T>(
     while (attempt <= effectiveMaxRetries) {
       try {
         if (modelIndex > 0) {
-           console.log(`[AI] Attempting with fallback model index ${modelIndex}...`);
+           Logger.info(`[AI] Attempting with fallback model index ${modelIndex}...`);
         }
         return await operation(currentModel);
       } catch (error: any) {
@@ -47,12 +48,12 @@ export async function withFallbackAndRetry<T>(
         if (attempt <= effectiveMaxRetries && !isTimeout) {
           const jitter = Math.random() * 1000;
           const delayMs = baseDelayMs * Math.pow(2, attempt - 1) + jitter;
-          console.warn(`[AI] Error with model index ${modelIndex} (${error?.message?.slice(0, 100) || 'Unknown'}). Retrying attempt ${attempt}/${effectiveMaxRetries} after ${Math.round(delayMs)}ms...`);
+          Logger.warn(`[AI] Error with model index ${modelIndex} (${error?.message?.slice(0, 100) || 'Unknown'}). Retrying attempt ${attempt}/${effectiveMaxRetries} after ${Math.round(delayMs)}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         } else {
           // Exhausted retries or timed out
           const reason = isTimeout ? 'timed out' : 'failed completely';
-          console.warn(`[AI] Model index ${modelIndex} ${reason}. Moving to next fallback model if available.`);
+          Logger.warn(`[AI] Model index ${modelIndex} ${reason}. Moving to next fallback model if available.`);
           break; // Break the while loop, move to the next model in the for loop
         }
       }

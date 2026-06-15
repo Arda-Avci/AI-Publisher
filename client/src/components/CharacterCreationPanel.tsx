@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type React from 'react';
-import { UserPlus, User, Edit3, Trash2, Image as ImageIcon, Loader } from 'lucide-react';
+import { UserPlus, User, Edit3, Trash2, Image as ImageIcon, Loader, Wand2, Sparkles } from 'lucide-react';
 import type { Character } from '../types.js';
+import { PhotoEditor } from './PhotoEditor.js';
 
 const ARCHETYPES = ['protagonist', 'mentor', 'comic_relief', 'antagonist', 'supporting', 'narrator'] as const;
 const VOICE_PROVIDERS = ['edge', 'openai', 'xtts'] as const;
@@ -225,6 +226,10 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
   const [voiceProvider, setVoiceProvider] = useState<string>('edge');
   const [voiceId, setVoiceId] = useState(VOICE_DEFAULTS.edge);
   const [referenceImage, setReferenceImage] = useState<string>('');
+  const [avatarStyle, setAvatarStyle] = useState<string>('realistic');
+  const [avatarSource, setAvatarSource] = useState<'ai' | 'upload'>('ai');
+  const [editingAvatarUrl, setEditingAvatarUrl] = useState<string | null>(null);
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
 
   const fetchCharacters = useCallback(async () => {
     try {
@@ -283,8 +288,33 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
     const reader = new FileReader();
     reader.onload = () => {
       setReferenceImage(reader.result as string);
+      setAvatarSource('upload');
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleGenerateAvatar = async () => {
+    if (!description.trim()) return;
+    setGeneratingAvatar(true);
+    try {
+      const res = await fetch('/api/v1/characters/generate-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, avatar_style: avatarStyle }),
+      });
+      const data = await res.json();
+      if (data.status === 'success' && data.avatar_base64) {
+        setReferenceImage(data.avatar_base64);
+        setAvatarSource('ai');
+      }
+    } catch { /* ignore */ } finally {
+      setGeneratingAvatar(false);
+    }
+  };
+
+  const handleAvatarSave = (newUrl: string) => {
+    setReferenceImage(newUrl);
+    setEditingAvatarUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -427,25 +457,83 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
           </div>
 
           <div style={s.field}>
+            <label style={s.label}>Avatar Stili</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setAvatarStyle('realistic')}
+                style={{
+                  flex: 1, padding: '6px 8px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                  background: avatarStyle === 'realistic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                  color: avatarStyle === 'realistic' ? '#0b0f19' : 'var(--text-muted)',
+                }}
+              >Gerçekçi</button>
+              <button
+                type="button"
+                onClick={() => setAvatarStyle('animatic')}
+                style={{
+                  flex: 1, padding: '6px 8px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                  background: avatarStyle === 'animatic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                  color: avatarStyle === 'animatic' ? '#0b0f19' : 'var(--text-muted)',
+                }}
+              >Animatik</button>
+            </div>
+          </div>
+
+          <div style={s.field}>
             <label style={s.label}>Referans Görseli</label>
-            <div style={s.fileRow}>
-              <label style={s.fileBtn}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  style={{ display: 'none' }}
-                />
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ImageIcon size={12} />
-                  {referenceImage ? 'Değiştir' : 'Yükle'}
-                </span>
-              </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={s.fileRow}>
+                <label style={s.fileBtn}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ImageIcon size={12} />
+                    {referenceImage ? 'Değiştir' : 'Yükle'}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGenerateAvatar}
+                  disabled={generatingAvatar || !description.trim()}
+                  style={{
+                    ...s.fileBtn, borderStyle: 'solid',
+                    opacity: generatingAvatar || !description.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {generatingAvatar ? (
+                    <Loader size={12} className="pulse" />
+                  ) : (
+                    <Sparkles size={12} />
+                  )}
+                  AI Üret
+                </button>
+                {referenceImage && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingAvatarUrl(referenceImage)}
+                    style={{ ...s.fileBtn, borderStyle: 'solid' }}
+                  >
+                    <Wand2 size={12} /> Düzenle
+                  </button>
+                )}
+              </div>
               {referenceImage && (
-                <span style={{ fontSize: '10px', color: 'var(--success)' }}>✓ Yüklendi</span>
+                <span style={{ fontSize: '10px', color: avatarSource === 'ai' ? 'var(--primary)' : 'var(--success)' }}>
+                  Kaynak: {avatarSource === 'ai' ? 'AI Üretimi' : 'Yükleme'}
+                </span>
               )}
             </div>
           </div>
+          {referenceImage && (
+            <div style={{ width: 80, height: 80, borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              <img src={referenceImage} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
 
           <div style={s.formActions}>
             <button
@@ -513,6 +601,14 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
             </div>
           ))}
         </div>
+      )}
+
+      {editingAvatarUrl && (
+        <PhotoEditor
+          imageUrl={editingAvatarUrl}
+          onSave={handleAvatarSave}
+          onClose={() => setEditingAvatarUrl(null)}
+        />
       )}
     </div>
   );

@@ -1,3 +1,14 @@
+export type LlmProvider = 'zen' | 'gemini' | 'claude' | 'deepseek';
+export type AvatarStyle = 'realistic' | 'animatic';
+export type AvatarSource = 'ai' | 'upload';
+export type RelationshipType = 'friendly' | 'neutral' | 'antagonistic' | 'respectful';
+
+export interface CharacterRelationship {
+  characterId: number;
+  type: RelationshipType;
+  notes?: string;
+}
+
 export interface Character {
   id?: number;
   user_id: number;
@@ -8,6 +19,12 @@ export interface Character {
   reference_image_base64?: string;
   tts_voice_id: string;
   voice_provider: 'edge' | 'openai' | 'xtts';
+  llm_provider?: LlmProvider;
+  llm_model?: string;
+  avatar_style?: AvatarStyle;
+  avatar_source?: AvatarSource;
+  color?: string;
+  relationships?: CharacterRelationship[];
   created_at?: string;
   updated_at?: string;
 }

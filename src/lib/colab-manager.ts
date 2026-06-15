@@ -20,6 +20,7 @@ import { EventEmitter } from 'events';
 import path from 'path';
 import axios from 'axios';
 import fs from 'fs';
+import { Logger } from './logger.js';
 
 export type ColabStatus = 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
 
@@ -122,6 +123,12 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
   }
 
   async start(): Promise<{ ngrokUrl: string }> {
+    if (process.env.MOCK_COLAB === 'true') {
+      this.setStatus('running', 'http://localhost:3016/mock', null);
+      this.state.startedAt = new Date().toISOString();
+      this.startHealthChecks();
+      return { ngrokUrl: 'http://localhost:3016/mock' };
+    }
     const envUrl = process.env.COLAB_URL;
     if (envUrl && envUrl.startsWith('http')) {
       if (!this.state.startedAt) this.state.startedAt = new Date().toISOString();
@@ -140,7 +147,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           this.startHealthChecks();
           return { ngrokUrl: envUrl };
         }
-        console.warn(`[WARN] Existing COLAB_URL connection failed (${err.message}). Starting new Colab server...`);
+        Logger.warn(`Existing COLAB_URL connection failed (${err.message}). Starting new Colab server...`);
         this.state.status = 'starting';
       }
     }
@@ -164,6 +171,13 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
   }
 
   async connect(url: string): Promise<{ ngrokUrl: string }> {
+    if (process.env.MOCK_COLAB === 'true' || url.includes('mock')) {
+      this.setStatus('running', url, null);
+      this.state.startedAt = new Date().toISOString();
+      process.env.COLAB_URL = url;
+      this.startHealthChecks();
+      return { ngrokUrl: url };
+    }
     this.setStatus('starting', url, null);
 
     // Clean up url
@@ -203,7 +217,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
         }
         fs.writeFileSync(envPath, envContent.trim() + '\n');
       } catch (e) {
-        console.warn('[colab] Failed to write to .env:', e);
+        Logger.warn('[colab] Failed to write to .env', e);
       }
 
       return { ngrokUrl: finalUrl };
@@ -331,13 +345,13 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     const url = this.state.ngrokUrl || process.env.COLAB_URL;
     if (url) {
       try {
-        console.log(`[colab] Sending shutdown request to Colab at ${url}/shutdown`);
+        Logger.info(`[colab] Sending shutdown request to Colab at ${url}/shutdown`);
         await axios.post(`${url}/shutdown`, {}, {
           timeout: 4000,
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
       } catch (e: any) {
-        console.warn(`[colab] Failed to call /shutdown endpoint: ${e.message}`);
+        Logger.warn(`[colab] Failed to call /shutdown endpoint: ${e.message}`);
       }
     }
 
@@ -434,6 +448,9 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
   }
 
   async verifyLibraries(): Promise<{ success: boolean; report?: any; error?: string }> {
+    if (process.env.MOCK_COLAB === 'true') {
+      return { success: true, report: {} };
+    }
     const url = this.state.ngrokUrl || process.env.COLAB_URL;
     if (!url) {
       return { success: false, error: 'COLAB_URL bulunamadı veya sunucu çalışmıyor.' };
@@ -495,6 +512,16 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
   }
 
   private async runHealthCheck(): Promise<void> {
+    if (process.env.MOCK_COLAB === 'true') {
+      this.state.gpuMemoryGB = 16;
+      this.state.gpuUsedGB = 4;
+      this.state.gpuUtilizationPct = 25;
+      this.state.runtimeSeconds = 3600;
+      this.state.lastHealthCheck = new Date().toISOString();
+      this.state.lastError = null;
+      this.emit('state-change', this.getState());
+      return;
+    }
     const url = this.state.ngrokUrl;
     if (!url) return;
     try {

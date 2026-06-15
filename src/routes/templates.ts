@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { generateTemplatePreview, getAllTemplatePreviews, enhancePromptForTemplate, ProductionTemplate } from '../services/templatePromptService';
+import { Logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
     const previews = await getAllTemplatePreviews();
     res.json({ success: true, templates: previews });
   } catch (error) {
-    console.error('Failed to get template previews:', error);
+    Logger.error('Failed to get template previews', error);
     res.status(500).json({ success: false, error: 'Failed to generate template previews' });
   }
 });
@@ -45,7 +46,7 @@ router.get('/:template/preview', async (req, res) => {
 
     res.json({ success: true, preview });
   } catch (error) {
-    console.error('Failed to get template preview:', error);
+    Logger.error('Failed to get template preview', error);
     res.status(500).json({ success: false, error: 'Failed to generate template preview' });
   }
 });
@@ -73,7 +74,7 @@ router.post('/:template/enhance-prompt', async (req, res) => {
     const enhanced = await enhancePromptForTemplate(prompt, template as ProductionTemplate);
     res.json({ success: true, enhanced });
   } catch (error) {
-    console.error('Failed to enhance prompt:', error);
+    Logger.error('Failed to enhance prompt', error);
     res.status(500).json({ success: false, error: 'Failed to enhance prompt' });
   }
 });

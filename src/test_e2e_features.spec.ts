@@ -8,6 +8,22 @@ import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs-extra';
 
+vi.mock('axios', () => {
+  const mockAxios: any = (config: any) => Promise.resolve({ data: Buffer.from('mock video data') });
+  mockAxios.get = vi.fn().mockResolvedValue({ data: Buffer.from('mock video data') });
+  mockAxios.post = vi.fn().mockResolvedValue({
+    data: {
+      download_url: 'https://mock-colab/video.mp4',
+      source: 'pexels',
+      task_id: 'mock_task',
+      status: 'success',
+    },
+  });
+  mockAxios.create = vi.fn(() => mockAxios);
+  mockAxios.interceptors = { request: { use: vi.fn(), eject: vi.fn() }, response: { use: vi.fn(), eject: vi.fn() } };
+  return { default: mockAxios, get: mockAxios.get, post: mockAxios.post, create: mockAxios.create };
+});
+
 vi.mock('./middleware/rate-limit.js', () => ({
   authLimiter: (_req: any, _res: any, next: any) => next(),
   mediumLimiter: (_req: any, _res: any, next: any) => next(),
@@ -49,22 +65,6 @@ vi.mock('./lib/audit.js', () => ({
 vi.mock('ai', () => ({
   generateText: vi.fn().mockResolvedValue({ text: 'Mock AI yanıtı' }),
 }));
-
-vi.mock('axios', () => {
-  const mockAxios: any = (config: any) => Promise.resolve({ data: Buffer.from('mock video data') });
-  mockAxios.get = vi.fn().mockResolvedValue({ data: Buffer.from('mock video data') });
-  mockAxios.post = vi.fn().mockResolvedValue({
-    data: {
-      download_url: 'https://mock-colab/video.mp4',
-      source: 'pexels',
-      task_id: 'mock_task',
-      status: 'success',
-    },
-  });
-  mockAxios.create = vi.fn(() => mockAxios);
-  mockAxios.interceptors = { request: { use: vi.fn(), eject: vi.fn() }, response: { use: vi.fn(), eject: vi.fn() } };
-  return { default: mockAxios, get: mockAxios.get, post: mockAxios.post, create: mockAxios.create };
-});
 
 vi.mock('./services/chatToEdit.js', () => ({
   parseEditCommand: vi.fn().mockResolvedValue({

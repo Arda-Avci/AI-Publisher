@@ -1,6 +1,7 @@
 import { getRabbitChannel, PUBLISH_JOBS_QUEUE, registerReconnectCallback } from './rabbitmq.js';
 import { db } from '../db.js';
 import { broadcastProgress } from './redis.js';
+import { Logger } from './logger.js';
 import {
   uploadToYouTube,
   uploadToTikTok,
@@ -36,7 +37,7 @@ export async function startPublishQueueWorker() {
       // aynı anda 1 adet çalışacak şekilde sınırla (Concurrency = 1)
       await channel.prefetch(1);
 
-      console.log(`[INFO] RabbitMQ Worker: ${PUBLISH_JOBS_QUEUE} dinleniyor (Prefetch=1)`);
+      Logger.info(`RabbitMQ Worker: ${PUBLISH_JOBS_QUEUE} dinleniyor (Prefetch=1)`);
 
       channel.consume(PUBLISH_JOBS_QUEUE, async (msg: any) => {
         if (!msg) return;
@@ -45,7 +46,7 @@ export async function startPublishQueueWorker() {
         try {
           payload = JSON.parse(msg.content.toString());
         } catch (err) {
-          console.error('[ERROR] Publish msg parse error:', err);
+          Logger.error('Publish msg parse error', err);
           channel.ack(msg);
           return;
         }
@@ -79,14 +80,14 @@ export async function startPublishQueueWorker() {
               percent: 100
             });
           } catch (broadcastErr) {
-            console.warn('[WARN] publish broadcast failed:', broadcastErr);
+            Logger.warn('publish broadcast failed', broadcastErr);
           }
 
-          console.log(`[publish ${platform}] job #${jobId} -> ${success ? 'success' : 'failed'}`);
+          Logger.info(`[publish ${platform}] job #${jobId} -> ${success ? 'success' : 'failed'}`);
           
           channel.ack(msg);
         } catch (err: any) {
-          console.error(`[ERROR] ${platform} yayın hatası:`, err);
+          Logger.error(`${platform} yayın hatası`, err);
           try {
             await db.run(
               `UPDATE video_jobs SET ${statusField} = $1 WHERE id = $2`,
@@ -104,13 +105,13 @@ export async function startPublishQueueWorker() {
               percent: 100
             });
           } catch (innerErr) {
-            console.error('[ERROR] publish failure handler crashed:', innerErr);
+            Logger.error('publish failure handler crashed', innerErr);
           }
           channel.ack(msg);
         }
       });
     } catch (err: any) {
-      console.error('[ERROR] Publish queue worker setup failed (will retry on reconnect):', err.message);
+      Logger.error('Publish queue worker setup failed (will retry on reconnect)', err.message);
     }
   };
 

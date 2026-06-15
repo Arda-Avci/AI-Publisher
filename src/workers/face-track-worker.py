@@ -75,7 +75,7 @@ class FaceTracker:
             small_gray,
             scaleFactor=1.1,
             minNeighbors=5,
-            minSize=(max(1, int(self.min_face_size * self.scale_factor)),) * 2,
+            minSize=(max(1, int(self.min_face_size * self.scale_factor)) * 2,),
             flags=cv2.CASCADE_SCALE_IMAGE
         )
 
@@ -85,7 +85,7 @@ class FaceTracker:
                 small_gray,
                 scaleFactor=1.1,
                 minNeighbors=5,
-                minSize=(max(1, int(self.min_face_size * self.scale_factor)),) * 2,
+                minSize=(max(1, int(self.min_face_size * self.scale_factor)) * 2,),
                 flags=cv2.CASCADE_SCALE_IMAGE
             )
 
@@ -115,6 +115,64 @@ class FaceTracker:
             'width': fw,
             'height': fh,
             'confidence': float(confidence)
+        }
+
+    def process_image(self) -> Dict[str, Any]:
+        """
+        Process a single image and return face tracking data (normalized 0-1).
+        """
+        frame = cv2.imread(self.video_path)
+        if frame is None:
+            return {
+                'error': f'Failed to read image: {self.video_path}',
+                'faces': []
+            }
+        
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        small_gray = cv2.resize(gray, None, fx=self.scale_factor, fy=self.scale_factor)
+        small_gray = cv2.equalizeHist(small_gray)
+        
+        faces = self.face_cascade.detectMultiScale(
+            small_gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(max(1, int(self.min_face_size * self.scale_factor)) * 2, max(1, int(self.min_face_size * self.scale_factor)) * 2),
+            flags=cv2.CASCADE_SCALE_IMAGE
+        )
+        
+        if len(faces) == 0:
+            faces = self.profile_cascade.detectMultiScale(
+                small_gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(max(1, int(self.min_face_size * self.scale_factor)) * 2, max(1, int(self.min_face_size * self.scale_factor)) * 2),
+                flags=cv2.CASCADE_SCALE_IMAGE
+            )
+            
+        faces_list = []
+        scale = 1.0 / self.scale_factor
+        height, width = frame.shape[:2]
+        
+        for (x, y, w, h) in faces:
+            orig_x = x * scale
+            orig_y = y * scale
+            orig_w = w * scale
+            orig_h = h * scale
+            
+            norm_x = orig_x / width
+            norm_y = orig_y / height
+            norm_w = orig_w / width
+            norm_h = orig_h / height
+            
+            faces_list.append({
+                'x': float(norm_x),
+                'y': float(norm_y),
+                'w': float(norm_w),
+                'h': float(norm_h)
+            })
+            
+        return {
+            'faces': faces_list
         }
 
     def process_video(self, start_time: float = 0, duration: Optional[float] = None) -> Dict[str, Any]:
@@ -212,17 +270,22 @@ def main():
         sys.exit(1)
 
     video_path = sys.argv[1]
-    start_time = float(sys.argv[2]) if len(sys.argv) > 2 else 0
-    duration = float(sys.argv[3]) if len(sys.argv) > 3 else None
+    is_image = video_path.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.bmp'))
 
     try:
         tracker = FaceTracker(video_path)
-        result = tracker.process_video(start_time, duration)
+        if is_image:
+            result = tracker.process_image()
+        else:
+            start_time = float(sys.argv[2]) if len(sys.argv) > 2 else 0
+            duration = float(sys.argv[3]) if len(sys.argv) > 3 else None
+            result = tracker.process_video(start_time, duration)
         print(json.dumps(result))
     except Exception as e:
         print(json.dumps({
             'error': str(e),
             'frames': [],
+            'faces': [],
             'duration': 0,
             'mode': 'face'
         }))

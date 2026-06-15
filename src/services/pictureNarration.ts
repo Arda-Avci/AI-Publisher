@@ -4,6 +4,10 @@
  * from text content (paragraphs, chapters)
  */
 
+import axios from 'axios';
+import { colab } from '../lib/colab-manager.js';
+import path from 'path';
+import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
 
 export interface NarrationBlock {
@@ -141,16 +145,73 @@ export async function generateBlockAssets(
   const result: { imageUrl?: string; audioUrl?: string; subtitleUrl?: string } = {};
 
   if (block.visualPrompt) {
-    // TODO: Connect to Colab image generation
-    result.imageUrl = `generated://image-${block.id}.png`;
+    const state = colab.getState();
+    if (state.status === 'running' && state.ngrokUrl) {
+      try {
+        const resp = await axios.post(`${state.ngrokUrl}/generate-image`, {
+          prompt: block.visualPrompt,
+          output_path: path.join(process.cwd(), 'videolar', `image-${block.id}.png`)
+        }, { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } });
+        result.imageUrl = resp.data?.output_path || `generated://image-${block.id}.png`;
+      } catch (err: any) {
+        Logger.warn('[pictureNarration] Image generation via Colab failed', { error: err.message });
+        result.imageUrl = `generated://image-${block.id}.png`;
+      }
+    } else {
+      Logger.warn('[pictureNarration] Colab unavailable for image generation', { status: state.status });
+      result.imageUrl = `generated://image-${block.id}.png`;
+    }
   }
 
   if (block.text) {
-    // TODO: Connect to TTS service
-    result.audioUrl = `generated://audio-${block.id}.mp3`;
+    const state = colab.getState();
+    if (state.status === 'running' && state.ngrokUrl) {
+      try {
+        const resp = await axios.post(`${state.ngrokUrl}/tts`, {
+          text: block.text,
+          output_path: path.join(process.cwd(), 'videolar', `audio-${block.id}.mp3`)
+        }, { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } });
+        result.audioUrl = resp.data?.output_path || `generated://audio-${block.id}.mp3`;
+      } catch (err: any) {
+        Logger.warn('[pictureNarration] TTS via Colab failed', { error: err.message });
+        result.audioUrl = `generated://audio-${block.id}.mp3`;
+      }
+    } else {
+      Logger.warn('[pictureNarration] Colab unavailable for TTS', { status: state.status });
+      result.audioUrl = `generated://audio-${block.id}.mp3`;
+    }
   }
 
-  // TODO: Generate subtitles from text
+  // Generate subtitle file (SRT format) from text
+  try {
+    const subtitleDir = path.join(process.cwd(), 'videolar');
+    const srtPath = path.join(subtitleDir, `subtitle-${block.id}.srt`);
+    await fs.ensureDir(subtitleDir);
+
+    const words = block.text.split(/\s+/);
+    const durationPerWord = 0.4; // seconds
+    // Estimate 3 words per subtitle line, 2 lines max
+    const lines: string[] = [];
+    let lineNum = 1;
+    for (let i = 0; i < words.length; i += 6) {
+      const chunk = words.slice(i, i + 6).join(' ');
+      if (!chunk) continue;
+      const startSec = i * durationPerWord;
+      const endSec = Math.min((i + 6) * durationPerWord, words.length * durationPerWord);
+      const fmt = (s: number) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${sec.toFixed(3).padStart(6, '0').replace('.', ',')}`;
+      };
+      lines.push(`${lineNum++}\n${fmt(startSec)} --> ${fmt(endSec)}\n${chunk}\n`);
+    }
+    await fs.writeFile(srtPath, lines.join('\n'));
+    result.subtitleUrl = srtPath;
+    Logger.info('[pictureNarration] Subtitle file generated', { srtPath, lines: lines.length });
+  } catch (err: any) {
+    Logger.warn('[pictureNarration] Subtitle generation failed', { error: err.message });
+  }
 
   return result;
 }

@@ -4,49 +4,11 @@ import fs from 'fs-extra';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('fs-extra', () => ({
-  default: {
-    ensureDir: vi.fn().mockResolvedValue(undefined),
-    copy: vi.fn().mockResolvedValue(undefined),
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    readFile: vi.fn().mockResolvedValue(Buffer.from('mock')),
-    remove: vi.fn().mockResolvedValue(undefined),
-    pathExists: vi.fn().mockImplementation((p: string) => Promise.resolve(p.includes('_exists'))),
-    readdir: vi.fn().mockResolvedValue([]),
-    existsSync: vi.fn().mockImplementation((p: string) => p.includes('_exists')),
-  },
-  ensureDir: vi.fn().mockResolvedValue(undefined),
-  copy: vi.fn().mockResolvedValue(undefined),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  readFile: vi.fn().mockResolvedValue(Buffer.from('mock')),
-  remove: vi.fn().mockResolvedValue(undefined),
-  pathExists: vi.fn().mockImplementation((p: string) => Promise.resolve(p.includes('_exists'))),
-  readdir: vi.fn().mockResolvedValue([]),
-  existsSync: vi.fn().mockImplementation((p: string) => p.includes('_exists')),
-}));
-
-vi.mock('./lib/logger.js', () => ({
-  Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
-vi.mock('./lib/ai-provider.js', () => ({
-  getAIModelChain: vi.fn().mockReturnValue([{ modelId: 'gemini-2.5-flash' }]),
-}));
-
-vi.mock('./lib/ai-utils.js', () => ({
-  withFallbackAndRetry: vi.fn(async (fn: any) => fn({ modelId: 'gemini-2.5-flash' })),
-}));
-
-vi.mock('ai', () => ({
-  generateText: vi.fn().mockResolvedValue({ text: 'mock' }),
-  generateObject: vi.fn().mockResolvedValue({ object: { titles: [], hashtags: [] } }),
-}));
-
-const COLAB_URL = 'https://mock-colab.ngrok-free.dev';
-const mockTaskId = `task_${Date.now()}`;
-
-// Mock axios for Colab HTTP calls
-const axiosResponse = (data: any) => ({ status: 200, statusText: 'OK', headers: {}, config: {} as any, data });
+const { mockTaskId, axiosResponse } = vi.hoisted(() => {
+  const mockTaskId = `task_${Date.now()}`;
+  const axiosResponse = (data: any) => ({ status: 200, statusText: 'OK', headers: {}, config: {} as any, data });
+  return { mockTaskId, axiosResponse };
+});
 
 vi.mock('axios', () => ({
   default: {
@@ -107,6 +69,46 @@ vi.mock('axios', () => ({
     }),
   },
 }));
+
+vi.mock('fs-extra', () => ({
+  default: {
+    ensureDir: vi.fn().mockResolvedValue(undefined),
+    copy: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    readFile: vi.fn().mockResolvedValue(Buffer.from('mock')),
+    remove: vi.fn().mockResolvedValue(undefined),
+    pathExists: vi.fn().mockImplementation((p: string) => Promise.resolve(p.includes('_exists'))),
+    readdir: vi.fn().mockResolvedValue([]),
+    existsSync: vi.fn().mockImplementation((p: string) => p.includes('_exists')),
+  },
+  ensureDir: vi.fn().mockResolvedValue(undefined),
+  copy: vi.fn().mockResolvedValue(undefined),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+  readFile: vi.fn().mockResolvedValue(Buffer.from('mock')),
+  remove: vi.fn().mockResolvedValue(undefined),
+  pathExists: vi.fn().mockImplementation((p: string) => Promise.resolve(p.includes('_exists'))),
+  readdir: vi.fn().mockResolvedValue([]),
+  existsSync: vi.fn().mockImplementation((p: string) => p.includes('_exists')),
+}));
+
+vi.mock('./lib/logger.js', () => ({
+  Logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock('./lib/ai-provider.js', () => ({
+  getAIModelChain: vi.fn().mockReturnValue([{ modelId: 'gemini-2.5-flash' }]),
+}));
+
+vi.mock('./lib/ai-utils.js', () => ({
+  withFallbackAndRetry: vi.fn(async (fn: any) => fn({ modelId: 'gemini-2.5-flash' })),
+}));
+
+vi.mock('ai', () => ({
+  generateText: vi.fn().mockResolvedValue({ text: 'mock' }),
+  generateObject: vi.fn().mockResolvedValue({ object: { titles: [], hashtags: [] } }),
+}));
+
+const COLAB_URL = 'https://mock-colab.ngrok-free.dev';
 
 describe('Colab Video & Audio Generation Integration Tests', () => {
   beforeAll(() => {

@@ -14,6 +14,7 @@ import {
   activePublishBrowsers
 } from '../publisher.js';
 import { broadcastProgress } from '../lib/redis.js';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Publish route: POST /publish/:id/:platform.
@@ -141,7 +142,7 @@ export function registerPublishRoutes(app: Application): void {
       await sendToQueue('publish_jobs_queue', payload);
 
     } catch (err: any) {
-      console.error('[ERROR] /publish pre-check failed:', err);
+      Logger.error('/publish pre-check failed', err);
       try {
         res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
       } catch {
@@ -185,7 +186,7 @@ export function registerPublishRoutes(app: Application): void {
       if (browser) {
         await browser.close().catch(() => {});
         activePublishBrowsers.delete(key);
-        console.log(`[INFO] Aktif ${platform} paylasimi iptal edildi, browser kapatildi: #${jobId}`);
+        Logger.info(`Aktif ${platform} paylasimi iptal edildi, browser kapatildi: #${jobId}`);
       }
 
       await db.run(
@@ -202,7 +203,7 @@ export function registerPublishRoutes(app: Application): void {
           percent: 0
         });
       } catch (broadcastErr) {
-        console.warn('[WARN] cancel-publish broadcast failed:', broadcastErr);
+        Logger.warn('cancel-publish broadcast failed', broadcastErr);
       }
 
       logAudit({
@@ -215,7 +216,7 @@ export function registerPublishRoutes(app: Application): void {
 
       res.json({ success: true, message: 'Yayinlama iptal edildi.' });
     } catch (err: any) {
-      console.error('[ERROR] /cancel-publish failed:', err);
+      Logger.error('/cancel-publish failed', err);
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });

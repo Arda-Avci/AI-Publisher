@@ -64,9 +64,9 @@ export async function correctEyeContact(
   try {
     Logger.info('[eyeContact] Sending request to Colab', { videoPath, outputPath });
 
-    // TODO: Colab endpoint `/api/v1/eye-contact` not yet implemented in colab_setup.py
-    // Expected payload: { video_path, output_path }
-    // Expected response: { status: 'success', output_path: string }
+    Logger.warn('[eyeContact] `/api/v1/eye-contact` not implemented on Colab side — future feature', {
+      videoPath, outputPath
+    });
 
     const response = await axios.post(
       `${colabUrl}/api/v1/eye-contact`,

@@ -28,6 +28,7 @@ import {
   deletePlotPoint,
   generateFromStoryBible,
 } from '../services/storyBibleService.js';
+import { Logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.get('/sessions', async (req, res) => {
     const sessions = await getUserChatSessions(userId);
     res.json({ success: true, sessions });
   } catch (error) {
-    console.error('Failed to get sessions:', error);
+    Logger.error('Failed to get sessions', error);
     res.status(500).json({ success: false, error: 'Failed to get sessions' });
   }
 });
@@ -63,7 +64,7 @@ router.post('/sessions', async (req, res) => {
     const session = await createChatSession(userId, storyBibleId, context);
     res.json({ success: true, session });
   } catch (error) {
-    console.error('Failed to create session:', error);
+    Logger.error('Failed to create session', error);
     res.status(500).json({ success: false, error: 'Failed to create session' });
   }
 });
@@ -83,7 +84,7 @@ router.get('/sessions/:id', async (req, res) => {
 
     res.json({ success: true, session });
   } catch (error) {
-    console.error('Failed to get session:', error);
+    Logger.error('Failed to get session', error);
     res.status(500).json({ success: false, error: 'Failed to get session' });
   }
 });
@@ -104,7 +105,7 @@ router.delete('/sessions/:id', async (req, res) => {
     await deleteChatSession(session.id);
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete session:', error);
+    Logger.error('Failed to delete session', error);
     res.status(500).json({ success: false, error: 'Failed to delete session' });
   }
 });
@@ -132,7 +133,7 @@ router.post('/chat', async (req, res) => {
     const result = await sendChatMessage(sessionId, message, { agent, template });
     res.json({ success: true, ...result });
   } catch (error) {
-    console.error('Chat error:', error);
+    Logger.error('Chat error', error);
     res.status(500).json({ success: false, error: 'Failed to send message' });
   }
 });
@@ -156,7 +157,7 @@ router.post('/scenes/:sessionId', async (req, res) => {
     const result = await generateSceneBreakdown(sessionId, sceneCount || 5);
     res.json({ success: true, ...result });
   } catch (error) {
-    console.error('Scene breakdown error:', error);
+    Logger.error('Scene breakdown error', error);
     res.status(500).json({ success: false, error: 'Failed to generate scenes' });
   }
 });
@@ -175,7 +176,7 @@ router.get('/bibles', async (req, res) => {
     const bibles = await getUserStoryBibles(userId);
     res.json({ success: true, bibles });
   } catch (error) {
-    console.error('Failed to get bibles:', error);
+    Logger.error('Failed to get bibles', error);
     res.status(500).json({ success: false, error: 'Failed to get story bibles' });
   }
 });
@@ -204,7 +205,7 @@ router.post('/bibles', async (req, res) => {
 
     res.json({ success: true, bible });
   } catch (error) {
-    console.error('Failed to create bible:', error);
+    Logger.error('Failed to create bible', error);
     res.status(500).json({ success: false, error: 'Failed to create story bible' });
   }
 });
@@ -227,7 +228,7 @@ router.get('/bibles/:id', async (req, res) => {
 
     res.json({ success: true, bible: { ...bible, characters, plotPoints } });
   } catch (error) {
-    console.error('Failed to get bible:', error);
+    Logger.error('Failed to get bible', error);
     res.status(500).json({ success: false, error: 'Failed to get story bible' });
   }
 });
@@ -248,7 +249,7 @@ router.put('/bibles/:id', async (req, res) => {
     const updated = await updateStoryBible(bible.id, req.body);
     res.json({ success: true, bible: updated });
   } catch (error) {
-    console.error('Failed to update bible:', error);
+    Logger.error('Failed to update bible', error);
     res.status(500).json({ success: false, error: 'Failed to update story bible' });
   }
 });
@@ -269,7 +270,7 @@ router.delete('/bibles/:id', async (req, res) => {
     await deleteStoryBible(bible.id);
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete bible:', error);
+    Logger.error('Failed to delete bible', error);
     res.status(500).json({ success: false, error: 'Failed to delete story bible' });
   }
 });
@@ -292,7 +293,7 @@ router.post('/bibles/:bibleId/characters', async (req, res) => {
     const character = await addCharacter(bible.id, req.body);
     res.json({ success: true, character });
   } catch (error) {
-    console.error('Failed to add character:', error);
+    Logger.error('Failed to add character', error);
     res.status(500).json({ success: false, error: 'Failed to add character' });
   }
 });
@@ -311,7 +312,7 @@ router.put('/characters/:id', async (req, res) => {
 
     res.json({ success: true, character });
   } catch (error) {
-    console.error('Failed to update character:', error);
+    Logger.error('Failed to update character', error);
     res.status(500).json({ success: false, error: 'Failed to update character' });
   }
 });
@@ -328,7 +329,7 @@ router.delete('/characters/:id', async (req, res) => {
     await deleteCharacter(parseInt(req.params.id));
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete character:', error);
+    Logger.error('Failed to delete character', error);
     res.status(500).json({ success: false, error: 'Failed to delete character' });
   }
 });
@@ -351,7 +352,7 @@ router.post('/bibles/:bibleId/plot-points', async (req, res) => {
     const plotPoint = await addPlotPoint(bible.id, req.body);
     res.json({ success: true, plotPoint });
   } catch (error) {
-    console.error('Failed to add plot point:', error);
+    Logger.error('Failed to add plot point', error);
     res.status(500).json({ success: false, error: 'Failed to add plot point' });
   }
 });
@@ -370,7 +371,7 @@ router.put('/plot-points/:id', async (req, res) => {
 
     res.json({ success: true, plotPoint });
   } catch (error) {
-    console.error('Failed to update plot point:', error);
+    Logger.error('Failed to update plot point', error);
     res.status(500).json({ success: false, error: 'Failed to update plot point' });
   }
 });
@@ -387,7 +388,7 @@ router.delete('/plot-points/:id', async (req, res) => {
     await deletePlotPoint(parseInt(req.params.id));
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete plot point:', error);
+    Logger.error('Failed to delete plot point', error);
     res.status(500).json({ success: false, error: 'Failed to delete plot point' });
   }
 });
@@ -417,7 +418,7 @@ router.post('/bibles/:id/generate', async (req, res) => {
 
     res.json({ success: true, ...result });
   } catch (error) {
-    console.error('Failed to generate from bible:', error);
+    Logger.error('Failed to generate from bible', error);
     res.status(500).json({ success: false, error: 'Failed to generate prompts' });
   }
 });

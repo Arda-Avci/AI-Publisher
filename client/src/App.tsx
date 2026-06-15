@@ -20,7 +20,7 @@ import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
 import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
-import { CoverSelector } from './components/CoverSelector.js';
+
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -240,27 +240,29 @@ export default function App() {
               onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t} />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-              <aside style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'rgba(24,24,27,0.3)', overflowY: 'auto', zIndex: 10 }}>
-                <ProjectForm masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
-                  ttsProvider={ttsProvider} ttsVoice={ttsVoice} productionTemplate={productionTemplate}
-                  hasShorts={hasShorts} hasSubtitles={hasSubtitles} brandKitEnabled={brandKitEnabled}
-                  kineticSubtitles={kineticSubtitles} autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
-                  targetPlatforms={targetPlatforms} formLoading={formLoading} userCredits={userCredits}
-                  onSetMasterPrompt={setMasterPrompt} onSetProductionNotes={setProductionNotes}
-                  onSetCharacterFeatures={setCharacterFeatures} onSetTtsProvider={setTtsProvider}
-                  onSetTtsVoice={setTtsVoice} onSetProductionTemplate={setProductionTemplate}
-                  onSetHasShorts={setHasShorts} onSetHasSubtitles={setHasSubtitles}
-                  onSetBrandKitEnabled={setBrandKitEnabled} onSetKineticSubtitles={setKineticSubtitles}
-                  onSetAutoSfxPlacement={setAutoSfxPlacement} onSetAudioDucking={setAudioDucking}
-                  onTogglePlatform={togglePlatform} onSetSelectedFile={setSelectedFile}
-                  onSetSelectedMusicFile={setSelectedMusicFile} onSubmit={handleSubmitJob} t={t}
-                  selectedModel={selectedModel} onSetSelectedModel={setSelectedModel}
-                  aspectRatio={aspectRatio} onSetAspectRatio={setAspectRatio}
-                  camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
-                  dubbingLang={dubbingLang} onSetDubbingLang={setDubbingLang}
-                  subtitleStyle={subtitleStyle} onSetSubtitleStyle={setSubtitleStyle}
-                  colorGrading={colorGrading} onSetColorGrading={setColorGrading} />
-              </aside>
+              {(mainTab === 'Stüdyo' || mainTab === 'Galeri') && (
+                <aside style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'rgba(24,24,27,0.3)', overflowY: 'auto', zIndex: 10 }}>
+                  <ProjectForm masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
+                    ttsProvider={ttsProvider} ttsVoice={ttsVoice} productionTemplate={productionTemplate}
+                    hasShorts={hasShorts} hasSubtitles={hasSubtitles} brandKitEnabled={brandKitEnabled}
+                    kineticSubtitles={kineticSubtitles} autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
+                    targetPlatforms={targetPlatforms} formLoading={formLoading} userCredits={userCredits}
+                    onSetMasterPrompt={setMasterPrompt} onSetProductionNotes={setProductionNotes}
+                    onSetCharacterFeatures={setCharacterFeatures} onSetTtsProvider={setTtsProvider}
+                    onSetTtsVoice={setTtsVoice} onSetProductionTemplate={setProductionTemplate}
+                    onSetHasShorts={setHasShorts} onSetHasSubtitles={setHasSubtitles}
+                    onSetBrandKitEnabled={setBrandKitEnabled} onSetKineticSubtitles={setKineticSubtitles}
+                    onSetAutoSfxPlacement={setAutoSfxPlacement} onSetAudioDucking={setAudioDucking}
+                    onTogglePlatform={togglePlatform} onSetSelectedFile={setSelectedFile}
+                    onSetSelectedMusicFile={setSelectedMusicFile} onSubmit={handleSubmitJob} t={t}
+                    selectedModel={selectedModel} onSetSelectedModel={setSelectedModel}
+                    aspectRatio={aspectRatio} onSetAspectRatio={setAspectRatio}
+                    camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
+                    dubbingLang={dubbingLang} onSetDubbingLang={setDubbingLang}
+                    subtitleStyle={subtitleStyle} onSetSubtitleStyle={setSubtitleStyle}
+                    colorGrading={colorGrading} onSetColorGrading={setColorGrading} />
+                </aside>
+              )}
 
               <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'var(--bg-primary)', backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, background: 'rgba(99,102,241,0.05)', borderRadius: '50%', filter: 'blur(100px)', transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0 }} />
@@ -297,16 +299,18 @@ export default function App() {
                 <HelpVideoPanel feature={mainTab === 'Stüdyo' ? 'studio' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Canvas' ? 'canvas' : mainTab === 'Batch' ? 'batch' : mainTab === 'Karakterler' ? 'characters' : mainTab === 'API Keys' ? 'api_keys' : 'studio'} language={language} />
               </main>
 
-              <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>
-                <GalleryPanel jobs={jobs} selectedJob={selectedJob} metaYtTitle={metaYtTitle} metaYtDesc={metaYtDesc} metaYtTags={metaYtTags}
-                  isMetaSaving={isMetaSaving} progressMsg={progressMsg} progressPercent={progressPercent}
-                  onSelectJob={handleSelectJob} onRefreshJobs={fetchJobs} onCancelJob={handleCancelJob}
-                  onDeleteJob={handleDeleteJob} onSetMetaYtTitle={setMetaYtTitle} onSetMetaYtDesc={setMetaYtDesc}
-                  onSetMetaYtTags={setMetaYtTags} onSaveMetaAndPublish={handleSaveMetaAndPublish}
-                  userCredits={userCredits} t={t}
-                  onAnalyzeViralScore={handleAnalyzeViralScore}
-                  onSelectCover={handleSelectCover} />
-              </aside>
+              {(mainTab === 'Stüdyo' || mainTab === 'Galeri') && (
+                <aside style={{ width: 320, flexShrink: 0, borderLeft: '1px solid var(--border)', background: 'var(--bg-primary)', overflowY: 'auto', zIndex: 10 }}>
+                  <GalleryPanel jobs={jobs} selectedJob={selectedJob} metaYtTitle={metaYtTitle} metaYtDesc={metaYtDesc} metaYtTags={metaYtTags}
+                    isMetaSaving={isMetaSaving} progressMsg={progressMsg} progressPercent={progressPercent}
+                    onSelectJob={handleSelectJob} onRefreshJobs={fetchJobs} onCancelJob={handleCancelJob}
+                    onDeleteJob={handleDeleteJob} onSetMetaYtTitle={setMetaYtTitle} onSetMetaYtDesc={setMetaYtDesc}
+                    onSetMetaYtTags={setMetaYtTags} onSaveMetaAndPublish={handleSaveMetaAndPublish}
+                    userCredits={userCredits} t={t}
+                    onAnalyzeViralScore={handleAnalyzeViralScore}
+                    onSelectCover={handleSelectCover} />
+                </aside>
+              )}
             </div>
 
             {editingImageScene && (

@@ -2,6 +2,7 @@ import { Application, Request, Response } from 'express';
 import { db } from '../db.js';
 import yts from 'yt-search';
 import { requireAuth } from '../middleware/auth.js';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Opportunity funnel route: /opportunity-videos.
@@ -245,10 +246,10 @@ async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchR
       };
     });
     
-    console.log(`[Fallback] yt-search returned ${videos.length} videos`);
+    Logger.info(`yt-search returned ${videos.length} videos`);
     return { success: true, videos, source: 'yt-search' };
   } catch (err: any) {
-    console.warn(`[Fallback] yt-search failed: ${err?.message || err}`);
+    Logger.warn(`yt-search failed: ${err?.message || err}`);
     return { success: false, error: 'ALL_FALLBACKS_FAILED' };
   }
 }
@@ -285,8 +286,8 @@ export function registerOpportunityRoutes(app: Application): void {
           languages: langs
         });
       }
-      console.warn(
-        '[opportunity] YouTube API failed, falling back to Invidious/Piped:',
+      Logger.warn(
+        'YouTube API failed, falling back to Invidious/Piped',
         ytResult.message || ytResult.error
       );
     }

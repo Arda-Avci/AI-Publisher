@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import util from 'util';
 import fs from 'fs';
 import path from 'path';
+import { Logger } from './logger.js';
 
 const execFileAsync = util.promisify(execFile);
 
@@ -51,7 +52,7 @@ export async function transcribeVideoAudioWithTimestamps(
     const colabUrl = process.env.COLAB_URL;
     if (colabUrl && colabUrl !== 'https://ngrok-free.app') {
       try {
-        console.log(`[INFO] Colab üzerinden deşifre başlatılıyor: ${colabUrl}/transcribe`);
+        Logger.info(`Colab üzerinden deşifre başlatılıyor: ${colabUrl}/transcribe`);
         const fileBuffer = fs.readFileSync(audioPath);
         const formData = new FormData();
         const blob = new Blob([fileBuffer], { type: 'audio/mp3' });
@@ -71,7 +72,7 @@ export async function transcribeVideoAudioWithTimestamps(
         if (response.ok) {
           const resData = await response.json() as any;
           if (resData && resData.status === 'success') {
-            console.log(`[INFO] Colab deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`);
+            Logger.info(`Colab deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`);
             const segments = (resData.segments || []).map((s: any) => ({
               start: s.start,
               end: s.end,
@@ -85,15 +86,15 @@ export async function transcribeVideoAudioWithTimestamps(
             };
           }
         } else {
-          console.warn(`[WARN] Colab deşifre API yanıtı başarısız: ${response.status}`);
+          Logger.warn(`Colab deşifre API yanıtı başarısız: ${response.status}`);
         }
       } catch (colabErr: any) {
-        console.warn(`[WARN] Colab deşifre çağrısı başarısız oldu, Gemini fallback'e geçiliyor: ${colabErr.message}`);
+        Logger.warn(`Colab deşifre çağrısı başarısız oldu, Gemini fallback'e geçiliyor: ${colabErr.message}`);
       }
     }
 
     // 3. GEMINI 2.5 FLASH FALLBACK (Structured JSON)
-    console.log(`[INFO] Gemini 2.5 Flash fallback deşifresi başlatılıyor...`);
+    Logger.info(`Gemini 2.5 Flash fallback deşifresi başlatılıyor...`);
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
       throw new Error('GOOGLE_GENERATIVE_AI_API_KEY bulunamadı, fallback deşifre gerçekleştirilemez.');
@@ -166,7 +167,7 @@ export async function transcribeVideoAudioWithTimestamps(
     }
 
     const parsedResult = JSON.parse(jsonStr.trim()) as TranscriptionResult;
-    console.log(`[INFO] Gemini fallback deşifresi tamamlandı. Metin uzunluğu: ${parsedResult.text?.length}, Segment: ${parsedResult.segments?.length}`);
+    Logger.info(`Gemini fallback deşifresi tamamlandı. Metin uzunluğu: ${parsedResult.text?.length}, Segment: ${parsedResult.segments?.length}`);
     return parsedResult;
 
   } finally {

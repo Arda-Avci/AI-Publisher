@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import dotenv from 'dotenv';
+import { Logger } from './logger.js';
 
 dotenv.config();
 
@@ -12,11 +13,11 @@ export const redisPub = new Redis(REDIS_URL);
 // Redis'te bir bağlantı abone (subscribe) moduna geçince başka işlemler yapamaz, bu yüzden ayrı bir client açıyoruz.
 export const redisSub = new Redis(REDIS_URL);
 
-redisPub.on('error', (err) => console.error('[ERROR] Redis Publisher:', err));
-redisSub.on('error', (err) => console.error('[ERROR] Redis Subscriber:', err));
+redisPub.on('error', (err) => Logger.error('Redis Publisher', err));
+redisSub.on('error', (err) => Logger.error('Redis Subscriber', err));
 
-redisPub.on('connect', () => console.log('[INFO] Redis Publisher bağlandı.'));
-redisSub.on('connect', () => console.log('[INFO] Redis Subscriber bağlandı.'));
+redisPub.on('connect', () => Logger.info('Redis Publisher bağlandı.'));
+redisSub.on('connect', () => Logger.info('Redis Subscriber bağlandı.'));
 
 /**
  * Bir Job için ilerleme durumu yayınlar.
@@ -28,6 +29,6 @@ export async function broadcastProgress(jobId: number, payload: any) {
   try {
     await redisPub.publish(channel, JSON.stringify(payload));
   } catch (err) {
-    console.error(`[ERROR] Redis publish hatası (Job ${jobId}):`, err);
+    Logger.error(`Redis publish hatası (Job ${jobId})`, err);
   }
 }

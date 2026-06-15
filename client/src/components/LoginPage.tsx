@@ -18,6 +18,27 @@ export function LoginPage({ language, setLanguage, onLogin, authError, setAuthEr
   const navigate = useNavigate();
 
   const isTR = language === 'tr';
+  const t = (key: string) => {
+    const dict: Record<string, Record<string, string>> = {
+      tr: {
+        loginSubtitle: 'Otonom Video Üretim & Pazarlama İstasyonu',
+        usernameLabel: 'E-Posta Adresi',
+        passwordLabel: 'Şifre',
+        loginPlaceholderUsername: 'e-posta@adresiniz.com',
+        signInButton: 'Giriş Yap',
+        languageToggleEN: 'Switch to English'
+      },
+      en: {
+        loginSubtitle: 'Autonomous Video Production & Marketing Station',
+        usernameLabel: 'Email Address',
+        passwordLabel: 'Password',
+        loginPlaceholderUsername: 'you@example.com',
+        signInButton: 'Sign In',
+        languageToggleEN: 'Türkçe\'ye Geç'
+      }
+    };
+    return dict[language]?.[key] || key;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +93,13 @@ export function LoginPage({ language, setLanguage, onLogin, authError, setAuthEr
             AI <span style={{ color: 'var(--accent)' }}>Publisher</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8 }}>
-            {isTR ? 'Sosyal medya için AI video üretim platformu' : 'AI video production for social media'}
+            {t('loginSubtitle')}
           </p>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {isTR ? 'KULLANICI ADI' : 'USERNAME'}
+              {t('usernameLabel')}
             </label>
             <input value={username} onChange={e => setUsername(e.target.value)}
               style={{
@@ -87,11 +108,11 @@ export function LoginPage({ language, setLanguage, onLogin, authError, setAuthEr
                 color: 'var(--text-primary)', fontSize: 14, outline: 'none',
                 boxSizing: 'border-box',
               }}
-              placeholder="admin" required />
+              placeholder={t("loginPlaceholderUsername")} required />
           </div>
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {isTR ? 'ŞİFRE' : 'PASSWORD'}
+              {t('passwordLabel')}
             </label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               style={{
@@ -121,7 +142,7 @@ export function LoginPage({ language, setLanguage, onLogin, authError, setAuthEr
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
             {loading && <Loader size={16} className="spin" />}
-            {isTR ? 'GİRİŞ YAP' : 'SIGN IN'}
+            {t('signInButton')}
           </button>
         </form>
         <div style={{ marginTop: 20, textAlign: 'center' }}>
@@ -130,7 +151,7 @@ export function LoginPage({ language, setLanguage, onLogin, authError, setAuthEr
               background: 'none', border: 'none', color: 'var(--text-muted)',
               cursor: 'pointer', fontSize: 12,
             }}>
-            {isTR ? '🇬🇧 English' : '🇹🇷 Türkçe'}
+            {t('languageToggleEN')}
           </button>
         </div>
       </div>

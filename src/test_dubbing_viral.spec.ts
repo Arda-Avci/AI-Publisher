@@ -5,6 +5,19 @@ import axios from 'axios';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+vi.mock('axios', () => ({
+  default: {
+    post: vi.fn().mockResolvedValue({ data: { status: 'success', output_path: '/output.mp4' } }),
+    get: vi.fn().mockResolvedValue({ data: {} }),
+    create: vi.fn(() => ({
+      get: vi.fn().mockResolvedValue({ data: {} }),
+      post: vi.fn().mockResolvedValue({ data: {} }),
+      interceptors: { request: { use: vi.fn(), eject: vi.fn() }, response: { use: vi.fn(), eject: vi.fn() } }
+    })),
+    interceptors: { request: { use: vi.fn(), eject: vi.fn() }, response: { use: vi.fn(), eject: vi.fn() } }
+  }
+}));
+
 vi.mock('fs-extra', () => ({
   default: {
     ensureDir: vi.fn().mockResolvedValue(undefined),
@@ -96,19 +109,6 @@ vi.mock('./lib/colab-manager.js', () => ({
     verifyLibraries: vi.fn(async () => ({ success: true, report: { diffusers: true } })),
     on: vi.fn(),
     off: vi.fn()
-  }
-}));
-
-vi.mock('axios', () => ({
-  default: {
-    post: vi.fn().mockResolvedValue({ data: { status: 'success', output_path: '/output.mp4' } }),
-    get: vi.fn().mockResolvedValue({ data: {} }),
-    create: vi.fn(() => ({
-      get: vi.fn().mockResolvedValue({ data: {} }),
-      post: vi.fn().mockResolvedValue({ data: {} }),
-      interceptors: { request: { use: vi.fn(), eject: vi.fn() }, response: { use: vi.fn(), eject: vi.fn() } }
-    })),
-    interceptors: { request: { use: vi.fn(), eject: vi.fn() }, response: { use: vi.fn(), eject: vi.fn() } }
   }
 }));
 

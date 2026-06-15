@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { db } from '../db.js';
+import { Logger } from './logger.js';
 
 /**
  * Audit log helper for S6 security hardening.
@@ -72,6 +73,6 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
     );
   } catch (err: any) {
     // Audit logging must NEVER fail the main operation.
-    console.error('[audit] log failed:', err?.message || err);
+    Logger.error('[audit] log failed', err?.message || err);
   }
 }

@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { execFile } from 'child_process';
 import crypto from 'crypto';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Downloads a YouTube video using yt-dlp.
@@ -25,12 +26,12 @@ export async function downloadYouTubeVideo(videoId: string): Promise<string> {
     videoUrl
   ];
   
-  console.log(`[INFO] İndiriliyor: ${videoUrl}`);
+  Logger.info(`İndiriliyor: ${videoUrl}`);
   
   await new Promise<void>((resolve, reject) => {
     execFile('yt-dlp', args, (err, stdout, stderr) => {
       if (err) {
-        console.error(`[ERROR] yt-dlp hatası: ${stderr}`);
+        Logger.error(`yt-dlp hatası: ${stderr}`);
         reject(new Error(`yt-dlp failed: ${err.message}`));
       } else {
         resolve();

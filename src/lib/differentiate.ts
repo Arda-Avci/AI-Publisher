@@ -21,6 +21,7 @@ import { downloadYouTubeVideo } from '../services/videoDownloader.js';
 import { extractReferenceFrame } from '../services/videoService.js';
 import path from 'path';
 import fs from 'fs';
+import { Logger } from './logger.js';
 import {
   cleanText,
   translateText,
@@ -250,7 +251,7 @@ export async function runPhase1Background(
       const transcript = await fetchYouTubeTranscript(videoId);
       originalText = transcript.plainText;
     } catch (err: any) {
-      console.warn(`[WARN] YouTube transcript failed for ${videoId}. Falling back to AI script generation...`, err.message);
+      Logger.warn(`YouTube transcript failed for ${videoId}. Falling back to AI script generation...`, err.message);
       await db.run(
         "UPDATE video_jobs SET current_stage = 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ?",
         [jobId]
@@ -311,10 +312,10 @@ export async function runPhase1Background(
     );
     await broadcastProgress(jobId, { stageKey: 'phase1Done', percent: 100, stage: 'Onaylandı — Manuel başlatma bekleniyor', status: 'pending' });
 
-    console.log('[INFO] Differentiation tamamlandı: job #' + jobId);
+    Logger.info('Differentiation tamamlandı: job #' + jobId);
   } catch (err: any) {
     const errorMsg = (err && err.message) ? err.message : String(err);
-    console.error('[ERROR] Phase 1 background job #' + jobId + ' başarısız:', err);
+    Logger.error('Phase 1 background job #' + jobId + ' başarısız', err);
     try {
       await db.run(
         `UPDATE video_jobs SET
@@ -326,7 +327,7 @@ export async function runPhase1Background(
       );
       await broadcastProgress(jobId, { stageKey: 'stageError', percent: 0, stage: 'Hata: ' + errorMsg, status: 'failed' });
     } catch (innerErr: any) {
-      console.error('[ERROR] Failed to mark job #' + jobId + ' as failed:', innerErr);
+      Logger.error('Failed to mark job #' + jobId + ' as failed', innerErr);
     }
   }
 }
@@ -583,7 +584,7 @@ export async function runDifferentiationPipeline(
     const transcript = await fetchYouTubeTranscript(videoId);
     originalText = transcript.plainText;
   } catch (err: any) {
-    console.warn(`[WARN] YouTube transcript failed for ${videoId}. Generating script from metadata...`, err.message);
+    Logger.warn(`YouTube transcript failed for ${videoId}. Generating script from metadata...`, err.message);
     const { generateScriptFromMetadata } = await import('../services/aiService.js');
     originalText = await generateScriptFromMetadata(origTitle, origDesc);
   }
@@ -626,7 +627,7 @@ export async function runDifferentiationPipeline(
     const marketingRes = await generateMarketingCopy(rewrittenTranscript);
     marketing = marketingRes.marketing;
   } catch (err) {
-    console.warn('[WARN] generateMarketingCopy failed, using basic copy:', err);
+    Logger.warn('generateMarketingCopy failed, using basic copy', err);
   }
 
   await db.run(
@@ -670,5 +671,5 @@ export async function runDifferentiationPipeline(
 
   await broadcastProgress(jobId, { stageKey: 'phase1Done', percent: 100, stage: 'Onay Bekliyor', status: 'awaiting_approval' });
 
-  console.log('[INFO] Differentiation pipeline completed for job #' + jobId);
+  Logger.info('Differentiation pipeline completed for job #' + jobId);
 }

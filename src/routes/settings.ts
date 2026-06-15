@@ -5,6 +5,7 @@ import { mediumLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
 import bcrypt from 'bcrypt';
 import { decryptUsername } from '../lib/crypto.js';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Settings routes: /settings GET and /save-settings POST.
@@ -119,7 +120,7 @@ export function registerSettingsRoutes(app: Application): void {
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
           if (err) {
-            console.error('[ERROR] Session save failed in save-settings:', err);
+            Logger.error('Session save failed in save-settings', err);
             reject(err);
           } else {
             resolve();

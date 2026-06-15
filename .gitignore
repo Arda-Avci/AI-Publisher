@@ -26,9 +26,15 @@ new_keys.json
 scratch/
 Wav2Lip/
 
-# Ignore all text and markdown files
+# Ignore root-level markdown files (keep crucial ones tracked)
+/*.md
+!README.md
+!AGENTS.md
+!CLAUDE.md
+!PROJECT_STATUS.md
+!TODO.md
 *.txt
-*.md
+!requirements.txt
 *.log
 .env*
 **/server*.log

@@ -1,5 +1,6 @@
 import amqplib from 'amqplib';
 import dotenv from 'dotenv';
+import { Logger } from './logger.js';
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ export function registerReconnectCallback(cb: () => void | Promise<void>) {
 async function connectWithRetry() {
   if (isConnecting) return;
   isConnecting = true;
-  console.log('[INFO] RabbitMQ bağlantısı kuruluyor...');
+  Logger.info('RabbitMQ bağlantısı kuruluyor...');
   
   while (true) {
     try {
@@ -37,10 +38,10 @@ async function connectWithRetry() {
       await channel.assertQueue(PUBLISH_JOBS_QUEUE, { durable: true });
       await channel.assertQueue(CLIP_JOBS_QUEUE, { durable: true });
 
-      console.log('[INFO] RabbitMQ başarıyla bağlandı ve kuyruklar hazır.');
+      Logger.info('RabbitMQ başarıyla bağlandı ve kuyruklar hazır.');
 
       connection.on('close', () => {
-        console.warn('[WARN] RabbitMQ bağlantısı kapandı! Yeniden bağlanılıyor...');
+        Logger.warn('RabbitMQ bağlantısı kapandı! Yeniden bağlanılıyor...');
         channel = null;
         connection = null;
         isConnecting = false;
@@ -48,7 +49,7 @@ async function connectWithRetry() {
       });
 
       connection.on('error', (err: any) => {
-        console.error('[ERROR] RabbitMQ bağlantı hatası:', err);
+        Logger.error('RabbitMQ bağlantı hatası', err);
       });
 
       isConnecting = false;
@@ -58,12 +59,12 @@ async function connectWithRetry() {
         try {
           await cb();
         } catch (cbErr) {
-          console.error('[ERROR] RabbitMQ reconnect callback hatası:', cbErr);
+          Logger.error('RabbitMQ reconnect callback hatası', cbErr);
         }
       }
       break;
     } catch (error) {
-      console.error('[ERROR] RabbitMQ bağlanırken hata oluştu, 5s sonra tekrar denenecek:', error);
+      Logger.error('RabbitMQ bağlanırken hata oluştu, 5s sonra tekrar denenecek', error);
       channel = null;
       connection = null;
       await new Promise(r => setTimeout(r, 5000));
@@ -74,7 +75,7 @@ async function connectWithRetry() {
 export async function initRabbitMQ() {
   // Bloke olmadan arka planda başlatıyoruz
   connectWithRetry().catch(err => {
-    console.error('[ERROR] RabbitMQ connectWithRetry kritik hata:', err);
+    Logger.error('RabbitMQ connectWithRetry kritik hata', err);
   });
 }
 

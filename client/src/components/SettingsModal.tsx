@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, User, Palette, Globe, Monitor, Mic, Save, Loader, Upload, Sparkles, Trash2 } from 'lucide-react';
+import { X, User, Palette, Globe, Monitor, Mic, Save, Loader, Upload, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import type { Language } from '../types.js';
+import { PhotoEditor } from './PhotoEditor.js';
 
 type SettingsTab = 'appearance' | 'language' | 'account' | 'production' | 'characters';
 
@@ -152,6 +153,8 @@ export function SettingsModal({ isOpen, onClose, language, theme, isDark, csrfTo
   const [newCharDesc, setNewCharDesc] = useState('');
   const [newCharAvatar, setNewCharAvatar] = useState('');
   const [generatingAvatar, setGeneratingAvatar] = useState(false);
+  const [avatarStyleSetting, setAvatarStyleSetting] = useState<'realistic' | 'animatic'>('realistic');
+  const [editingAvatarUrl, setEditingAvatarUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const voiceInputRef = useRef<HTMLInputElement>(null);
@@ -236,11 +239,16 @@ export function SettingsModal({ isOpen, onClose, language, theme, isDark, csrfTo
     try {
       const r = await fetch('/api/v1/characters/generate-avatar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCharName, description: newCharDesc }),
+        body: JSON.stringify({ name: newCharName, description: newCharDesc, avatar_style: avatarStyleSetting }),
       });
       const d = await r.json();
       if (d.status === 'success' && d.avatar_base64) setNewCharAvatar(d.avatar_base64);
     } catch {} finally { setGeneratingAvatar(false); }
+  };
+
+  const handleAvatarSave = (newUrl: string) => {
+    setNewCharAvatar(newUrl);
+    setEditingAvatarUrl(null);
   };
 
   const deleteCharacter = async (id: number) => {
@@ -310,12 +318,12 @@ export function SettingsModal({ isOpen, onClose, language, theme, isDark, csrfTo
                   <div style={s.sectionTitle}>{t('lightDarkMode') || 'Aydınlık/Karanlık'}</div>
                   <div style={s.sectionDesc}>{t('switchbetweenli112') || 'Aydınlık veya karanlık mod'}</div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => { if (isDark) onToggleDark(); }} style={{
+                    <button onClick={() => { if (isDark) { onToggleDark(); fetch('/save-settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ theme_mode: 'light' }) }).catch(() => {}); } }} style={{
                       ...s.btnStatic, flex: 1, justifyContent: 'center',
                       background: !isDark ? 'var(--accent)' : 'var(--bg-surface)',
                       color: !isDark ? 'white' : 'var(--text-muted)',
                     }}>☀️ {t('light') || 'Aydınlık'}</button>
-                    <button onClick={() => { if (!isDark) onToggleDark(); }} style={{
+                    <button onClick={() => { if (!isDark) { onToggleDark(); fetch('/save-settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ theme_mode: 'dark' }) }).catch(() => {}); } }} style={{
                       ...s.btnStatic, flex: 1, justifyContent: 'center',
                       background: isDark ? 'var(--accent)' : 'var(--bg-surface)',
                       color: isDark ? 'white' : 'var(--text-muted)',
@@ -479,6 +487,16 @@ export function SettingsModal({ isOpen, onClose, language, theme, isDark, csrfTo
                     <input style={s.input} value={newCharName} onChange={e => setNewCharName(e.target.value)} placeholder="Karakter adı (örn: sibel)" />
                     <textarea style={{ ...s.input, minHeight: 60, resize: 'vertical' }} value={newCharDesc} onChange={e => setNewCharDesc(e.target.value)} placeholder="Fiziksel özellikler (avatar promptu)" />
                     <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setAvatarStyleSetting('realistic')}
+                        style={{ ...s.btnStatic, flex: 1, justifyContent: 'center', background: avatarStyleSetting === 'realistic' ? 'var(--accent)' : 'var(--bg-surface)', color: avatarStyleSetting === 'realistic' ? 'white' : 'var(--text-muted)', border: '1px solid var(--border)' }}
+                      >Gerçekçi</button>
+                      <button
+                        onClick={() => setAvatarStyleSetting('animatic')}
+                        style={{ ...s.btnStatic, flex: 1, justifyContent: 'center', background: avatarStyleSetting === 'animatic' ? 'var(--accent)' : 'var(--bg-surface)', color: avatarStyleSetting === 'animatic' ? 'white' : 'var(--text-muted)', border: '1px solid var(--border)' }}
+                      >Animatik</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <input ref={charAvatarInputRef} type="file" accept="image/*" style={{ display: 'none' }}
                         onChange={async (e) => { const f = e.target.files?.[0]; if (f) setNewCharAvatar(await encodeFileAsBase64(f)); }} />
                       <button onClick={() => charAvatarInputRef.current?.click()} style={{ ...s.btnStatic, background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
@@ -487,12 +505,23 @@ export function SettingsModal({ isOpen, onClose, language, theme, isDark, csrfTo
                       <button onClick={generateAvatar} disabled={generatingAvatar} style={{ ...s.btnStatic, background: 'linear-gradient(135deg, #7F00FF, #FF007F)', color: 'white' }}>
                         {generatingAvatar ? <Loader size={14} className="spin" /> : <Sparkles size={14} />} SD Avatar Üret
                       </button>
+                      {newCharAvatar && (
+                        <button onClick={() => setEditingAvatarUrl(newCharAvatar)} style={{ ...s.btnStatic, background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+                          <Wand2 size={14} /> Düzenle
+                        </button>
+                      )}
                       <button onClick={createCharacter} disabled={loading || !newCharName.trim()} style={{ ...s.btnStatic, background: 'var(--accent)', color: 'white' }}>
                         {loading ? <Loader size={14} className="spin" /> : <User size={14} />} Ekle
                       </button>
                     </div>
                     {newCharAvatar && (
-                      <img src={newCharAvatar} alt="Avatar preview" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', marginTop: 4 }} />
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                        <img src={newCharAvatar} alt="Avatar preview" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Kaynak: {newCharAvatar.startsWith('data:') ? 'AI/Yükleme' : 'URL'}</span>
+                      </div>
+                    )}
+                    {editingAvatarUrl && (
+                      <PhotoEditor imageUrl={editingAvatarUrl} onSave={handleAvatarSave} onClose={() => setEditingAvatarUrl(null)} />
                     )}
                   </div>
                 </div>

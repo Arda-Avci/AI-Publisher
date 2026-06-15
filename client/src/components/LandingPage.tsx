@@ -48,38 +48,21 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('Tümü');
+  const [activeCategory, setActiveCategory] = useState('all');
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const galleryRef = useRef<HTMLElement>(null);
 
-  const categories = ['Tümü', 'Çocuk', 'Reklam', 'Eğitim', 'Komedi', 'Spiritüel', 'Spor'];
-  const categoryIcon: Record<string, any> = {
-    'Tümü': Film, 'Çocuk': Heart, 'Reklam': TrendingUp, 'Eğitim': BookOpen,
-    'Komedi': Star, 'Spiritüel': Sparkles, 'Spor': Activity
-  };
-  const categoryMap: Record<string, string> = {
-    'Çocuk': 'cocuk', 'Reklam': 'reklam', 'Eğitim': 'egitim',
-    'Komedi': 'komedi', 'Spiritüel': 'spirituel', 'Spor': 'spor'
-  };
-  const categoryGradients: Record<string, string> = {
-    'Çocuk': 'linear-gradient(135deg, #1e1b4b, #312e81)',
-    'Reklam': 'linear-gradient(135deg, #1c1917, #292524)',
-    'Eğitim': 'linear-gradient(135deg, #172554, #1e3a5f)',
-    'Komedi': 'linear-gradient(135deg, #052e16, #14532d)',
-    'Spiritüel': 'linear-gradient(135deg, #1e1b4b, #3b0764)',
-    'Spor': 'linear-gradient(135deg, #1f1315, #4a0e17)',
-  };
+  const categoryKeys = ['all', 'child', 'ad', 'education', 'comedy', 'spiritual', 'sports'] as const;;
+  const categoryIcon: Record<string, any> = { 'all': Film, 'child': Heart, 'ad': TrendingUp, 'education': BookOpen, 'comedy': Star, 'spiritual': Sparkles, 'sports': Activity };;
+  const categoryMap: Record<string, string> = { 'child': 'cocuk', 'ad': 'reklam', 'education': 'egitim', 'comedy': 'komedi', 'spiritual': 'spirituel', 'sports': 'spor' };;
+  const categoryGradients: Record<string, string> = { 'child': 'linear-gradient(135deg, #1e1b4b, #312e81)', 'ad': 'linear-gradient(135deg, #1c1917, #292524)', 'education': 'linear-gradient(135deg, #172554, #1e3a5f)', 'comedy': 'linear-gradient(135deg, #052e16, #14532d)', 'spiritual': 'linear-gradient(135deg, #1e1b4b, #3b0764)', 'sports': 'linear-gradient(135deg, #1f1315, #4a0e17)' };;
   const aiModels = ['CogVideoX', 'Wan 2.1', 'HunyuanVideo', 'XTTS-v2', 'Wav2Lip', 'AudioLDM2'];
 
-  const filteredVideos = activeCategory === 'Tümü'
-    ? demoVideos
-    : demoVideos.filter(v => v.production_template?.toLowerCase() === categoryMap[activeCategory]);
+  const filteredVideos = activeCategory === 'all' ? demoVideos : demoVideos.filter(v => v.production_template?.toLowerCase() === categoryMap[activeCategory]);
 
   const showPlaceholders = !loading && demoVideos.length === 0;
 
-  const placeholderItems = showPlaceholders
-    ? (activeCategory === 'Tümü' ? ['Çocuk', 'Reklam', 'Eğitim', 'Komedi', 'Spiritüel', 'Spor'] : [activeCategory])
-    : [];
+  const placeholderItems = showPlaceholders ? (activeCategory === 'all' ? ['child', 'ad', 'education', 'comedy', 'spiritual', 'sports'] : [activeCategory]) : [];
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -120,7 +103,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
     try {
       await onLogin(username, password);
     } catch (err: any) {
-      setAuthError(err.message || 'Giriş başarısız.');
+      setAuthError(err.message || t('loginError'));
     } finally {
       setLoginLoading(false);
     }
@@ -229,7 +212,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           fontSize: '56px', fontWeight: 800, lineHeight: '1.1', letterSpacing: '-2px',
           textAlign: 'center', margin: 0, maxWidth: '850px'
         }}>
-          <span className="gradient-text">Otonom AI Video<br />Üretim Platformu</span>
+          <span className="gradient-text">{t("landingTitle")}</span>
         </h1>
 
         {/* Subtitle */}
@@ -237,7 +220,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           fontSize: '17px', color: 'var(--text-muted)', lineHeight: '1.6',
           textAlign: 'center', maxWidth: '600px', margin: 0
         }}>
-          Prompt'tan sosyal medyaya, tek tıkla. Colab GPU'su ile 4K video üretin.
+          {t('landingSubtitle')}
         </p>
 
         {/* CTA Buttons */}
@@ -320,9 +303,9 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           display: 'flex', gap: '48px', justifyContent: 'center', alignItems: 'center', marginTop: '10px'
         }}>
           {[
-            { num: '50K+', label: 'Video' },
-            { num: '5+', label: 'AI Model' },
-            { num: '4', label: 'Platform' }
+            { num: '50K+', label: t('statVideo') },
+            { num: '5+', label: t('statAiModel') },
+            { num: '4', label: t('statPlatform') }
           ].map((stat, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span className="gradient-text" style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
@@ -346,10 +329,10 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         {/* Section Header */}
         <div className="reveal-on-scroll" style={{ textAlign: 'center', marginBottom: '40px' }}>
           <h2 style={{ fontSize: '32px', fontWeight: 800, margin: 0 }}>
-            AI Tarafından Üretilen <span className="gradient-text">Örnek Çalışmalar</span>
+            {t("galleryTitle")}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '8px' }}>
-            Platformumuzun farklı üretim modları ve senaryolarından derlenmiş lansman galerisi.
+            {t('gallerySubtitle')}
           </p>
         </div>
 
@@ -357,7 +340,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
         <div style={{
           display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '36px', flexWrap: 'wrap'
         }}>
-          {categories.map(cat => {
+          {categoryKeys.map(cat => {
             const Icon = categoryIcon[cat];
             const isActive = activeCategory === cat;
             return (
@@ -383,7 +366,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                 }}
               >
                 <Icon size={14} />
-                {cat}
+                {t('category' + cat) || cat}
               </button>
             );
           })}
@@ -465,10 +448,10 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                       </div>
                       <div style={{ padding: '16px' }}>
                         <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                          {cat} Kategorisi
+                          {cat} {t("categoryLabel")}
                         </h4>
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '6px 0 0', lineHeight: '1.4' }}>
-                          AI tarafından üretilmiş örnek {cat.toLowerCase()} videosu
+                          {t('aiGeneratedSample')} {cat.toLowerCase()} {t('videoLabel')}
                         </p>
                       </div>
                     </div>
@@ -586,7 +569,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
             Güçlü <span className="gradient-text">Özellikler</span>
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '8px' }}>
-            AI destekli video üretim platformunun tüm yetenekleri
+            {t('allCapabilities')}
           </p>
         </div>
 
@@ -622,9 +605,9 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
               <Film size={28} />
             </div>
             <div>
-              <h3 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>AI Video Üretimi</h3>
+              <h3 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>{t('aiVideoProduction')}</h3>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', marginTop: '12px', maxWidth: '440px' }}>
-                CogVideoX ve HunyuanVideo ile metinden veya görselden 4K video üretin. Image-to-Video zincirleme yapısıyla sahneler arası tutarlılık sağlayın.
+                {t('cogVideoDesc')}
               </p>
             </div>
           </div>
@@ -739,9 +722,9 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
           display: 'flex', justifyContent: 'center', gap: '80px', alignItems: 'center'
         }}>
           {[
-            { num: '50.000+', label: 'Video Üretildi' },
+            { num: '50.000+', label: t('videosProduced') },
             { num: '25.000+', label: 'Kullanıcı' },
-            { num: '4', label: 'Sosyal Medya Platformu' }
+            { num: '4', label: t('socialMediaPlatforms') }
           ].map((stat, i) => (
             <div key={i} className="stat-item" style={{ textAlign: 'center' }}>
               <div className="gradient-text stat-number" style={{
@@ -951,7 +934,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                     borderTop: '1px solid var(--border)', paddingTop: '15px'
                   }}>
                     <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold' }}>
-                      Otomatik Sosyal Medya Kopyaları
+                      {t('autoSocialMediaCopies')}
                     </span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Başlık (YouTube Shorts):</span>

@@ -10,6 +10,7 @@ import { upload } from '../lib/upload.js';
 import { logAudit } from '../lib/audit.js';
 import { validateCreateJob, validateSaveMeta } from '../lib/validation.js';
 import { CreditService } from '../services/creditService.js';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Job lifecycle routes:
@@ -102,7 +103,7 @@ export function registerJobRoutes(app: Application): void {
       // Arka planda is kuyrugunu tetikle
       await sendToQueue(VIDEO_JOBS_QUEUE, { jobId: newJobId });
     } catch (err: any) {
-      console.error('[ERROR] /create-job failed:', err);
+      Logger.error('/create-job failed', err);
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -139,7 +140,7 @@ export function registerJobRoutes(app: Application): void {
       );
       res.json({ success: true });
     } catch (err: any) {
-      console.error('[ERROR] /save-meta failed:', err);
+      Logger.error('/save-meta failed', err);
       res.json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -295,7 +296,7 @@ export function registerJobRoutes(app: Application): void {
       await sendToQueue(VIDEO_JOBS_QUEUE, { jobId });
       return res.json({ success: true, message: 'Proje kuyruga eklendi, uretim basliyor.' });
     } catch (err: any) {
-      console.error('[ERROR] /start-job failed:', err);
+      Logger.error('/start-job failed', err);
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -361,12 +362,12 @@ export function registerJobRoutes(app: Application): void {
           percent: 0
         });
       } catch (broadcastErr) {
-        console.warn('[WARN] /cancel-job broadcast failed:', broadcastErr);
+        Logger.warn('/cancel-job broadcast failed', broadcastErr);
       }
 
       res.json({ success: true, message: 'Job iptal edildi.' });
     } catch (err: any) {
-      console.error('[ERROR] /cancel-job failed:', err);
+      Logger.error('/cancel-job failed', err);
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -407,7 +408,7 @@ export function registerJobRoutes(app: Application): void {
 
       res.json({ success: true, coverImagePath: selectedRelativePath });
     } catch (err: any) {
-      console.error('[ERROR] /select-cover failed:', err);
+      Logger.error('/select-cover failed', err);
       res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -419,7 +420,7 @@ export function registerJobRoutes(app: Application): void {
       const scenes = await db.all('SELECT * FROM video_scenes WHERE job_id = ? ORDER BY sort_order ASC', [jobId]);
       res.json({ success: true, scenes });
     } catch (err: any) {
-      console.error('[ERROR] GET /api/v1/jobs/:jobId/scenes failed:', err);
+      Logger.error('GET /api/v1/jobs/:jobId/scenes failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -477,7 +478,7 @@ export function registerJobRoutes(app: Application): void {
 
       res.json({ success: true, message: 'Timeline sahneleri kaydedildi.' });
     } catch (err: any) {
-      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes failed:', err);
+      Logger.error('POST /api/v1/jobs/:jobId/scenes failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -499,7 +500,7 @@ export function registerJobRoutes(app: Application): void {
 
       res.json({ success: true, sceneId: result.lastID, sceneNumber: nextNumber });
     } catch (err: any) {
-      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes/add failed:', err);
+      Logger.error('POST /api/v1/jobs/:jobId/scenes/add failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -543,7 +544,7 @@ export function registerJobRoutes(app: Application): void {
 
       res.json({ success: true, message: 'Sahne silindi ve kalan sahneler yeniden sıralandı.' });
     } catch (err: any) {
-      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes/:sceneId/delete failed:', err);
+      Logger.error('POST /api/v1/jobs/:jobId/scenes/:sceneId/delete failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -605,7 +606,7 @@ export function registerJobRoutes(app: Application): void {
 
       res.json({ success: true, message: `Sahne #${scene.scene_number} yeniden üretim kuyruğuna eklendi.` });
     } catch (err: any) {
-      console.error('[ERROR] POST /api/v1/jobs/:jobId/scenes/:sceneId/regenerate failed:', err);
+      Logger.error('POST /api/v1/jobs/:jobId/scenes/:sceneId/regenerate failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });
@@ -639,7 +640,7 @@ export function registerJobRoutes(app: Application): void {
         analysis
       });
     } catch (err: any) {
-      console.error('[ERROR] predictViralScore failed:', err);
+      Logger.error('predictViralScore failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });

@@ -29,7 +29,7 @@ charactersRouter.post('/', requireAuth, mediumLimiter, upload.fields([
   { name: 'voice', maxCount: 1 }
 ]), async (req: Request, res: Response) => {
   const userId = req.session.userId;
-  const { name, description, role_archetype, tts_voice_id, voice_provider } = req.body;
+  const { name, description, role_archetype, tts_voice_id, voice_provider, llm_provider, llm_model, avatar_style, avatar_source, color, relationships } = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
   if (!name) {
@@ -43,6 +43,11 @@ charactersRouter.post('/', requireAuth, mediumLimiter, upload.fields([
     referenceImageBase64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
   }
 
+  let parsedRelationships;
+  if (relationships) {
+    try { parsedRelationships = typeof relationships === 'string' ? JSON.parse(relationships) : relationships; } catch { parsedRelationships = undefined; }
+  }
+
   try {
     const character = await characterService.create({
       user_id: userId,
@@ -52,6 +57,12 @@ charactersRouter.post('/', requireAuth, mediumLimiter, upload.fields([
       reference_image_base64: referenceImageBase64 || undefined,
       tts_voice_id,
       voice_provider,
+      llm_provider,
+      llm_model,
+      avatar_style,
+      avatar_source,
+      color,
+      relationships: parsedRelationships,
     });
     res.json({ status: 'success', data: character });
   } catch (error: any) {
@@ -70,7 +81,7 @@ charactersRouter.put('/:id', requireAuth, mediumLimiter, upload.fields([
 ]), async (req: Request, res: Response) => {
   const userId = req.session.userId;
   const { id } = req.params;
-  const { name, description, role_archetype, tts_voice_id, voice_provider } = req.body;
+  const { name, description, role_archetype, tts_voice_id, voice_provider, llm_provider, llm_model, avatar_style, avatar_source, color, relationships } = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
   try {
@@ -90,6 +101,11 @@ charactersRouter.put('/:id', requireAuth, mediumLimiter, upload.fields([
       referenceImageBase64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
     }
 
+    let parsedRelationships;
+    if (relationships) {
+      try { parsedRelationships = typeof relationships === 'string' ? JSON.parse(relationships) : relationships; } catch { parsedRelationships = existing.relationships; }
+    }
+
     const updated = await characterService.update(Number(id), {
       name,
       description,
@@ -97,6 +113,12 @@ charactersRouter.put('/:id', requireAuth, mediumLimiter, upload.fields([
       reference_image_base64: referenceImageBase64,
       tts_voice_id,
       voice_provider,
+      llm_provider,
+      llm_model,
+      avatar_style,
+      avatar_source,
+      color,
+      relationships: parsedRelationships,
     });
     res.json({ status: 'success', data: updated });
   } catch (error: any) {
@@ -106,7 +128,7 @@ charactersRouter.put('/:id', requireAuth, mediumLimiter, upload.fields([
 });
 
 charactersRouter.post('/generate-avatar', requireAuth, mediumLimiter, async (req: Request, res: Response) => {
-  const { name, description } = req.body;
+  const { name, description, avatar_style } = req.body;
   const COLAB_URL = process.env.COLAB_URL;
 
   if (!description) {
@@ -120,11 +142,11 @@ charactersRouter.post('/generate-avatar', requireAuth, mediumLimiter, async (req
   }
 
   try {
-    Logger.info('Generating character avatar via Colab', { name, description });
-    const prompt = `Cinematic portrait profile picture, high quality headshot of ${description}, solid dark background`;
+    Logger.info('Generating character avatar via Colab', { name, description, avatar_style });
 
     const response = await axios.post(`${COLAB_URL}/generate-avatar`, {
-      avatar_prompt: prompt
+      avatar_prompt: description,
+      style: avatar_style || 'realistic',
     }, { timeout: 120000 });
 
     if (response.data?.status === 'success' && response.data?.avatar_base64) {

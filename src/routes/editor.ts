@@ -302,4 +302,36 @@ export function registerEditorRoutes(app: Application): void {
       }
     }
   );
+
+  // 6. Gaze correction (göz teması düzeltme)
+  app.post('/api/v1/editor/gaze-fix', mediumLimiter, requireAuth, async (req, res) => {
+    const { videoPath, smooth = true } = req.body;
+    if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });
+    const { pathExists } = await import('fs-extra');
+    if (!await pathExists(videoPath)) return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
+    const outPath = path.join(process.cwd(), 'videolar', `gaze_fixed_${Date.now()}.mp4`);
+    try {
+      const { correctEyeContact } = await import('../services/eyeContact.js');
+      const result = await correctEyeContact(videoPath, outPath);
+      res.json({ success: true, outputPath: result.processedVideoPath, usedFallback: result.usedFallback });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // 7. Inpainting (nesne/maske silme)
+  app.post('/api/v1/editor/inpaint-video', mediumLimiter, requireAuth, async (req, res) => {
+    const { videoPath, masks = [], strength = 0.8 } = req.body;
+    if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });
+    const { pathExists } = await import('fs-extra');
+    if (!await pathExists(videoPath)) return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
+    const outPath = path.join(process.cwd(), 'videolar', `inpainted_${Date.now()}.mp4`);
+    try {
+      const { inpaintObjects } = await import('../services/inpainting.js');
+      await inpaintObjects(videoPath, masks, outPath);
+      res.json({ success: true, outputPath: outPath });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 }

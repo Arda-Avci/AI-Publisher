@@ -7,6 +7,7 @@ import { db } from '../db.js';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { getStoryBible, getStoryCharacters, getStoryPlotPoints } from './storyBibleService.js';
+import { Logger } from '../lib/logger.js';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -253,7 +254,7 @@ Yanıtını Türkçe olarak ver. Yanıtında:
       suggestedPrompts: suggestedPrompts.length > 0 ? suggestedPrompts : undefined,
     };
   } catch (error) {
-    console.error('Chat AI error:', error);
+    Logger.error('Chat AI error', error);
     const errorReply = 'Üzgünüm, şu anda yanıt üretemiyorum. Lütfen tekrar deneyin.';
     await addMessage(sessionId, 'assistant', errorReply);
     return { reply: errorReply };
@@ -365,7 +366,7 @@ JSON formatında döndür:
 
     throw new Error('Could not parse scene breakdown');
   } catch (error) {
-    console.error('Scene breakdown error:', error);
+    Logger.error('Scene breakdown error', error);
     return {
       scenes: Array.from({ length: sceneCount }, (_, i) => ({
         number: i + 1,

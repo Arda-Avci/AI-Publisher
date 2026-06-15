@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Palette, Sun, Moon, Thermometer, Sparkles, Film, Contrast, Droplets } from 'lucide-react';
+import { Palette, Sun, Moon, Sparkles, Film, Contrast, Droplets } from 'lucide-react';
 
 const PRESETS: Array<{
   id: string; label: string; icon: React.ReactNode; color: string; gradient: string;

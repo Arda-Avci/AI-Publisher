@@ -12,6 +12,7 @@ import {
   type SourceVideoMeta,
   type DurationMode
 } from '../lib/differentiate.js';
+import { Logger } from '../lib/logger.js';
 
 /**
  * Differentiation routes for the opportunity funnel:
@@ -79,7 +80,7 @@ export function registerDifferentiationRoutes(app: Application): void {
         jobId: created.jobId
       });
     } catch (err: any) {
-      console.error('[ERROR] /differentiate-video failed:', err);
+      Logger.error('/differentiate-video failed', err);
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -138,7 +139,7 @@ export function registerDifferentiationRoutes(app: Application): void {
 
       return res.json(response);
     } catch (err: any) {
-      console.error('[ERROR] /differentiate-status failed:', err);
+      Logger.error('/differentiate-status failed', err);
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -179,7 +180,7 @@ export function registerDifferentiationRoutes(app: Application): void {
 
       return res.json({ success: true });
     } catch (err: any) {
-      console.error('[ERROR] /differentiate-cancel failed:', err);
+      Logger.error('/differentiate-cancel failed', err);
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });
@@ -218,7 +219,7 @@ export function registerDifferentiationRoutes(app: Application): void {
         jobId: result.jobId
       });
     } catch (err: any) {
-      console.error('[ERROR] /approve-translation failed:', err);
+      Logger.error('/approve-translation failed', err);
       return res.status(500).json({ success: false, error: err?.message || 'UNKNOWN_ERROR' });
     }
   });

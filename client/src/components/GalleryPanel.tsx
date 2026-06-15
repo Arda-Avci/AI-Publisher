@@ -180,6 +180,7 @@ export function GalleryPanel({
             onSave={onSaveMetaAndPublish}
             onAnalyzeViralScore={onAnalyzeViralScore}
             onSelectCover={onSelectCover}
+            onRefreshJobs={onRefreshJobs}
           />
         )}
       </div>
@@ -408,16 +409,26 @@ function ProgressTracker({
 function MetaEditor({
   job, ytTitle, ytDesc, ytTags, isSaving,
   onSetYtTitle, onSetYtDesc, onSetYtTags, onSave,
-  onAnalyzeViralScore, onSelectCover,
+  onAnalyzeViralScore, onSelectCover, onRefreshJobs,
 }: {
   job: Job; ytTitle: string; ytDesc: string; ytTags: string; isSaving: boolean;
   onSetYtTitle: (v: string) => void; onSetYtDesc: (v: string) => void; onSetYtTags: (v: string) => void;
   onSave: () => void;
   onAnalyzeViralScore?: (jobId: number) => void;
   onSelectCover?: (jobId: number, path: string) => void;
+  onRefreshJobs: () => void;
 }) {
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [selectedCover, setSelectedCover] = useState('');
+  const [kurguLoading, setKurguLoading] = useState(false);
+  const [denoise, setDenoise] = useState(true);
+  const [equalize, setEqualize] = useState(false);
+  const [deecho, setDeecho] = useState(true);
+  const [useFaceTracking, setUseFaceTracking] = useState(true);
+  const [maskX, setMaskX] = useState('0.1');
+  const [maskY, setMaskY] = useState('0.2');
+  const [maskW, setMaskW] = useState('0.3');
+  const [maskH, setMaskH] = useState('0.4');
 
   useEffect(() => {
     if (job.cover_images) {
@@ -432,6 +443,118 @@ function MetaEditor({
   const handleSelectCover = (path: string) => {
     setSelectedCover(path);
     if (onSelectCover) onSelectCover(job.id, path);
+  };
+
+  const handleGazeFix = async () => {
+    if (!job.final_filename) return;
+    setKurguLoading(true);
+    try {
+      const res = await fetch('/api/v1/editor/gaze-fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoPath: `videolar/${job.final_filename}`, smooth: true })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Göz teması düzeltme işlemi başarıyla tamamlandı!');
+        onRefreshJobs();
+      } else {
+        alert('Göz teması düzeltme hatası: ' + (data.error || 'Bilinmeyen hata'));
+      }
+    } catch (err: any) {
+      alert('Hata: ' + err.message);
+    } finally {
+      setKurguLoading(false);
+    }
+  };
+
+  const handleEnhanceAudio = async () => {
+    if (!job.final_filename) return;
+    setKurguLoading(true);
+    try {
+      const res = await fetch('/api/v1/editor/enhance-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: `videolar/${job.final_filename}`,
+          denoise,
+          equalize,
+          deecho,
+          levelDb: -3
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Ses iyileştirme işlemi başarıyla tamamlandı!');
+        onRefreshJobs();
+      } else {
+        alert('Ses iyileştirme hatası: ' + (data.error || 'Bilinmeyen hata'));
+      }
+    } catch (err: any) {
+      alert('Hata: ' + err.message);
+    } finally {
+      setKurguLoading(false);
+    }
+  };
+
+  const handleReframe = async () => {
+    if (!job.final_filename) return;
+    setKurguLoading(true);
+    try {
+      const res = await fetch('/api/v1/editor/reframe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: `videolar/${job.final_filename}`,
+          useFaceTracking,
+          startTime: 0,
+          duration: 30
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Yeniden çerçeveleme (9:16) başarıyla tamamlandı!');
+        onRefreshJobs();
+      } else {
+        alert('Reframe hatası: ' + (data.error || 'Bilinmeyen hata'));
+      }
+    } catch (err: any) {
+      alert('Hata: ' + err.message);
+    } finally {
+      setKurguLoading(false);
+    }
+  };
+
+  const handleInpaintVideo = async () => {
+    if (!job.final_filename) return;
+    setKurguLoading(true);
+    try {
+      const res = await fetch('/api/v1/editor/inpaint-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: `videolar/${job.final_filename}`,
+          masks: [{
+            x: parseFloat(maskX) || 0.1,
+            y: parseFloat(maskY) || 0.2,
+            width: parseFloat(maskW) || 0.3,
+            height: parseFloat(maskH) || 0.4
+          }],
+          strength: 0.8
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Video nesne silme işlemi başarıyla tamamlandı!');
+        onRefreshJobs();
+      } else {
+        alert('Inpainting hatası: ' + (data.error || 'Bilinmeyen hata'));
+      }
+    } catch (err: any) {
+      alert('Hata: ' + err.message);
+    } finally {
+      setKurguLoading(false);
+    }
   };
 
   return (
@@ -483,6 +606,130 @@ function MetaEditor({
       <MetaField label="Etiketler / Hashtags (virgülle ayırın)">
         <input type="text" value={ytTags} onChange={e => onSetYtTags(e.target.value)} style={inputStyle} />
       </MetaField>
+
+      {/* AI PREMIUM KURGU VE DÜZELTME ARAÇLARI */}
+      <div style={{
+        marginTop: '8px',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'rgba(255, 255, 255, 0.02)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent)', letterSpacing: '0.05em' }}>
+          AI PREMIUM KURGU ARAÇLARI
+        </div>
+
+        {/* Gaze Correction */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <button
+            onClick={handleGazeFix}
+            disabled={kurguLoading}
+            style={{
+              padding: '8px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: kurguLoading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            {kurguLoading ? <Loader size={12} className="spin" /> : '👁️'} Göz Temasını Düzelt
+          </button>
+        </div>
+
+        {/* Studio Sound */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}>Stüdyo Sesi Filtreleri</div>
+          <div style={{ display: 'flex', gap: '12px', fontSize: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={denoise} onChange={e => setDenoise(e.target.checked)} /> Gürültü Sil
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={deecho} onChange={e => setDeecho(e.target.checked)} /> Yankı Sil
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={equalize} onChange={e => setEqualize(e.target.checked)} /> EQ Ayarla
+            </label>
+          </div>
+          <button
+            onClick={handleEnhanceAudio}
+            disabled={kurguLoading}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: 'none',
+              background: 'var(--accent)',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 600,
+              cursor: kurguLoading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Sesi İyileştir (Studio Sound)
+          </button>
+        </div>
+
+        {/* Smart Reframe */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}>Akıllı Yeniden Çerçeveleme (9:16)</div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', cursor: 'pointer' }}>
+            <input type="checkbox" checked={useFaceTracking} onChange={e => setUseFaceTracking(e.target.checked)} /> OpenCV Yüz Takibi Kullan
+          </label>
+          <button
+            onClick={handleReframe}
+            disabled={kurguLoading}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #7F00FF, #FF007F)',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 600,
+              cursor: kurguLoading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Dikey Formatına Çevir (9:16)
+          </button>
+        </div>
+
+        {/* Video Inpainting */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)' }}>Hafif Nesne / Maske Silici</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
+            <input type="text" placeholder="X" value={maskX} onChange={e => setMaskX(e.target.value)} style={{ ...inputStyle, padding: '4px', fontSize: '9px', textAlign: 'center' }} />
+            <input type="text" placeholder="Y" value={maskY} onChange={e => setMaskY(e.target.value)} style={{ ...inputStyle, padding: '4px', fontSize: '9px', textAlign: 'center' }} />
+            <input type="text" placeholder="W" value={maskW} onChange={e => setMaskW(e.target.value)} style={{ ...inputStyle, padding: '4px', fontSize: '9px', textAlign: 'center' }} />
+            <input type="text" placeholder="H" value={maskH} onChange={e => setMaskH(e.target.value)} style={{ ...inputStyle, padding: '4px', fontSize: '9px', textAlign: 'center' }} />
+          </div>
+          <button
+            onClick={handleInpaintVideo}
+            disabled={kurguLoading}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: 'none',
+              background: '#ef4444',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 600,
+              cursor: kurguLoading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Seçilen Alanı Maskele ve Sil
+          </button>
+        </div>
+      </div>
+
       <button
         onClick={onSave}
         disabled={isSaving}

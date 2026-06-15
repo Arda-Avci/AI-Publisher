@@ -13,6 +13,32 @@ import { colab } from '../src/lib/colab-manager.js';
 import { encryptUsername } from '../src/lib/crypto.js';
 import bcrypt from 'bcrypt';
 
+// Mock axios to return success responses
+vi.mock('axios', () => {
+  return {
+    default: {
+      get: async (url: string) => {
+        if (url.endsWith('/health')) {
+          return { data: { memory: { gpu_total_gb: 15 } } };
+        }
+        if (url.endsWith('/verify-libs')) {
+          return { data: { success: true, report: { torch: { status: 'ok' } } } };
+        }
+        if (url.includes('/status/')) {
+          return { data: { status: 'success', has_subtitle: true } };
+        }
+        return { data: {} };
+      },
+      post: async (url: string) => {
+        if (url.endsWith('/generate-media')) {
+          return { data: { status: 'accepted', task_id: 'mock-task-id' } };
+        }
+        return { data: {} };
+      }
+    }
+  };
+});
+
 // Mock rate limiters to avoid being blocked in tests
 vi.mock('../src/middleware/rate-limit.js', () => ({
   authLimiter: (req: any, res: any, next: any) => next(),
@@ -125,31 +151,6 @@ describe('AI-Publisher System Integration Tests', () => {
 
   beforeAll(async () => {
     process.env.COLAB_URL = 'http://mocked-colab-url.com';
-    // Mock axios to return success responses
-    vi.mock('axios', () => {
-      return {
-        default: {
-          get: async (url: string) => {
-            if (url.endsWith('/health')) {
-              return { data: { memory: { gpu_total_gb: 15 } } };
-            }
-            if (url.endsWith('/verify-libs')) {
-              return { data: { success: true, report: { torch: { status: 'ok' } } } };
-            }
-            if (url.includes('/status/')) {
-              return { data: { status: 'success', has_subtitle: true } };
-            }
-            return { data: {} };
-          },
-          post: async (url: string) => {
-            if (url.endsWith('/generate-media')) {
-              return { data: { status: 'accepted', task_id: 'mock-task-id' } };
-            }
-            return { data: {} };
-          }
-        }
-      };
-    });
 
     // Setup Express
     app = express();

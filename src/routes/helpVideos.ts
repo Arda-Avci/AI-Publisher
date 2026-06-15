@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { db } from '../db.js';
+import { Logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, videos: localizedVideos });
   } catch (error) {
-    console.error('Failed to get help videos:', error);
+    Logger.error('Failed to get help videos', error);
     res.status(500).json({ success: false, error: 'Failed to fetch help videos' });
   }
 });
@@ -74,7 +75,7 @@ router.get('/:feature', async (req, res) => {
 
     res.json({ success: true, videos: localizedVideos });
   } catch (error) {
-    console.error('Failed to get help videos for feature:', error);
+    Logger.error('Failed to get help videos for feature', error);
     res.status(500).json({ success: false, error: 'Failed to fetch help videos' });
   }
 });
@@ -99,7 +100,7 @@ router.post('/admin', async (req, res) => {
 
     res.json({ success: true, id: result.lastID });
   } catch (error) {
-    console.error('Failed to create help video:', error);
+    Logger.error('Failed to create help video', error);
     res.status(500).json({ success: false, error: 'Failed to create help video' });
   }
 });
@@ -163,7 +164,7 @@ router.put('/admin/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to update help video:', error);
+    Logger.error('Failed to update help video', error);
     res.status(500).json({ success: false, error: 'Failed to update help video' });
   }
 });
@@ -178,7 +179,7 @@ router.delete('/admin/:id', async (req, res) => {
     await db.run('DELETE FROM help_videos WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete help video:', error);
+    Logger.error('Failed to delete help video', error);
     res.status(500).json({ success: false, error: 'Failed to delete help video' });
   }
 });

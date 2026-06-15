@@ -7,7 +7,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../../lib/logger.js';
 import { runFFmpeg, getVideoDuration } from '../videoService.js';
-import type { SportotoDiscussion } from './sportotoBridge.js';
+import type { SportotoDiscussion } from './discussionSource.js';
 
 const SPEAKER_COLORS: Record<string, string> = {
   Moderator: '#F59E0B',

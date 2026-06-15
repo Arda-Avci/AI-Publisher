@@ -25,9 +25,6 @@ export class CreditService {
   }
 
   static async getUserCredits(userId: number): Promise<{ credits: number; limit: number; resetDate: string }> {
-    if (await this.isAdmin(userId)) {
-      return { credits: 999999, limit: 999999, resetDate: new Date(Date.now() + 365 * 86400000).toISOString() };
-    }
     try {
       const user = await db.get(
         'SELECT credits, monthly_credit_limit, credit_reset_date FROM users WHERE id = ?',
@@ -71,14 +68,12 @@ export class CreditService {
 
   /** Balance check only — does NOT deduct. Returns { ok, requiredCredits }. */
   static async checkSufficientCredits(userId: number, requiredCredits: number): Promise<{ ok: boolean; balance: number }> {
-    if (await this.isAdmin(userId)) return { ok: true, balance: 999999 };
     const { credits } = await this.getUserCredits(userId);
     return { ok: credits >= requiredCredits, balance: credits };
   }
 
   /** Deduct credits AFTER successful production. */
   static async deductAfterProduction(userId: number, amount: number, description: string): Promise<boolean> {
-    if (await this.isAdmin(userId)) return true;
     try {
       const { credits } = await this.getUserCredits(userId);
       const newCredits = credits - amount;
@@ -97,7 +92,6 @@ export class CreditService {
   }
 
   static async refundCredits(userId: number, amount: number, description: string): Promise<void> {
-    if (await this.isAdmin(userId)) return;
     try {
       const { credits } = await this.getUserCredits(userId);
       const newCredits = credits + amount;

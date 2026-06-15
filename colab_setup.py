@@ -55,6 +55,7 @@ packages_to_check = [
     ("transformers", "import transformers"),
     ("flask", "import flask"),
     ("pyngrok", "from pyngrok import ngrok"),
+    ("TTS (coqui-tts)", "from TTS.api import TTS"),
     ("faster_whisper", "from faster_whisper import WhisperModel"),
     ("whisper", "import whisper"),
     ("yt_dlp", "import yt_dlp"),
@@ -136,6 +137,10 @@ if not already_installed:
     # Rubberband ses senkronizasyonu (Auto-Synced-Translated-Dubs)
     run_cmd('uv pip install --system --prefer-binary --no-cache-dir pyrubberband soundfile')
     run_cmd('apt-get install -y rubberband-cli rubberband-ladspa')
+
+    # XTTS-v2 (coqui-tts) ve sistem bağımlılıkları (espeak-ng)
+    run_cmd('apt-get install -y espeak-ng espeak libsndfile1')
+    run_cmd('uv pip install --system --prefer-binary --no-cache-dir coqui-tts')
 
     # Alternatif TTS sağlayıcıları (Lobe Chat / OpenAI / Edge)
     run_cmd('uv pip install --system --prefer-binary --no-cache-dir openai edge-tts')

@@ -22,8 +22,12 @@ const music = path.join(FIXTURES, 'sample_music.mp3');
 const srt = path.join(FIXTURES, 'sample.srt');
 
 function run(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+  let finalArgs = [...args];
+  if (cmd === 'ffmpeg' && !finalArgs.includes('-threads')) {
+    finalArgs = ['-threads', '1', ...finalArgs];
+  }
   return new Promise((resolve) => {
-    execFile(cmd, args, { timeout: 60000 }, (err, stdout, stderr) => {
+    execFile(cmd, finalArgs, { timeout: 60000 }, (err, stdout, stderr) => {
       resolve({ stdout, stderr, code: (err as any)?.code ?? 0 });
     });
   });
@@ -175,9 +179,12 @@ describe('SubtitleMixer', () => {
 describe('SplitScreen', () => {
   it('should stack two videos vertically (vstack)', async () => {
     const out = path.join(OUTPUT, 'vstack.mp4');
-    const { code } = await run('ffmpeg', ['-y', '-i', video, '-i', video,
+    const { code, stderr } = await run('ffmpeg', ['-y', '-threads', '1', '-i', video, '-threads', '1', '-i', video,
       '-filter_complex', '[0:v][1:v]vstack=inputs=2:shortest=1[out]',
-      '-map', '[out]', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', out]);
+      '-map', '[out]', '-c:v', 'libx264', '-preset', 'ultrafast', '-threads', '1', '-c:a', 'aac', out]);
+    if (code !== 0) {
+      console.error("FFmpeg vstack failed. stderr:", stderr);
+    }
     expect(code).toBe(0);
     expect(await fs.pathExists(out)).toBe(true);
   });

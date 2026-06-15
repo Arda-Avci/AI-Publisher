@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { Logger } from './logger.js';
 dotenv.config();
 
 const algorithm = 'aes-256-cbc';
@@ -31,7 +32,7 @@ export function decryptUsername(encryptedText: string): string {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (e) {
-    console.error('[ERROR] Kullanıcı adı decrypt edilemedi:', e);
+    Logger.error('Kullanıcı adı decrypt edilemedi', e);
     return encryptedText;
   }
 }
