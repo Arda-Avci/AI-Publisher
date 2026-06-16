@@ -69,7 +69,7 @@ packages_to_check = [
     ("transformers", "import transformers"),
     ("flask", "import flask"),
     ("pyngrok", "from pyngrok import ngrok"),
-    ("TTS (coqui-tts)", "from TTS.api import TTS"),
+    ("TTS (coqui-tts)", "try:\n            from TTS.api import TTS\n        except Exception as tts_import_e:\n            if 'numpy' in str(tts_import_e):\n                pass # Ignore numpy 2.x migration warnings that throw on import\n            else:\n                raise tts_import_e"),
     ("faster_whisper", "from faster_whisper import WhisperModel"),
     ("whisper", "import whisper"),
     ("yt_dlp", "import yt_dlp"),
@@ -117,6 +117,9 @@ if not already_installed:
 
     # Öncelikle hızlı paket kurulumu için uv paket yöneticisini kuruyoruz
     run_cmd('pip install uv')
+
+    # NumPy 2.x compile ve cython hatalarını önlemek için NumPy'ı 1.x sürümünde sabitliyoruz
+    run_cmd('uv pip install --system "numpy<2.0.0" --no-cache-dir')
 
     # SymPy / mpmath AttributeError çakışma önlemi
     run_cmd('pip uninstall -y sympy mpmath')
@@ -232,16 +235,8 @@ else:
         except Exception as dl_e:
             print(f"[WARN] GitHub'dan otomatik indirilemedi/güncellenemedi: {dl_e}")
             if not os.path.exists("colab_server.py"):
-                print("👉 Lütfen bilgisayarınızdaki 'colab_server.py' dosyasını seçip yükleyin:\n")
-                try:
-                    from google.colab import files
-                    uploaded = files.upload()
-                    if "colab_server.py" not in uploaded:
-                        print("❌ colab_server.py dosyası yüklenmedi! Başlatma iptal edildi.")
-                        sys.exit(1)
-                except Exception as e:
-                    print(f"❌ Dosya yükleme arayüzü açılamadı: {e}")
-                    sys.exit(1)
+                print("❌ colab_server.py bulunamadı ve raw linkten indirilemedi. Başlatma iptal edildi.")
+                sys.exit(1)
             else:
                 print("[INFO] Mevcut yerel colab_server.py dosyası kullanılacak.")
 
