@@ -9,6 +9,20 @@ import sys
 import subprocess
 import time
 
+# Google Drive mount (G-Drive model önbellekleme desteği için)
+if os.path.exists("/content"):
+    try:
+        from google.colab import drive
+        print("[INFO] Mounting Google Drive for model cache...")
+        drive.mount('/content/drive')
+        os.makedirs('/content/drive/MyDrive/Colab_Cache/huggingface', exist_ok=True)
+        os.makedirs('/content/drive/MyDrive/Colab_Cache/torch', exist_ok=True)
+        os.environ["HF_HOME"] = "/content/drive/MyDrive/Colab_Cache/huggingface"
+        os.environ["TORCH_HOME"] = "/content/drive/MyDrive/Colab_Cache/torch"
+        print("[OK] Google Drive model önbellek dizinleri başarıyla bağlandı!")
+    except Exception as drive_e:
+        print(f"[WARN] Google Drive mount edilemedi, modeller her seferinde sıfırdan indirilecek: {drive_e}")
+
 # Modern transformers kütüphanesinde kaldırılan veya değişen is_..._available ve
 # is_..._greater_or_equal fonksiyonlarının coqui-tts (TTS) ile uyumluluk sağlaması
 # amacıyla import_utils modülünün evrensel bir ModuleProxy ile sarmalanması.
