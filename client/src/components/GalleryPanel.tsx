@@ -772,8 +772,38 @@ function ColabStatusPanel() {
 
   useEffect(() => {
     fetchStatus();
+
+    const bypassQuery = window.location.href.includes('ngrok') ? '?ngrok-skip-browser-warning=true' : '';
+    const sseUrl = `/colab-status-stream${bypassQuery}`;
+    let eventSource: EventSource | null = new EventSource(sseUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const json = JSON.parse(event.data);
+        setData(json);
+      } catch { }
+    };
+
+    eventSource.onerror = () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      setTimeout(() => {
+        if (eventSource) {
+          eventSource = new EventSource(sseUrl);
+        }
+      }, 5000);
+    };
+
     const interval = setInterval(fetchStatus, 30_000);
-    return () => clearInterval(interval);
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      clearInterval(interval);
+    };
   }, []);
 
   const handleTestModels = async () => {

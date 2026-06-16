@@ -39,3 +39,10 @@ Wav2Lip/
 .env*
 **/server*.log
 
+# Compiled JS outputs (TypeScript build artifacts)
+src/**/*.js
+src/**/*.js.map
+
+# Generated documentation artifacts
+C4-Documentation/
+

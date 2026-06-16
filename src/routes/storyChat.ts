@@ -40,7 +40,7 @@ const router = Router();
  */
 router.get('/sessions', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const sessions = await getUserChatSessions(userId);
@@ -57,7 +57,7 @@ router.get('/sessions', async (req, res) => {
  */
 router.post('/sessions', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const { storyBibleId, context } = req.body;
@@ -75,7 +75,7 @@ router.post('/sessions', async (req, res) => {
  */
 router.get('/sessions/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const session = await getChatSession(parseInt(req.params.id));
@@ -95,7 +95,7 @@ router.get('/sessions/:id', async (req, res) => {
  */
 router.delete('/sessions/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const session = await getChatSession(parseInt(req.params.id));
@@ -116,7 +116,7 @@ router.delete('/sessions/:id', async (req, res) => {
  */
 router.post('/chat', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const { sessionId, message, agent, template } = req.body;
@@ -144,7 +144,7 @@ router.post('/chat', async (req, res) => {
  */
 router.post('/scenes/:sessionId', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const sessionId = parseInt(req.params.sessionId);
@@ -170,7 +170,7 @@ router.post('/scenes/:sessionId', async (req, res) => {
  */
 router.get('/bibles', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bibles = await getUserStoryBibles(userId);
@@ -187,7 +187,7 @@ router.get('/bibles', async (req, res) => {
  */
 router.post('/bibles', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const { title, genre, description, worldSetting, themes, tone, targetAudience } = req.body;
@@ -216,7 +216,7 @@ router.post('/bibles', async (req, res) => {
  */
 router.get('/bibles/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bible = await getStoryBible(parseInt(req.params.id));
@@ -239,7 +239,7 @@ router.get('/bibles/:id', async (req, res) => {
  */
 router.put('/bibles/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bible = await getStoryBible(parseInt(req.params.id));
@@ -260,7 +260,7 @@ router.put('/bibles/:id', async (req, res) => {
  */
 router.delete('/bibles/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bible = await getStoryBible(parseInt(req.params.id));
@@ -283,7 +283,7 @@ router.delete('/bibles/:id', async (req, res) => {
  */
 router.post('/bibles/:bibleId/characters', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bible = await getStoryBible(parseInt(req.params.bibleId));
@@ -304,7 +304,7 @@ router.post('/bibles/:bibleId/characters', async (req, res) => {
  */
 router.put('/characters/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const character = await updateCharacter(parseInt(req.params.id), req.body);
@@ -323,7 +323,7 @@ router.put('/characters/:id', async (req, res) => {
  */
 router.delete('/characters/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     await deleteCharacter(parseInt(req.params.id));
@@ -342,7 +342,7 @@ router.delete('/characters/:id', async (req, res) => {
  */
 router.post('/bibles/:bibleId/plot-points', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bible = await getStoryBible(parseInt(req.params.bibleId));
@@ -363,7 +363,7 @@ router.post('/bibles/:bibleId/plot-points', async (req, res) => {
  */
 router.put('/plot-points/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const plotPoint = await updatePlotPoint(parseInt(req.params.id), req.body);
@@ -382,7 +382,7 @@ router.put('/plot-points/:id', async (req, res) => {
  */
 router.delete('/plot-points/:id', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     await deletePlotPoint(parseInt(req.params.id));
@@ -401,7 +401,7 @@ router.delete('/plot-points/:id', async (req, res) => {
  */
 router.post('/bibles/:id/generate', async (req, res) => {
   try {
-    const userId = (req.session as any)?.userId;
+    const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const bible = await getStoryBible(parseInt(req.params.id));

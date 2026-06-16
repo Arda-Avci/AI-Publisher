@@ -12,12 +12,15 @@ interface HeaderProps {
   onSetActiveTab: (t: Tab) => void;
   onLogout: () => void;
   t: (key: string, params?: Record<string, any>) => string;
+  isAdmin?: boolean;
+  onNavigateAdmin?: () => void;
 }
 
 export function Header({
   language: _language, theme: _theme, isDark: _isDark, activeTab: _activeTab, userCredits,
   onSetTheme: _onSetTheme, onToggleDark: _onToggleDark, onToggleLanguage: _onToggleLanguage,
   onSetActiveTab: _onSetActiveTab, onLogout: _onLogout, t: _t,
+  isAdmin, onNavigateAdmin,
 }: HeaderProps) {
   const creditsStr = userCredits ? userCredits.credits.toLocaleString() : '0';
 
@@ -69,6 +72,17 @@ export function Header({
             Engine: v2.4 (Online)
           </span>
         </div>
+
+        {isAdmin && (
+          <button onClick={onNavigateAdmin}
+            style={{
+              padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(212, 175, 55, 0.3)',
+              cursor: 'pointer', fontSize: 11, background: 'rgba(212, 175, 55, 0.08)',
+              color: '#D4AF37', fontFamily: 'var(--font-mono)',
+            }}>
+            ADMIN
+          </button>
+        )}
 
         <div style={{
           width: '1px', height: '16px',

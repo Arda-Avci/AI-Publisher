@@ -32,6 +32,7 @@ import { registerEditorRoutes } from './routes/editor.js';
 import { registerCreditRoutes } from './routes/credits.js';
 import { registerLocalesRoutes } from './routes/locales.js';
 import { registerAuditRoutes } from './routes/audit.js';
+import adminRouter from './routes/admin.js';
 import { registerChatToEditRoutes } from './routes/chatToEdit.js';
 import { registerViMaxRoutes } from './routes/viMax.js';
 import { registerPipecatRoutes } from './routes/pipecat.js';
@@ -82,6 +83,17 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   Logger.error('SESSION_SECRET is not set in production. Security risk!');
   process.exit(1);
 }
+
+// Global process-level hata yakalama
+// Yakalanmayan Promise rejection'ları sessizce Node.js'i crash edebilir
+process.on('unhandledRejection', (reason) => {
+  Logger.error('Unhandled Promise Rejection', reason instanceof Error ? reason : new Error(String(reason)));
+});
+
+process.on('uncaughtException', (err) => {
+  Logger.error('Uncaught Exception — sunucu yeniden başlatılıyor', err);
+  process.exit(1);
+});
 
 // UTF-8 encoding middleware — tüm response'larda Türkçe karakter desteği
 app.use(utf8Middleware);
@@ -183,6 +195,7 @@ app.use('/api/v1/transcript', transcriptEditorRouter);
 app.use('/api/v1/studio', aiStudioRouter);
 app.use('/api/v1/storyboard', storyboardRouter);
 app.use('/api/v1/edit-queue', editQueueRouter);
+app.use('/api/v1/admin', adminRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

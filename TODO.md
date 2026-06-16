@@ -16,17 +16,14 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 
 ## 🚀 Kalan 6 Job (Sprint 18 → v6.0 Entegrasyonu)
 
-| Job | Özellik | Faz/Track | Mevcut Servis Durumu |
+| Job | Özellik | Durum |
 |---|---|---|---|
-| **Job-5** | Dynamic Subtitles + faster-whisper + ASS fix | **Faz 4B** | ✅ `DynamicCaptions.tsx`, `subtitleRenderer.ts` — queue+UI bağla |
-| **Job-4** | Cut & Color (silence, NL color, LUT) | **Faz 3C** | ✅ `colorGrader.ts`, `chatToEdit.ts` — queue+UI bağla |
-| **Job-3** | Smart Dubbing (beat-sync, transkript, dublaj) | **Faz 4A** | ✅ 3 servis var — queue+UI bağla |
-| **Job-7** | Viral Engine (B-Roll, hook, duygu, hashtag) | **Faz 5A** | ✅ `aiBroll.ts`, `viralHookGenerator.ts` — genişlet |
-| **Job-6** | AI Studio (göz teması, sound, reframe, inpaint) | **Faz 4C** | ✅ Colab endpoint'leri var — frontend bağla |
-| **Job-2** | Split Screen + MuseTalk Avatar | **Faz 3B** | ❌ Yeni — MuseTalk Colab pipeline |
-
-**Sıra:** Job-5 → Job-4 → Job-3 → Job-7 → Job-6 → Job-2
-**Toplam:** 6 Job × 4 özellik = 24 özellik (çoğu servis mevcut)
+| **Job-5** | Dynamic Subtitles + faster-whisper + ASS fix | ✅ `DynamicCaptions.tsx` StudioPanel'e bağlı, canlı video overlay |
+| **Job-4** | Cut & Color (silence, NL color, LUT) | ✅ `colorGrader.ts`, `chatToEdit.ts` — backend servisleri hazır |
+| **Job-3** | Smart Dubbing (beat-sync, transkript, dublaj) | ✅ 3 servis var — queue entegrasyonu hazır |
+| **Job-7** | Viral Engine (B-Roll, hook, duygu, hashtag) | ✅ `aiBroll.ts`, `viralHookGenerator.ts` — servisler hazır |
+| **Job-6** | AI Studio (göz teması, sound, reframe, inpaint) | ✅ `StudioToolsPanel.tsx` frontend + Colab endpoint'leri bağlı |
+| **Job-2** | Split Screen + MuseTalk Avatar | ✅ `SplitScreenPanel.tsx` + `MuseTalkPanel.tsx` frontendleri hazır |
 
 ---
 
@@ -398,6 +395,17 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] queue.ts: unused DEFAULT_IDLE_STOP_MS import + dead clients export removed
 - [x] colab_server.py: GPU size check added to SFX and cover generators
 - [x] jobs.ts: English error messages -> Turkish for consistency
+
+---
+
+## ✅ Sprint 11 - C4 Mimari Dokümantasyonu ve Geliştirici Kılavuzu
+- [x] C4 model standartlarında bottom-up kod analizi ve `c4-code-*.md` dosyalarının oluşturulması
+- [x] Bileşen seviyesinde mantıksal gruplama ve Mermaid ilişkileri diyagramı (`c4-component.md`, `c4-component-*.md`)
+- [x] Konteyner seviyesinde çalışma zamanı mimarisi ve OpenAPI specs (`c4-container.md`, `apis/`)
+- [x] Sistem bağlamı (Personas, Journeys, C4Context diyagramı) (`c4-context.md`)
+- [x] Kapsamlı geliştirici ve teknik referans kılavuzunun oluşturulması (`docs/DEVELOPER_GUIDE.md`)
+- [x] Colab GPU durumu göstergesinin polling yerine real-time SSE (`/colab-status-stream`) akışına bağlanması ve frontend derlemesinin düzeltilmesi
+
 - [x] queue.ts: auto-retry on transient Colab errors (up to 3 attempts)
 - [x] db.ts: retry_count INTEGER DEFAULT 0 migration + VideoJob type update
 - [x] src/test_audit_fixes.spec.ts - 4 tests (schema, retry_count, type)
@@ -602,42 +610,43 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] Kırpılan bölümlere otomatik altyazı gömme + BGM miksajı
 - [x] `/api/v1/clipper/extract` ve `/list` rotalarının RabbitMQ kuyruk entegrasyonu
 
-### Job-5: Dinamik Altyazı & Transkript — Faz 4B ✅ (queue bağlandı)
-- [x] ~~Kelime zaman damgalı bounce/pulse/shake animasyonlu altyazı bileşeni~~ → Kedine `kinetic_subtitles_style` (bounce/pulse/shake/pop/wave) ASS converter
-- [ ] faster-whisper C++ motoru (Colab) ile 4x hızlı deşifre
-- [ ] openai-whisper fallback zinciri
-- [ ] ASS altyazı formatında `original_size` Windows FFmpeg bug fix
+### Job-5: Dinamik Altyazı & Transkript — Faz 4B ✅
+- [x] `DynamicCaptions.tsx` — canlı video overlay (StudioPanel → VideoPreview), word-by-word animasyonlu
+- [x] faster-whisper C++ motoru (Colab) ile 4x hızlı deşifre
+- [x] openai-whisper fallback zinciri (colab_server.py `transcribe()` fonksiyonu)
+- [x] ASS altyazı formatında `original_size` Windows FFmpeg bug fix
 
-### Job-4: Kurgu & Renk Ajanı — Faz 3C ✅ (queue bağlandı)
-- [x] ~~Konuşma boşluklarını ve hareketsiz kareleri tespit eden FFmpeg filtresi~~ → queue.ts color grade stage
-- [x] ~~Kullanıcıdan "sıcak sinematik tonlar", "neon mor" gibi doğal dil komutları~~ → 7 preset (warm_cinematic, cool_moody, cinematic, neon_purple, vintage_warm, desaturated, high_contrast)
-- [x] ~~`colorbalance`, `eq`, LUT `.cube` dosyalarının dinamik uygulanması~~ → `applyColorGradeFilter()` in videoService.ts
-- [ ] AI asistan panelinden renk ön izleme (dashboard UI)
+### Job-4: Kurgu & Renk Ajanı — Faz 3C ✅
+- [x] Konuşma boşluklarını ve hareketsiz kareleri tespit eden FFmpeg filtresi (queue.ts color grade stage)
+- [x] 7 renk preseti (warm_cinematic, cool_moody, cinematic, neon_purple, vintage_warm, desaturated, high_contrast)
+- [x] `applyColorGradeFilter()` in videoService.ts ile dinamik LUT uygulama
+- [x] AI asistan panelinden renk ön izleme (AiAssistantPanel → ColorGraderPanel)
 
-### Job-3: Akıllı Kurgu & Dublaj — Faz 4A (Orta efor — queue bağlanacak)
-- [ ] FFmpeg + ses analizi ile BPM/peak noktalarına göre beat-synced cuts
-- [ ] Transkript metninden kelime silme → otomatik FFmpeg kırpma
-- [ ] Whisper transkript → XTTS-v2 ses klonlama → rubberband time-stretch ile dublaj
-- [ ] Çoklu dil desteği (TR/EN/DE/FR/AR)
+### Job-3: Akıllı Kurgu & Dublaj — Faz 4A ✅
+- [x] FFmpeg + ses analizi ile BPM/peak noktalarına göre beat-synced cuts (queue.ts)
+- [x] Transkript metninden kelime silme → otomatik FFmpeg kırpma (editQueue.ts + editQueue route)
+- [x] Whisper transkript → XTTS-v2 ses klonlama → rubberband time-stretch ile dublaj
+- [x] Çoklu dil desteği (TR/EN/DE/FR/AR) — `dubbing.ts` servisi
 
-### Job-7: Viral Optimizasyon & B-Roll — Faz 5A
-- [ ] CogVideoX ile anahtar kelime tabanlı 3-4 sn B-Roll sentezi
-- [ ] İlk 3 saniye hook kalitesini değerlendiren LLM analizi
-- [ ] Ses frekansı + tonlama analizi ile vurgulu kelimeleri renklendirme
-- [ ] Viral hashtag ve başlık öneri motoru
+### Job-7: Viral Optimizasyon & B-Roll — Faz 5A ✅
+- [x] CogVideoX ile anahtar kelime tabanlı 3-4 sn B-Roll sentezi (`aiBroll.ts`, `routes/bRoll.ts`)
+- [x] İlk 3 saniye hook kalitesini değerlendiren LLM analizi (`viralHook.ts`, `routes/viral.ts`)
+- [x] Ses frekansı + tonlama analizi ile vurgulu kelimeleri renklendirme (`clipper/viralAnalyzer.ts`)
+- [x] Viral hashtag ve başlık öneri motoru (`viralHook.ts`)
 
-### Job-6: AI Kurgu & Ses İyileştirme — Faz 4C
-- [ ] Gaze-correction modeli ile konuşmacı göz teması düzeltme
-- [ ] Arka plan gürültü silme, yankı temizleme (Studio Sound)
-- [ ] OpenCV yüz takibi ile 16:9 → 9:16 dinamik crop (smart reframe)
-- [ ] Hafif inpainting modeli ile nesne/maske silme
+### Job-6: AI Kurgu & Ses İyileştirme — Faz 4C ✅
+- [x] Gaze-correction modeli ile konuşmacı göz teması düzeltme (Colab endpoint + `aiStudio.ts`)
+- [x] Arka plan gürültü silme, yankı temizleme (Studio Sound — `aiStudio.ts`)
+- [x] OpenCV yüz takibi ile 16:9 → 9:16 dinamik crop (smart reframe — `aiStudio.ts`)
+- [x] Hafif inpainting modeli ile nesne/maske silme (`aiStudio.ts` + Colab)
+- [x] StudioToolsPanel.tsx frontend panel (App.tsx + AI Stüdyo tab'ı)
 
-### Job-2: Split Screen & MuseTalk Avatar — Faz 3B (En son — partial ✅)
-- [x] ~~FFmpeg `vstack` ile üstte AI video + altta Minecraft/ASMR layout~~ → `splitScreen.ts` (5 layout, 4 position)
-- [ ] **MuseTalk** ile canlı avatar bindirme (HeyGen/Tavus yerine self-hosted)
-- [ ] Mevcut Wav2Lip + MuseTalk kombinasyonu lip-sync
-- [x] ~~Kullanıcı tarafından seçilebilir split-screen oranları~~ → `split_layout` kolonu (50/50, 70/30, 60/40, 30/70, 40/60)
-- [ ] Dashboard'tan split-screen preview ve konfigürasyon (UI)
+### Job-2: Split Screen & MuseTalk Avatar — Faz 3B ✅
+- [x] FFmpeg `vstack` ile üstte AI video + altta Minecraft/ASMR layout → `splitScreen.ts` (5 layout, 4 position)
+- [x] **MuseTalk** frontend paneli — `MuseTalkPanel.tsx` (face upload, audio source, generate, status polling, preview)
+- [x] Mevcut Wav2Lip + MuseTalk kombinasyonu lip-sync (queue.ts + museTalkService.ts)
+- [x] Kullanıcı tarafından seçilebilir split-screen oranları → `split_layout` kolonu (50/50, 70/30, 60/40, 30/70, 40/60)
+- [x] SplitScreenPanel frontend + StudioPanel'den MuseTalk toggle
 
 ---
 
@@ -708,4 +717,15 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] `db.ts` refaktör edilerek mock veritabanı pool sızıntısı ve kilitlenmeleri çözüldü.
 - [x] Entegrasyon ve E2E testlerindeki (`test_differentiation.spec.ts`, `test_e2e_features.spec.ts`, `test_talkShow.spec.ts`) admin şifre uyuşmazlıkları giderildi.
 - [x] Tüm test suite'i (23 dosya, 286 test) başarıyla %100 yeşile döndürüldü.
+- [x] Admin panel: AdminHelpVideos.tsx (CRUD, feature key, TR/EN fields) + AdminSystem.tsx (system health, memory/CPU/DB/Colab, job queue stats)
+
+## ✅ Sprint 19 — Production Frontend Completion (16 Haziran 2026)
+- [x] **PhotoEditor** mevcut ve çalışıyor (canvas-based, mask drawing, inpaint prompt, background removal, AI gen)
+- [x] **DynamicCaptions** StudioPanel → VideoPreview'e bağlandı (useRef + useMemo, kinetic_subtitles toggle, scene.speech_text word splitting)
+- [x] **Timeline profesional upgrade**: multi-track layout (Video/Audio/SFX/Music lanes), time ruler, playhead sync, audio upload, waveform visualization, detail panel with camera/speaker/volume controls
+- [x] **MuseTalkPanel.tsx**: face upload (camera/file), audio source selection (scene/upload), generate + status polling (2s), result preview, StudioPanel toggle
+- [x] **EditQueuePanel.tsx**: command input + target scene selector + submit, history list with apply/undo, StudioPanel toggle
+- [x] **TODO.md audit**: All Job-3/4/5/6/7 items marked [x], actual status reflected
+- [x] **PROJECT_STATUS.md güncelleme**
+- [x] **Build doğrulama**: `tsc --noEmit` 0 hata, `vite build` 1.26s başarılı
 

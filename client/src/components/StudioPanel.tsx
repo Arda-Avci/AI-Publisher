@@ -1,10 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Play, Loader, Zap } from 'lucide-react';
 import type { Scene } from './Timeline.js';
+import { Timeline } from './Timeline.js';
 import type { OpportunityVideo } from './Opportunities.js';
 import type { Job, Tab } from '../types.js';
 import { CharacterCreationPanel } from './CharacterCreationPanel.js';
 import { TalkShowEditor } from './TalkShowEditor.js';
+import { DynamicCaptions } from './DynamicCaptions.js';
+import type { CaptionWord } from './DynamicCaptions.js';
+import { MuseTalkPanel } from './MuseTalkPanel.js';
+import { EditQueuePanel } from './EditQueuePanel.js';
 
 interface StudioPanelProps {
   activeTab: Tab;
@@ -31,7 +36,7 @@ interface StudioPanelProps {
 
 export function StudioPanel({
   activeTab: _activeTab,
-  selectedJob, progressMsg, progressPercent, etaSeconds,
+  selectedJob, scenes, progressMsg, progressPercent, etaSeconds,
   csrfToken,
   onSetSelectedJob: _onSetSelectedJob,
   onUpdateScenes: _onUpdateScenes,
@@ -43,12 +48,17 @@ export function StudioPanel({
   t: _t,
   masterPrompt, onSetMasterPrompt, onSubmit, formLoading, mainTab,
 }: StudioPanelProps) {
+  const [playheadTime, setPlayheadTime] = useState(0);
+  const [selectedSceneId, setSelectedSceneId] = useState<number | undefined>();
+  const [showMuseTalk, setShowMuseTalk] = useState(false);
+  const [showEditQueue, setShowEditQueue] = useState(false);
   if (mainTab === 'Galeri') {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
         {selectedJob ? (
           <VideoPreview
             selectedJob={selectedJob}
+            scenes={scenes}
             progressMsg={progressMsg}
             progressPercent={progressPercent}
             etaSeconds={etaSeconds}
@@ -85,16 +95,85 @@ export function StudioPanel({
     return null;
   }
 
+  const handleSelectScene = (scene: Scene) => {
+    setSelectedSceneId(scene.id);
+    _onSelectScene(scene);
+  };
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 100px 24px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 24px 100px 24px', gap: '16px' }}>
         <VideoPreview
           selectedJob={selectedJob}
+          scenes={scenes}
           progressMsg={progressMsg}
           progressPercent={progressPercent}
           etaSeconds={etaSeconds}
           masterPrompt={masterPrompt}
+          onTimeUpdate={setPlayheadTime}
         />
+        {selectedJob && scenes.length > 0 && (
+          <Timeline
+            scenes={scenes}
+            onUpdateScenes={_onUpdateScenes}
+            onRegenerateScene={_onRegenerateScene}
+            onAddScene={_onAddScene}
+            onDeleteScene={_onDeleteScene}
+            onSelectScene={handleSelectScene}
+            selectedSceneId={selectedSceneId}
+            playheadTime={playheadTime}
+          />
+        )}
+        {selectedJob && selectedSceneId && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowMuseTalk(!showMuseTalk)}
+              style={{
+                padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                border: `1px solid ${showMuseTalk ? 'var(--gold)' : 'var(--border)'}`,
+                background: showMuseTalk ? 'rgba(200,164,92,0.12)' : 'rgba(255,255,255,0.04)',
+                color: showMuseTalk ? 'var(--gold)' : 'var(--text-primary)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                transition: 'all 0.15s',
+              }}
+            >
+              🎭 Dudak Senkronizasyonu (MuseTalk)
+            </button>
+            <button
+              onClick={() => setShowEditQueue(!showEditQueue)}
+              style={{
+                padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                border: `1px solid ${showEditQueue ? 'var(--gold)' : 'var(--border)'}`,
+                background: showEditQueue ? 'rgba(200,164,92,0.12)' : 'rgba(255,255,255,0.04)',
+                color: showEditQueue ? 'var(--gold)' : 'var(--text-primary)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                transition: 'all 0.15s',
+              }}
+            >
+              ✏️ AI Edit Queue
+            </button>
+          </div>
+        )}
+        {selectedJob && showMuseTalk && selectedSceneId && (() => {
+          const scene = scenes.find(s => s.id === selectedSceneId);
+          return scene ? (
+            <MuseTalkPanel
+              sceneId={scene.id}
+              sceneImagePath={scene.image_path}
+              sceneAudioPath={scene.audio_path}
+              csrfToken={csrfToken}
+              onClose={() => setShowMuseTalk(false)}
+            />
+          ) : null;
+        })()}
+        {selectedJob && showEditQueue && (
+          <EditQueuePanel
+            jobId={selectedJob.id}
+            scenes={scenes.map(s => ({ id: s.id, scene_number: s.scene_number }))}
+            csrfToken={csrfToken}
+            onClose={() => setShowEditQueue(false)}
+          />
+        )}
       </div>
       <FloatingPrompt
         masterPrompt={masterPrompt}
@@ -204,13 +283,43 @@ function FloatingPrompt({
 }
 
 function VideoPreview({
-  selectedJob, progressMsg, progressPercent, etaSeconds, masterPrompt,
+  selectedJob, scenes, progressMsg, progressPercent, etaSeconds, masterPrompt, onTimeUpdate,
 }: {
-  selectedJob: Job | null; progressMsg: string; progressPercent: number;
-  etaSeconds: number | null; masterPrompt: string;
+  selectedJob: Job | null; scenes: Scene[]; progressMsg: string; progressPercent: number;
+  etaSeconds: number | null; masterPrompt: string; onTimeUpdate?: (t: number) => void;
 }) {
   const hasVideo = selectedJob?.final_filename;
   const status = selectedJob?.status;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const words = useMemo(() => {
+    if (!scenes || scenes.length === 0) return [];
+    const allWords: CaptionWord[] = [];
+    const rate = 0.35;
+    scenes.forEach((scene) => {
+      const text = scene.speech_text || '';
+      const tokens = text.split(/\s+/).filter(Boolean);
+      if (tokens.length === 0) return;
+      const sceneOffset = (scene.scene_number - 1) * 6;
+      tokens.forEach((word: string, i: number) => {
+        allWords.push({
+          word,
+          start: sceneOffset + i * rate,
+          end: sceneOffset + (i + 1) * rate,
+        });
+      });
+    });
+    return allWords;
+  }, [scenes]);
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      const t = videoRef.current.currentTime;
+      setCurrentTime(t);
+      onTimeUpdate?.(t);
+    }
+  };
 
   const renderPlaceholder = () => {
     if (!selectedJob) {
@@ -352,12 +461,31 @@ function VideoPreview({
 
       {hasVideo ? (
         <video
+          ref={videoRef}
           src={`/videolar/${selectedJob!.final_filename}`}
           controls
+          onTimeUpdate={handleTimeUpdate}
           style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'relative', zIndex: 0 }}
         />
       ) : (
         renderPlaceholder()
+      )}
+
+      {/* DynamicCaptions overlay */}
+      {hasVideo && words.length > 0 && (
+        <div style={{ position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 3, width: '80%', maxWidth: '700px' }}>
+          <DynamicCaptions
+            words={words}
+            currentTime={currentTime}
+            animationType="bounce"
+            highlightColor="#FFD700"
+            baseColor="#FFFFFF"
+            fontSize={28}
+            visible={true}
+            align="center"
+            autoPlay={true}
+          />
+        </div>
       )}
 
       {/* Info badges when preview is active */}

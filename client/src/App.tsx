@@ -21,6 +21,12 @@ import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
 import { StudioToolsPanel } from './components/StudioToolsPanel.js';
+import AdminLayout from './components/admin/AdminLayout.js';
+import AdminDashboard from './components/admin/AdminDashboard.js';
+import AdminUsers from './components/admin/AdminUsers.js';
+import AdminHelpVideos from './components/admin/AdminHelpVideos.js';
+import AdminSystem from './components/admin/AdminSystem.js';
+import type { AdminPage } from './components/admin/AdminLayout.js';
 
 
 export default function App() {
@@ -70,6 +76,8 @@ export default function App() {
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [camIntensity, setCamIntensity] = useState(0.75);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPage, setAdminPage] = useState<AdminPage>('dashboard');
 
   // Future phase states
   const [dubbingLang, setDubbingLang] = useState('none');
@@ -114,8 +122,8 @@ export default function App() {
       const r = await fetch('/api/v1/csrf'); const d = await r.json();
       if (d.csrfToken) setCsrfToken(d.csrfToken);
       const r2 = await fetch('/api/v1/session'); const d2 = await r2.json();
-      if (d2.userId) { setIsLoggedIn(true); if (d2.theme) setTheme(d2.theme); if (d2.lang) setLanguage(d2.lang); if (d2.isDark !== undefined) setIsDark(d2.isDark); }
-      else setIsLoggedIn(false);
+      if (d2.userId) { setIsLoggedIn(true); setIsAdmin(!!d2.isAdmin); if (d2.theme) setTheme(d2.theme); if (d2.lang) setLanguage(d2.lang); if (d2.isDark !== undefined) setIsDark(d2.isDark); }
+      else { setIsLoggedIn(false); setIsAdmin(false); }
     } catch { setIsLoggedIn(false); }
   };
 
@@ -131,6 +139,7 @@ export default function App() {
       const d = await r.json();
       if (d.success) {
         setIsLoggedIn(true);
+        setIsAdmin(!!d.isAdmin);
         if (d.theme) setTheme(d.theme);
         if (d.lang) setLanguage(d.lang);
         if (d.isDark !== undefined) setIsDark(d.isDark);
@@ -247,6 +256,17 @@ export default function App() {
             onLogin={handleLoginDirect} authError={authError} setAuthError={setAuthError} />
         ) : <Navigate to="/" replace />
       } />
+      <Route path="/admin" element={
+        isLoggedIn && isAdmin ? (
+          <AdminLayout currentPage={adminPage} onNavigate={setAdminPage}
+            onLogout={handleLogout} username="Admin">
+            {adminPage === 'dashboard' && <AdminDashboard />}
+            {adminPage === 'users' && <AdminUsers />}
+            {adminPage === 'help-videos' && <AdminHelpVideos />}
+            {adminPage === 'system' && <AdminSystem />}
+          </AdminLayout>
+        ) : <Navigate to="/" replace />
+      } />
       <Route path="/*" element={
         !isLoggedIn ? (
           <LandingPage onLogin={handleLoginDirect} authError={authError}
@@ -256,7 +276,8 @@ export default function App() {
             <Header language={language} theme={theme} isDark={isDark} activeTab={activeTab}
               userCredits={userCredits} onSetTheme={setTheme} onToggleDark={() => setIsDark(!isDark)}
               onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-              onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t} />
+              onSetActiveTab={setActiveTab} onLogout={handleLogout} t={t}
+              isAdmin={isAdmin} onNavigateAdmin={() => window.location.href = '/admin'} />
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
               {(mainTab === 'Stüdyo' || mainTab === 'Galeri') && (

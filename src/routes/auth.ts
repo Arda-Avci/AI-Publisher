@@ -24,9 +24,11 @@ export function registerAuthRoutes(app: Application): void {
       if (user.preferred_language) req.session.lang = user.preferred_language;
       if (user.selected_theme) req.session.theme = user.selected_theme;
       logAudit({ userId: user.id, action: 'auth.login.success', req });
+      const isAdmin = user.is_admin === 1 || user.is_admin === true;
       res.json({
         success: true,
         userId: user.id,
+        isAdmin,
         theme: user.selected_theme || 'default',
         lang: user.preferred_language || 'tr',
         isDark: true,
@@ -38,13 +40,16 @@ export function registerAuthRoutes(app: Application): void {
   });
 
   // Session bilgisi — React uygulamasının giriş durumunu kontrol etmesi için
-  app.get('/api/v1/session', (req, res) => {
+  app.get('/api/v1/session', async (req, res) => {
     if (!req.session.userId) {
       res.json({ userId: null });
       return;
     }
+    const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.session.userId]);
+    const isAdmin = user?.is_admin === 1 || user?.is_admin === true;
     res.json({
       userId: req.session.userId,
+      isAdmin,
       lang: req.session.lang || 'tr',
       theme: req.session.theme || 'default',
       isDark: req.session.isDark !== undefined ? req.session.isDark : true,

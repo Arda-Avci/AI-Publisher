@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --bg-primary: hsl(var(--background));
   --bg-surface: hsl(var(--card));

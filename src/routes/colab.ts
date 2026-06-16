@@ -122,9 +122,26 @@ export function registerColabRoutes(app: Application): void {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders?.();
 
+    const formatState = (state: any) => {
+      const isRunning = state.status === 'running';
+      const diag = state.diagnostics || {};
+      const gpuModel = diag.gpu_model || (state.gpuMemoryGB ? (state.gpuMemoryGB > 20 ? 'NVIDIA L4' : 'NVIDIA Tesla T4') : 'Bağlı Değil');
+      return {
+        running: isRunning,
+        status: state.status,
+        gpu: gpuModel,
+        gpuModel: gpuModel,
+        vram_used: state.gpuUsedGB || 0,
+        vram_total: state.gpuMemoryGB || 0,
+        isRunning: isRunning,
+        lastHealthCheck: state.lastHealthCheck,
+        diagnostics: state.diagnostics || null
+      };
+    };
+
     const send = (state: any) => {
       try {
-        res.write(`data: ${JSON.stringify(state)}\n\n`);
+        res.write(`data: ${JSON.stringify(formatState(state))}\n\n`);
       } catch {
         // ignore
       }

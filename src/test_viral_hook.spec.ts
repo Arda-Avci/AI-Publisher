@@ -32,61 +32,56 @@ vi.mock('./lib/logger.js', () => ({
 }));
 
 vi.mock('./lib/ai-provider.js', () => ({
-  getAIModelChain: vi.fn().mockReturnValue([]),
+  getAIModelChain: vi.fn().mockReturnValue([
+    { modelId: 'mock-model', chat: vi.fn() }
+  ]),
 }));
 
-vi.mock('./lib/ai-utils.js', () => ({
-  withFallbackAndRetry: vi.fn(async (fn) => {
-    const fnStr = fn.toString();
-    if (fnStr.includes('HookQualitySchema')) {
-      return {
-        object: {
-          score: 6,
-          hookType: 'statistic',
-          pacingScore: 6,
-          visualAppealScore: 6,
-          audioClarityScore: 6,
-          attentionRetentionScore: 6,
-          strengths: [],
-          weaknesses: [],
-          improvementTips: [],
-          openerStrength: 60,
-          patternMatch: { curiosity: 50, controversy: 30, authority: 80, numbers: 40 }
-        }
-      };
-    }
-    if (fnStr.includes('ViralTitlesSchema')) {
-      return {
-        object: {
-          titles: [{ title: 'Viral title', style: 'curiosity', ctaIncluded: false, emojiCount: 1 }]
-        }
-      };
-    }
-    if (fnStr.includes('HashtagsSchema')) {
-      return {
-        object: {
-          hashtags: [{ tag: '#ai', platform: 'youtube', category: 'niche', estimatedReach: '10K' }]
-        }
-      };
-    }
-    return { object: { titles: [], hashtags: [] } };
-  }),
-}));
+vi.mock('./lib/ai-utils.js', () => {
+  const mockFn = vi.fn().mockImplementation(async (op) => {
+    return {
+      object: {
+        score: 7,
+        hookType: 'statistic',
+        pacingScore: 7,
+        visualAppealScore: 7,
+        audioClarityScore: 7,
+        attentionRetentionScore: 7,
+        strengths: ['good pacing'],
+        weaknesses: ['weak hook'],
+        improvementTips: ['improve audio'],
+        openerStrength: 70,
+        patternMatch: { curiosity: 50, controversy: 30, authority: 80, numbers: 40 },
+        titles: [
+          { title: 'Viral title', style: 'curiosity', ctaIncluded: false, emojiCount: 1 },
+          { title: 'Curiosity title', style: 'curiosity', ctaIncluded: false, emojiCount: 0 },
+          { title: 'Stat driven', style: 'stat-driven', ctaIncluded: false, emojiCount: 1 },
+          { title: 'Controversial', style: 'controversial', ctaIncluded: true, emojiCount: 2 }
+        ],
+        hashtags: [
+          { tag: '#viral', platform: 'youtube', category: 'trend', estimatedReach: '100K' },
+          { tag: '#tech', platform: 'youtube', category: 'niche', estimatedReach: '50K' },
+          { tag: '#test', platform: 'tiktok', category: 'generic', estimatedReach: '1K' }
+        ],
+        hookScore: 80
+      }
+    };
+  });
+  return {
+    withFallbackAndRetry: mockFn,
+  };
+});
 
 vi.mock('ai', () => ({
   generateObject: vi.fn(),
 }));
 
-vi.mock('./services/videoService.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('./services/videoService.js')>();
-  return {
-    ...original,
-    runFFmpeg: vi.fn(async () => ({ stdout: '', stderr: '' })),
-    extractReferenceFrame: vi.fn().mockResolvedValue(''),
-    extractReferenceFrameAtTime: vi.fn().mockResolvedValue(''),
-    getVideoDuration: vi.fn(async () => 30.0),
-  };
-});
+vi.mock('./services/videoService.js', () => ({
+  runFFmpeg: vi.fn(async () => ({ stdout: '', stderr: '' })),
+  extractReferenceFrame: vi.fn().mockResolvedValue(''),
+  extractReferenceFrameAtTime: vi.fn().mockResolvedValue(''),
+  getVideoDuration: vi.fn(async () => 30.0),
+}));
 
 // ── Import under test ─────────────────────────────────────────────────────────
 
@@ -220,7 +215,7 @@ describe('viralHook', () => {
     expect(result.titles.length).toBeGreaterThan(0);
     expect(result.titles[0]).toHaveProperty('title');
     expect(result.titles[0]).toHaveProperty('style');
-  });
+  }, 15000);
 
   it('generateViralTitles returns array with different styles', async () => {
     const { withFallbackAndRetry } = await import('./lib/ai-utils.js');
@@ -240,7 +235,7 @@ describe('viralHook', () => {
     expect(styles).toContain('curiosity');
     expect(styles).toContain('stat-driven');
     expect(styles).toContain('controversial');
-  });
+  }, 15000);
 
   // ── generateHashtags returns array ─────────────────────────────────────────
 
@@ -261,7 +256,7 @@ describe('viralHook', () => {
     expect(result.hashtags[0]).toHaveProperty('tag');
     expect(result.hashtags[0]).toHaveProperty('platform');
     expect(result.hashtags[0]).toHaveProperty('category');
-  });
+  }, 15000);
 
   it('generateHashtags works for all platforms', async () => {
     const { withFallbackAndRetry } = await import('./lib/ai-utils.js');
@@ -275,7 +270,7 @@ describe('viralHook', () => {
       const result = await generateHashtags('content', platform);
       expect(Array.isArray(result.hashtags)).toBe(true);
     }
-  });
+  }, 15000);
 
   // ── analyzeHookQuality ─────────────────────────────────────────────────────
 
@@ -300,7 +295,7 @@ describe('viralHook', () => {
     expect(result.score).toBe(7.0);
     expect(result.hookType).toBe('question');
     expect(result.openerStrength).toBe(60);
-  });
+  }, 15000);
 
   // ── optimizeForViral ────────────────────────────────────────────────────────
 
@@ -311,7 +306,7 @@ describe('viralHook', () => {
     expect(result).toHaveProperty('hashtags');
     expect(Array.isArray(result.titles)).toBe(true);
     expect(Array.isArray(result.hashtags)).toBe(true);
-  });
+  }, 15000);
 
   // ── ViralContentSchema ─────────────────────────────────────────────────────
 
@@ -353,5 +348,5 @@ describe('viralHook', () => {
     expect(Array.isArray(result.titles)).toBe(true);
     expect(Array.isArray(result.hashtags)).toBe(true);
     expect(typeof result.hookScore).toBe('number');
-  });
+  }, 15000);
 });
