@@ -101,10 +101,9 @@ async function startProduction(job: VideoJob) {
     Logger.info('[PRODUCTION] Starting Fırsatlar Hunisi autonomous workflow...', { jobId: job.id });
     try {
       await runDifferentiationPipeline(job.id, job.user_id);
-      // Reload job data
       const updatedJob = await db.get("SELECT * FROM video_jobs WHERE id = ?", [job.id]);
-      if (updatedJob && updatedJob.id) {
-        job = updatedJob;
+      if (updatedJob) {
+        job = updatedJob as VideoJob;
       } else {
         throw new Error(`İş #${job.id} veritabanında güncellenirken bulunamadı veya silindi.`);
       }

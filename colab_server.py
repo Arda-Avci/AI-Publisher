@@ -189,8 +189,14 @@ last_activity = time.time()
 # ── Global hata yakalayıcı ───────────────────────────────────────────────────
 @app.errorhandler(Exception)
 def handle_exception(e):
+    error_msg = traceback.format_exc()
     print("❌ SUNUCU HATA DETAYI:")
-    traceback.print_exc()
+    print(error_msg)
+    try:
+        with open("colab_error.log", "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.datetime.now().isoformat()}] Global Exception:\n{error_msg}\n")
+    except Exception as log_e:
+        print(f"Failed writing to colab_error.log: {log_e}")
     return jsonify({"status": "error", "message": str(e)}), 500
 
 print("🚀 Flask sunucusu Lazy Loading (ModelScope T2V) ile hazırlandı.")
@@ -1238,7 +1244,13 @@ def _generate_media_worker_with_callback(task_id: str, data: dict):
             log_diagnostic_activity(f"İş başarısız: Task {task_id} status: {TASKS.get(task_id, {}).get('status')}")
             
     except Exception as e:
-        print(f"❌ Otonom callback hatası: {e}")
+        error_msg = traceback.format_exc()
+        print(f"❌ Otonom callback hatası:\n{error_msg}")
+        try:
+            with open("colab_error.log", "a", encoding="utf-8") as f:
+                f.write(f"[{datetime.datetime.now().isoformat()}] Worker Exception (Task {task_id}, Job {job_id}):\n{error_msg}\n")
+        except Exception as log_e:
+            print(f"Failed writing worker error log: {log_e}")
         DIAGNOSTICS["total_jobs_failed"] += 1
         DIAGNOSTICS["last_job_status"] = "failed"
         DIAGNOSTICS["last_job_error"] = str(e)
