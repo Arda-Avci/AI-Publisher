@@ -13,7 +13,7 @@ export interface SplitConfig {
   secondarySource: string;
 }
 
-const LAYOUT_RATIOS: Record<SplitLayout, { primaryPct: number; secondaryPct: number }> = {
+export const LAYOUT_RATIOS: Record<SplitLayout, { primaryPct: number; secondaryPct: number }> = {
   '50/50': { primaryPct: 50, secondaryPct: 50 },
   '70/30': { primaryPct: 70, secondaryPct: 30 },
   '60/40': { primaryPct: 60, secondaryPct: 40 },

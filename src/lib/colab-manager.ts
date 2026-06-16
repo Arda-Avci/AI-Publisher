@@ -35,6 +35,7 @@ export interface ColabState {
   startedAt: string | null;
   uptimeSeconds: number | null;
   runtimeSeconds: number | null;
+  diagnostics?: any;
 }
 
 export interface ColabManager {
@@ -75,6 +76,7 @@ interface InternalState {
   lastError: string | null;
   startedAt: string | null;
   runtimeSeconds: number | null;
+  diagnostics?: any;
 }
 
 class ColabManagerImpl extends EventEmitter implements ColabManager {
@@ -484,6 +486,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       this.state.ngrokUrl = null;
       this.state.gpuMemoryGB = null;
       this.state.startedAt = null;
+      this.state.diagnostics = null;
     }
     if (lastError !== null) this.state.lastError = lastError;
     // S4: emit state-change for SSE consumers
@@ -519,6 +522,40 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       this.state.runtimeSeconds = 3600;
       this.state.lastHealthCheck = new Date().toISOString();
       this.state.lastError = null;
+      this.state.diagnostics = {
+        total_jobs_received: 5,
+        total_jobs_success: 4,
+        total_jobs_failed: 1,
+        last_job_time: new Date().toISOString(),
+        last_job_status: "success",
+        last_job_error: null,
+        callbacks: {
+          total_attempted: 5,
+          total_success: 4,
+          total_failed: 1,
+          last_sent_at: new Date().toISOString(),
+          last_status_code: 200,
+          last_error: null,
+          last_url: "http://localhost:3016/api/v1/video/callback",
+          tunnel_connectivity: "healthy"
+        },
+        outputs: {
+          videos_generated: 4,
+          speech_synthesized: 4,
+          sfx_generated: 4,
+          lipsync_applied: 4,
+          subtitles_generated: 4
+        },
+        models_loaded: {
+          tts: true,
+          wav2lip: true,
+          whisper: true,
+          musetalk: false
+        },
+        recent_activities: [
+          `[${new Date().toISOString()}] Mock diagnostics initialized (MOCK_COLAB=true)`
+        ]
+      };
       this.emit('state-change', this.getState());
       return;
     }
@@ -532,11 +569,13 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       const mem = res.data?.memory || {};
       const gpuUtil = res.data?.gpu_utilization || {};
       const runtime = res.data?.runtime || {};
+      const diagnostics = res.data?.diagnostics || null;
 
       this.state.gpuMemoryGB = typeof mem.gpu_total_gb === 'number' ? mem.gpu_total_gb : null;
       this.state.gpuUsedGB = typeof mem.gpu_used_gb === 'number' ? mem.gpu_used_gb : null;
       this.state.gpuUtilizationPct = typeof gpuUtil.gpu_pct === 'number' ? gpuUtil.gpu_pct : null;
       this.state.runtimeSeconds = typeof runtime.uptime_seconds === 'number' ? runtime.uptime_seconds : null;
+      this.state.diagnostics = diagnostics;
       this.state.lastHealthCheck = new Date().toISOString();
       if (this.state.status === 'running') {
         this.state.lastError = null;

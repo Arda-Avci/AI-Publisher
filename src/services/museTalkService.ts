@@ -86,3 +86,62 @@ export async function preloadModel(): Promise<boolean> {
     return false;
   }
 }
+
+export interface ComboLipSyncResult {
+  outputPath: string;
+  success: boolean;
+}
+
+export async function generateComboLipSync(
+  videoPath: string,
+  audioPath: string,
+  outputVideo?: string
+): Promise<ComboLipSyncResult> {
+  const colabUrl = colab.getState().ngrokUrl;
+  if (!colabUrl) {
+    throw new Error('Combo lip-sync icin Colab baglantisi gerekli');
+  }
+
+  const vPath = videoPath;
+  const aPath = audioPath;
+
+  if (!await fs.pathExists(vPath)) {
+    throw new Error(`Video dosyasi bulunamadi: ${vPath}`);
+  }
+  if (!await fs.pathExists(aPath)) {
+    throw new Error(`Ses dosyasi bulunamadi: ${aPath}`);
+  }
+
+  const outPath = outputVideo || path.join(
+    process.cwd(), 'videolar',
+    `combo_lipsync_${Date.now()}.mp4`
+  );
+
+  const videoBuffer = await fs.readFile(vPath);
+  const audioBuffer = await fs.readFile(aPath);
+
+  const formData = new FormData();
+  formData.append('video_path', vPath);
+  formData.append('audio_path', aPath);
+
+  Logger.info('[ComboLipSync] Starting Wav2Lip + MuseTalk pipeline...', { videoPath: vPath, audioPath: aPath });
+
+  try {
+    const response = await axios.post(`${colabUrl}/api/v1/lipsync/combo`, formData, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'bypass-tunnel-reminder': 'true',
+      },
+      responseType: 'arraybuffer',
+      timeout: 600000,
+    });
+
+    await fs.writeFile(outPath, Buffer.from(response.data));
+    Logger.info('[ComboLipSync] Combo lip-sync video saved', { outPath });
+
+    return { outputPath: outPath, success: true };
+  } catch (err: any) {
+    Logger.error('[ComboLipSync] Generation failed:', err);
+    throw new Error(`Combo lip-sync hatasi: ${err.message}`);
+  }
+}

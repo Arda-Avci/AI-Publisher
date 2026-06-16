@@ -38,7 +38,8 @@ router.get('/status', async (_req: Request, res: Response) => {
       uptimeSeconds: state.uptimeSeconds ?? h.runtime?.uptime_seconds ?? null,
       runtimeSeconds: state.runtimeSeconds ?? h.runtime?.uptime_seconds ?? null,
       lastHealthCheck: state.lastHealthCheck,
-      startedAt: state.startedAt
+      startedAt: state.startedAt,
+      diagnostics: state.diagnostics ?? h.diagnostics ?? null
     });
   } catch {
     return res.json({

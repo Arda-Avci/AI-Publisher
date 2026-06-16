@@ -60,6 +60,7 @@ except Exception as patch_e:
 
 
 import subprocess
+import shutil
 try:
     import yt_dlp
 except ImportError:
@@ -86,6 +87,74 @@ from pyngrok import ngrok
 app = Flask(__name__)
 
 TASKS = {}
+
+# ── Server Diagnostics & Telemetry ──────────────────────────────────────────
+import datetime
+
+DIAGNOSTICS = {
+    "total_jobs_received": 0,
+    "total_jobs_success": 0,
+    "total_jobs_failed": 0,
+    "last_job_time": None,
+    "last_job_status": None,
+    "last_job_error": None,
+    
+    # Callback stats
+    "callbacks": {
+        "total_attempted": 0,
+        "total_success": 0,
+        "total_failed": 0,
+        "last_sent_at": None,
+        "last_status_code": None,
+        "last_error": None,
+        "last_url": None,
+        "tunnel_connectivity": "unknown"  # "healthy", "failed", or "unknown"
+    },
+    
+    # Produced outputs counts
+    "outputs": {
+        "videos_generated": 0,
+        "speech_synthesized": 0,
+        "sfx_generated": 0,
+        "lipsync_applied": 0,
+        "subtitles_generated": 0
+    },
+    
+    # Recent activity logs (max 20 entries)
+    "recent_activities": []
+}
+
+def log_diagnostic_activity(activity_message: str):
+    timestamp = datetime.datetime.now().isoformat()
+    DIAGNOSTICS["recent_activities"].append(f"[{timestamp}] {activity_message}")
+    if len(DIAGNOSTICS["recent_activities"]) > 20:
+        DIAGNOSTICS["recent_activities"].pop(0)
+
+def check_tunnel_connectivity():
+    last_url = DIAGNOSTICS["callbacks"]["last_url"]
+    if not last_url:
+        return "unknown"
+    
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(last_url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+        headers = {
+            "ngrok-skip-browser-warning": "any-value",
+            "bypass-tunnel-reminder": "true"
+        }
+        # Hızlı ping GET isteği
+        resp = requests.get(f"{base_url}/api/v1/csrf", headers=headers, timeout=3.0)
+        if resp.status_code == 200:
+            return "healthy"
+        else:
+            resp = requests.get(base_url, headers=headers, timeout=3.0)
+            if resp.status_code < 500:
+                return "healthy"
+            return "unhealthy"
+    except Exception as e:
+        print(f"[DEBUG] Tunnel connectivity check failed: {e}")
+        return "failed"
 
 # ── İsteğe bağlı kütüphaneler (rubberband, GFPGAN, ESRGAN, alternatif TTS) ──
 try:
@@ -158,6 +227,51 @@ def _check_model_whitelist(video_model: str, whitelist_param: list = None):
             f"COLAB_MODEL_WHITELIST env değişkenini ayarlayın veya "
             f"model_whitelist JSON parametresini iletin."
         )
+
+# ── VİDEO MODEL KALİTE ZİNCİRİ (en kaliteli → en hızlı) ─────────────────────
+# I2V modelleri: Görselden video, kalite sırasına göre
+VIDEO_I2V_FALLBACK_CHAIN = [
+    "HunyuanVideo-I2V",
+    "Wan2.1-I2V-14B",
+    "CogVideoX-5b-I2V",
+    "CogVideoX-2b-I2V",
+    "LTX-Video-I2V"
+]
+
+VIDEO_T2V_FALLBACK_CHAIN = [
+    "HunyuanVideo",
+    "CogVideoX-5b",
+    "CogVideoX-2b",
+    "Wan2.1-T2V-1.3B",
+    "LTX-Video"
+]
+
+
+def _try_video_with_fallback(prompt, image_path, task_id, is_i2v, model_whitelist):
+    """Iterate fallback quality chain until success. Returns (frames, used_model, error)."""
+    chain = VIDEO_I2V_FALLBACK_CHAIN if is_i2v else VIDEO_T2V_FALLBACK_CHAIN
+    _update_task(task_id, status="processing", stage="video_generation", stagePercent=15, message=f"Video üretiliyor ({chain[0]})...", etaSeconds=520)
+    last_error = None
+    for attempt_model in chain:
+        try:
+            if is_i2v:
+                frames = generate_video_image_lazy(prompt, image_path, task_id, attempt_model, model_whitelist)
+            else:
+                frames = generate_video_text_lazy(prompt, task_id, attempt_model, model_whitelist)
+            print(f"✅ Video başarıyla üretildi (model: {attempt_model})")
+            return frames, attempt_model, None
+        except torch.cuda.OutOfMemoryError as exc:
+            print(f"⚠️ {attempt_model} OOM! Sonraki modele geçiliyor... ({exc})")
+            last_error = exc
+        except Exception as exc:
+            print(f"⚠️ {attempt_model} başarısız: {exc}. Sonraki modele geçiliyor...")
+            last_error = exc
+        finally:
+            flush_memory()
+        _update_task(task_id, stagePercent=15, message=f"Model {attempt_model} başarısız, yedek deneniyor...", etaSeconds=520)
+        continue
+    print(f"❌ Tüm modeller başarısız. Son hata: {last_error}")
+    return None, None, last_error
 
 # ── 1. VİDEO ÜRETİMİ (Lazy Loading - Wan 2.1, LTX 2, Hunyuan, CogVideo) ─────────
 def generate_video_image_lazy(prompt: str, image_path: str, task_id: str = None, video_model: str = "CogVideoX-5b-I2V", model_whitelist: list = None) -> list:
@@ -437,7 +551,25 @@ def synthesize_speech(text, output_path, provider="edge", target_duration_sec=No
     """
     Çoklu TTS sağlayıcı desteği ile konuşma sentezler + 2-pass rubberband.
     provider: "edge" (varsayılan), "openai", "xtts"
+    target_lang: "tr", "en", "de", "fr", "ar" — XTTS-v2 dil kodu
     """
+    # Dil -> XTTS-v2 voice ID mapping (language-specific speaker voices)
+    XTTS_VOICE_MAP = {
+        "tr": "Claribel Dervla",    # Turkish default voice
+        "en": "Amy Campbell",        # English default voice
+        "de": "Joachim Beckedrath",  # German
+        "fr": "Naomi McDunn",        # French
+        "ar": "Leila Ahmed",         # Arabic
+    }
+    # Edge-TTS dil -> voice mapping
+    EDGE_VOICE_MAP = {
+        "tr": "tr-TR-EmelNeural",
+        "en": "en-US-AriaNeural",
+        "de": "de-DE-KatjaNeural",
+        "fr": "fr-FR-DeniseNeural",
+        "ar": "ar-SA-ZariyamNeural",
+    }
+
     if provider == "openai" and OPENAI_AVAILABLE:
         generate_tts_openai(text, output_path, voice=kwargs.get("voice", "alloy"))
     elif provider == "xtts":
@@ -456,28 +588,28 @@ def synthesize_speech(text, output_path, provider="edge", target_duration_sec=No
                 speaker_wav = temp_ref.name
                 temp_ref_path = temp_ref.name
 
-            lang = kwargs.get("language", "tr")
+            target_lang = kwargs.get("language", "tr")
+            # Dil kodunu dogrula
+            lang_code = target_lang if target_lang in XTTS_VOICE_MAP else "tr"
+
             if not os.path.exists(speaker_wav):
-                voice_name = kwargs.get("voice", "Claribel Dervla")
-                print(f"🎙️ Referans ses bulunamadı, varsayılan ses ile sentezleniyor: {voice_name}")
-                model.tts_to_file(text=text, speaker=voice_name, language=lang, file_path=output_path)
+                # Kullanici belirli bir ses secmediyse dil bazli varsayilan sec
+                voice_name = kwargs.get("voice", XTTS_VOICE_MAP.get(lang_code, "Claribel Dervla"))
+                print(f"🎙️ Referans ses bulunamadı, dil bazli varsayılan ses: {voice_name} (lang={lang_code})")
+                model.tts_to_file(text=text, speaker=voice_name, language=lang_code, file_path=output_path)
             else:
                 print(f"🎙️ Referans ses üzerinden klonlama yapılıyor: {speaker_wav}")
-                model.tts_to_file(text=text, speaker_wav=speaker_wav, language=lang, file_path=output_path)
+                model.tts_to_file(text=text, speaker_wav=speaker_wav, language=lang_code, file_path=output_path)
 
             if temp_ref_path and os.path.exists(temp_ref_path):
                 os.unlink(temp_ref_path)
         except Exception as e:
             print(f"[ERROR] XTTS sentezleme hatası, Edge-TTS fallback tetikleniyor: {e}")
-            voice = kwargs.get("voice", "tr-TR-EmelNeural")
-            if not voice or voice == "Claribel Dervla":
-                voice = "tr-TR-EmelNeural"
+            voice = kwargs.get("voice", EDGE_VOICE_MAP.get(kwargs.get("language", "tr"), "tr-TR-EmelNeural"))
             generate_tts_edge(text, output_path, voice=voice)
     else:
         # provider == "edge" veya fallback
-        voice = kwargs.get("voice", "tr-TR-EmelNeural")
-        if not voice or voice == "Claribel Dervla":
-            voice = "tr-TR-EmelNeural"
+        voice = kwargs.get("voice", EDGE_VOICE_MAP.get(kwargs.get("language", "tr"), "tr-TR-EmelNeural"))
         generate_tts_edge(text, output_path, voice=voice)
 
     # 2-pass: Hedef süre varsa rubberband ile esnet
@@ -916,30 +1048,20 @@ def _generate_media_worker(task_id: str, data: dict):
             print(f"❌ Base64 çözme hatası: {exc}")
             image_path = None
 
-    # 1. Video
-    _update_task(task_id, status="processing", stage="video_generation", stagePercent=15, message=f"Video üretiliyor ({video_model})...", etaSeconds=520)
-    try:
-        if image_path and os.path.exists(image_path):
-            i2v_model = video_model
-            if "cogvideox" in video_model.lower() and "i2v" not in video_model.lower():
-                i2v_model = video_model + "-I2V"
-            elif "wan" in video_model.lower() and "i2v" not in video_model.lower():
-                i2v_model = "Wan2.1-I2V-14B"
-            elif "ltx" in video_model.lower() and "i2v" not in video_model.lower():
-                i2v_model = "LTX-Video-I2V"
-            elif "hunyuan" in video_model.lower() and "i2v" not in video_model.lower():
-                i2v_model = "HunyuanVideo-I2V"
-                
-            print(f"Using I2V model ({i2v_model}) with init_image: {image_path}")
-            frames = generate_video_image_lazy(final_prompt, image_path, task_id, i2v_model, model_whitelist)
-        else:
-            print(f"Using T2V model ({video_model})...")
-            frames = generate_video_text_lazy(final_prompt, task_id, video_model, model_whitelist)
-    except Exception as exc:
-        TASKS[task_id] = {"status": "error", "message": str(exc)}
+    # 1. Video (fallback chain ile: en kaliteli model dene, hata olursa düş)
+    is_i2v = bool(image_path and os.path.exists(image_path))
+    frames, used_model, fallback_error = _try_video_with_fallback(
+        final_prompt, image_path, task_id, is_i2v, model_whitelist
+    )
+    if used_model is None:
+        TASKS[task_id] = {"status": "error", "message": f"Tüm modeller başarısız: {fallback_error}"}
         return
+    video_model = used_model  # Kullanılan gerçek modeli kaydet
 
     frames_to_mp4(frames, RAW_VIDEO_PATH, fps=8)
+    DIAGNOSTICS["outputs"]["videos_generated"] += 1
+    DIAGNOSTICS["outputs"]["last_video_produced_at"] = datetime.datetime.now().isoformat()
+    log_diagnostic_activity(f"Video üretildi: {task_id} (model: {video_model})")
     _update_task(task_id, stagePercent=30, message="Video üretildi, ses işleniyor...", etaSeconds=95)
 
     # 2. TTS (2-pass rubberband + çoklu sağlayıcı)
@@ -961,6 +1083,9 @@ def _generate_media_worker(task_id: str, data: dict):
                 voice=tts_voice,
                 language="tr",
             )
+            DIAGNOSTICS["outputs"]["speech_synthesized"] += 1
+            DIAGNOSTICS["outputs"]["last_speech_produced_at"] = datetime.datetime.now().isoformat()
+            log_diagnostic_activity(f"Konuşma sentezlendi: {task_id} (sağlayıcı: {tts_provider})")
         except Exception as exc:
             TASKS[task_id] = {"status": "error", "message": f"TTS hatası: {str(exc)}"}
             return
@@ -973,6 +1098,8 @@ def _generate_media_worker(task_id: str, data: dict):
     # 3. Altyazı Üretimi
     if speech_text:
         generate_subtitles_whisper(AUDIO_PATH, SUBTITLE_PATH, language="tr")
+        DIAGNOSTICS["outputs"]["subtitles_generated"] += 1
+        log_diagnostic_activity(f"Altyazı üretildi: {task_id}")
 
     _update_task(task_id, stagePercent=55, message="Altyazı hazır, dudak senkroni uygulanıyor...", etaSeconds=60)
 
@@ -986,6 +1113,9 @@ def _generate_media_worker(task_id: str, data: dict):
         if lipsync_result.get("success"):
             out_path = lipsync_result["output_path"]
             print(f"✅ Wav2Lip tamam: {out_path}")
+            DIAGNOSTICS["outputs"]["lipsync_applied"] += 1
+            DIAGNOSTICS["outputs"]["last_lipsync_applied_at"] = datetime.datetime.now().isoformat()
+            log_diagnostic_activity(f"Dudak senkroni uygulandı: {task_id}")
         else:
             print(f"⚠️ Lip-sync atlandı: {lipsync_result.get('error', 'bilinmeyen')}")
     else:
@@ -1005,6 +1135,9 @@ def _generate_media_worker(task_id: str, data: dict):
         try:
             audio_sfx = generate_sfx_lazy(sfx_prompt)
             wavfile.write(SFX_PATH, 16000, (audio_sfx[0] * 32767).astype(np.int16))
+            DIAGNOSTICS["outputs"]["sfx_generated"] += 1
+            DIAGNOSTICS["outputs"]["last_sfx_produced_at"] = datetime.datetime.now().isoformat()
+            log_diagnostic_activity(f"Ses efekti üretildi: {task_id} (prompt: {sfx_prompt[:30]})")
         except Exception as exc:
             TASKS[task_id] = {"status": "error", "message": f"SFX hatası: {str(exc)}"}
             return
@@ -1034,57 +1167,109 @@ def _generate_media_worker_with_callback(task_id: str, data: dict):
     job_id = data.get("job_id")
     scene_number = data.get("scene_number", 1)
     
+    # Teşhis verilerini güncelle
+    DIAGNOSTICS["total_jobs_received"] += 1
+    DIAGNOSTICS["last_job_time"] = datetime.datetime.now().isoformat()
+    DIAGNOSTICS["last_job_status"] = "processing"
+    log_diagnostic_activity(f"İş başlatıldı: Job: {job_id}, Scene: {scene_number}, Task: {task_id}")
+    
     try:
         # Mevcut üretim adımlarını tetikle
         _generate_media_worker(task_id, data)
         
         # Görev başarılı bittiyse dosyaları oku ve Node.js'e gönder
-        if TASKS.get(task_id, {}).get("status") == "success" and callback_url:
-            print(f"📤 İpek yolu kuruluyor: Sonuçlar {callback_url} adresine gönderiliyor... Job: {job_id}, Scene: {scene_number}")
+        if TASKS.get(task_id, {}).get("status") == "success":
+            DIAGNOSTICS["total_jobs_success"] += 1
+            DIAGNOSTICS["last_job_status"] = "success"
             
-            # Node.js Express/FastAPI sunucuna gönderilecek multipart payload
-            files = {}
-            if os.path.exists(LAST_VIDEO_PATH):
-                files['video'] = open(LAST_VIDEO_PATH, 'rb')
-            if os.path.exists(AUDIO_PATH):
-                files['speech'] = open(AUDIO_PATH, 'rb')
-            if os.path.exists(SFX_PATH):
-                files['sfx'] = open(SFX_PATH, 'rb')
-            if os.path.exists(SUBTITLE_PATH):
-                files['subtitle'] = open(SUBTITLE_PATH, 'rb')
+            if callback_url:
+                print(f"📤 İpek yolu kuruluyor: Sonuçlar {callback_url} adresine gönderiliyor... Job: {job_id}, Scene: {scene_number}")
                 
-            payload = {
-                "task_id": task_id,
-                "job_id": job_id,
-                "scene_number": scene_number,
-                "status": "success",
-                "message": "Colab render işlemi başarıyla tamamlandı."
-            }
-            
-            # Backend sunucuna otonom POST atılıyor (ngrok ve localtunnel bypass header'ları eklenerek)
-            bypass_headers = {
-                "ngrok-skip-browser-warning": "any-value",
-                "bypass-tunnel-reminder": "true"
-            }
-            response = requests.post(callback_url, data=payload, files=files, headers=bypass_headers, timeout=120)
-            print(f"📩 Node.js Sunucu Yanıtı: {response.status_code}")
+                # Node.js Express/FastAPI sunucuna gönderilecek multipart payload
+                files = {}
+                if os.path.exists(LAST_VIDEO_PATH):
+                    files['video'] = open(LAST_VIDEO_PATH, 'rb')
+                if os.path.exists(AUDIO_PATH):
+                    files['speech'] = open(AUDIO_PATH, 'rb')
+                if os.path.exists(SFX_PATH):
+                    files['sfx'] = open(SFX_PATH, 'rb')
+                if os.path.exists(SUBTITLE_PATH):
+                    files['subtitle'] = open(SUBTITLE_PATH, 'rb')
+                    
+                payload = {
+                    "task_id": task_id,
+                    "job_id": job_id,
+                    "scene_number": scene_number,
+                    "status": "success",
+                    "message": "Colab render işlemi başarıyla tamamlandı."
+                }
+                
+                # Backend sunucuna otonom POST atılıyor (ngrok ve localtunnel bypass header'ları eklenerek)
+                bypass_headers = {
+                    "ngrok-skip-browser-warning": "any-value",
+                    "bypass-tunnel-reminder": "true"
+                }
+                
+                DIAGNOSTICS["callbacks"]["total_attempted"] += 1
+                DIAGNOSTICS["callbacks"]["last_sent_at"] = datetime.datetime.now().isoformat()
+                DIAGNOSTICS["callbacks"]["last_url"] = callback_url
+                
+                try:
+                    response = requests.post(callback_url, data=payload, files=files, headers=bypass_headers, timeout=120)
+                    print(f"📩 Node.js Sunucu Yanıtı: {response.status_code}")
+                    DIAGNOSTICS["callbacks"]["last_status_code"] = response.status_code
+                    if response.status_code in [200, 201, 202]:
+                        DIAGNOSTICS["callbacks"]["total_success"] += 1
+                        DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "healthy"
+                        log_diagnostic_activity(f"Callback başarıyla gönderildi: {callback_url}")
+                    else:
+                        DIAGNOSTICS["callbacks"]["total_failed"] += 1
+                        DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "unhealthy"
+                        log_diagnostic_activity(f"Callback başarısız (status {response.status_code}): {callback_url}")
+                except Exception as cb_err:
+                    DIAGNOSTICS["callbacks"]["total_failed"] += 1
+                    DIAGNOSTICS["callbacks"]["last_error"] = str(cb_err)
+                    DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "failed"
+                    log_diagnostic_activity(f"Callback gönderim hatası: {cb_err}")
+        else:
+            DIAGNOSTICS["total_jobs_failed"] += 1
+            DIAGNOSTICS["last_job_status"] = "failed"
+            DIAGNOSTICS["last_job_error"] = TASKS.get(task_id, {}).get("message", "Bilinmeyen işleme hatası")
+            log_diagnostic_activity(f"İş başarısız: Task {task_id} status: {TASKS.get(task_id, {}).get('status')}")
             
     except Exception as e:
         print(f"❌ Otonom callback hatası: {e}")
+        DIAGNOSTICS["total_jobs_failed"] += 1
+        DIAGNOSTICS["last_job_status"] = "failed"
+        DIAGNOSTICS["last_job_error"] = str(e)
+        log_diagnostic_activity(f"İş hatası: {e}")
         if callback_url:
+            DIAGNOSTICS["callbacks"]["total_attempted"] += 1
+            DIAGNOSTICS["callbacks"]["last_sent_at"] = datetime.datetime.now().isoformat()
+            DIAGNOSTICS["callbacks"]["last_url"] = callback_url
             try:
                 bypass_headers = {
                     "ngrok-skip-browser-warning": "any-value",
                     "bypass-tunnel-reminder": "true"
                 }
-                requests.post(callback_url, data={
+                response = requests.post(callback_url, data={
                     "task_id": task_id,
                     "job_id": job_id,
                     "scene_number": scene_number,
                     "status": "error",
                     "message": str(e)
                 }, headers=bypass_headers, timeout=10)
+                DIAGNOSTICS["callbacks"]["last_status_code"] = response.status_code
+                if response.status_code in [200, 201, 202]:
+                    DIAGNOSTICS["callbacks"]["total_success"] += 1
+                    DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "healthy"
+                else:
+                    DIAGNOSTICS["callbacks"]["total_failed"] += 1
+                    DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "unhealthy"
             except Exception as cb_err:
+                DIAGNOSTICS["callbacks"]["total_failed"] += 1
+                DIAGNOSTICS["callbacks"]["last_error"] = str(cb_err)
+                DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "failed"
                 print(f"❌ Hata callback gönderimi başarısız: {cb_err}")
 
 
@@ -1165,6 +1350,125 @@ def download_subtitle():
         return jsonify({"error": "Altyazı dosyası bulunamadı"}), 404
     return send_file(SUBTITLE_PATH, mimetype="text/plain", download_name="subtitle.srt")
 
+@app.route("/faster-whisper", methods=["POST"])
+def faster_whisper_route():
+    """
+    faster-whisper C++ motoru ile 4x hızlı deşifre.
+    Destekler: model_size (tiny/base/small/medium/large),
+    compute_type (int8/float16), beam_size.
+    Word-level timestamps SRT olarak döner.
+    """
+    global last_activity
+    last_activity = time.time()
+
+    language = request.form.get("language", "tr")
+    model_size = request.form.get("model_size", "small")
+    compute_type = request.form.get("compute_type", "float16" if torch.cuda.is_available() else "int8")
+    beam_size = int(request.form.get("beam_size", 5))
+    file_path = request.form.get("file_path", "")
+
+    if request.is_json:
+        data = request.get_json() or {}
+        language = data.get("language", language)
+        model_size = data.get("model_size", model_size)
+        compute_type = data.get("compute_type", compute_type)
+        beam_size = int(data.get("beam_size", beam_size))
+        file_path = data.get("file_path", file_path)
+
+    temp_file_path = None
+
+    try:
+        if "file" in request.files:
+            uploaded_file = request.files["file"]
+            ext = os.path.splitext(uploaded_file.filename)[1] or ".mp3"
+            temp_file_path = f"/content/fw_temp_{uuid.uuid4()}{ext}"
+            uploaded_file.save(temp_file_path)
+            target_path = temp_file_path
+            print(f"📥 faster-whisper için dosya yüklendi: {target_path}")
+        elif file_path:
+            if not os.path.exists(file_path):
+                return jsonify({"status": "error", "message": f"Dosya bulunamadı: {file_path}"}), 404
+            target_path = file_path
+            print(f"📂 faster-whisper için lokal dosya kullanılıyor: {target_path}")
+        else:
+            return jsonify({"status": "error", "message": "Dosya ('file') veya 'file_path' parametresi zorunludur"}), 400
+
+        from faster_whisper import WhisperModel
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"📝 faster-whisper ({model_size}, compute={compute_type}, beam={beam_size}) ile deşifre...")
+        model = WhisperModel(model_size, device=device, compute_type=compute_type)
+
+        segments, info = model.transcribe(
+            target_path,
+            beam_size=beam_size,
+            word_timestamps=True,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500),
+            language=language
+        )
+
+        result_segments = []
+        full_text = []
+        for seg in segments:
+            word_list = []
+            if hasattr(seg, 'words') and seg.words:
+                for w in seg.words:
+                    word_list.append({
+                        "word": w.word,
+                        "start": round(w.start, 2),
+                        "end": round(w.end, 2),
+                        "confidence": round(getattr(w, 'probability', 1.0), 3)
+                    })
+            result_segments.append({
+                "start": round(seg.start, 2),
+                "end": round(seg.end, 2),
+                "text": seg.text.strip(),
+                "words": word_list if word_list else None
+            })
+            full_text.append(seg.text.strip())
+
+        # SRT formatında word-level timestamps üret
+        def _fmt(secs: float) -> str:
+            h = int(secs // 3600)
+            m = int((secs % 3600) // 60)
+            s = int(secs % 60)
+            ms = int((secs - int(secs)) * 1000)
+            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+        srt_lines = []
+        idx = 1
+        for seg in result_segments:
+            srt_lines.append(str(idx))
+            srt_lines.append(f"{_fmt(seg['start'])} --> {_fmt(seg['end'])}")
+            srt_lines.append(seg['text'].strip())
+            srt_lines.append("")
+            idx += 1
+
+        srt_content = "\n".join(srt_lines)
+
+        print(f"✅ faster-whisper deşifre tamam: {len(result_segments)} segment, method=faster-whisper")
+        return jsonify({
+            "status": "success",
+            "method": "faster-whisper",
+            "text": " ".join(full_text),
+            "segments": result_segments,
+            "language": info.language,
+            "srt": srt_content
+        }), 200
+
+    except Exception as e:
+        print(f"❌ faster-whisper endpoint hatası: {e}")
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+        flush_memory()
+
+
 @app.route("/transcribe", methods=["POST"])
 def transcribe_route():
     """
@@ -1213,6 +1517,59 @@ def transcribe_route():
             try: os.unlink(temp_file_path)
             except: pass
         flush_memory()
+
+
+# ── Sentez-Speech: Çoklu dil desteği ile XTTS-v2 sentez ───────────────────────
+@app.route("/synthesize-speech", methods=["POST"])
+def synthesize_speech_route():
+    """
+    Metin ve hedef dil ile XTTS-v2 ses sentezler.
+    Body (JSON):
+      text          - Sentez metni
+      target_lang   - Hedef dil kodu: tr, en, de, fr, ar
+      voice         - Opsiyonel: XTTS voice ID
+      provider      - Opsiyonel: "xtts" (varsayilan), "edge", "openai"
+      speaker_wav   - Opsiyonel: Referans ses dosyasi (base64 veya path)
+    """
+    global last_activity
+    last_activity = time.time()
+
+    data = request.get_json(force=True) or {}
+    text = data.get("text", "")
+    target_lang = data.get("target_lang", "tr")
+    voice = data.get("voice", "")
+    provider = data.get("provider", "xtts")
+    speaker_wav = data.get("speaker_wav", "/content/karakter.wav")
+    ref_audio_b64 = data.get("reference_audio_base64", "")
+
+    if not text:
+        return jsonify({"error": "'text' parametresi zorunludur"}), 400
+
+    if target_lang not in ["tr", "en", "de", "fr", "ar"]:
+        return jsonify({"error": f"Geçersiz target_lang: {target_lang}. Desteklenen: tr, en, de, fr, ar"}), 400
+
+    output_path = f"/content/synth_speech_{uuid.uuid4().hex[:8]}.wav"
+
+    try:
+        synthesize_speech(
+            text=text,
+            output_path=output_path,
+            provider=provider,
+            target_duration_sec=None,
+            language=target_lang,
+            voice=voice or None,
+            speaker_wav=speaker_wav if os.path.exists(speaker_wav) else None,
+            reference_audio_base64=ref_audio_b64 or None,
+        )
+        return send_file(output_path, mimetype="audio/wav", as_attachment=True, download_name="speech.wav")
+    except Exception as e:
+        print(f"❌ synthesize-speech hatası: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(output_path):
+            try: os.unlink(output_path)
+            except: pass
+
 
 # ── RESİM EDİTÖRÜ ENTEGRASYONLARI (Odysseus Esintili) ──────────────────────────
 
@@ -1826,6 +2183,9 @@ def generate_covers():
                 "type": "covers",
                 "message": "Kapak tasarımları başarıyla tamamlandı."
             }
+            DIAGNOSTICS["callbacks"]["total_attempted"] += 1
+            DIAGNOSTICS["callbacks"]["last_sent_at"] = datetime.datetime.now().isoformat()
+            DIAGNOSTICS["callbacks"]["last_url"] = callback_url
             try:
                 bypass_headers = {
                     "ngrok-skip-browser-warning": "any-value",
@@ -1833,7 +2193,20 @@ def generate_covers():
                 }
                 response = requests.post(callback_url, data=payload, files=files, headers=bypass_headers, timeout=60)
                 print(f"📩 Kapak callback yanıtı: {response.status_code}")
+                DIAGNOSTICS["callbacks"]["last_status_code"] = response.status_code
+                if response.status_code in [200, 201, 202]:
+                    DIAGNOSTICS["callbacks"]["total_success"] += 1
+                    DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "healthy"
+                    log_diagnostic_activity(f"Kapak callback başarıyla gönderildi: {callback_url}")
+                else:
+                    DIAGNOSTICS["callbacks"]["total_failed"] += 1
+                    DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "unhealthy"
+                    log_diagnostic_activity(f"Kapak callback başarısız (status {response.status_code}): {callback_url}")
             except Exception as e:
+                DIAGNOSTICS["callbacks"]["total_failed"] += 1
+                DIAGNOSTICS["callbacks"]["last_error"] = str(e)
+                DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = "failed"
+                log_diagnostic_activity(f"Kapak callback gönderim hatası: {e}")
                 print(f"❌ Kapak callback gönderilemedi: {e}")
                 
         return jsonify({"status": "success", "message": "3 alternatif kapak resmi başarıyla üretildi"})
@@ -1893,7 +2266,7 @@ def generate_broll():
         except Exception as e:
             print(f"⚠️ Pexels video indirme hatası, AI fallback: {e}")
 
-    # AI Fallback (LTX-Video ile görselden/metinden video)
+    # AI Fallback (fallback chain ile: CogVideoX-5b → CogVideoX-2b → LTX-Video)
     try:
         print("🤖 AI Fallback ile video üretiliyor...")
         black_img_path = "/content/black.jpg"
@@ -1901,7 +2274,19 @@ def generate_broll():
             black_img = np.zeros((1920, 1080, 3), dtype=np.uint8)
             cv2.imwrite(black_img_path, black_img)
         
-        video_frames = generate_video_image_lazy(prompt, black_img_path, video_model="LTX-Video")
+        broll_chain = ["CogVideoX-5b-I2V", "CogVideoX-2b-I2V", "LTX-Video-I2V"]
+        video_frames = None
+        for br_model in broll_chain:
+            try:
+                video_frames = generate_video_image_lazy(prompt, black_img_path, video_model=br_model)
+                print(f"✅ B-roll {br_model} ile üretildi")
+                break
+            except Exception as br_e:
+                print(f"⚠️ B-roll model {br_model} başarısız: {br_e}")
+                flush_memory()
+                continue
+        if video_frames is None:
+            raise RuntimeError("Tüm B-roll modelleri başarısız.")
         from diffusers.utils import export_to_video
         export_to_video(video_frames, broll_path, fps=8)
         return jsonify({"status": "success", "source": "ai", "download_url": f"/download/broll/{job_id}/{scene_number}"})
@@ -2158,6 +2543,164 @@ def musetalk_preload():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# ── LIP-SYNC COMBO: Wav2Lip + MuseTalk ───────────────────────────────────────
+@app.route("/api/v1/lipsync/combo", methods=["POST"])
+def lipsync_combo_endpoint():
+    """
+    Kombinasyon lip-sync: once Wav2Lip uygula, ardindan MuseTalk ile refine.
+    Body: video_path, audio_path, face_image_path (opsiyonel)
+    """
+    global last_activity
+    last_activity = time.time()
+
+    data = request.get_json(force=True) or {}
+    video_path = data.get("video_path")
+    audio_path = data.get("audio_path")
+    face_image_path = data.get("face_image_path")  # optional reference face
+
+    if not video_path or not audio_path:
+        return jsonify({"error": "video_path ve audio_path zorunlu"}), 400
+    if not os.path.exists(video_path):
+        return jsonify({"error": f"Video bulunamadı: {video_path}"}), 404
+    if not os.path.exists(audio_path):
+        return jsonify({"error": f"Audio bulunamadı: {audio_path}"}), 404
+
+    temp_dir = "/content/combo_lipsync"
+    os.makedirs(temp_dir, exist_ok=True)
+    step1_path = os.path.join(temp_dir, f"step1_wav2lip_{uuid.uuid4().hex[:8]}.mp4")
+    final_path = os.path.join(temp_dir, f"step2_musetalk_{uuid.uuid4().hex[:8]}.mp4")
+
+    try:
+        # Adim 1: Wav2Lip
+        print("[COMBO] Adim 1/2: Wav2Lip uygulaniyor...")
+        w2l_result = apply_lipsync_internal(video_path, audio_path)
+        if w2l_result.get("success") and w2l_result.get("output_path"):
+            shutil.copyfile(w2l_result["output_path"], step1_path)
+        else:
+            print(f"[COMBO] Wav2Lip atlandi: {w2l_result.get('error', 'bilinmeyen')}. Orijinal video kullaniliyor.")
+            shutil.copyfile(video_path, step1_path)
+
+        # Adim 2: MuseTalk refine
+        print("[COMBO] Adim 2/2: MuseTalk refine uygulaniyor...")
+        mt_model = load_musetalk()
+        if not mt_model:
+            print("[COMBO] MuseTalk yuklenemedi, Wav2Lip sonucu donduruluyor.")
+            with open(step1_path, "rb") as f:
+                data_bytes = f.read()
+            for p in [step1_path]:
+                if os.path.exists(p): os.remove(p)
+            return data_bytes, 200, {"Content-Type": "video/mp4"}
+
+        # Yuz tespiti icin ilk kareyi cikart
+        face_for_mt = "/content/combo_temp_face.jpg"
+        cap = cv2.VideoCapture(step1_path)
+        ret, frame = cap.read()
+        if ret:
+            cv2.imwrite(face_for_mt, frame)
+        cap.release()
+        if not ret or not os.path.exists(face_for_mt):
+            with open(step1_path, "rb") as f:
+                data_bytes = f.read()
+            for p in [step1_path]:
+                if os.path.exists(p): os.remove(p)
+            return data_bytes, 200, {"Content-Type": "video/mp4"}
+
+        try:
+            mt_model.generate(face_for_mt, audio_path, final_path)
+        except Exception as mt_err:
+            print(f"[COMBO] MuseTalk hatasi, Wav2Lip sonucu donduruluyor: {mt_err}")
+            with open(step1_path, "rb") as f:
+                data_bytes = f.read()
+            for p in [step1_path, face_for_mt]:
+                if os.path.exists(p): os.remove(p)
+            return data_bytes, 200, {"Content-Type": "video/mp4"}
+
+        if os.path.exists(final_path):
+            with open(final_path, "rb") as f:
+                data_bytes = f.read()
+            for p in [step1_path, final_path, face_for_mt]:
+                if os.path.exists(p): os.remove(p)
+            return data_bytes, 200, {"Content-Type": "video/mp4"}
+        else:
+            raise RuntimeError("MuseTalk cikti olusmadi")
+
+    except Exception as e:
+        print(f"[COMBO] Kombinasyon lipsync hatasi: {e}")
+        for p in [step1_path, final_path]:
+            if os.path.exists(p): os.remove(p)
+        return jsonify({"error": str(e)}), 500
+
+
+# ── SPLIT SCREEN: Preview ve Apply ────────────────────────────────────────────
+@app.route("/api/v1/split/preview", methods=["GET"])
+def split_preview():
+    """
+    Split-screen onizlemesi icin referans goruntu dondurur.
+    Query: layout (50/50, 70/30, ...), position (top, bottom, left, right)
+    """
+    layout = request.args.get("layout", "50/50")
+    position = request.args.get("position", "top")
+
+    preview_w, preview_h = 640, 360
+    img = np.zeros((preview_h, preview_w, 3), dtype=np.uint8)
+
+    if position in ("left", "right"):
+        split_x = int(preview_w * (int(layout[:2]) / 100))
+        if position == "left":
+            img[:, :split_x] = [255, 255, 255]
+        else:
+            img[:, split_x:] = [255, 255, 255]
+    else:
+        split_y = int(preview_h * (int(layout[:2]) / 100))
+        if position == "top":
+            img[:split_y, :] = [255, 255, 255]
+        else:
+            img[split_y:, :] = [255, 255, 255]
+
+    temp_preview = f"/content/split_preview_{uuid.uuid4().hex[:8]}.jpg"
+    cv2.imwrite(temp_preview, img)
+
+    try:
+        return send_file(temp_preview, mimetype="image/jpeg")
+    finally:
+        if os.path.exists(temp_preview):
+            try: os.remove(temp_preview)
+            except: pass
+
+
+@app.route("/api/v1/split/apply", methods=["POST"])
+def split_apply():
+    """
+    Split-screen konfigurasyonunu kaydeder (simdilik diskte .json olarak saklanir).
+    Body: job_id, layout, position, primary_video_path, secondary_video_path
+    """
+    data = request.get_json(force=True) or {}
+    job_id = data.get("job_id")
+    layout = data.get("layout", "50/50")
+    position = data.get("position", "top")
+    primary_path = data.get("primary_video_path", "")
+    secondary_path = data.get("secondary_video_path", "")
+
+    if not job_id:
+        return jsonify({"error": "job_id zorunludur"}), 400
+
+    config_path = f"/content/split_config_{job_id}.json"
+    config = {
+        "job_id": job_id,
+        "layout": layout,
+        "position": position,
+        "primary_video_path": primary_path,
+        "secondary_video_path": secondary_path
+    }
+
+    import json
+    with open(config_path, "w") as f:
+        json.dump(config, f)
+
+    print(f"[SPLIT] Konfigurasyon kaydedildi: {config_path}")
+    return jsonify({"status": "success", "config_path": config_path}), 200
+
+
 # ── AI STUDIO: SMART REFRAME ──────────────────────────────────────────────────
 @app.route("/api/v1/studio/smart-reframe", methods=["POST"])
 def studio_smart_reframe():
@@ -2284,10 +2827,12 @@ def health_check():
     gpu_total_gb = 0.0
     gpu_used_gb = 0.0
     gpu_pct = 0.0
+    gpu_model = None
     
     if torch.cuda.is_available():
         try:
             device = torch.cuda.current_device()
+            gpu_model = torch.cuda.get_device_name(device)
             gpu_total_gb = torch.cuda.get_device_properties(device).total_memory / (1024**3)
             gpu_used_gb = torch.cuda.memory_allocated(device) / (1024**3)
             gpu_pct = (gpu_used_gb / gpu_total_gb) * 100 if gpu_total_gb > 0 else 0.0
@@ -2295,6 +2840,17 @@ def health_check():
             pass
             
     uptime_seconds = int(time.time() - server_start_time)
+    
+    # Tünel bağlantısını test et
+    DIAGNOSTICS["callbacks"]["tunnel_connectivity"] = check_tunnel_connectivity()
+    
+    # Yüklü olan modelleri belirle
+    models_loaded = {
+        "tts": TTS_MODEL is not None,
+        "wav2lip": WAV2LIP_MODEL is not None and WAV2LIP_MODEL is not False,
+        "whisper": _whisper_model is not None,
+        "musetalk": MUSETALK_MODEL is not None and MUSETALK_MODEL is not False
+    }
     
     return jsonify({
         "status": "healthy",
@@ -2305,8 +2861,21 @@ def health_check():
         "gpu_utilization": {
             "gpu_pct": gpu_pct
         },
+        "gpu_model": gpu_model,
         "runtime": {
             "uptime_seconds": uptime_seconds
+        },
+        "diagnostics": {
+            "total_jobs_received": DIAGNOSTICS["total_jobs_received"],
+            "total_jobs_success": DIAGNOSTICS["total_jobs_success"],
+            "total_jobs_failed": DIAGNOSTICS["total_jobs_failed"],
+            "last_job_time": DIAGNOSTICS["last_job_time"],
+            "last_job_status": DIAGNOSTICS["last_job_status"],
+            "last_job_error": DIAGNOSTICS["last_job_error"],
+            "callbacks": DIAGNOSTICS["callbacks"],
+            "outputs": DIAGNOSTICS["outputs"],
+            "models_loaded": models_loaded,
+            "recent_activities": DIAGNOSTICS["recent_activities"]
         }
     })
 

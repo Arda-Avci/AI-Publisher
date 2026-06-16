@@ -152,9 +152,12 @@ async function handleAuthSetup(req: Request, res: Response) {
     await page.goto(loginUrl, { waitUntil: 'networkidle', timeout: 0 });
 
     // Expose a function the page can call when login succeeds
+    const browserRef = browser;
     await page.exposeFunction('__authSaveSuccess', async () => {
       try {
-        await saveAuthSession(platform, lang, browser!);
+        if (browserRef && browserRef.isConnected()) {
+          await saveAuthSession(platform, lang, browserRef);
+        }
       } catch (err: any) {
         Logger.error(`[Auth] ${tt('authSaveFailed', lang, { platform, error: err.message })}`);
       }
@@ -178,7 +181,7 @@ async function handleAuthSetup(req: Request, res: Response) {
           await new Promise(r => setTimeout(r, 2000));
           await (page as any).__authSaveSuccess?.();
         }
-      } catch { /* ignore */ }
+      } catch (err) { Logger.warn(`[Auth] Frame nav error: ${err}`); }
     });
 
     // Also detect via logged-in DOM indicators

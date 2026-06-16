@@ -42,6 +42,169 @@ export interface EmotionDetectionResult {
 }
 
 /**
+ * Word-level vocal emphasis detected from audio analysis.
+ */
+export interface WordEmphasis {
+  word: string;
+  start: number;
+  end: number;
+  emphasis: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Detects vocal emphasis at word-level by analyzing audio frequency peaks via FFmpeg astats.
+ *
+ * Uses astats to find volume peaks across the audio, then maps them to approximate
+ * word positions based on estimated speaking pace. Returns word-level emphasis data
+ * suitable for coloring in DynamicCaptions.
+ *
+ * @param audioPath - Absolute path to audio file (WAV/MP3)
+ * @returns Array of word-level emphasis data with timestamps
+ */
+export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphasis[]> {
+  Logger.info('[emotionCaptions] Detecting vocal emphasis', { audioPath });
+
+  return new Promise((resolve) => {
+    execFile(
+      'ffmpeg',
+      [
+        '-i', audioPath,
+        '-af', 'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
+        '-f', 'null', '-'
+      ],
+      async (err: any, stdout: string, stderr: string) => {
+        if (err) {
+          Logger.warn('[emotionCaptions] FFmpeg astats failed for vocal emphasis', { error: err.message });
+          resolve([]);
+          return;
+        }
+
+        const output = stderr || stdout;
+        const peakMatches = output.match(/time=(\d+):(\d+):(\d+\.\d+).*?Peak_level\s*:\s*([-\d.]+)/gi);
+
+        if (!peakMatches || peakMatches.length === 0) {
+          Logger.warn('[emotionCaptions] No astats peak data found');
+          resolve([]);
+          return;
+        }
+
+        // Get audio duration
+        const { execFile: execFileDur } = require('child_process');
+        execFileDur(
+          'ffprobe',
+          ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', audioPath],
+          async (durErr: any, durStdout: string) => {
+            const duration = parseFloat(durStdout.trim()) || 10;
+
+            // Extract timestamps and peak levels
+            type PeakPoint = { time: number; level: number };
+            const peaks: PeakPoint[] = [];
+
+            for (const match of peakMatches) {
+              const timeMatch = match.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+              const levelMatch = match.match(/Peak_level\s*:\s*([-\d.]+)/i);
+              if (timeMatch && levelMatch) {
+                const h = parseInt(timeMatch[1], 10);
+                const m = parseInt(timeMatch[2], 10);
+                const s = parseFloat(timeMatch[3]);
+                const level = parseFloat(levelMatch[1]);
+                peaks.push({ time: h * 3600 + m * 60 + s, level });
+              }
+            }
+
+            if (peaks.length === 0) {
+              resolve([]);
+              return;
+            }
+
+            // Find threshold for high/medium/low peaks
+            const levels = peaks.map(p => p.level).filter(l => isFinite(l));
+            if (levels.length === 0) {
+              resolve([]);
+              return;
+            }
+
+            const avgLevel = levels.reduce((a, b) => a + b, 0) / levels.length;
+            const maxLevel = Math.max(...levels);
+            const minLevel = Math.min(...levels);
+
+            const highThreshold = avgLevel + (maxLevel - avgLevel) * 0.6;
+            const medThreshold = avgLevel + (maxLevel - avgLevel) * 0.3;
+
+            // Find peak segments (contiguous high-energy regions)
+            const peakSegments: PeakPoint[] = [];
+            for (const peak of peaks) {
+              if (peak.level >= medThreshold) {
+                peakSegments.push(peak);
+              }
+            }
+
+            // Estimate word count from duration (avg 2.5 words/sec)
+            const estimatedWordCount = Math.floor(duration * 2.5);
+            const wordsPerSecond = estimatedWordCount / duration;
+
+            // Map peak segments to word positions
+            // Each peak segment covers a time range; assign it to a word position
+            const wordEmphasisList: WordEmphasis[] = [];
+
+            if (peakSegments.length > 0) {
+              // Group peak segments into word-sized chunks
+              const chunkDuration = 1 / wordsPerSecond; // time per word
+
+              for (let i = 0; i < peakSegments.length; i++) {
+                const seg = peakSegments[i];
+                const wordIndex = Math.floor(seg.time / chunkDuration);
+                const start = wordIndex * chunkDuration;
+                const end = start + chunkDuration;
+
+                // Determine emphasis level
+                let emphasis: 'high' | 'medium' | 'low' = 'low';
+                if (seg.level >= highThreshold) {
+                  emphasis = 'high';
+                } else if (seg.level >= medThreshold) {
+                  emphasis = 'medium';
+                }
+
+                // Avoid duplicates at same word index
+                const existing = wordEmphasisList.find(
+                  w => Math.abs(w.start - start) < chunkDuration * 0.5
+                );
+                if (!existing || (existing.emphasis === 'low' && emphasis !== 'low')) {
+                  if (existing) {
+                    existing.emphasis = emphasis;
+                    existing.start = Math.min(existing.start, start);
+                    existing.end = Math.max(existing.end, end);
+                  } else {
+                    wordEmphasisList.push({
+                      word: `word_${wordIndex}`,
+                      start,
+                      end,
+                      emphasis
+                    });
+                  }
+                }
+              }
+            }
+
+            // Sort by start time
+            wordEmphasisList.sort((a, b) => a.start - b.start);
+
+            Logger.info('[emotionCaptions] Vocal emphasis detected', {
+              peakCount: wordEmphasisList.length,
+              duration,
+              highCount: wordEmphasisList.filter(w => w.emphasis === 'high').length,
+              medCount: wordEmphasisList.filter(w => w.emphasis === 'medium').length
+            });
+
+            resolve(wordEmphasisList);
+          }
+        );
+      }
+    );
+  });
+}
+
+/**
  * SRT caption entry with styling info.
  */
 export interface StyledSrtEntry {

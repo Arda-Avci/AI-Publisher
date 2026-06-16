@@ -14,6 +14,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
       req.xhr || 
       (req.headers.accept && req.headers.accept.includes('application/json')) || 
       req.originalUrl.startsWith('/api/') ||
+      req.originalUrl.startsWith('/progress/') ||
       req.originalUrl.startsWith('/differentiate-status') || 
       req.originalUrl.startsWith('/opportunity-videos')
     ) {

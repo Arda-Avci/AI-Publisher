@@ -19,8 +19,8 @@
     "build": "tsc",
     "setup-ngrok": "node scripts/setup-ngrok.js",
     "test": "npx vitest run",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "format:write": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"client/src/**/*.tsx\"",
+    "format:write": "prettier --write \"src/**/*.ts\" \"client/src/**/*.tsx\"",
     "test:browser": "tsx scripts/run-e2e.ts",
     "prepare": "husky"
   },
@@ -28,6 +28,11 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "overrides": {
+    "axios": "^1.22.0",
+    "ws": "^8.21.0",
+    "playwright": "^1.60.0"
+  },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.82",
     "@ai-sdk/google": "^3.0.80",
@@ -75,6 +80,7 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.0",
+    "@vitest/coverage-v8": "^4.1.8",
     "vitest": "^4.1.8"
   }
 }

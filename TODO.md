@@ -47,6 +47,8 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] `colab_setup.py` pip quiet kurulum bayraklarının kaldırılması ve notebook'a canlı log akışı için `subprocess.Popen` sarmalayıcısının entegrasyonu.
 - [x] `colab_setup.py` alt sürecinin kendini öldürmesi sonucu oluşan `CalledProcessError` hatasını önlemek için `sys.exit(100)` çıkış kodu kullanımı ve notebook'un bu çıkış koduna göre ana kernel'i yeniden başlatması.
 - [x] Notebook hücresinin en üstüne `GITHUB_TOKEN` ve `NGROK_TOKEN` form alanlarının eklenip çevre değişkenleri ile alt sürece aktarılarak kilitlenmelerin önlenmesi.
+- [x] Colab sunucusunda çalışan koda gelişmiş sunucu sağlığı ve teşhis (diagnostics) izleme mekanizmasının entegre edilmesi (bellekteki aktif modeller, çıktı sayıları, recent activities logları ve callback tünel connectivity testi) ve Node.js backend (`colab-manager.ts` ve `/api/v1/colab/status` rotası) üzerinden bu verilerin geriye dönük uyumlu şekilde sunulması.
+
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı
 - [x] SQLite Veritabanı Mimarisi (`src/db.ts`) genişletilmiş ayar/playlist sütunları.
@@ -700,5 +702,10 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [ ] .env Sızıntısı Kontrolü — API key hardcoded taraması
 - [ ] HTTP Güvenlik Başlıkları — X-Frame-Options, CSP, X-Content-Type-Options
 - [ ] Session Cookie — httpOnly, secure, sameSite doğrulama
-- [ ] Derleme — check:types, check:lint, test (189/189), client build, Express build
+- [x] Derleme — check:types, check:lint, test (286/286 %100 yeşil), client build, Express build
+
+### Son İyileştirmeler ve Hata Düzeltmeleri (16 Haziran 2026)
+- [x] `db.ts` refaktör edilerek mock veritabanı pool sızıntısı ve kilitlenmeleri çözüldü.
+- [x] Entegrasyon ve E2E testlerindeki (`test_differentiation.spec.ts`, `test_e2e_features.spec.ts`, `test_talkShow.spec.ts`) admin şifre uyuşmazlıkları giderildi.
+- [x] Tüm test suite'i (23 dosya, 286 test) başarıyla %100 yeşile döndürüldü.
 

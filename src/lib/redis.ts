@@ -24,11 +24,13 @@ redisSub.on('connect', () => Logger.info('Redis Subscriber bağlandı.'));
  * @param jobId İş ID'si
  * @param payload SSE tarafına gönderilecek veri (JSON)
  */
-export async function broadcastProgress(jobId: number, payload: any) {
+export async function broadcastProgress(jobId: number, payload: any): Promise<boolean> {
   const channel = `job_progress:${jobId}`;
   try {
     await redisPub.publish(channel, JSON.stringify(payload));
+    return true;
   } catch (err) {
     Logger.error(`Redis publish hatası (Job ${jobId})`, err);
+    return false;
   }
 }

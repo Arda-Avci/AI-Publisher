@@ -466,3 +466,171 @@ async function getVideoDurationFFprobe(videoPath: string): Promise<number> {
   const d = parseFloat((stdout || '0').trim());
   return isNaN(d) ? 0 : d;
 }
+
+// ── Transkript Metninden Kelime Silme ─────────────────────────────────────────
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+/**
+ * Belirtilen kelimeleri transkript metninden siler.
+ * Kelimeleri cümle içinden cikarir ve segment zamanlarini yeniden hesaplar.
+ *
+ * @param transcript - Whisper'dan alinan SRT benzeri zamanli metin (satir satirdir: "start end text")
+ * @param wordsToRemove - Silinecek kelimeler dizisi
+ * @returns {segments} - Guncellenmis segmentler (silinen kelimeler cikarilmistir)
+ */
+export function removeWordsFromTranscript(
+  transcript: string,
+  wordsToRemove: string[]
+): { segments: TranscriptSegment[] } {
+  const lines = transcript.split(/\r?\n/).filter(l => l.trim());
+  const segments: TranscriptSegment[] = [];
+
+  for (const line of lines) {
+    // Parse "start end text" format (Whisper output)
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 3) continue;
+
+    const start = parseFloat(parts[0]);
+    const end = parseFloat(parts[1]);
+    const text = parts.slice(2).join(' ');
+
+    if (isNaN(start) || isNaN(end)) continue;
+
+    // Kelimeyi cümleden cikar
+    let cleanedText = text;
+    for (const word of wordsToRemove) {
+      const regex = new RegExp(`\\b${escapeRegex(word)}\\b`, 'gi');
+      cleanedText = cleanedText.replace(regex, '');
+    }
+    // Coklu bosluklari temizle
+    cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
+
+    if (cleanedText.length > 0) {
+      segments.push({ start, end, text: cleanedText });
+    }
+  }
+
+  return { segments };
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * SRT dosyasindan TranscriptSegment[] dizisi dondurur.
+ * @param srtPath - SRT dosya yolu
+ */
+export async function parseSrtToSegments(srtPath: string): Promise<TranscriptSegment[]> {
+  const content = await fs.readFile(srtPath, 'utf-8');
+  const blocks = content.split(/\r?\n\r?\n/);
+  const segments: TranscriptSegment[] = [];
+
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 3) continue;
+
+    const timeLine = lines[1];
+    if (!timeLine || !timeLine.includes('-->')) continue;
+
+    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
+    const start = parseSrtTimeToSeconds(startStr);
+    const end = parseSrtTimeToSeconds(endStr);
+    const text = lines.slice(2).join(' ').replace(/<[^>]+>/g, '').trim();
+
+    if (!isNaN(start) && !isNaN(end)) {
+      segments.push({ start, end, text });
+    }
+  }
+
+  return segments;
+}
+
+function parseSrtTimeToSeconds(srtTime: string): number {
+  const parts = srtTime.replace(',', '.').split(':');
+  if (parts.length !== 3) return 0;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const secParts = parts[2].split('.');
+  const s = parseInt(secParts[0], 10);
+  const ms = secParts[1] ? parseInt(secParts[1], 10) : 0;
+  return h * 3600 + m * 60 + s + ms / 1000;
+}
+
+/**
+ * Verilen segmentlerden yeni bir video keser (FFmpeg concat demuxer ile).
+ * Silinen kelimelerin oldugu zaman araliklari cikarilir.
+ *
+ * @param videoPath  - Giriş video yolu
+ * @param segments   - Tutulacak zaman araliklari {start, end}[]
+ * @param outputPath - Cikti yolu
+ */
+export async function cutVideoByTranscript(
+  videoPath: string,
+  segments: { start: number; end: number }[],
+  outputPath: string
+): Promise<string> {
+  if (segments.length === 0) {
+    await fs.copy(videoPath, outputPath);
+    return outputPath;
+  }
+
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const tempDir = path.join(uploadsDir, `transcript_cut_${Date.now()}`);
+  await fs.ensureDir(tempDir);
+
+  try {
+    const segmentPaths: string[] = [];
+
+    for (let i = 0; i < segments.length; i++) {
+      const { start, end } = segments[i];
+      const segPath = path.join(tempDir, `seg_${String(i).padStart(4, '0')}.mp4`);
+
+      await runInWorker<WorkerResult>(
+        'ffmpeg',
+        [
+          '-y', '-i', videoPath,
+          '-ss', start.toFixed(3),
+          '-to', end.toFixed(3),
+          '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          segPath.replace(/\\/g, '/')
+        ],
+        120000
+      );
+      segmentPaths.push(segPath);
+    }
+
+    // Concat demuxer ile birleştir
+    const concatListPath = path.join(tempDir, 'concat.txt');
+    const concatContent = segmentPaths
+      .map(p => `file '${p.replace(/\\/g, '/')}'`)
+      .join('\n');
+    await fs.writeFile(concatListPath, concatContent);
+
+    await runInWorker<WorkerResult>(
+      'ffmpeg',
+      [
+        '-y', '-f', 'concat', '-safe', '0',
+        '-i', concatListPath.replace(/\\/g, '/'),
+        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        outputPath
+      ],
+      120000
+    );
+
+    Logger.info('[cutVideoByTranscript] tamamlandi', {
+      outputPath,
+      segmentCount: segments.length
+    });
+    return outputPath;
+  } finally {
+    await fs.remove(tempDir);
+  }
+}

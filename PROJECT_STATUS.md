@@ -31,6 +31,8 @@
 - [x] **4A**: Smart Dubbing queue binding
 - [x] **4B**: Kinetic subtitles (bounce/pulse/shake/pop/wave)
 - [x] **4C**: AI Studio unified — `src/services/aiStudio.ts`, `src/routes/aiStudio.ts` (7 endpoint), Colab endpoints
+- [x] **Colab Telemetry & Diagnostics**: Colab sunucu sağlığı izleme, aktif model algılama, callback tünel testi ve çıktı istatistikleri entegre edildi (`colab_server.py`, `src/lib/colab-manager.ts`, `src/routes/colabStatus.ts`).
+- [x] **Veritabanı Mock ve Test İyileştirmeleri**: `db.ts` refaktör edilerek testlerdeki pool mock sızıntıları çözüldü. Test admin şifre uyuşmazlıkları (`test_differentiation.spec.ts`, `test_e2e_features.spec.ts`, `test_talkShow.spec.ts`) giderildi ve 286 testin tamamı %100 başarıyla yeşillendirildi.
 
 ### Faz 7: Test ve QA
 - [x] **7A-7E**: Test planı dokümanı — `docs/v6_roadmap/Faz_7_Testing_QA.md`

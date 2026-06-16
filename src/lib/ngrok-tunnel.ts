@@ -4,6 +4,7 @@ import { Logger } from './logger.js';
 let ltProcess: any = null;
 let currentPort: number | null = null;
 let retryCount = 0;
+let isUnmounting = false;
 const MAX_RETRIES = 3;
 
 export async function startNgrokTunnel(port: number): Promise<string> {
@@ -71,6 +72,7 @@ function handleTunnelCrash() {
     const backoffMs = retryCount * 5000;
     Logger.info(`Localtunnel tüneli ${backoffMs / 1000} saniye içinde tekrar başlatılacak (Deneme: ${retryCount}/${MAX_RETRIES})...`);
     setTimeout(() => {
+      if (isUnmounting) return;
       if (currentPort) {
         startNgrokTunnel(currentPort).catch(err => {
           Logger.error('Localtunnel otomatik kurtarma denemesi başarısız oldu', err);

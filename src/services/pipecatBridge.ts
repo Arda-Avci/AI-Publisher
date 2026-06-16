@@ -94,7 +94,15 @@ class PipecatBridge {
         windowsHide: true,
       });
 
+      let resolved = false;
+      const cleanup = () => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timeout);
+      };
+
       const timeout = setTimeout(() => {
+        cleanup();
         if (this.process && this.process.exitCode === null) {
           Logger.info('[Pipecat] Server started (timeout assume ready)');
           this.connectWebSocket();
@@ -102,14 +110,14 @@ class PipecatBridge {
         } else if (this.process) {
           Logger.warn(`[Pipecat] Process exited with code ${this.process.exitCode}, server başlatılamadı`);
           this.process = null;
-          resolve(); // Don't reject — Pipecat non-critical
+          resolve();
         }
       }, 5000);
 
       this.process.stdout?.on('data', (data: Buffer) => {
         const text = data.toString();
         if (text.includes('Uvicorn running on')) {
-          clearTimeout(timeout);
+          cleanup();
           Logger.info('[Pipecat] Server is ready');
           this.connectWebSocket();
           resolve();
@@ -127,9 +135,11 @@ class PipecatBridge {
         Logger.warn(`[Pipecat] Server exited with code ${code}`);
         this.process = null;
         this.ws = null;
+        cleanup();
 
         if (this.autoRestart && code !== 0) {
           Logger.info('[Pipecat] Auto-restarting in 3s...');
+          if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
           this.reconnectTimer = setTimeout(() => {
             this.start().catch((err) =>
               Logger.error('[Pipecat] Auto-restart failed:', err)

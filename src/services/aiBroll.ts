@@ -41,6 +41,81 @@ export interface GenerateBrollResult {
 }
 
 /**
+ * Generates a keyword-based 3-4 second B-Roll clip using CogVideoX via Colab.
+ *
+ * Calls Colab endpoint: /generate-media?mode=cogvideo_broll&prompt={keyword}&duration={duration}
+ *
+ * @param keyword     - Single keyword or short phrase describing the B-Roll
+ * @param duration    - Duration in seconds (3-4 typical)
+ * @param outputPath  - Absolute path to save the generated B-Roll video
+ * @returns Path to generated video on success
+ */
+export async function generateCogVideoXBroll(
+  keyword: string,
+  duration: number,
+  outputPath: string
+): Promise<string> {
+  const state = colab.getState();
+
+  if (state.status !== 'running' || !state.ngrokUrl) {
+    Logger.warn('[aiBroll] Colab not running for CogVideoX B-Roll', { status: state.status });
+    throw new Error('Colab not available');
+  }
+
+  const colabUrl = state.ngrokUrl;
+
+  try {
+    Logger.info('[aiBroll] Generating CogVideoX B-Roll', { keyword, duration, outputPath });
+
+    const response = await axios.get(
+      `${colabUrl}/generate-media`,
+      {
+        params: {
+          mode: 'cogvideo_broll',
+          prompt: keyword,
+          duration
+        },
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        timeout: 600000
+      }
+    );
+
+    const resultPath = response.data?.output_path || response.data?.video_path;
+    if (!resultPath) {
+      throw new Error(`No output_path in response: ${JSON.stringify(response.data)}`);
+    }
+
+    // Download from Colab if result is a URL
+    if (resultPath.startsWith('http')) {
+      const writer = fs.createWriteStream(outputPath);
+      const axiosStream = await axios.get(resultPath, {
+        responseType: 'stream',
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        timeout: 300000
+      });
+      axiosStream.data.pipe(writer);
+      await new Promise<void>((res, rej) => {
+        writer.on('finish', res);
+        writer.on('error', rej);
+      });
+    } else {
+      // Assume it's a local Colab path, copy from Colab
+      await fs.copy(resultPath, outputPath);
+    }
+
+    if (!(await fs.pathExists(outputPath))) {
+      throw new Error(`B-Roll file not found after download: ${outputPath}`);
+    }
+
+    Logger.info('[aiBroll] CogVideoX B-Roll generated', { outputPath });
+    return outputPath;
+  } catch (err: any) {
+    Logger.error('[aiBroll] CogVideoX B-Roll failed', err);
+    throw err;
+  }
+}
+
+/**
  * Generates a B-Roll clip using CogVideoX via Colab.
  *
  * @param keywords     - Keywords describing the B-Roll content

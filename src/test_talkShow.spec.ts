@@ -51,10 +51,12 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
     await initDatabase();
 
     const encryptedAdmin = encryptUsername('admin');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
     const existing = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
     if (!existing) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
       await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedAdmin, hashedPassword]);
+    } else {
+      await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existing.id]);
     }
     const user = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
     adminUserId = user.id;

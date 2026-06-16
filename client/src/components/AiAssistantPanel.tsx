@@ -7,7 +7,7 @@ interface AiAssistantPanelProps {
 }
 
 export function AiAssistantPanel({ language: _language, t: _t }: AiAssistantPanelProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'tutorial' | 'landing' | 'theme'>('tutorial');
+  const [activeSubTab, setActiveSubTab] = useState<'tutorial' | 'landing' | 'theme' | 'color'>('tutorial');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -190,6 +190,26 @@ export function AiAssistantPanel({ language: _language, t: _t }: AiAssistantPane
         >
           <Palette size={16} />
           Tema Sihirbazı
+        </button>
+        <button
+          onClick={() => setActiveSubTab('color')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: activeSubTab === 'color' ? 'var(--accent-light)' : 'transparent',
+            color: activeSubTab === 'color' ? 'var(--accent)' : 'var(--text-muted)',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'var(--transition)'
+          }}
+        >
+          <Sparkles size={16} />
+          Renk Onizleme
         </button>
       </div>
 

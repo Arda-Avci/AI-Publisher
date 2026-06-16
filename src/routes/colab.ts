@@ -1,5 +1,6 @@
 import { Application, Request, Response } from 'express';
 import multer from 'multer';
+import axios from 'axios';
 import { colab } from '../lib/colab-manager.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter, sseLimiter } from '../middleware/rate-limit.js';
@@ -92,6 +93,22 @@ export function registerColabRoutes(app: Application): void {
   // ─── S3: Colab Manager endpoints ──────────────────────────────────────────────
   app.get('/colab-status', requireAuth, (req, res) => {
     res.json(colab.getState());
+  });
+
+  app.get('/health', async (req, res) => {
+    const url = colab.getState().ngrokUrl || process.env.COLAB_URL;
+    if (!url) {
+      return res.status(503).json({ success: false, error: 'Colab URL not configured' });
+    }
+    try {
+      const response = await axios.get(`${url}/health`, {
+        timeout: 5000,
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
+      res.json(response.data);
+    } catch (err: any) {
+      res.status(502).json({ success: false, error: `Colab health check failed: ${err.message}` });
+    }
   });
 
   // S4: SSE stream for push-based colab status updates (replaces 15s polling)

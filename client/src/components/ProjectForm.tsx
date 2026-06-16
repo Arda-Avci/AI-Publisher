@@ -3,6 +3,10 @@ import { Send, Loader, Wand2 } from 'lucide-react';
 import type { ProductionTemplate, TtsProvider, Platform, UserCredits } from '../types.js';
 import { TemplatePreview } from './TemplatePreview.js';
 import { ColorGraderPanel } from './ColorGraderPanel.js';
+import { KineticSubtitlesPanel } from './KineticSubtitlesPanel.js';
+import { ViralPanel } from './ViralPanel.js';
+import { DubbingPanel, type DubbingConfig } from './DubbingPanel.js';
+import { SplitScreenPanel } from './SplitScreenPanel.js';
 
 interface ProjectFormProps {
   selectedModel: string;
@@ -21,6 +25,8 @@ interface ProjectFormProps {
   hasSubtitles: boolean;
   brandKitEnabled: boolean;
   kineticSubtitles: boolean;
+  kineticSubtitlesStyle: string;
+  onSetKineticSubtitlesStyle: (v: string) => void;
   autoSfxPlacement: boolean;
   audioDucking: boolean;
   targetPlatforms: Platform[];
@@ -45,10 +51,36 @@ interface ProjectFormProps {
   t: (key: string, params?: Record<string, any>) => string;
   dubbingLang: string;
   onSetDubbingLang: (v: string) => void;
+  dubbingConfig: DubbingConfig;
+  onSetDubbingConfig: (v: DubbingConfig) => void;
   subtitleStyle: string;
   onSetSubtitleStyle: (v: string) => void;
   colorGrading: string;
   onSetColorGrading: (v: string) => void;
+  colorGradingEnabled: boolean;
+  onSetColorGradingEnabled: (v: boolean) => void;
+  autoCutEnabled: boolean;
+  onSetAutoCutEnabled: (v: boolean) => void;
+  autoCutPreset: string;
+  onSetAutoCutPreset: (v: string) => void;
+  viralConfig: {
+    viralHookEnabled: boolean;
+    brollEnabled: boolean;
+    emotionCaptionsEnabled: boolean;
+  };
+  onSetViralConfig: (v: {
+    viralHookEnabled: boolean;
+    brollEnabled: boolean;
+    emotionCaptionsEnabled: boolean;
+  }) => void;
+  splitEnabled: boolean;
+  onSetSplitEnabled: (v: boolean) => void;
+  splitLayout: string;
+  onSetSplitLayout: (v: string) => void;
+  splitPosition: string;
+  onSetSplitPosition: (v: string) => void;
+  useMuseTalk: boolean;
+  onSetUseMuseTalk: (v: boolean) => void;
 }
 
 const MODELS = ['Publisher Cinematic V3', 'Anime Diffusion (Hızlı)', 'Zen-M3 Realism'];
@@ -289,8 +321,8 @@ export function ProjectForm(props: ProjectFormProps) {
 
         {/* ---- Existing Form Fields ---- */}
         <form onSubmit={props.onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Field 
-            label={props.t('masterPrompt')} 
+          <Field
+            label={props.t('masterPrompt')}
             labelStyle={labelStyle}
             extra={
               <button
@@ -475,22 +507,40 @@ export function ProjectForm(props: ProjectFormProps) {
             <Checkbox label="Kinetik Altyazı" checked={props.kineticSubtitles} onChange={props.onSetKineticSubtitles} />
             <Checkbox label="Uzamsal Ses" checked={props.autoSfxPlacement} onChange={props.onSetAutoSfxPlacement} />
             <Checkbox label="Ses Ördekleme" checked={props.audioDucking} onChange={props.onSetAudioDucking} />
+            <Checkbox label="Sessiz Kısımları Kes (Auto-Cut)" checked={props.autoCutEnabled} onChange={props.onSetAutoCutEnabled} />
           </CheckboxGroup>
+
+          {props.autoCutEnabled && (
+            <Field label="Auto-Cut Modu" labelStyle={labelStyle}>
+              <select
+                value={props.autoCutPreset}
+                onChange={(e) => props.onSetAutoCutPreset(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="silence">Sessizlik Kesimi (Varsayılan)</option>
+                <option value="static">Statik/Hareketsiz Kesim</option>
+                <option value="aggressive">Agresif (Her İkisi)</option>
+              </select>
+            </Field>
+          )}
+
+          {props.kineticSubtitles && (
+            <Field label="Kinetik Altyazı Ayarları" labelStyle={labelStyle}>
+              <KineticSubtitlesPanel
+                value={{ style: props.kineticSubtitlesStyle as any || 'bounce', highlightColor: '#FFD700', baseColor: '#FFFFFF', fontSize: 24 }}
+                onChange={(v) => props.onSetKineticSubtitlesStyle(v.style)}
+                compact
+              />
+            </Field>
+          )}
 
           <Divider />
 
-          <Field label="Çok Dilli Dublaj (Gelecek Faz)" labelStyle={labelStyle}>
-            <select
-              value={props.dubbingLang}
-              onChange={(e) => props.onSetDubbingLang(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="none">Orijinal Ses</option>
-              <option value="tr">Türkçe (Dublaj)</option>
-              <option value="en">İngilizce (Dublaj)</option>
-              <option value="de">Almanca (Dublaj)</option>
-              <option value="es">İspanyolca (Dublaj)</option>
-            </select>
+          <Field label="Dublaj & Beat-Sync" labelStyle={labelStyle}>
+            <DubbingPanel
+              value={props.dubbingConfig}
+              onChange={props.onSetDubbingConfig}
+            />
           </Field>
 
           <Field label="Altyazı Stili (Gelecek Faz)" labelStyle={labelStyle}>
@@ -505,9 +555,35 @@ export function ProjectForm(props: ProjectFormProps) {
             </select>
           </Field>
 
-          <Field label="Renk Derecelendirme" labelStyle={labelStyle}>
-            <ColorGraderPanel value={props.colorGrading} onChange={props.onSetColorGrading} compact />
+          <Checkbox label="Renk Derecelendirme" checked={props.colorGradingEnabled} onChange={props.onSetColorGradingEnabled} />
+
+          {props.colorGradingEnabled && (
+            <Field label="" labelStyle={labelStyle}>
+              <ColorGraderPanel value={props.colorGrading} onChange={props.onSetColorGrading} compact />
+            </Field>
+          )}
+
+          <Field label="Viral Motor" labelStyle={labelStyle}>
+            <ViralPanel
+              value={props.viralConfig}
+              onChange={props.onSetViralConfig}
+              compact
+            />
           </Field>
+
+          <Divider />
+
+          <SplitScreenPanel
+            splitEnabled={props.splitEnabled}
+            onSetSplitEnabled={props.onSetSplitEnabled}
+            splitLayout={props.splitLayout}
+            onSetSplitLayout={props.onSetSplitLayout}
+            splitPosition={props.splitPosition}
+            onSetSplitPosition={props.onSetSplitPosition}
+            useMuseTalk={props.useMuseTalk}
+            onSetUseMuseTalk={props.onSetUseMuseTalk}
+            compact
+          />
 
           <Divider />
 

@@ -83,13 +83,16 @@ function convertQuery(sql: string): string {
  * değişikliğe uğramadan çalışmasını sağlar.
  */
 export const db = {
+  pool: pool,
   async get(sql: string, params: any[] = []): Promise<any> {
-    const res = await pool.query(convertQuery(sql), params);
+    const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
+    const res = await activePool.query(convertQuery(sql), params);
     return res.rows[0];
   },
 
   async all(sql: string, params: any[] = []): Promise<any[]> {
-    const res = await pool.query(convertQuery(sql), params);
+    const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
+    const res = await activePool.query(convertQuery(sql), params);
     return res.rows;
   },
 
@@ -101,7 +104,8 @@ export const db = {
       ? converted + ' RETURNING id' 
       : converted;
 
-    const res = await pool.query(finalSql, params);
+    const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
+    const res = await activePool.query(finalSql, params);
     
     return {
       lastID: isInsert && res.rows[0] ? res.rows[0].id : undefined,
@@ -110,7 +114,8 @@ export const db = {
   },
 
   async exec(sql: string): Promise<void> {
-    await pool.query(sql);
+    const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
+    await activePool.query(sql);
   }
 };
 
@@ -321,6 +326,8 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS niche_enabled INTEGER DEFAULT 0;');
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_layout TEXT DEFAULT '50/50';");
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_enabled INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS use_musetalk INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS musetalk_enabled INTEGER DEFAULT 0;');
   await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_preset TEXT DEFAULT 'none';");
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_enabled INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_enabled INTEGER DEFAULT 0;');
@@ -329,10 +336,12 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS transcript_word_timings TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS storyboard_enabled INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_enabled INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_cut_enabled INTEGER DEFAULT 0;');
+  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_cut_preset TEXT DEFAULT 'silence';");
 
   // Edit queue table
   await db.exec(`CREATE TABLE IF NOT EXISTS edit_queue (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     job_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     command TEXT NOT NULL,

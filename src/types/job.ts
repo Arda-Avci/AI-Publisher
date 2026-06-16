@@ -1,4 +1,4 @@
-export interface VideoJob {
+﻿export interface VideoJob {
   id: number;
   user_id: number;
   status: 'pending' | 'processing' | 'failed' | 'completed' | 'cancelled' | 'awaiting_approval';
@@ -67,12 +67,26 @@ export interface VideoJob {
   niche_enabled?: number;
   split_layout?: string;
   split_enabled?: number;
+  use_musetalk?: number;
+  musetalk_enabled?: number;
   color_grade_preset?: string;
   color_grade_enabled?: number;
+  auto_cut_enabled?: number;
+  auto_cut_preset?: string;
   sd_flux_enabled?: number;
   sd_flux_prompt?: string;
   kinetic_subtitles_style?: string;
   transcript_word_timings?: string;
+  beat_sync_enabled?: number;
+  beat_sync_bpm?: number;
+  beat_sync_min_segment?: number;
+  studio_sound_enabled?: number;
+  eye_contact_enabled?: number;
+  smart_reframe_enabled?: number;
+  inpaint_enabled?: number;
+  viral_hook_enabled?: number;
+  broll_enabled?: number;
+  emotion_captions?: number;
 }
 
 export interface VideoScene {
@@ -92,4 +106,3 @@ export interface VideoScene {
   music_volume?: number;
   speaker?: string;
 }
-

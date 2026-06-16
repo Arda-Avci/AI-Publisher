@@ -95,6 +95,14 @@ const PRESET_PARAMS: Record<string, {
 
 // ── Doğal Dil Parse ──────────────────────────────────────────────────────────
 
+const HUE_MAP: Record<string, { r: number; g: number; b: number }> = {
+  purple: { r: 128, g: 0, b: 128 }, blue: { r: 0, g: 0, b: 255 },
+  green: { r: 0, g: 128, b: 0 }, red: { r: 255, g: 0, b: 0 },
+  yellow: { r: 255, g: 255, b: 0 }, orange: { r: 255, g: 165, b: 0 },
+  cyan: { r: 0, g: 255, b: 255 }, magenta: { r: 255, g: 0, b: 255 },
+  white: { r: 255, g: 255, b: 255 }, black: { r: 0, g: 0, b: 0 },
+};
+
 /**
  * Doğal dil renk komutlarını parse eder.
  * @param command — "sıcak sinematik tonlar", "neon mor", "doygun yeşil" gibi
@@ -111,16 +119,16 @@ export function parseColorCommand(command: string): ColorGrade {
     return { type: 'preset', preset: 'neon' };
   }
 
-  if (lower.includes('sinematik') || lower.includes('cinematic')) {
-    return { type: 'preset', preset: 'cinematic' };
-  }
-
-  if (lower.includes('sıcak') || lower.includes('warm')) {
+  if (lower.includes('sıcak') || lower.includes('warm') || lower.includes('sicak')) {
     return { type: 'preset', preset: 'warm' };
   }
 
-  if (lower.includes('soğuk') || lower.includes('cool')) {
+  if (lower.includes('soğuk') || lower.includes('cool') || lower.includes('soguk')) {
     return { type: 'preset', preset: 'cool' };
+  }
+
+  if (lower.includes('sinematik') || lower.includes('cinematic')) {
+    return { type: 'preset', preset: 'cinematic' };
   }
 
   if (lower.includes('vintage') || lower.includes('retro') || lower.includes('eski')) {
@@ -131,7 +139,7 @@ export function parseColorCommand(command: string): ColorGrade {
     return { type: 'preset', preset: 'desaturated' };
   }
 
-  if (lower.includes('yüksek kontrast') || lower.includes('high contrast')) {
+  if (lower.includes('yüksek kontrast') || lower.includes('high contrast') || lower.includes('yuksek kontrast')) {
     return { type: 'preset', preset: 'highContrast' };
   }
 
@@ -165,7 +173,7 @@ export function parseColorCommand(command: string): ColorGrade {
 }
 
 /** Belirli bir hue için özel renk grading oluşturur */
-function buildHueGrade(hue: string): ColorGrade {
+export function buildHueGrade(hue: string): ColorGrade {
   const hueParams: Record<string, { r: number; g: number; b: number }> = {
     purple: { r: 0.8, g: 0.2, b: 1.0 },
     blue: { r: 0.3, g: 0.5, b: 1.0 },

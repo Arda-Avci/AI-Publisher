@@ -11,6 +11,7 @@ import { getAIModelChain } from '../lib/ai-provider.js';
 import { generateObject } from 'ai';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { z } from 'zod';
+import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
 import { extractReferenceFrame } from './videoService.js';
 
@@ -20,7 +21,7 @@ import { extractReferenceFrame } from './videoService.js';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 
 /**
- * Hook quality analysis result.
+ * Hook quality analysis result (extended with opener strength + pattern match).
  */
 export const HookQualitySchema = z.object({
   score: z.number().min(0).max(10),
@@ -31,7 +32,15 @@ export const HookQualitySchema = z.object({
   attentionRetentionScore: z.number().min(0).max(10),
   strengths: z.array(z.string()),
   weaknesses: z.array(z.string()),
-  improvementTips: z.array(z.string())
+  improvementTips: z.array(z.string()),
+  // Extended fields for first-3-second analysis
+  openerStrength: z.number().min(0).max(100).optional(),
+  patternMatch: z.object({
+    curiosity: z.number().min(0).max(100).optional(),
+    controversy: z.number().min(0).max(100).optional(),
+    authority: z.number().min(0).max(100).optional(),
+    numbers: z.number().min(0).max(100).optional()
+  }).optional()
 });
 
 /**
@@ -62,19 +71,37 @@ export const HashtagsSchema = z.object({
 /**
  * Analyzes the first 3 seconds of a video for hook quality.
  *
- * Extracts a reference frame and sends it to LLM for analysis of:
- * - Visual hook appeal
- * - Text/graphic presence
- * - Emotional trigger effectiveness
+ * Extracts the first 3 seconds as video + frame, sends to LLM for analysis of:
+ * - Opener strength (0-100)
+ * - Pattern match (curiosity/controversy/authority/numbers)
+ * - Visual hook appeal, text/graphic presence, emotional trigger effectiveness
  *
  * @param videoPath - Absolute path to the video file
- * @returns Hook quality analysis
+ * @returns Hook quality analysis with opener strength and pattern match
  */
 export async function analyzeHookQuality(videoPath: string): Promise<z.infer<typeof HookQualitySchema>> {
-  Logger.info('[viralHook] Analyzing hook quality', { videoPath });
+  Logger.info('[viralHook] Analyzing hook quality (first 3 seconds)', { videoPath });
 
-  // Extract first 3-second frame for visual analysis
+  // Extract first 3-second clip and reference frame
   const frameBase64 = await extractReferenceFrame(videoPath);
+
+  // Also extract first 3-second video clip for temporal analysis
+  const { runFFmpeg } = await import('./videoService.js');
+  const clipPath = videoPath.replace(/\.[^.]+$/, '_hook_preview.mp4');
+
+  try {
+    await runFFmpeg('ffmpeg', [
+      '-y', '-i', videoPath,
+      '-t', '3',
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-vf', 'scale=720:-2',
+      '-an',
+      clipPath
+    ]);
+  } catch {
+    Logger.warn('[viralHook] Could not extract 3s clip, using frame only');
+  }
 
   const models = getAIModelChain();
 
@@ -93,7 +120,8 @@ export async function analyzeHookQuality(videoPath: string): Promise<z.infer<typ
 
     contentParts.push({
       type: 'text' as const,
-      text: `Analyze the first 3 seconds of this video for hook quality.
+      text: `Analyze the FIRST 3 SECONDS of this video specifically for hook quality.
+
 Rate the following (0-10):
 1. Overall hook quality (does it grab attention immediately?)
 2. Pacing (is there immediate movement/action/text?)
@@ -101,12 +129,19 @@ Rate the following (0-10):
 4. Audio clarity (is there speech or sound that hooks?)
 5. Attention retention potential (will viewer stay?)
 
+ALSO rate these pattern matches (0-100 each):
+- Curiosity gap: Does the opener create curiosity/thirst for knowledge?
+- Controversy: Does it provoke disagreement or debate?
+- Authority: Does it cite expert sources, data, or credibility markers?
+- Numbers: Does it use statistics, counts, or quantifiable claims?
+
 Also identify:
 - Hook type (question, statistic, controversy, story, shock, other)
+- Opener strength score (0-100, how effective is the VERY first second)
 - Strengths and weaknesses
-- Concrete improvement tips
+- Concrete improvement tips for the first 3 seconds
 
-Respond in Turkish.`
+Respond in Turkish with all fields.`
     });
 
     return generateObject({
@@ -117,7 +152,15 @@ Respond in Turkish.`
     });
   }, models, 2, 2000, true);
 
-  Logger.info('[viralHook] Hook analysis complete', { score: result.object.score });
+  // Cleanup preview clip
+  if (await fs.pathExists(clipPath)) {
+    await fs.remove(clipPath);
+  }
+
+  Logger.info('[viralHook] Hook analysis complete', {
+    score: result.object.score,
+    openerStrength: result.object.openerStrength
+  });
   return result.object;
 }
 
@@ -250,5 +293,86 @@ export async function optimizeForViral(
     hookScore: hookAnalysis.score,
     titles: titles.titles,
     hashtags: hashtags.hashtags
+  };
+}
+
+/**
+ * Result of viral content generation.
+ */
+export const ViralContentSchema = z.object({
+  titles: z.array(z.string()),
+  hashtags: z.array(z.string()),
+  hookScore: z.number().min(0).max(100)
+});
+
+/**
+ * Generates viral content suggestions based on video analysis and transcript.
+ *
+ * Calls Gemini with a structured prompt for video content analysis,
+ * returns optimized titles, hashtags, and hook score.
+ *
+ * @param videoPath  - Absolute path to the video file
+ * @param transcript - Full transcript text of the video
+ * @returns Viral content suggestions (titles, hashtags, hook score)
+ */
+export async function generateViralContent(
+  videoPath: string,
+  transcript: string
+): Promise<{ titles: string[]; hashtags: string[]; hookScore: number }> {
+  Logger.info('[viralHook] Generating viral content', { videoPath, transcriptLength: transcript.length });
+
+  // Extract preview frame for visual analysis
+  const frameBase64 = await extractReferenceFrame(videoPath);
+
+  const models = getAIModelChain();
+
+  const result = await withFallbackAndRetry((model) => {
+    const contentParts: any[] = [];
+
+    if (frameBase64) {
+      const cleanB64 = frameBase64.replace(/^data:image\/\w+;base64,/, '');
+      const frameBuffer = Buffer.from(cleanB64, 'base64');
+      contentParts.push({
+        type: 'image' as const,
+        image: frameBuffer,
+        mimeType: 'image/jpeg'
+      });
+    }
+
+    contentParts.push({
+      type: 'text' as const,
+      text: `You are a viral content strategist for YouTube Shorts and TikTok.
+Analyze this video and its transcript to generate viral-optimized content.
+
+TRANSCRIPT:
+${transcript.substring(0, 2000)}
+
+Generate:
+1. 5 viral title options (max 60 chars each, mix of curiosity/controversy/stat-driven styles, can use Turkish or English)
+2. 10 relevant hashtags (mix of niche, trend, and broad hashtags for maximum reach)
+3. Hook score (0-100): rate the video's hook effectiveness based on opener strength, curiosity gap, and engagement potential
+
+Return JSON with: titles (array of strings), hashtags (array of strings starting with #), hookScore (0-100 integer).
+Sadece JSON döndür, açıklama yazma.`
+    });
+
+    return generateObject({
+      model,
+      schema: ViralContentSchema,
+      abortSignal: AbortSignal.timeout(45000),
+      messages: [{ role: 'user', content: contentParts }]
+    });
+  }, models, 2, 2000, true);
+
+  Logger.info('[viralHook] Viral content generated', {
+    titleCount: result.object.titles.length,
+    hashtagCount: result.object.hashtags.length,
+    hookScore: result.object.hookScore
+  });
+
+  return {
+    titles: result.object.titles,
+    hashtags: result.object.hashtags,
+    hookScore: result.object.hookScore
   };
 }

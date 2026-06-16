@@ -13,6 +13,8 @@ import {
   convertSrtToKineticAss,
   applyColorGradeFilter
 } from './services/videoService.js';
+import { applySplitScreen } from './services/splitScreen.js';
+import { generateTalkingHead } from './services/museTalkService.js';
 import { VideoJob } from './types/job.js';
 import { generateStudioScenes } from './services/aiService.js';
 import { CreditService, getModelCost } from './services/creditService.js';
@@ -29,6 +31,9 @@ import { Logger } from './lib/logger.js';
 const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 
 import { broadcastProgress } from './lib/redis.js';
+import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/viralHook.js';
+import { insertBroll } from './services/aiBroll.js';
+import { detectEmotionPeaks, generateHighlightSrt, formatHighlightSrt, applyEmotionCaptionStyle } from './services/emotionCaptions.js';
 
 let isProcessing = false;
 
@@ -1095,6 +1100,37 @@ async function startProduction(job: VideoJob) {
       try { fs.removeSync(f); } catch {}
     }
 
+    // S3C: Auto Cut Stage (after montage, before differentiation)
+    if (job.auto_cut_enabled === 1) {
+      Logger.info('[AUTO CUT] Starting silence/static removal...', { preset: job.auto_cut_preset });
+      await db.run(
+        "UPDATE video_jobs SET current_stage = ?, progress_percent = 91 WHERE id = ?",
+        [STAGE_KEYS.AUTO_CUT, job.id]
+      );
+      broadcast(job.id, { stageKey: 'stageAutoCut', percent: 91, message: 'Sessiz bölümler kesiliyor...' });
+
+      try {
+        const { autoCutVideo } = await import('./services/autoEditor.js');
+        const cutOutputPath = path.join(process.cwd(), 'videolar', `cut_${fName}`);
+        const preset = job.auto_cut_preset || 'silence';
+        await autoCutVideo(fPath, {
+          silenceThresholdDb: preset === 'silence' ? -40 : -35,
+          minSilenceSec: preset === 'aggressive' ? 0.3 : 0.5,
+          staticThreshold: preset === 'static' ? 0.01 : 0.005,
+          minStaticSec: 1.0,
+          aggressive: preset === 'aggressive',
+        });
+        const originalPath = fPath;
+        fPath = cutOutputPath;
+        try { await fs.remove(originalPath); } catch { /* ignore */ }
+        broadcast(job.id, { stageKey: 'stageAutoCut', percent: 92, message: 'Otomatik kesim tamamlandı' });
+        Logger.info('[AUTO CUT] Completed successfully');
+      } catch (cutErr) {
+        Logger.warn('[AUTO CUT] Failed, continuing with uncut video:', cutErr);
+        broadcast(job.id, { stageKey: 'stageAutoCut', percent: 92, message: 'Otomatik kesim başarısız, devam ediliyor' });
+      }
+    }
+
     // S5+: Video özgünleştirme (differentiation) filtrelerini uygula
     if (job.differentiation_layout === 1) {
       const differentiatedName = `diff_${fName}`;
@@ -1106,6 +1142,51 @@ async function startProduction(job: VideoJob) {
         Logger.info('Video özgünleştirme filtreleri başarıyla uygulandı.');
       } catch (diffErr) {
         Logger.warn('Video özgünleştirme filtreleri uygulanırken hata oluştu:', diffErr);
+      }
+    }
+
+    // ── S3B: Split Screen Stage ──
+    if (job.split_enabled === 1 && job.split_layout) {
+      Logger.info('[SPLIT] Applying split screen', { layout: job.split_layout });
+      await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = 91 WHERE id = ?", [STAGE_KEYS.SPLIT_SCREEN, job.id]);
+      broadcast(job.id, { stageKey: STAGE_KEYS.SPLIT_SCREEN, percent: 91 });
+      try {
+        const splitOutputPath = path.join(process.cwd(), 'videolar', `split_${fName}`);
+        // Secondary video path: use the first scene's video as secondary source if not provided
+        const secondaryVideo = path.join(process.cwd(), 'videolar', `ms_${job.id}_1.mp4`);
+        await applySplitScreen(fPath, secondaryVideo, splitOutputPath, job.split_layout as any, 'top');
+        await fs.move(splitOutputPath, fPath, { overwrite: true });
+        Logger.info('[SPLIT] Split screen applied successfully');
+      } catch (splitErr) {
+        Logger.warn('[SPLIT] Failed, continuing with original:', splitErr);
+      }
+    }
+
+    // ── S3B: MuseTalk Talking Head Stage ──
+    if (job.use_musetalk === 1) {
+      Logger.info('[MUSETALK] Starting talking head generation');
+      await db.run("UPDATE video_jobs SET current_stage = ?, progress_percent = 92 WHERE id = ?", [STAGE_KEYS.MUSETALK, job.id]);
+      broadcast(job.id, { stageKey: STAGE_KEYS.MUSETALK, percent: 92 });
+      try {
+        const user: any = await db.get('SELECT personal_avatar_base64 FROM users WHERE id = ?', [job.user_id]);
+        const faceImagePath = path.join(process.cwd(), 'uploads', `musetalk_face_${job.id}.jpg`);
+        if (user?.personal_avatar_base64) {
+          const b64 = user.personal_avatar_base64.replace(/^data:image\/\w+;base64,/, '');
+          await fs.writeFile(faceImagePath, Buffer.from(b64, 'base64'));
+        }
+        const audioPath = path.join(process.cwd(), 'videolar', `ts_${job.id}_1.wav`);
+        if (await fs.pathExists(faceImagePath) && await fs.pathExists(audioPath)) {
+          const result = await generateTalkingHead({ faceImagePath, audioPath });
+          if (result.success && result.outputPath) {
+            const musetalkOutputPath = path.join(process.cwd(), 'videolar', `musetalk_${fName}`);
+            await fs.move(result.outputPath, musetalkOutputPath, { overwrite: true });
+            // MuseTalk output becomes new primary, original becomes secondary
+            await applySplitScreen(musetalkOutputPath, fPath, fPath, '50/50', 'top');
+          }
+        }
+        Logger.info('[MUSETALK] Talking head stage complete');
+      } catch (mtErr) {
+        Logger.warn('[MUSETALK] Failed, continuing:', mtErr);
       }
     }
 
@@ -1243,6 +1324,252 @@ async function startProduction(job: VideoJob) {
           ['failed', job.id]
         );
         broadcast(job.id, { stageKey: 'stageDubbing', percent: 97, message: 'Dublaj başarısız, orijinal ses ile devam ediliyor' });
+      }
+    }
+
+    // ── 4A-Extended: Beat-Sync Stage ──
+    if (job.beat_sync_enabled === 1) {
+      Logger.info('[BEAT_SYNC] Starting beat-sync editing...', { jobId: job.id });
+      await db.run(
+        "UPDATE video_jobs SET current_stage = 'Beat-Sync Uygulanıyor', progress_percent = 97 WHERE id = ?",
+        [job.id]
+      );
+      broadcast(job.id, { stageKey: 'stageBeatSync', percent: 97, message: 'Beat-senkron kesimler uygulanıyor...' });
+
+      try {
+        const { findBeatCutPoints } = await import('./services/beatSyncEditor.js');
+        const { applyBeatSyncCuts } = await import('./services/videoService.js');
+
+        const beatSyncOutputPath = path.join(
+          process.cwd(), 'videolar',
+          `beatsync_${job.id}_${Date.now()}.mp4`
+        );
+
+        const cutPoints = await findBeatCutPoints(fPath, fPath, {
+          bpm: job.beat_sync_bpm,
+          minSegmentDuration: job.beat_sync_min_segment ?? 2.0,
+        });
+
+        await applyBeatSyncCuts(fPath, cutPoints, beatSyncOutputPath);
+
+        const originalPath = fPath;
+        fPath = beatSyncOutputPath;
+        try { await fs.remove(originalPath); } catch { /* ignore */ }
+
+        await db.run(
+          "UPDATE video_jobs SET beat_sync_status = ?, beat_sync_output_path = ?, progress_percent = 98 WHERE id = ?",
+          ['completed', beatSyncOutputPath, job.id]
+        );
+        broadcast(job.id, { stageKey: 'stageBeatSync', percent: 98, message: `Beat-sync tamamlandı: ${cutPoints.length} kesim noktası` });
+        Logger.info('[BEAT_SYNC] Beat-sync complete', { jobId: job.id, cutPoints: cutPoints.length });
+      } catch (beatErr) {
+        Logger.warn('[BEAT_SYNC] Beat-sync failed, continuing without beat-sync:', beatErr);
+        await db.run(
+          "UPDATE video_jobs SET beat_sync_status = ?, progress_percent = 98 WHERE id = ?",
+          ['failed', job.id]
+        );
+        broadcast(job.id, { stageKey: 'stageBeatSync', percent: 98, message: 'Beat-sync başarısız, orijinal video ile devam ediliyor' });
+      }
+    }
+
+    // ── 4C: AI Studio Stage (after beat-sync, before viral) ──
+    const hasStudioSound = job.studio_sound_enabled === 1;
+    const hasEyeContact = job.eye_contact_enabled === 1;
+    const hasSmartReframe = job.smart_reframe_enabled === 1;
+    const hasInpaint = job.inpaint_enabled === 1;
+
+    if (hasStudioSound || hasEyeContact || hasSmartReframe || hasInpaint) {
+      Logger.info('[AI STUDIO] Starting AI Studio post-processing...', { hasStudioSound, hasEyeContact, hasSmartReframe, hasInpaint });
+      await db.run(
+        "UPDATE video_jobs SET current_stage = 'AI Stüdyo', progress_percent = 97 WHERE id = ?",
+        [job.id]
+      );
+      broadcast(job.id, { stageKey: 'stageStudioSound', percent: 97, message: 'AI Stüdyo işlemleri yapılıyor...' });
+
+      try {
+        const { enhanceAudio, correctGaze, smartReframe } = await import('./services/aiStudio.js');
+        let processedPath = fPath;
+
+        if (hasStudioSound) {
+          broadcast(job.id, { stageKey: 'stageStudioSound', percent: 97, message: 'Ses iyileştirme yapılıyor...' });
+          const audioOut = path.join(process.cwd(), 'videolar', `studio_${job.id}_${Date.now()}.mp4`);
+          await enhanceAudio(processedPath, audioOut, {}, (pct: number, msg: string) => broadcast(job.id, { stageKey: 'stageStudioSound', percent: pct, message: msg }));
+          processedPath = audioOut;
+        }
+
+        if (hasEyeContact) {
+          broadcast(job.id, { stageKey: 'stageEyeContact', percent: 97, message: 'Göz teması düzeltiliyor...' });
+          const gazeOut = path.join(process.cwd(), 'videolar', `gaze_${job.id}_${Date.now()}.mp4`);
+          await correctGaze(processedPath, gazeOut, true, (pct: number, msg: string) => broadcast(job.id, { stageKey: 'stageEyeContact', percent: pct, message: msg }));
+          processedPath = gazeOut;
+        }
+
+        if (hasSmartReframe) {
+          broadcast(job.id, { stageKey: 'stageSmartReframe', percent: 97, message: 'Akıllı yeniden çerçeveleme yapılıyor...' });
+          const reframeOut = path.join(process.cwd(), 'videolar', `reframe_${job.id}_${Date.now()}.mp4`);
+          await smartReframe(processedPath, reframeOut, { aspectRatio: '9:16', useFaceTracking: true }, (pct: number, msg: string) => broadcast(job.id, { stageKey: 'stageSmartReframe', percent: pct, message: msg }));
+          processedPath = reframeOut;
+        }
+
+        if (hasInpaint) {
+          broadcast(job.id, { stageKey: 'stageInpaint', percent: 97, message: 'Video inpainting yapılıyor...' });
+          const { inpaintObjects } = await import('./services/inpainting.js');
+          const inpaintOut = path.join(process.cwd(), 'videolar', `inpaint_${job.id}_${Date.now()}.mp4`);
+          await inpaintObjects(processedPath, [], inpaintOut);
+          processedPath = inpaintOut;
+        }
+
+        const originalPath = fPath;
+        fPath = processedPath;
+        try { await fs.remove(originalPath); } catch { /* ignore */ }
+
+        broadcast(job.id, { stageKey: 'stageStudioSound', percent: 98, message: 'AI Stüdyo tamamlandı' });
+        Logger.info('[AI STUDIO] Pipeline complete');
+      } catch (studioErr) {
+        Logger.warn('[AI STUDIO] Pipeline failed, continuing with original:', studioErr);
+        broadcast(job.id, { stageKey: 'stageStudioSound', percent: 98, message: 'AI Stüdyo başarısız, orijinal video ile devam ediliyor' });
+      }
+    }
+
+    // ── 5A: Viral Engine Pipeline (after final concat, before completion) ──
+    const viralEnabled = job.viral_hook_enabled === 1 || job.broll_enabled === 1 || job.emotion_captions === 1;
+    if (viralEnabled) {
+      try {
+        // Stage: Viral Hook Analysis
+        if (job.viral_hook_enabled === 1) {
+          Logger.info('[VIRAL] Hook quality analysis starting...');
+          await db.run(
+            "UPDATE video_jobs SET current_stage = 'Viral Hook Analizi', progress_percent = 97 WHERE id = ?",
+            [job.id]
+          );
+          broadcast(job.id, { stageKey: 'stageViralHook', percent: 97, message: 'Hook kalitesi analiz ediliyor...' });
+
+          const hookResult = await analyzeHookQuality(fPath);
+          const titlesResult = await generateViralTitles(job.master_prompt || 'video', 5);
+          const hashtagsResult = await generateHashtags(job.master_prompt || '', 'youtube');
+
+          await db.run(
+            `UPDATE video_jobs SET
+              viral_score = ?,
+              yt_title = COALESCE(?, yt_title),
+              yt_tags = ?,
+              progress_percent = 97
+            WHERE id = ?`,
+            [
+              hookResult.score,
+              titlesResult.titles[0]?.title || null,
+              hashtagsResult.hashtags.slice(0, 5).map((h: any) => h.tag).join(' '),
+              job.id
+            ]
+          );
+
+          broadcast(job.id, {
+            stageKey: 'stageViralHook', percent: 97,
+            hookScore: hookResult.score,
+            hookType: hookResult.hookType,
+            titles: titlesResult.titles,
+            hashtags: hashtagsResult.hashtags.slice(0, 8)
+          });
+          Logger.info('[VIRAL] Hook analysis complete', { score: hookResult.score, hookType: hookResult.hookType });
+        }
+
+        // Stage: B-Roll Insertion
+        if (job.broll_enabled === 1) {
+          Logger.info('[VIRAL] B-Roll insertion starting...');
+          await db.run(
+            "UPDATE video_jobs SET current_stage = 'B-Roll Ekleniyor', progress_percent = 98 WHERE id = ?",
+            [job.id]
+          );
+          broadcast(job.id, { stageKey: 'stageBrollInsert', percent: 98, message: 'B-Roll clips ekleniyor...' });
+
+          const { generateBroll } = await import('./services/aiBroll.js');
+          const brollOutputDir = path.join(process.cwd(), 'videolar', `broll_${job.id}_${Date.now()}`);
+          await fs.ensureDir(brollOutputDir);
+
+          const keywordMoments: { keywords: string[]; insertAtSeconds: number; duration: number }[] = [];
+          if (job.transcript_translated || job.transcript_cleaned) {
+            const transcript = job.transcript_translated || job.transcript_cleaned || '';
+            const words = transcript.split(/\s+/);
+            const videoDur = dur > 0 ? dur : 60;
+            const wordsPerSec = words.length / videoDur;
+            const brollKeywords = ['show', 'demo', 'example', 'look', 'watch', 'see', 'here', 'moment'];
+            for (const kw of brollKeywords) {
+              const idx = transcript.toLowerCase().indexOf(kw);
+              if (idx >= 0) {
+                const insertAt = (transcript.substring(0, idx).split(/\s+/).length / wordsPerSec) * 0.9;
+                keywordMoments.push({ keywords: [kw], insertAtSeconds: insertAt, duration: 3 });
+                break;
+              }
+            }
+          }
+
+          const brollClips: Awaited<ReturnType<typeof generateBroll>>[] = [];
+          for (const moment of keywordMoments) {
+            const brollPath = path.join(brollOutputDir, `broll_${brollClips.length}.mp4`);
+            const genResult = await generateBroll(moment.keywords, moment.duration, brollPath);
+            if (genResult.success) {
+              brollClips.push({
+                keywords: moment.keywords,
+                duration: moment.duration,
+                outputPath: brollPath,
+                insertAtSeconds: moment.insertAtSeconds
+              } as any);
+            }
+          }
+
+          if (brollClips.length > 0) {
+            const brollOutputPath = path.join(process.cwd(), 'videolar', `brolled_${fName}`);
+            await insertBroll(fPath, brollClips as any, brollOutputPath);
+            const originalPath = fPath;
+            fPath = brollOutputPath;
+            try { await fs.remove(originalPath); } catch { /* ignore */ }
+          }
+
+          broadcast(job.id, { stageKey: 'stageBrollInsert', percent: 98, brollCount: brollClips.length });
+          Logger.info('[VIRAL] B-Roll insertion complete', { inserted: brollClips.length });
+        }
+
+        // Stage: Emotion Captions
+        if (job.emotion_captions === 1) {
+          Logger.info('[VIRAL] Emotion caption styling starting...');
+          await db.run(
+            "UPDATE video_jobs SET current_stage = 'Duygu Altyazıları', progress_percent = 98 WHERE id = ?",
+            [job.id]
+          );
+          broadcast(job.id, { stageKey: 'stageEmotionCaption', percent: 98, message: 'Duygu vurgulu altyazılar ekleniyor...' });
+
+          const audioPath = path.join(process.cwd(), 'videolar', `temp_audio_${job.id}.wav`);
+          try {
+            await runFFmpegWithFallback([{
+              cmd: 'ffmpeg', args: ['-y', '-i', fPath, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', audioPath],
+              timeoutMs: 60000
+            }]);
+
+            const emotionResult = await detectEmotionPeaks(audioPath);
+            const transcript = job.transcript_translated || job.transcript_cleaned || '';
+            const srtEntries = generateHighlightSrt(transcript, emotionResult.peaks);
+            const srtContent = formatHighlightSrt(srtEntries, 0, 2.5);
+            const srtPath = path.join(process.cwd(), 'videolar', `emotion_${job.id}.srt`);
+            await fs.writeFile(srtPath, srtContent, 'utf-8');
+
+            const emotionOutputPath = path.join(process.cwd(), 'videolar', `emotion_${fName}`);
+            await applyEmotionCaptionStyle(fPath, srtPath, emotionOutputPath);
+            const originalPath = fPath;
+            fPath = emotionOutputPath;
+            try { await fs.remove(originalPath); } catch { /* ignore */ }
+            try { await fs.remove(srtPath); } catch { /* ignore */ }
+
+            broadcast(job.id, { stageKey: 'stageEmotionCaption', percent: 99, peakCount: emotionResult.peaks.length });
+            Logger.info('[VIRAL] Emotion captions applied', { peaks: emotionResult.peaks.length });
+          } finally {
+            try { await fs.remove(audioPath); } catch { /* ignore */ }
+          }
+        }
+
+        Logger.info('[VIRAL] Viral engine pipeline complete');
+      } catch (viralErr) {
+        Logger.warn('[VIRAL] Pipeline failed, continuing with original video:', viralErr);
+        broadcast(job.id, { stageKey: 'stageViralHook', percent: 99, message: 'Viral motor hatası, devam ediliyor' });
       }
     }
 

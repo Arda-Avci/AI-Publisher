@@ -175,3 +175,69 @@ export async function enhanceVideoAudio(
     throw err;
   }
 }
+
+/**
+ * Removes background noise from an audio file using FFmpeg afftdn filter.
+ *
+ * @param audioPath  - Absolute path to input audio/video file
+ * @param outputPath - Absolute path for output audio file
+ * @returns Path to the noise-reduced audio file
+ */
+export async function removeBackgroundNoise(
+  audioPath: string,
+  outputPath: string
+): Promise<string> {
+  Logger.info('[studioSound] Removing background noise', { audioPath, outputPath });
+
+  const args = [
+    '-y',
+    '-i', audioPath,
+    '-af', 'afftdn=nl=1:nh=0.5:nf=-25',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-ar', '48000',
+    outputPath
+  ];
+
+  try {
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args, timeoutMs: 120000 }]);
+    Logger.info('[studioSound] Background noise removal completed', { outputPath });
+    return outputPath;
+  } catch (err: any) {
+    Logger.error('[studioSound] Background noise removal failed', err);
+    throw err;
+  }
+}
+
+/**
+ * Removes reverb/echo from an audio file using FFmpeg aecho filter.
+ *
+ * @param audioPath  - Absolute path to input audio/video file
+ * @param outputPath - Absolute path for output audio file
+ * @returns Path to the reverb-reduced audio file
+ */
+export async function removeReverb(
+  audioPath: string,
+  outputPath: string
+): Promise<string> {
+  Logger.info('[studioSound] Removing reverb', { audioPath, outputPath });
+
+  const args = [
+    '-y',
+    '-i', audioPath,
+    '-af', 'aecho=0.8:0.88:60:0.4:200:0.3',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-ar', '48000',
+    outputPath
+  ];
+
+  try {
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args, timeoutMs: 120000 }]);
+    Logger.info('[studioSound] Reverb removal completed', { outputPath });
+    return outputPath;
+  } catch (err: any) {
+    Logger.error('[studioSound] Reverb removal failed', err);
+    throw err;
+  }
+}

@@ -99,12 +99,14 @@ describe('Video Differentiation System Integration Tests', () => {
     // Init SQLite database
     await initDatabase();
 
-    // Ensure we have a test user 'admin' in db
+    // Ensure we have a test user 'admin' in db with correct password
     const encryptedAdmin = encryptUsername('admin');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
     const existing = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
     if (!existing) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
       await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedAdmin, hashedPassword]);
+    } else {
+      await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existing.id]);
     }
   });
 

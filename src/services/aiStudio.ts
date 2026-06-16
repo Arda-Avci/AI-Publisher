@@ -305,16 +305,11 @@ export async function correctGaze(
     const colabUrl = colab.getState().ngrokUrl;
     if (!colabUrl) throw new Error('Colab not connected');
 
-    const videoBuffer = await fs.readFile(inputVideo);
-    const formData = new FormData();
-    formData.append('video', new Blob([videoBuffer], { type: 'video/mp4' }), path.basename(inputVideo));
-    formData.append('smooth', String(smooth));
-
-    const response = await axios.post(`${colabUrl}/api/v1/eye-contact`, formData, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
-      responseType: 'arraybuffer',
-      timeout: 300000,
-    });
+    const response = await axios.post(
+      `${colabUrl}/api/v1/eye-contact`,
+      { video_path: inputVideo, output_path: outputVideo, smooth },
+      { headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' }, timeout: 300000 }
+    );
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
     return { outputPath: outputVideo, usedColab: true, durationMs: Date.now() - startTime };
@@ -331,4 +326,42 @@ export async function correctGaze(
   onProgress?.(100, 'Göz teması düzeltildi');
 
   return { outputPath: result.processedVideoPath, usedColab: false, durationMs: Date.now() - startTime };
+}
+
+export async function removeBackgroundNoise(
+  inputVideo: string,
+  outputVideo: string,
+  onProgress?: ProgressCallback
+): Promise<StudioResult> {
+  const startTime = Date.now();
+  onProgress?.(10, 'Arka plan gürültüsü siliniyor...');
+
+  try {
+    const { removeBackgroundNoise: localDenoise } = await import('./studioSound.js');
+    await localDenoise(inputVideo, outputVideo);
+    onProgress?.(100, 'Arka plan gürültüsü temizlendi');
+    return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+  } catch (err: any) {
+    Logger.error('[aiStudio] removeBackgroundNoise failed', err);
+    throw err;
+  }
+}
+
+export async function removeReverb(
+  inputVideo: string,
+  outputVideo: string,
+  onProgress?: ProgressCallback
+): Promise<StudioResult> {
+  const startTime = Date.now();
+  onProgress?.(10, 'Yankı temizleme yapılıyor...');
+
+  try {
+    const { removeReverb: localDereverb } = await import('./studioSound.js');
+    await localDereverb(inputVideo, outputVideo);
+    onProgress?.(100, 'Yankı temizlendi');
+    return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+  } catch (err: any) {
+    Logger.error('[aiStudio] removeReverb failed', err);
+    throw err;
+  }
 }

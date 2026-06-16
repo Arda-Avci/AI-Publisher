@@ -20,6 +20,7 @@ import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
 import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
+import { StudioToolsPanel } from './components/StudioToolsPanel.js';
 
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
   const [hasSubtitles, setHasSubtitles] = useState(true);
   const [brandKitEnabled, setBrandKitEnabled] = useState(false);
   const [kineticSubtitles, setKineticSubtitles] = useState(false);
+  const [kineticSubtitlesStyle, setKineticSubtitlesStyle] = useState('bounce');
   const [autoSfxPlacement, setAutoSfxPlacement] = useState(false);
   const [audioDucking, setAudioDucking] = useState(false);
   const [targetPlatforms, setTargetPlatforms] = useState<Platform[]>(['youtube']);
@@ -74,7 +76,24 @@ export default function App() {
   const [subtitleStyle, setSubtitleStyle] = useState('dynamic_hormozi');
   const [colorGrading, setColorGrading] = useState('');
 
-  const mainTabs = ['Örnekler', 'Stüdyo', 'Galeri', 'Talk-Show', 'AI Asistan', 'Karakterler', 'Canvas', 'API Keys', 'Batch', 'Clipper', 'Yayın Planla'] as const;
+  // AI Studio tool states
+  const [studioSoundEnabled, setStudioSoundEnabled] = useState(false);
+  const [eyeContactEnabled, setEyeContactEnabled] = useState(false);
+  const [smartReframeEnabled, setSmartReframeEnabled] = useState(false);
+  const [inpaintEnabled, setInpaintEnabled] = useState(false);
+
+  // Job-3/4/5/7/2 form states
+  const [dubbingConfig, setDubbingConfig] = useState({ dubbingLang: 'none', dubbingVoice: '', beatSyncEnabled: false, beatSyncBpm: 120, beatSyncMinSegment: 2 });
+  const [colorGradingEnabled, setColorGradingEnabled] = useState(false);
+  const [autoCutEnabled, setAutoCutEnabled] = useState(false);
+  const [autoCutPreset, setAutoCutPreset] = useState('silence');
+  const [viralConfig, setViralConfig] = useState({ viralHookEnabled: false, brollEnabled: false, emotionCaptionsEnabled: false });
+  const [splitEnabled, setSplitEnabled] = useState(false);
+  const [splitLayout, setSplitLayout] = useState('50/50');
+  const [splitPosition, setSplitPosition] = useState('top');
+  const [useMuseTalk, setUseMuseTalk] = useState(false);
+
+  const mainTabs = ['Örnekler', 'Stüdyo', 'Galeri', 'Talk-Show', 'AI Asistan', 'Karakterler', 'Canvas', 'API Keys', 'Batch', 'Clipper', 'Yayın Planla', 'AI Stüdyo'] as const;
   const [mainTab, setMainTab] = useState<typeof mainTabs[number]>('Örnekler');
 
   const t = useCallback((key: string, params?: Record<string, any>) => {
@@ -160,7 +179,7 @@ export default function App() {
       fd.append('tts_provider', ttsProvider); fd.append('tts_voice', ttsVoice); fd.append('production_template', productionTemplate);
       fd.append('has_shorts', hasShorts ? '1' : '0'); fd.append('has_subtitles', hasSubtitles ? '1' : '0');
       fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0'); fd.append('kinetic_subtitles', kineticSubtitles ? '1' : '0');
-      fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0'); fd.append('audio_ducking', audioDucking ? '1' : '0');
+      fd.append('kinetic_subtitles_style', kineticSubtitlesStyle); fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0'); fd.append('audio_ducking', audioDucking ? '1' : '0');
       fd.append('dubbing_lang', dubbingLang); fd.append('subtitle_style', subtitleStyle); fd.append('color_grading', colorGrading);
       targetPlatforms.forEach(p => fd.append('platforms[]', p)); if (selectedFile) fd.append('material', selectedFile); if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
       setCharPendingFormData(fd); setCharDetectedNames(names); setCharModalOpen(true); return;
@@ -171,10 +190,10 @@ export default function App() {
     fd.append('tts_provider', ttsProvider); fd.append('tts_voice', ttsVoice); fd.append('production_template', productionTemplate);
     fd.append('has_shorts', hasShorts ? '1' : '0'); fd.append('has_subtitles', hasSubtitles ? '1' : '0');
     fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0'); fd.append('kinetic_subtitles', kineticSubtitles ? '1' : '0');
-    fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0'); fd.append('audio_ducking', audioDucking ? '1' : '0');
+    fd.append('kinetic_subtitles_style', kineticSubtitlesStyle); fd.append('auto_sfx_placement', autoSfxPlacement ? '1' : '0'); fd.append('audio_ducking', audioDucking ? '1' : '0');
     fd.append('dubbing_lang', dubbingLang); fd.append('subtitle_style', subtitleStyle); fd.append('color_grading', colorGrading);
     targetPlatforms.forEach(p => fd.append('platforms[]', p)); if (selectedFile) fd.append('material', selectedFile); if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
-    try { await fetch('/create-job', { method: 'POST', headers: { 'x-csrf-token': csrfToken }, body: fd }); setMasterPrompt(''); setProductionNotes(''); setCharacterFeatures(''); setSelectedFile(null); setSelectedMusicFile(null); setBrandKitEnabled(false); setKineticSubtitles(false); setAutoSfxPlacement(false); setAudioDucking(false); setDubbingLang('none'); setSubtitleStyle('dynamic_hormozi'); setColorGrading(''); fetchJobs(); setActiveTab('gallery'); } catch {} finally { setFormLoading(false); }
+    try { await fetch('/create-job', { method: 'POST', headers: { 'x-csrf-token': csrfToken }, body: fd }); setMasterPrompt(''); setProductionNotes(''); setCharacterFeatures(''); setSelectedFile(null); setSelectedMusicFile(null); setBrandKitEnabled(false); setKineticSubtitles(false); setKineticSubtitlesStyle('bounce'); setAutoSfxPlacement(false); setAudioDucking(false); setDubbingLang('none'); setSubtitleStyle('dynamic_hormozi'); setColorGrading(''); fetchJobs(); setActiveTab('gallery'); } catch {} finally { setFormLoading(false); }
   };
 
   const handleCharModalConfirm = async (charMap: Record<string, { name: string; description: string; isNew: boolean }>) => {
@@ -245,7 +264,8 @@ export default function App() {
                   <ProjectForm masterPrompt={masterPrompt} productionNotes={productionNotes} characterFeatures={characterFeatures}
                     ttsProvider={ttsProvider} ttsVoice={ttsVoice} productionTemplate={productionTemplate}
                     hasShorts={hasShorts} hasSubtitles={hasSubtitles} brandKitEnabled={brandKitEnabled}
-                    kineticSubtitles={kineticSubtitles} autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
+                    kineticSubtitles={kineticSubtitles} kineticSubtitlesStyle={kineticSubtitlesStyle} onSetKineticSubtitlesStyle={setKineticSubtitlesStyle}
+                    autoSfxPlacement={autoSfxPlacement} audioDucking={audioDucking}
                     targetPlatforms={targetPlatforms} formLoading={formLoading} userCredits={userCredits}
                     onSetMasterPrompt={setMasterPrompt} onSetProductionNotes={setProductionNotes}
                     onSetCharacterFeatures={setCharacterFeatures} onSetTtsProvider={setTtsProvider}
@@ -260,7 +280,16 @@ export default function App() {
                     camIntensity={camIntensity} onSetCamIntensity={setCamIntensity}
                     dubbingLang={dubbingLang} onSetDubbingLang={setDubbingLang}
                     subtitleStyle={subtitleStyle} onSetSubtitleStyle={setSubtitleStyle}
-                    colorGrading={colorGrading} onSetColorGrading={setColorGrading} />
+                    colorGrading={colorGrading} onSetColorGrading={setColorGrading}
+                    colorGradingEnabled={colorGradingEnabled} onSetColorGradingEnabled={setColorGradingEnabled}
+                    autoCutEnabled={autoCutEnabled} onSetAutoCutEnabled={setAutoCutEnabled}
+                    autoCutPreset={autoCutPreset} onSetAutoCutPreset={setAutoCutPreset}
+                    dubbingConfig={dubbingConfig} onSetDubbingConfig={setDubbingConfig}
+                    viralConfig={viralConfig} onSetViralConfig={setViralConfig}
+                    splitEnabled={splitEnabled} onSetSplitEnabled={setSplitEnabled}
+                    splitLayout={splitLayout} onSetSplitLayout={setSplitLayout}
+                    splitPosition={splitPosition} onSetSplitPosition={setSplitPosition}
+                    useMuseTalk={useMuseTalk} onSetUseMuseTalk={setUseMuseTalk} />
                 </aside>
               )}
 
@@ -295,6 +324,19 @@ export default function App() {
                 {mainTab === 'Batch' && (<BatchUpload language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
                 {mainTab === 'Clipper' && (<ClipperPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
                 {mainTab === 'Yayın Planla' && (<SchedulePublishPanel language={language} t={t} onShowToast={(msg, type) => console.log(msg, type)} />)}
+                {mainTab === 'AI Stüdyo' && (
+                  <StudioToolsPanel
+                    studioSoundEnabled={studioSoundEnabled}
+                    eyeContactEnabled={eyeContactEnabled}
+                    smartReframeEnabled={smartReframeEnabled}
+                    inpaintEnabled={inpaintEnabled}
+                    onSetStudioSoundEnabled={setStudioSoundEnabled}
+                    onSetEyeContactEnabled={setEyeContactEnabled}
+                    onSetSmartReframeEnabled={setSmartReframeEnabled}
+                    onSetInpaintEnabled={setInpaintEnabled}
+                    t={t}
+                  />
+                )}
 
                 <HelpVideoPanel feature={mainTab === 'Stüdyo' ? 'studio' : mainTab === 'Galeri' ? 'gallery' : mainTab === 'Canvas' ? 'canvas' : mainTab === 'Batch' ? 'batch' : mainTab === 'Karakterler' ? 'characters' : mainTab === 'API Keys' ? 'api_keys' : 'studio'} language={language} />
               </main>

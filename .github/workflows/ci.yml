@@ -8,7 +8,10 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     services:
       postgres:
@@ -50,6 +53,8 @@ jobs:
       YOUTUBE_API_KEY: ""
       NODE_OPTIONS: "--max-old-space-size=4096"
 
+    permissions: write-all
+
     steps:
       - uses: actions/checkout@v4
 
@@ -69,6 +74,10 @@ jobs:
 
       - name: Lint
         run: npm run check:lint
+
+      - name: Build client
+        run: npm --prefix client run build
+        if: runner.os != 'Windows'
 
       - name: Run tests
         run: npm test
