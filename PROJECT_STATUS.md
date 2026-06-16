@@ -57,6 +57,10 @@
   - Tünel kopmalarına karşı auto-reconnect logic ve ngrok bypass query desteği frontend tarafına entegre edildi.
   - Derleme hatası veren kullanılmayan `Clock` ve `jobId` değişkenleri temizlenerek Vite build yeşillendirildi.
 
+- [x] **Google Drive Kalıcı Model Önbelleği (G-Drive Caching)**:
+  - `colab_setup.py` dosyasına Google Drive mount desteği eklendi.
+  - `HF_HOME` ve `TORCH_HOME` önbellek yolları `/content/drive/MyDrive/Colab_Cache` altına yönlendirildi. Böylece modeller sadece ilk çalıştırmada indirilecek, sonraki açılışlarda saniyeler içinde yüklenecektir.
+
 ### Faz 7: Test ve QA
 - [x] **7A-7E**: Test planı dokümanı — `docs/v6_roadmap/Faz_7_Testing_QA.md`
 

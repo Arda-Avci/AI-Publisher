@@ -405,6 +405,7 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] Sistem bağlamı (Personas, Journeys, C4Context diyagramı) (`c4-context.md`)
 - [x] Kapsamlı geliştirici ve teknik referans kılavuzunun oluşturulması (`docs/DEVELOPER_GUIDE.md`)
 - [x] Colab GPU durumu göstergesinin polling yerine real-time SSE (`/colab-status-stream`) akışına bağlanması ve frontend derlemesinin düzeltilmesi
+- [x] Google Drive mount ve model caching desteği ile sunucu yüklenme süresinin saniyelere indirilmesi (`colab_setup.py`)
 
 - [x] queue.ts: auto-retry on transient Colab errors (up to 3 attempts)
 - [x] db.ts: retry_count INTEGER DEFAULT 0 migration + VideoJob type update
