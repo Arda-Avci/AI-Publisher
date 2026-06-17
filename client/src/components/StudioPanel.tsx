@@ -36,7 +36,11 @@ interface StudioPanelProps {
 
 export function StudioPanel({
   activeTab: _activeTab,
-  selectedJob, scenes, progressMsg, progressPercent, etaSeconds,
+  selectedJob,
+  scenes,
+  progressMsg,
+  progressPercent,
+  etaSeconds,
   csrfToken,
   onSetSelectedJob: _onSetSelectedJob,
   onUpdateScenes: _onUpdateScenes,
@@ -46,7 +50,11 @@ export function StudioPanel({
   onSelectScene: _onSelectScene,
   onUseAsPrompt: _onUseAsPrompt,
   t: _t,
-  masterPrompt, onSetMasterPrompt, onSubmit, formLoading, mainTab,
+  masterPrompt,
+  onSetMasterPrompt,
+  onSubmit,
+  formLoading,
+  mainTab,
 }: StudioPanelProps) {
   const [playheadTime, setPlayheadTime] = useState(0);
   const [selectedSceneId, setSelectedSceneId] = useState<number | undefined>();
@@ -54,7 +62,18 @@ export function StudioPanel({
   const [showEditQueue, setShowEditQueue] = useState(false);
   if (mainTab === 'Galeri') {
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         {selectedJob ? (
           <VideoPreview
             selectedJob={selectedJob}
@@ -65,10 +84,23 @@ export function StudioPanel({
             masterPrompt={masterPrompt}
           />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              color: 'var(--text-muted)',
+              textAlign: 'center',
+            }}
+          >
             <Play size={48} style={{ opacity: 0.3 }} />
-            <span style={{ fontSize: '14px', fontFamily: 'var(--font-mono)' }}>Galeriden bir proje seçin</span>
-            <span style={{ fontSize: '12px', opacity: 0.6 }}>Sağ paneldeki listeden bir video seçerek önizleyebilirsiniz</span>
+            <span style={{ fontSize: '14px', fontFamily: 'var(--font-mono)' }}>
+              Galeriden bir proje seçin
+            </span>
+            <span style={{ fontSize: '12px', opacity: 0.6 }}>
+              Sağ paneldeki listeden bir video seçerek önizleyebilirsiniz
+            </span>
           </div>
         )}
       </div>
@@ -101,8 +133,18 @@ export function StudioPanel({
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 24px 100px 24px', gap: '16px' }}>
+    <div
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}
+    >
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '24px 24px 100px 24px',
+          gap: '16px',
+        }}
+      >
         <VideoPreview
           selectedJob={selectedJob}
           scenes={scenes}
@@ -125,15 +167,29 @@ export function StudioPanel({
           />
         )}
         {selectedJob && selectedSceneId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0 4px',
+              flexWrap: 'wrap',
+            }}
+          >
             <button
               onClick={() => setShowMuseTalk(!showMuseTalk)}
               style={{
-                padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 600,
                 border: `1px solid ${showMuseTalk ? 'var(--gold)' : 'var(--border)'}`,
                 background: showMuseTalk ? 'rgba(200,164,92,0.12)' : 'rgba(255,255,255,0.04)',
                 color: showMuseTalk ? 'var(--gold)' : 'var(--text-primary)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
                 transition: 'all 0.15s',
               }}
             >
@@ -142,11 +198,17 @@ export function StudioPanel({
             <button
               onClick={() => setShowEditQueue(!showEditQueue)}
               style={{
-                padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 600,
                 border: `1px solid ${showEditQueue ? 'var(--gold)' : 'var(--border)'}`,
                 background: showEditQueue ? 'rgba(200,164,92,0.12)' : 'rgba(255,255,255,0.04)',
                 color: showEditQueue ? 'var(--gold)' : 'var(--text-primary)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
                 transition: 'all 0.15s',
               }}
             >
@@ -154,22 +216,25 @@ export function StudioPanel({
             </button>
           </div>
         )}
-        {selectedJob && showMuseTalk && selectedSceneId && (() => {
-          const scene = scenes.find(s => s.id === selectedSceneId);
-          return scene ? (
-            <MuseTalkPanel
-              sceneId={scene.id}
-              sceneImagePath={scene.image_path}
-              sceneAudioPath={scene.audio_path}
-              csrfToken={csrfToken}
-              onClose={() => setShowMuseTalk(false)}
-            />
-          ) : null;
-        })()}
+        {selectedJob &&
+          showMuseTalk &&
+          selectedSceneId &&
+          (() => {
+            const scene = scenes.find((s) => s.id === selectedSceneId);
+            return scene ? (
+              <MuseTalkPanel
+                sceneId={scene.id}
+                sceneImagePath={scene.image_path}
+                sceneAudioPath={scene.audio_path}
+                csrfToken={csrfToken}
+                onClose={() => setShowMuseTalk(false)}
+              />
+            ) : null;
+          })()}
         {selectedJob && showEditQueue && (
           <EditQueuePanel
             jobId={selectedJob.id}
-            scenes={scenes.map(s => ({ id: s.id, scene_number: s.scene_number }))}
+            scenes={scenes.map((s) => ({ id: s.id, scene_number: s.scene_number }))}
             csrfToken={csrfToken}
             onClose={() => setShowEditQueue(false)}
           />
@@ -186,10 +251,15 @@ export function StudioPanel({
 }
 
 function FloatingPrompt({
-  masterPrompt, onSetMasterPrompt, onSubmit, formLoading,
+  masterPrompt,
+  onSetMasterPrompt,
+  onSubmit,
+  formLoading,
 }: {
-  masterPrompt: string; onSetMasterPrompt: (v: string) => void;
-  onSubmit: (e: React.FormEvent) => void; formLoading: boolean;
+  masterPrompt: string;
+  onSetMasterPrompt: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  formLoading: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -271,11 +341,7 @@ function FloatingPrompt({
           fontFamily: 'var(--font-sans)',
         }}
       >
-        {formLoading ? (
-          <Loader size={16} className="spin" />
-        ) : (
-          <Zap size={16} />
-        )}
+        {formLoading ? <Loader size={16} className="spin" /> : <Zap size={16} />}
         {formLoading ? 'Üretiliyor…' : 'Üret'}
       </button>
     </form>
@@ -283,10 +349,21 @@ function FloatingPrompt({
 }
 
 function VideoPreview({
-  selectedJob, scenes, progressMsg, progressPercent, etaSeconds, masterPrompt, onTimeUpdate,
+  selectedJob,
+  scenes,
+  progressMsg,
+  progressPercent,
+  etaSeconds,
+  masterPrompt,
+  onTimeUpdate,
 }: {
-  selectedJob: Job | null; scenes: Scene[]; progressMsg: string; progressPercent: number;
-  etaSeconds: number | null; masterPrompt: string; onTimeUpdate?: (t: number) => void;
+  selectedJob: Job | null;
+  scenes: Scene[];
+  progressMsg: string;
+  progressPercent: number;
+  etaSeconds: number | null;
+  masterPrompt: string;
+  onTimeUpdate?: (t: number) => void;
 }) {
   const hasVideo = selectedJob?.final_filename;
   const status = selectedJob?.status;
@@ -324,16 +401,43 @@ function VideoPreview({
   const renderPlaceholder = () => {
     if (!selectedJob) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            padding: '40px',
+            textAlign: 'center',
+            zIndex: 2,
+          }}
+        >
           <div className="gold-logo" style={{ fontSize: '14px', letterSpacing: '0.25em' }}>
             AI PUBLISHER STUDIO
           </div>
           <div style={{ width: '40px', height: '1px', background: 'var(--gold)', opacity: 0.6 }} />
-          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+          <h3
+            style={{
+              fontSize: '28px',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 400,
+              maxWidth: '500px',
+              lineHeight: '1.4',
+            }}
+          >
             Sinematik Prodüksiyonunuzu Başlatın
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
-            {masterPrompt || 'Aşağıdaki alana bir video konsepti girin veya galeriden daha önce ürettiğiniz bir projeyi seçerek önizleyin.'}
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              maxWidth: '400px',
+              lineHeight: '1.6',
+            }}
+          >
+            {masterPrompt ||
+              'Aşağıdaki alana bir video konsepti girin veya galeriden daha önce ürettiğiniz bir projeyi seçerek önizleyin.'}
           </p>
         </div>
       );
@@ -341,16 +445,63 @@ function VideoPreview({
 
     if (status === 'pending') {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
-          <div className="pulse" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 8px var(--gold)' }} />
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>İŞLEM BEKLEMEDE</span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            padding: '40px',
+            textAlign: 'center',
+            zIndex: 2,
+          }}
+        >
+          <div
+            className="pulse"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: 'var(--gold)',
+                boxShadow: '0 0 8px var(--gold)',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+              }}
+            >
+              İŞLEM BEKLEMEDE
+            </span>
           </div>
-          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+          <h3
+            style={{
+              fontSize: '28px',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 400,
+              maxWidth: '500px',
+              lineHeight: '1.4',
+            }}
+          >
             Sunucu Sırası Bekleniyor
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
-            Prodüksiyon talebiniz kuyruğa alındı. Google Colab GPU hazır olduğunda otonom video üretim süreci otomatik olarak başlayacaktır.
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              maxWidth: '400px',
+              lineHeight: '1.6',
+            }}
+          >
+            Prodüksiyon talebiniz kuyruğa alındı. Google Colab GPU hazır olduğunda otonom video
+            üretim süreci otomatik olarak başlayacaktır.
           </p>
         </div>
       );
@@ -358,16 +509,62 @@ function VideoPreview({
 
     if (status === 'failed') {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)' }} />
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>ÜRETİM BAŞARISIZ</span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            padding: '40px',
+            textAlign: 'center',
+            zIndex: 2,
+          }}
+        >
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)' }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                boxShadow: '0 0 8px var(--accent)',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+              }}
+            >
+              ÜRETİM BAŞARISIZ
+            </span>
           </div>
-          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+          <h3
+            style={{
+              fontSize: '28px',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 400,
+              maxWidth: '500px',
+              lineHeight: '1.4',
+            }}
+          >
             Kurgu Sırasında Hata Oluştu
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
-            Medya sentezi veya miksaj aşamasında bir sorunla karşılaşıldı. Detayları sistem loglarından inceleyebilir veya yeni bir konseptle tekrar deneyebilirsiniz.
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              maxWidth: '400px',
+              lineHeight: '1.6',
+            }}
+          >
+            Medya sentezi veya miksaj aşamasında bir sorunla karşılaşıldı. Detayları sistem
+            loglarından inceleyebilir veya yeni bir konseptle tekrar deneyebilirsiniz.
           </p>
         </div>
       );
@@ -375,16 +572,60 @@ function VideoPreview({
 
     if (status === 'awaiting_approval') {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            padding: '40px',
+            textAlign: 'center',
+            zIndex: 2,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 8px var(--gold)' }} />
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>ONAY BEKLİYOR</span>
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: 'var(--gold)',
+                boxShadow: '0 0 8px var(--gold)',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+              }}
+            >
+              ONAY BEKLİYOR
+            </span>
           </div>
-          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+          <h3
+            style={{
+              fontSize: '28px',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 400,
+              maxWidth: '500px',
+              lineHeight: '1.4',
+            }}
+          >
             Sosyal Medya Yayın Onayı
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
-            Video üretimi başarıyla tamamlandı. Sağ panelden yapay zeka tarafından hazırlanan kopya metinlerini düzenleyip onaylayarak yayın motorunu tetikleyebilirsiniz.
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              maxWidth: '400px',
+              lineHeight: '1.6',
+            }}
+          >
+            Video üretimi başarıyla tamamlandı. Sağ panelden yapay zeka tarafından hazırlanan kopya
+            metinlerini düzenleyip onaylayarak yayın motorunu tetikleyebilirsiniz.
           </p>
         </div>
       );
@@ -392,22 +633,52 @@ function VideoPreview({
 
     if (status === 'processing') {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            padding: '40px',
+            textAlign: 'center',
+            zIndex: 2,
+          }}
+        >
           <Loader size={36} className="spin" style={{ color: 'var(--accent)' }} />
-          <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+          <h3
+            style={{
+              fontSize: '28px',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 400,
+              maxWidth: '500px',
+              lineHeight: '1.4',
+            }}
+          >
             Video Üretiliyor ({progressPercent}%)
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              maxWidth: '400px',
+              lineHeight: '1.6',
+            }}
+          >
             Aşama: <strong>{progressMsg || 'Başlatılıyor...'}</strong>
           </p>
           {etaSeconds !== null && (
-            <div style={{
-              fontSize: '11px', color: 'var(--gold)',
-              background: 'rgba(212, 175, 55, 0.08)',
-              border: '1px solid rgba(212, 175, 55, 0.15)',
-              padding: '6px 14px', borderRadius: 'var(--radius)',
-              fontFamily: 'var(--font-mono)',
-            }}>
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--gold)',
+                background: 'rgba(212, 175, 55, 0.08)',
+                border: '1px solid rgba(212, 175, 55, 0.15)',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius)',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
               Tahmini Kalan Süre: {Math.floor(etaSeconds / 60)}dk {etaSeconds % 60}sn
             </div>
           )}
@@ -416,15 +687,41 @@ function VideoPreview({
     }
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px', textAlign: 'center', zIndex: 2 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+          padding: '40px',
+          textAlign: 'center',
+          zIndex: 2,
+        }}
+      >
         <div className="gold-logo" style={{ fontSize: '14px', letterSpacing: '0.25em' }}>
           AI PUBLISHER
         </div>
         <div style={{ width: '40px', height: '1px', background: 'var(--gold)', opacity: 0.6 }} />
-        <h3 style={{ fontSize: '28px', color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', fontWeight: 400, maxWidth: '500px', lineHeight: '1.4' }}>
+        <h3
+          style={{
+            fontSize: '28px',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-serif)',
+            fontWeight: 400,
+            maxWidth: '500px',
+            lineHeight: '1.4',
+          }}
+        >
           Prodüksiyon Sentezleniyor
         </h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+        <p
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-muted)',
+            maxWidth: '400px',
+            lineHeight: '1.6',
+          }}
+        >
           Video kurgusu veya medya sentez süreci henüz tamamlanmadı. Lütfen bekleyin.
         </p>
       </div>
@@ -453,7 +750,8 @@ function VideoPreview({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(180deg, rgba(5,7,11,0.9) 0%, transparent 60%, rgba(5,7,11,0.9) 100%)',
+          background:
+            'linear-gradient(180deg, rgba(5,7,11,0.9) 0%, transparent 60%, rgba(5,7,11,0.9) 100%)',
           pointerEvents: 'none',
           zIndex: 1,
         }}
@@ -465,7 +763,13 @@ function VideoPreview({
           src={`/videolar/${selectedJob!.final_filename}`}
           controls
           onTimeUpdate={handleTimeUpdate}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'relative', zIndex: 0 }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            position: 'relative',
+            zIndex: 0,
+          }}
         />
       ) : (
         renderPlaceholder()
@@ -473,7 +777,17 @@ function VideoPreview({
 
       {/* DynamicCaptions overlay */}
       {hasVideo && words.length > 0 && (
-        <div style={{ position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 3, width: '80%', maxWidth: '700px' }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 3,
+            width: '80%',
+            maxWidth: '700px',
+          }}
+        >
           <DynamicCaptions
             words={words}
             currentTime={currentTime}
@@ -490,35 +804,48 @@ function VideoPreview({
 
       {/* Info badges when preview is active */}
       {hasVideo && (
-        <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
-          <span style={{
-            padding: '3px 8px',
-            borderRadius: '4px',
-            background: 'rgba(5, 7, 11, 0.6)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-mono)',
-            letterSpacing: '0.05em',
-            border: '1px solid var(--border)',
-          }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '16px',
+            left: '16px',
+            display: 'flex',
+            gap: '8px',
+            zIndex: 2,
+          }}
+        >
+          <span
+            style={{
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: 'rgba(5, 7, 11, 0.6)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              fontSize: '10px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.05em',
+              border: '1px solid var(--border)',
+            }}
+          >
             4K UHD
           </span>
-          <span style={{
-            padding: '3px 8px',
-            borderRadius: '4px',
-            background: 'rgba(5, 7, 11, 0.6)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            fontSize: '10px',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-mono)',
-            letterSpacing: '0.05em',
-            border: '1px solid var(--border)',
-          }}>
+          <span
+            style={{
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: 'rgba(5, 7, 11, 0.6)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              fontSize: '10px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.05em',
+              border: '1px solid var(--border)',
+            }}
+          >
             24 FPS
           </span>
         </div>
@@ -526,18 +853,30 @@ function VideoPreview({
 
       {/* Prompt text when preview is active */}
       {hasVideo && (
-        <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 2, textAlign: 'center', width: '70%' }}>
-          <span style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            fontFamily: 'var(--font-sans)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            display: 'block',
-            maxWidth: '100%',
-            letterSpacing: '0.02em',
-          }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '16px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 2,
+            textAlign: 'center',
+            width: '70%',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-sans)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block',
+              maxWidth: '100%',
+              letterSpacing: '0.02em',
+            }}
+          >
             {selectedJob?.master_prompt}
           </span>
         </div>
@@ -545,5 +884,3 @@ function VideoPreview({
     </div>
   );
 }
-
-

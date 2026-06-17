@@ -26,7 +26,7 @@ export interface WorkerResult {
 export function runInWorker<T = WorkerResult>(
   cmd: string,
   args: string[],
-  timeoutMs = 30000
+  timeoutMs = 30000,
 ): Promise<T> {
   let finalArgs = [...args];
   if (cmd === 'ffmpeg' && !finalArgs.includes('-threads')) {
@@ -47,7 +47,10 @@ export function runInWorker<T = WorkerResult>(
         resolve(msg as T);
       });
       worker.on('error', (err) => {
-        if (!settled) { settled = true; reject(err); }
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
       });
       worker.on('exit', (code) => {
         if (!settled) {
@@ -64,7 +67,7 @@ export function runInWorker<T = WorkerResult>(
             status: 'error',
             error: `Command failed with code ${error.code}. Stderr: ${stderr}`,
             stdout,
-            stderr
+            stderr,
           } as any);
         } else {
           resolve({ status: 'success', stdout, stderr } as any);
@@ -76,7 +79,7 @@ export function runInWorker<T = WorkerResult>(
           child.kill('SIGKILL');
           resolve({
             status: 'timeout',
-            error: 'FFmpeg execution timed out (Main Thread Fallback Protection).'
+            error: 'FFmpeg execution timed out (Main Thread Fallback Protection).',
           } as any);
         }, timeoutMs);
 
@@ -89,7 +92,7 @@ export function runInWorker<T = WorkerResult>(
 export async function runFFmpeg(
   cmd: string,
   args: string[],
-  timeoutMs = 30000
+  timeoutMs = 30000,
 ): Promise<{ stdout: string; stderr: string }> {
   const res = await runInWorker<WorkerResult>(cmd, args, timeoutMs);
   if (res.status === 'success') {
@@ -102,7 +105,9 @@ export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<
   for (let i = 0; i < commands.length; i++) {
     const { cmd, args, timeoutMs = 30000 } = commands[i];
     try {
-      Logger.info(`FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`);
+      Logger.info(
+        `FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`,
+      );
       await runFFmpeg(cmd, args, timeoutMs);
       return;
     } catch (err: any) {
@@ -115,30 +120,41 @@ export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<
 }
 
 export async function ensurePingSound(): Promise<string> {
-  if (pingPathCache && await fs.pathExists(pingPathCache)) return pingPathCache;
+  if (pingPathCache && (await fs.pathExists(pingPathCache))) return pingPathCache;
   const uploadsDir = path.join(process.cwd(), 'uploads');
   await fs.ensureDir(uploadsDir);
   const pingPath = path.join(uploadsDir, 'ping.wav');
-  await runFFmpeg(
-    'ffmpeg',
-    ['-y', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=0.25', '-af', 'afade=t=out:st=0.2:d=0.05', pingPath]
-  );
+  await runFFmpeg('ffmpeg', [
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'sine=frequency=880:duration=0.25',
+    '-af',
+    'afade=t=out:st=0.2:d=0.05',
+    pingPath,
+  ]);
   pingPathCache = pingPath;
   return pingPath;
 }
 
 export async function addCalloutPings(videoPath: string, outputPath: string): Promise<void> {
-  const { stdout: durStr } = await runFFmpeg(
-    'ffprobe',
-    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath]
-  );
+  const { stdout: durStr } = await runFFmpeg('ffprobe', [
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    videoPath,
+  ]);
   const dur = parseFloat(durStr.trim());
   if (isNaN(dur) || dur < 1) throw new Error('Geçersiz video süresi');
 
   const pingPath = await ensurePingSound();
 
-  const t1 = Math.max(0, dur * 0.30 - 0.125);
-  const t2 = Math.max(0, dur * 0.50 - 0.125);
+  const t1 = Math.max(0, dur * 0.3 - 0.125);
+  const t2 = Math.max(0, dur * 0.5 - 0.125);
   const t3 = Math.max(0, dur * 0.65 - 0.125);
   const d1 = Math.round(t1 * 1000);
   const d2 = Math.round(t2 * 1000);
@@ -148,19 +164,36 @@ export async function addCalloutPings(videoPath: string, outputPath: string): Pr
     `[1:a]adelay=${d1}|${d1}[p1]`,
     `[1:a]adelay=${d2}|${d2}[p2]`,
     `[1:a]adelay=${d3}|${d3}[p3]`,
-    `[0:a][p1][p2][p3]amix=inputs=4:duration=first:dropout_transition=0[aout]`
+    `[0:a][p1][p2][p3]amix=inputs=4:duration=first:dropout_transition=0[aout]`,
   ].join(';');
 
-  await runFFmpeg(
-    'ffmpeg',
-    ['-y', '-i', videoPath, '-i', pingPath, '-filter_complex', filter, '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath]
-  );
+  await runFFmpeg('ffmpeg', [
+    '-y',
+    '-i',
+    videoPath,
+    '-i',
+    pingPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:v',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-shortest',
+    outputPath,
+  ]);
 }
 
 export async function generateEndScreenImage(
   avatarBase64: string | null,
   outPath: string,
-  isVertical: boolean
+  isVertical: boolean,
 ): Promise<void> {
   const w = isVertical ? 1080 : 1920;
   const h = isVertical ? 1920 : 1080;
@@ -170,7 +203,11 @@ export async function generateEndScreenImage(
 
   if (avatarBase64 && avatarBase64.startsWith('data:image')) {
     const b64 = avatarBase64.replace(/^data:image\/\w+;base64,/, '');
-    const avatarPath = path.join(process.cwd(), 'uploads', `endscreen_avatar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`);
+    const avatarPath = path.join(
+      process.cwd(),
+      'uploads',
+      `endscreen_avatar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`,
+    );
     await fs.writeFile(avatarPath, Buffer.from(b64, 'base64'));
     const avatarSize = 300;
     const avatarX = `(W-${avatarSize})/2`;
@@ -188,7 +225,7 @@ export async function generateEndScreenImage(
 
   const args = ['-y'];
   // We safely parse inputs: ["-f", "lavfi", "-i", "..."]
-  inputs.forEach(i => args.push(...i.split(' ')));
+  inputs.forEach((i) => args.push(...i.split(' ')));
   args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath);
   await runFFmpeg('ffmpeg', args);
 }
@@ -197,12 +234,17 @@ export async function applyEndScreen(
   videoPath: string,
   endScreenPath: string,
   outputPath: string,
-  isVertical: boolean
+  isVertical: boolean,
 ): Promise<void> {
-  const { stdout: durStr } = await runFFmpeg(
-    'ffprobe',
-    ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath]
-  );
+  const { stdout: durStr } = await runFFmpeg('ffprobe', [
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    videoPath,
+  ]);
   const dur = parseFloat(durStr.trim());
   if (isNaN(dur) || dur < 5) throw new Error('Video 5 saniyeden kısa, end screen uygulanamaz');
 
@@ -210,16 +252,26 @@ export async function applyEndScreen(
   const h = isVertical ? 1920 : 1080;
   const endStart = (dur - 5).toFixed(3);
 
-  await runFFmpeg(
-    'ffmpeg',
-    ['-y', '-i', videoPath, '-loop', '1', '-i', endScreenPath, '-filter_complex', `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`, '-c:a', 'copy', outputPath]
-  );
+  await runFFmpeg('ffmpeg', [
+    '-y',
+    '-i',
+    videoPath,
+    '-loop',
+    '1',
+    '-i',
+    endScreenPath,
+    '-filter_complex',
+    `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`,
+    '-c:a',
+    'copy',
+    outputPath,
+  ]);
 }
 
 export async function getOrBuildEndScreen(
   userId: number,
   avatarBase64: string | null,
-  isVertical: boolean
+  isVertical: boolean,
 ): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'uploads');
   await fs.ensureDir(uploadsDir);
@@ -235,59 +287,82 @@ export async function getOrBuildEndScreen(
 
 export async function renderAvatarHelper(avatarBase64: string, outputPath: string): Promise<void> {
   const tempInput = path.join(process.cwd(), 'videolar', `avatar_temp_${Date.now()}.png`);
-  const avatarBuffer = Buffer.from(avatarBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+  const avatarBuffer = Buffer.from(avatarBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
   await fs.writeFile(tempInput, avatarBuffer);
 
   const cmd = 'ffmpeg';
-  const args = ['-y', '-i', tempInput, '-vf', 'scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6', outputPath];
+  const args = [
+    '-y',
+    '-i',
+    tempInput,
+    '-vf',
+    'scale=200:200,geomap=circle,drawbox=y=0:x=0:w=200:h=200:color=cyan@1:t=6',
+    outputPath,
+  ];
   const argsFallback = ['-y', '-i', tempInput, '-vf', 'scale=200:200', outputPath];
-  
+
   try {
     await runFFmpegWithFallback([
       { cmd, args },
-      { cmd, args: argsFallback }
+      { cmd, args: argsFallback },
     ]);
   } finally {
     await fs.remove(tempInput);
   }
 }
 
-export function getGridCoordinates(position: string, videoWidth: number, videoHeight: number, overlayWidth: number, overlayHeight: number): { x: number, y: number } {
+export function getGridCoordinates(
+  position: string,
+  videoWidth: number,
+  videoHeight: number,
+  overlayWidth: number,
+  overlayHeight: number,
+): { x: number; y: number } {
   let x = 20;
   let y = 20;
-  
+
   if (position.includes('right')) {
     x = videoWidth - overlayWidth - 20;
   } else if (position.includes('center')) {
     x = Math.floor((videoWidth - overlayWidth) / 2);
   }
-  
+
   if (position.includes('bottom')) {
     y = videoHeight - overlayHeight - 20;
   } else if (position.includes('center')) {
     y = Math.floor((videoHeight - overlayHeight) / 2);
   }
-  
+
   return { x, y };
 }
-
 
 export async function extractReferenceFrame(videoPath: string): Promise<string> {
   const outputDir = path.join(process.cwd(), 'videolar');
   await fs.ensureDir(outputDir);
   const tempOutput = path.join(outputDir, `ref_${Date.now()}.png`);
-  
+
   // Extract frame at 00:00:01
   const cmd = 'ffmpeg';
-  const args = ['-y', '-ss', '00:00:01', '-i', videoPath, '-frames:v', '1', '-q:v', '2', tempOutput];
+  const args = [
+    '-y',
+    '-ss',
+    '00:00:01',
+    '-i',
+    videoPath,
+    '-frames:v',
+    '1',
+    '-q:v',
+    '2',
+    tempOutput,
+  ];
   const argsFallback = ['-y', '-i', videoPath, '-frames:v', '1', tempOutput];
-  
+
   try {
     await runFFmpegWithFallback([
       { cmd, args },
-      { cmd, args: argsFallback }
+      { cmd, args: argsFallback },
     ]);
-    
+
     if (await fs.pathExists(tempOutput)) {
       const buffer = await fs.readFile(tempOutput);
       const base64 = buffer.toString('base64');
@@ -301,13 +376,13 @@ export async function extractReferenceFrame(videoPath: string): Promise<string> 
       await fs.remove(tempOutput);
     }
   }
-  return "";
+  return '';
 }
 
 export async function applyVideoDifferentiationFilters(
   inputPath: string,
   outputPath: string,
-  isVertical: boolean
+  isVertical: boolean,
 ): Promise<void> {
   const w = isVertical ? 1080 : 1920;
   const h = isVertical ? 1920 : 1080;
@@ -316,27 +391,35 @@ export async function applyVideoDifferentiationFilters(
     `[0:v]split[orig][bg]`,
     `[bg]scale=${w}:${h},boxblur=40[blurred]`,
     `[orig]scale=${scaleOriginal},eq=contrast=1.05:saturation=1.1[scaled]`,
-    `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,vignette=pi/8[outv]`
+    `[blurred][scaled]overlay=(W-w)/2:(H-h)/2,vignette=pi/8[outv]`,
   ].join(';');
 
   const args = [
     '-y',
-    '-i', inputPath,
-    '-filter_complex', filter,
-    '-map', '[outv]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    outputPath
+    '-i',
+    inputPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '[outv]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    outputPath,
   ];
 
-  await runFFmpegWithFallback([
-    { cmd: 'ffmpeg', args }
-  ]);
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
 }
 
-export async function extractReferenceFrameAtTime(videoPath: string, timestampSeconds: number): Promise<string> {
+export async function extractReferenceFrameAtTime(
+  videoPath: string,
+  timestampSeconds: number,
+): Promise<string> {
   const hours = Math.floor(timestampSeconds / 3600);
   const minutes = Math.floor((timestampSeconds % 3600) / 60);
   const seconds = Math.floor(timestampSeconds % 60);
@@ -344,7 +427,10 @@ export async function extractReferenceFrameAtTime(videoPath: string, timestampSe
 
   const outputDir = path.join(process.cwd(), 'videolar');
   await fs.ensureDir(outputDir);
-  const tempOutput = path.join(outputDir, `ref_${Date.now()}_${Math.floor(Math.random()*1000)}.png`);
+  const tempOutput = path.join(
+    outputDir,
+    `ref_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`,
+  );
 
   const cmd = 'ffmpeg';
   const args = ['-y', '-ss', timeStr, '-i', videoPath, '-frames:v', '1', '-q:v', '2', tempOutput];
@@ -353,7 +439,7 @@ export async function extractReferenceFrameAtTime(videoPath: string, timestampSe
   try {
     await runFFmpegWithFallback([
       { cmd, args },
-      { cmd, args: argsFallback }
+      { cmd, args: argsFallback },
     ]);
 
     if (await fs.pathExists(tempOutput)) {
@@ -369,7 +455,7 @@ export async function extractReferenceFrameAtTime(videoPath: string, timestampSe
       await fs.remove(tempOutput);
     }
   }
-  return "";
+  return '';
 }
 
 export async function extractLastFrame(videoPath: string): Promise<string> {
@@ -386,10 +472,13 @@ export async function extractLastFrame(videoPath: string): Promise<string> {
 
 export async function getVideoDuration(videoPath: string): Promise<number> {
   const { stdout } = await runFFmpeg('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-of', 'csv=p=0',
-    videoPath
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    videoPath,
   ]);
   const d = parseFloat(stdout.trim());
   return isNaN(d) ? 0 : d;
@@ -398,7 +487,7 @@ export async function getVideoDuration(videoPath: string): Promise<number> {
 export async function concatVideosWithCrossfade(
   videoPaths: string[],
   outputPath: string,
-  transDur = 1.0
+  transDur = 1.0,
 ): Promise<void> {
   if (videoPaths.length === 0) {
     throw new Error('concatVideosWithCrossfade: Video listesi bos');
@@ -416,15 +505,39 @@ export async function concatVideosWithCrossfade(
   }
 
   // Validate durations. If any video is shorter than transDur * 2, fallback to concat demuxer (normal concat)
-  const canXFade = durations.every(d => d > transDur * 2);
+  const canXFade = durations.every((d) => d > transDur * 2);
   if (!canXFade) {
     Logger.warn('Videolar crossfade icin cok kisa, normal concat uygulaniyor.');
     const txt = path.join(path.dirname(outputPath), `temp_concat_${Date.now()}.txt`);
-    await fs.writeFile(txt, videoPaths.map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'));
+    await fs.writeFile(
+      txt,
+      videoPaths.map((p) => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'),
+    );
     try {
       await runFFmpegWithFallback([
-        { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', outputPath] },
-        { cmd: 'ffmpeg', args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', outputPath] }
+        {
+          cmd: 'ffmpeg',
+          args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', outputPath],
+        },
+        {
+          cmd: 'ffmpeg',
+          args: [
+            '-y',
+            '-f',
+            'concat',
+            '-safe',
+            '0',
+            '-i',
+            txt,
+            '-c:v',
+            'libx264',
+            '-pix_fmt',
+            'yuv420p',
+            '-c:a',
+            'aac',
+            outputPath,
+          ],
+        },
       ]);
     } finally {
       await fs.remove(txt);
@@ -447,7 +560,9 @@ export async function concatVideosWithCrossfade(
     const nextVideoLabel = `${i + 1}:v`;
     const outVideoLabel = `v_xfade_${i}`;
     const offset = runningDur - transDur;
-    filterParts.push(`[${lastVideoLabel}][${nextVideoLabel}]xfade=transition=fade:duration=${transDur}:offset=${offset.toFixed(3)}[${outVideoLabel}]`);
+    filterParts.push(
+      `[${lastVideoLabel}][${nextVideoLabel}]xfade=transition=fade:duration=${transDur}:offset=${offset.toFixed(3)}[${outVideoLabel}]`,
+    );
     lastVideoLabel = outVideoLabel;
     runningDur = runningDur + durations[i + 1] - transDur;
   }
@@ -457,24 +572,30 @@ export async function concatVideosWithCrossfade(
   for (let i = 0; i < videoPaths.length - 1; i++) {
     const nextAudioLabel = `${i + 1}:a`;
     const outAudioLabel = `a_xfade_${i}`;
-    filterParts.push(`[${lastAudioLabel}][${nextAudioLabel}]acrossfade=d=${transDur}[${outAudioLabel}]`);
+    filterParts.push(
+      `[${lastAudioLabel}][${nextAudioLabel}]acrossfade=d=${transDur}[${outAudioLabel}]`,
+    );
     lastAudioLabel = outAudioLabel;
   }
 
   const filterComplex = filterParts.join(';');
   args.push(
-    '-filter_complex', filterComplex,
-    '-map', `[${lastVideoLabel}]`,
-    '-map', `[${lastAudioLabel}]`,
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac',
-    outputPath
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    `[${lastVideoLabel}]`,
+    '-map',
+    `[${lastAudioLabel}]`,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    outputPath,
   );
 
-  await runFFmpegWithFallback([
-    { cmd: 'ffmpeg', args }
-  ]);
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
 }
 
 // ── YENİ: Akıllı Ses ve Müzik Ördekleme Filtresi (Smart Audio Ducking) ──
@@ -482,7 +603,7 @@ export async function applySmartAudioDucking(
   videoPath: string,
   speechAudioPath: string,
   bgMusicPath: string,
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   // sidechaincompress filtresi ile konuşma sesi geldiğinde arka plan müziğinin sesini kısıyoruz.
   // [2:a] = bgMusicPath, [1:a] = speechAudioPath (anlatıcı)
@@ -490,26 +611,32 @@ export async function applySmartAudioDucking(
   const filter = [
     `[2:a]volume=0.20[bg]`, // Müziği baştan biraz kıs
     `[bg][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`,
-    `[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`
+    `[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
   ].join(';');
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-i', speechAudioPath,
-    '-i', bgMusicPath,
-    '-filter_complex', filter,
-    '-map', '0:v',
-    '-map', '[aout]',
-    '-c:v', 'copy',
-    '-c:a', 'aac',
+    '-i',
+    videoPath,
+    '-i',
+    speechAudioPath,
+    '-i',
+    bgMusicPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:v',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'aac',
     '-shortest',
-    outputPath
+    outputPath,
   ];
 
-  await runFFmpegWithFallback([
-    { cmd: 'ffmpeg', args }
-  ]);
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
 }
 
 // Helper: SRT zaman formatını saniyeye çevir
@@ -541,14 +668,14 @@ export async function convertSrtToKineticAss(
   fontName = 'Arial',
   animStyle: 'bounce' | 'pulse' | 'shake' | 'pop' | 'wave' = 'bounce',
   videoWidth = 1920,
-  videoHeight = 1080
+  videoHeight = 1080,
 ): Promise<void> {
   const content = await fs.readFile(srtPath, 'utf-8');
   const blocks = content.split(/\r?\n\r?\n/);
   const events: string[] = [];
 
   const hexToAssColor = (hex: string): string => {
-    let cleaned = hex.replace('#', '');
+    const cleaned = hex.replace('#', '');
     if (cleaned.length === 6) {
       const r = cleaned.substring(0, 2);
       const g = cleaned.substring(2, 4);
@@ -566,24 +693,27 @@ export async function convertSrtToKineticAss(
     pulse: '\\fscx140\\fscy140',
     shake: '\\fscx110\\fscy110\\frx5\\fry3',
     pop: '\\fscx150\\fscy150\\bord3',
-    wave: '\\fscx120\\fscy120\\frx10'
+    wave: '\\fscx120\\fscy120\\frx10',
   };
 
   const activeStyle = styleTags[animStyle] || styleTags.bounce;
 
   for (const block of blocks) {
-    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lines = block
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (lines.length < 3) continue;
     const timeLine = lines[1];
     const textLines = lines.slice(2).join(' ').trim();
     if (!timeLine || !timeLine.includes('-->')) continue;
 
-    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
+    const [startStr, endStr] = timeLine.split('-->').map((s) => s.trim());
     const startSec = parseSrtTimeToSeconds(startStr);
     const endSec = parseSrtTimeToSeconds(endStr);
     const totalDuration = endSec - startSec;
 
-    const words = textLines.split(/\s+/).filter(w => w.length > 0);
+    const words = textLines.split(/\s+/).filter((w) => w.length > 0);
     if (words.length === 0) continue;
 
     const wordDuration = totalDuration / words.length;
@@ -628,23 +758,52 @@ export async function applyKineticSubtitles(
   outputPath: string,
   primaryColor?: string,
   secondaryColor?: string,
-  fontPath?: string
+  fontPath?: string,
 ): Promise<void> {
   const assPath = videoPath.replace('.mp4', '_kinetic.ass');
   const fontName = fontPath ? path.basename(fontPath, path.extname(fontPath)) : 'Arial';
 
   // Video boyutlarını al (Windows FFmpeg ASS original_size bug fix için)
-  let videoWidth = 1920, videoHeight = 1080;
+  let videoWidth = 1920,
+    videoHeight = 1080;
   try {
-    const { stdout } = await runInWorker<WorkerResult>('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath], 15000);
+    const { stdout } = await runInWorker<WorkerResult>(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        '-of',
+        'csv=s=x:p=0',
+        videoPath,
+      ],
+      15000,
+    );
     const dims = stdout?.trim();
     if (dims) {
       const [w, h] = dims.split('x').map(Number);
-      if (w && h) { videoWidth = w; videoHeight = h; }
+      if (w && h) {
+        videoWidth = w;
+        videoHeight = h;
+      }
     }
-  } catch { /* use defaults */ }
+  } catch {
+    /* use defaults */
+  }
 
-  await convertSrtToKineticAss(srtPath, assPath, primaryColor, secondaryColor, fontName, 'bounce', videoWidth, videoHeight);
+  await convertSrtToKineticAss(
+    srtPath,
+    assPath,
+    primaryColor,
+    secondaryColor,
+    fontName,
+    'bounce',
+    videoWidth,
+    videoHeight,
+  );
 
   // Windows'ta font yolu double backslash ile gönderilmeli (C:\\path\\font.ttf)
   const isWindows = process.platform === 'win32';
@@ -656,18 +815,10 @@ export async function applyKineticSubtitles(
   // uyumsuz çalışır. ASS dosyasında PlayResX/Y olmadığında FFmpeg varsayılan
   // 384x288 kullanır. Bu yüzden ASS header'ından PlayResX/Y'yi çıkardık —
   // böylece FFmpeg video boyutunu doğrudan kabul eder.
-  const args = [
-    '-y',
-    '-i', videoPath,
-    '-vf', `ass=${assFilterPath}`,
-    '-c:a', 'copy',
-    outputPath
-  ];
+  const args = ['-y', '-i', videoPath, '-vf', `ass=${assFilterPath}`, '-c:a', 'copy', outputPath];
 
   try {
-    await runFFmpegWithFallback([
-      { cmd: 'ffmpeg', args }
-    ]);
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   } finally {
     if (await fs.pathExists(assPath)) {
       await fs.remove(assPath);
@@ -680,20 +831,27 @@ export async function applyBrandKit(
   videoPath: string,
   logoBase64: string,
   positionGrid: string, // örn: 'top_right', 'bottom_left'
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   const uploadsDir = path.join(process.cwd(), 'uploads');
   await fs.ensureDir(uploadsDir);
   const logoPath = path.join(uploadsDir, `brand_logo_temp_${Date.now()}.png`);
-  
+
   const b64 = logoBase64.replace(/^data:image\/\w+;base64,/, '');
   await fs.writeFile(logoPath, Buffer.from(b64, 'base64'));
 
   // Video boyutlarını ffprobe ile alalım
-  const { stdout: dims } = await runFFmpeg(
-    'ffprobe',
-    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath]
-  );
+  const { stdout: dims } = await runFFmpeg('ffprobe', [
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    videoPath,
+  ]);
 
   const [vW, vH] = dims.trim().split('x').map(Number);
   const logoW = Math.round(vW * 0.15); // Logonun genişliği videonun %15'i kadar olsun
@@ -723,20 +881,25 @@ export async function applyBrandKit(
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-i', logoPath,
-    '-filter_complex', filter,
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    outputPath
+    '-i',
+    videoPath,
+    '-i',
+    logoPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    outputPath,
   ];
 
   try {
-    await runFFmpegWithFallback([
-      { cmd: 'ffmpeg', args }
-    ]);
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   } finally {
     if (await fs.pathExists(logoPath)) {
       await fs.remove(logoPath);
@@ -749,7 +912,7 @@ export async function applySpatialAudioMix(
   videoPath: string,
   sfxPath: string,
   positionX: number, // -1 (tam sol) ile +1 (tam sağ) arası
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   // Stereo panner formülü: sol kanal katsayısı ve sağ kanal katsayısı
   const panLeft = ((1 - positionX) / 2).toFixed(2);
@@ -759,56 +922,72 @@ export async function applySpatialAudioMix(
   // Not: Bazı ses efektleri mono olabilir, pan filtresi bunu stereo pan'e çevirir.
   const filter = [
     `[1:a]pan=stereo|c0=${panLeft}*c0|c1=${panRight}*c0[sfx_panned]`,
-    `[0:a][sfx_panned]amix=inputs=2:duration=first:dropout_transition=0[aout]`
+    `[0:a][sfx_panned]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
   ].join(';');
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-i', sfxPath,
-    '-filter_complex', filter,
-    '-map', '0:v',
-    '-map', '[aout]',
-    '-c:v', 'copy',
-    '-c:a', 'aac',
-    outputPath
+    '-i',
+    videoPath,
+    '-i',
+    sfxPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:v',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'aac',
+    outputPath,
   ];
 
-  await runFFmpegWithFallback([
-    { cmd: 'ffmpeg', args }
-  ]);
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
 }
 
 // ── v6.0 3C: Color Grade Filter (preset wrapper) ──
 const COLOR_PRESETS: Record<string, string> = {
-  warm_cinematic: 'eq=brightness=0.0:contrast=1.1:saturation=1.15:gamma_r=1.1:gamma_g=1.0:gamma_b=0.9,colorbalance=rh=0.1:gh=0.05:bh=-0.1:rm=0.08:gm=0.03:bm=-0.06',
-  cool_moody: 'eq=brightness=0.0:contrast=1.05:saturation=1.1:gamma_r=0.9:gamma_g=1.0:gamma_b=1.1,colorbalance=rh=-0.1:gh=-0.05:bh=0.1:rm=-0.06:gm=-0.03:bm=0.08',
-  cinematic: 'eq=brightness=-0.05:contrast=1.2:saturation=0.9:gamma_r=1.05:gamma_g=1.0:gamma_b=0.95,colorbalance=rh=0.05:gh=0.03:bh=0.0:rm=0.03:gm=0.02:bm=-0.02',
-  neon_purple: 'eq=brightness=0.05:contrast=1.4:saturation=1.8:gamma_r=1.2:gamma_g=1.0:gamma_b=1.3,colorbalance=rh=0.1:gh=-0.05:bh=0.2:rm=0.15:gm=0.0:bm=0.25',
-  vintage_warm: 'eq=brightness=-0.1:contrast=0.9:saturation=0.7:gamma_r=1.0:gamma_g=0.95:gamma_b=0.85,colorbalance=rh=0.15:gh=0.1:bh=0.05:rm=0.1:gm=0.08:bm=0.0',
+  warm_cinematic:
+    'eq=brightness=0.0:contrast=1.1:saturation=1.15:gamma_r=1.1:gamma_g=1.0:gamma_b=0.9,colorbalance=rh=0.1:gh=0.05:bh=-0.1:rm=0.08:gm=0.03:bm=-0.06',
+  cool_moody:
+    'eq=brightness=0.0:contrast=1.05:saturation=1.1:gamma_r=0.9:gamma_g=1.0:gamma_b=1.1,colorbalance=rh=-0.1:gh=-0.05:bh=0.1:rm=-0.06:gm=-0.03:bm=0.08',
+  cinematic:
+    'eq=brightness=-0.05:contrast=1.2:saturation=0.9:gamma_r=1.05:gamma_g=1.0:gamma_b=0.95,colorbalance=rh=0.05:gh=0.03:bh=0.0:rm=0.03:gm=0.02:bm=-0.02',
+  neon_purple:
+    'eq=brightness=0.05:contrast=1.4:saturation=1.8:gamma_r=1.2:gamma_g=1.0:gamma_b=1.3,colorbalance=rh=0.1:gh=-0.05:bh=0.2:rm=0.15:gm=0.0:bm=0.25',
+  vintage_warm:
+    'eq=brightness=-0.1:contrast=0.9:saturation=0.7:gamma_r=1.0:gamma_g=0.95:gamma_b=0.85,colorbalance=rh=0.15:gh=0.1:bh=0.05:rm=0.1:gm=0.08:bm=0.0',
   desaturated: 'eq=brightness=0.0:contrast=1.0:saturation=0.3:gamma_r=1.0:gamma_g=1.0:gamma_b=1.0',
-  high_contrast: 'eq=brightness=0.0:contrast=1.6:saturation=1.2,colorbalance=rh=0.05:gh=0.02:bh=-0.02:rm=0.03:gm=0.01:bm=-0.01'
+  high_contrast:
+    'eq=brightness=0.0:contrast=1.6:saturation=1.2,colorbalance=rh=0.05:gh=0.02:bh=-0.02:rm=0.03:gm=0.01:bm=-0.01',
 };
 
 export async function applyColorGradeFilter(
   inputPath: string,
   outputPath: string,
-  presetName: string
+  presetName: string,
 ): Promise<void> {
   const filter = COLOR_PRESETS[presetName];
   if (!filter) {
     throw new Error(`Unknown color preset: ${presetName}`);
   }
   const args = [
-    '-y', '-i', inputPath,
-    '-vf', filter,
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    outputPath
+    '-y',
+    '-i',
+    inputPath,
+    '-vf',
+    filter,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    outputPath,
   ];
-  await runFFmpegWithFallback([
-    { cmd: 'ffmpeg', args }
-  ]);
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
 }
 
 // BeatCutPoint type re-export for queue stage
@@ -825,7 +1004,7 @@ export type { BeatCutPoint } from './beatSyncEditor.js';
 export async function applyBeatSyncCuts(
   videoPath: string,
   beatCutPoints: BeatCutPoint[],
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   if (beatCutPoints.length < 2) {
     await fs.copy(videoPath, outputPath);
@@ -845,13 +1024,19 @@ export async function applyBeatSyncCuts(
 
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-ss', startTime.toFixed(3),
-        '-i', videoPath,
-        '-t', (endTime - startTime).toFixed(3),
-        '-c:v', 'libx264',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        segPath
+        '-ss',
+        startTime.toFixed(3),
+        '-i',
+        videoPath,
+        '-t',
+        (endTime - startTime).toFixed(3),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        segPath,
       ]);
       segmentPaths.push(segPath);
     }
@@ -860,15 +1045,23 @@ export async function applyBeatSyncCuts(
     const lastStart = beatCutPoints[beatCutPoints.length - 1].timestamp;
     const duration = await getVideoDuration(videoPath);
     if (duration - lastStart >= 1.0) {
-      const lastSegPath = path.join(tempDir, `seg_${String(beatCutPoints.length - 1).padStart(3, '0')}.mp4`);
+      const lastSegPath = path.join(
+        tempDir,
+        `seg_${String(beatCutPoints.length - 1).padStart(3, '0')}.mp4`,
+      );
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-ss', lastStart.toFixed(3),
-        '-i', videoPath,
-        '-c:v', 'libx264',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        lastSegPath
+        '-ss',
+        lastStart.toFixed(3),
+        '-i',
+        videoPath,
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        lastSegPath,
       ]);
       segmentPaths.push(lastSegPath);
     }
@@ -883,7 +1076,7 @@ export async function applyBeatSyncCuts(
 
     Logger.info('[applyBeatSyncCuts] complete', {
       outputPath,
-      segmentCount: segmentPaths.length
+      segmentCount: segmentPaths.length,
     });
     return outputPath;
   } finally {
@@ -902,7 +1095,7 @@ export async function applyBeatSyncCuts(
 export async function applyBeatSyncCutsWithFilters(
   videoPath: string,
   cutTimestamps: number[],
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   if (cutTimestamps.length < 2) {
     await fs.copy(videoPath, outputPath);
@@ -923,7 +1116,7 @@ export async function applyBeatSyncCutsWithFilters(
   const filter = [
     `[0:v]fps=30,split=${cutTimestamps.length - 1}[vout]`,
     `[vout]select='${selectExpr}',setpts=N/FRAME_RATE/TB[selected]`,
-    `[0:a]asetpts=N/FRAME_RATE/TB[aout]`
+    `[0:a]asetpts=N/FRAME_RATE/TB[aout]`,
   ].join(';');
 
   const tempDir = path.join(process.cwd(), 'videolar', `beatsyncflt_${Date.now()}`);
@@ -933,14 +1126,21 @@ export async function applyBeatSyncCutsWithFilters(
   try {
     await runFFmpeg('ffmpeg', [
       '-y',
-      '-i', videoPath,
-      '-filter_complex', filter,
-      '-map', '[selected]',
-      '-map', '[aout]',
-      '-c:v', 'libx264',
-      '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac',
-      intermediatePath
+      '-i',
+      videoPath,
+      '-filter_complex',
+      filter,
+      '-map',
+      '[selected]',
+      '-map',
+      '[aout]',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      intermediatePath,
     ]);
 
     // Apply crossfade transitions by re-encoding segments with overlap
@@ -956,4 +1156,3 @@ export async function applyBeatSyncCutsWithFilters(
     await fs.remove(tempDir);
   }
 }
-

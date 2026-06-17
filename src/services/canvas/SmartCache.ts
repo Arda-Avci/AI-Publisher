@@ -27,13 +27,13 @@ export class SmartCache {
     connections: CanvasConnection[],
     viewportX: number,
     viewportY: number,
-    viewportScale: number
+    viewportScale: number,
   ): CanvasSnapshot {
     // Create lightweight snapshot - only store essential data
     const snapshot: CanvasSnapshot = {
       id: uuidv4(),
       canvasId,
-      nodes: nodes.map(node => ({
+      nodes: nodes.map((node) => ({
         id: node.id,
         type: node.type,
         x: node.x,
@@ -46,7 +46,7 @@ export class SmartCache {
         createdAt: node.createdAt,
         updatedAt: node.updatedAt,
       })),
-      connections: connections.map(conn => ({
+      connections: connections.map((conn) => ({
         id: conn.id,
         fromNodeId: conn.fromNodeId,
         toNodeId: conn.toNodeId,
@@ -92,12 +92,12 @@ export class SmartCache {
     // Check expiration
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(canvasId);
-      this.accessOrder = this.accessOrder.filter(id => id !== canvasId);
+      this.accessOrder = this.accessOrder.filter((id) => id !== canvasId);
       return null;
     }
 
     // Update access order (move to end - most recently used)
-    this.accessOrder = this.accessOrder.filter(id => id !== canvasId);
+    this.accessOrder = this.accessOrder.filter((id) => id !== canvasId);
     this.accessOrder.push(canvasId);
 
     return entry.snapshot;
@@ -108,7 +108,7 @@ export class SmartCache {
    */
   invalidate(canvasId: string): void {
     this.cache.delete(canvasId);
-    this.accessOrder = this.accessOrder.filter(id => id !== canvasId);
+    this.accessOrder = this.accessOrder.filter((id) => id !== canvasId);
   }
 
   /**

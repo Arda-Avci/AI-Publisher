@@ -46,7 +46,7 @@ export interface EyeContactResult {
  */
 export async function correctEyeContact(
   videoPath: string,
-  outputPath: string
+  outputPath: string,
 ): Promise<EyeContactResult> {
   const state = colab.getState();
 
@@ -55,7 +55,7 @@ export async function correctEyeContact(
     return {
       processedVideoPath: videoPath,
       usedFallback: true,
-      error: 'Colab not available'
+      error: 'Colab not available',
     };
   }
 
@@ -64,31 +64,35 @@ export async function correctEyeContact(
   try {
     Logger.info('[eyeContact] Sending request to Colab', { videoPath, outputPath });
 
-    Logger.warn('[eyeContact] `/api/v1/eye-contact` not implemented on Colab side — future feature', {
-      videoPath, outputPath
-    });
+    Logger.warn(
+      '[eyeContact] `/api/v1/eye-contact` not implemented on Colab side — future feature',
+      {
+        videoPath,
+        outputPath,
+      },
+    );
 
     const response = await axios.post(
       `${colabUrl}/api/v1/eye-contact`,
       {
         video_path: videoPath,
-        output_path: outputPath
+        output_path: outputPath,
       },
       {
         timeout: 300000, // 5 min
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-      }
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      },
     );
 
     if (response.data?.status === 'success' && response.data?.output_path) {
       // Verify output file exists
       if (await fs.pathExists(response.data.output_path)) {
         Logger.info('[eyeContact] Eye contact correction succeeded', {
-          outputPath: response.data.output_path
+          outputPath: response.data.output_path,
         });
         return {
           processedVideoPath: response.data.output_path,
-          usedFallback: false
+          usedFallback: false,
         };
       }
     }
@@ -96,12 +100,12 @@ export async function correctEyeContact(
     throw new Error(`Unexpected Colab response: ${JSON.stringify(response.data)}`);
   } catch (err: any) {
     Logger.warn('[eyeContact] Colab call failed, using fallback', {
-      error: err.message
+      error: err.message,
     });
     return {
       processedVideoPath: videoPath,
       usedFallback: true,
-      error: err.message
+      error: err.message,
     };
   }
 }
@@ -110,10 +114,7 @@ export async function correctEyeContact(
  * Convenience wrapper that copies input to output if fallback is used.
  * Ensures the caller always has a valid processed video at outputPath.
  */
-export async function enhanceEyeContact(
-  videoPath: string,
-  outputPath: string
-): Promise<string> {
+export async function enhanceEyeContact(videoPath: string, outputPath: string): Promise<string> {
   const result = await correctEyeContact(videoPath, outputPath);
 
   if (result.usedFallback) {
@@ -122,7 +123,7 @@ export async function enhanceEyeContact(
       await fs.copy(videoPath, outputPath);
     }
     Logger.info('[eyeContact] Fallback: original video copied to output', {
-      outputPath
+      outputPath,
     });
   }
 

@@ -18,7 +18,9 @@ export class Logger {
 
   static debug(msg: string, data?: any) {
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[${this.getTimestamp()}] [DEBUG] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`);
+      console.log(
+        `[${this.getTimestamp()}] [DEBUG] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`,
+      );
     }
   }
 }

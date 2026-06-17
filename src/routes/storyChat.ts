@@ -80,7 +80,8 @@ router.get('/sessions/:id', async (req, res) => {
 
     const session = await getChatSession(parseInt(req.params.id));
     if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
-    if (session.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (session.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     res.json({ success: true, session });
   } catch (error) {
@@ -100,7 +101,8 @@ router.delete('/sessions/:id', async (req, res) => {
 
     const session = await getChatSession(parseInt(req.params.id));
     if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
-    if (session.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (session.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     await deleteChatSession(session.id);
     res.json({ success: true });
@@ -128,7 +130,8 @@ router.post('/chat', async (req, res) => {
     // Verify session ownership
     const session = await getChatSession(sessionId);
     if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
-    if (session.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (session.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const result = await sendChatMessage(sessionId, message, { agent, template });
     res.json({ success: true, ...result });
@@ -152,7 +155,8 @@ router.post('/scenes/:sessionId', async (req, res) => {
 
     const session = await getChatSession(sessionId);
     if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
-    if (session.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (session.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const result = await generateSceneBreakdown(sessionId, sceneCount || 5);
     res.json({ success: true, ...result });
@@ -221,7 +225,8 @@ router.get('/bibles/:id', async (req, res) => {
 
     const bible = await getStoryBible(parseInt(req.params.id));
     if (!bible) return res.status(404).json({ success: false, error: 'Story bible not found' });
-    if (bible.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (bible.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const characters = await getStoryCharacters(bible.id);
     const plotPoints = await getStoryPlotPoints(bible.id);
@@ -244,7 +249,8 @@ router.put('/bibles/:id', async (req, res) => {
 
     const bible = await getStoryBible(parseInt(req.params.id));
     if (!bible) return res.status(404).json({ success: false, error: 'Story bible not found' });
-    if (bible.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (bible.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const updated = await updateStoryBible(bible.id, req.body);
     res.json({ success: true, bible: updated });
@@ -265,7 +271,8 @@ router.delete('/bibles/:id', async (req, res) => {
 
     const bible = await getStoryBible(parseInt(req.params.id));
     if (!bible) return res.status(404).json({ success: false, error: 'Story bible not found' });
-    if (bible.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (bible.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     await deleteStoryBible(bible.id);
     res.json({ success: true });
@@ -288,7 +295,8 @@ router.post('/bibles/:bibleId/characters', async (req, res) => {
 
     const bible = await getStoryBible(parseInt(req.params.bibleId));
     if (!bible) return res.status(404).json({ success: false, error: 'Story bible not found' });
-    if (bible.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (bible.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const character = await addCharacter(bible.id, req.body);
     res.json({ success: true, character });
@@ -347,7 +355,8 @@ router.post('/bibles/:bibleId/plot-points', async (req, res) => {
 
     const bible = await getStoryBible(parseInt(req.params.bibleId));
     if (!bible) return res.status(404).json({ success: false, error: 'Story bible not found' });
-    if (bible.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (bible.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const plotPoint = await addPlotPoint(bible.id, req.body);
     res.json({ success: true, plotPoint });
@@ -406,7 +415,8 @@ router.post('/bibles/:id/generate', async (req, res) => {
 
     const bible = await getStoryBible(parseInt(req.params.id));
     if (!bible) return res.status(404).json({ success: false, error: 'Story bible not found' });
-    if (bible.userId !== userId) return res.status(403).json({ success: false, error: 'Forbidden' });
+    if (bible.userId !== userId)
+      return res.status(403).json({ success: false, error: 'Forbidden' });
 
     const { template, sceneCount, includeCharacters, includePlotPoints } = req.body;
 

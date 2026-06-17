@@ -45,6 +45,7 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] `colab_setup.py` alt sürecinin kendini öldürmesi sonucu oluşan `CalledProcessError` hatasını önlemek için `sys.exit(100)` çıkış kodu kullanımı ve notebook'un bu çıkış koduna göre ana kernel'i yeniden başlatması.
 - [x] Notebook hücresinin en üstüne `GITHUB_TOKEN` ve `NGROK_TOKEN` form alanlarının eklenip çevre değişkenleri ile alt sürece aktarılarak kilitlenmelerin önlenmesi.
 - [x] Colab sunucusunda çalışan koda gelişmiş sunucu sağlığı ve teşhis (diagnostics) izleme mekanizmasının entegre edilmesi (bellekteki aktif modeller, çıktı sayıları, recent activities logları ve callback tünel connectivity testi) ve Node.js backend (`colab-manager.ts` ve `/api/v1/colab/status` rotası) üzerinden bu verilerin geriye dönük uyumlu şekilde sunulması.
+- [x] **Google Drive Kalıcı Konteyner Depolama ve Otonom Yönetim:** Google Colab yapay zeka modelleri (CogVideoX, Wan 2.1, LTX-Video, HunyuanVideo, Kokoro TTS ve ses/senkronizasyon modelleri) bağımsız Docker konteynerlerine taşındı. Konteynerler Google Drive `/content/drive/MyDrive/Colab Notebooks/docker/images/` altında tar.gz olarak saklanıp setup sırasında otomatik yüklenmektedir. Lazy loading, model bazlı dinamik port yönlendirmesi, VRAM/OOM optimizasyonu (Stable Diffusion'da rembg dahil), 50 saniyelik agresif konteyner durdurma süresi ve 1 dakikalık VM inaktivite shutdown süresi entegre edilmiştir.
 
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı

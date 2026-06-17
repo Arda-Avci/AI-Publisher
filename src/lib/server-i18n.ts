@@ -18,7 +18,11 @@ export function loadServerTranslations() {
   }
 }
 
-export function t(key: string, lang: 'tr' | 'en' = 'tr', params?: Record<string, string | number>): string {
+export function t(
+  key: string,
+  lang: 'tr' | 'en' = 'tr',
+  params?: Record<string, string | number>,
+): string {
   loadServerTranslations();
   const messages = lang === 'tr' ? trMessages : enMessages;
   let text = messages[key] || key;
@@ -57,4 +61,4 @@ export const STAGE_KEYS = {
   ERROR: 'stageError',
 } as const;
 
-export type StageKey = typeof STAGE_KEYS[keyof typeof STAGE_KEYS];
+export type StageKey = (typeof STAGE_KEYS)[keyof typeof STAGE_KEYS];

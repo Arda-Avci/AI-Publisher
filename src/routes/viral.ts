@@ -10,9 +10,19 @@ import { Router } from 'express';
 import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
-import { analyzeHookQuality, generateViralTitles, generateHashtags, optimizeForViral } from '../services/viralHook.js';
+import {
+  analyzeHookQuality,
+  generateViralTitles,
+  generateHashtags,
+  optimizeForViral,
+} from '../services/viralHook.js';
 import { generateBroll, insertBroll, BrollClip } from '../services/aiBroll.js';
-import { detectEmotionPeaks, generateHighlightSrt, formatHighlightSrt, applyEmotionCaptionStyle } from '../services/emotionCaptions.js';
+import {
+  detectEmotionPeaks,
+  generateHighlightSrt,
+  formatHighlightSrt,
+  applyEmotionCaptionStyle,
+} from '../services/emotionCaptions.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -36,7 +46,7 @@ router.post('/hook', requireAuth, async (req, res) => {
       ? video_path
       : path.join(process.cwd(), video_path);
 
-    if (!await fs.pathExists(videoAbsPath)) {
+    if (!(await fs.pathExists(videoAbsPath))) {
       res.status(404).json({ error: 'Video file not found' });
       return;
     }
@@ -47,14 +57,15 @@ router.post('/hook', requireAuth, async (req, res) => {
     const result = await analyzeHookQuality(videoAbsPath);
 
     // Per-platform scoring: adjust the AI's score based on platform-specific factors
-    const platformScores = targetPlatform === 'all'
-      ? {
-          youtube: Math.round(result.score * 1.0),
-          tiktok: Math.round(result.score * 1.1),      // TikTok rewards hook-heavy content
-          x: Math.round(result.score * 0.85),            // X needs punchier hooks
-          meta: Math.round(result.score * 0.95),          // Meta in between
-        }
-      : { [targetPlatform as string]: result.score };
+    const platformScores =
+      targetPlatform === 'all'
+        ? {
+            youtube: Math.round(result.score * 1.0),
+            tiktok: Math.round(result.score * 1.1), // TikTok rewards hook-heavy content
+            x: Math.round(result.score * 0.85), // X needs punchier hooks
+            meta: Math.round(result.score * 0.95), // Meta in between
+          }
+        : { [targetPlatform as string]: result.score };
 
     res.json({
       success: true,
@@ -86,7 +97,7 @@ router.post('/titles', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      data: result.titles
+      data: result.titles,
     });
   } catch (err: any) {
     Logger.error('[viral] Title generation error', err);
@@ -116,7 +127,7 @@ router.post('/hashtags', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      data: result.hashtags
+      data: result.hashtags,
     });
   } catch (err: any) {
     Logger.error('[viral] Hashtag generation error', err);
@@ -143,7 +154,7 @@ router.post('/optimize', requireAuth, async (req, res) => {
       ? video_path
       : path.join(process.cwd(), video_path);
 
-    if (!await fs.pathExists(videoAbsPath)) {
+    if (!(await fs.pathExists(videoAbsPath))) {
       res.status(404).json({ error: 'Video file not found' });
       return;
     }
@@ -155,7 +166,7 @@ router.post('/optimize', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      data: result
+      data: result,
     });
   } catch (err: any) {
     Logger.error('[viral] Viral optimization error', err);
@@ -182,7 +193,7 @@ router.post('/broll', requireAuth, async (req, res) => {
       ? main_video
       : path.join(process.cwd(), main_video);
 
-    if (!await fs.pathExists(mainVideoAbs)) {
+    if (!(await fs.pathExists(mainVideoAbs))) {
       res.status(404).json({ error: 'Main video file not found' });
       return;
     }
@@ -199,7 +210,10 @@ router.post('/broll', requireAuth, async (req, res) => {
         const brollDir = path.join(process.cwd(), 'videolar');
         await fs.ensureDir(brollDir);
 
-        const outputPath = path.join(brollDir, `broll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`);
+        const outputPath = path.join(
+          brollDir,
+          `broll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`,
+        );
 
         const genResult = await generateBroll(keywords, duration, outputPath);
 
@@ -208,7 +222,7 @@ router.post('/broll', requireAuth, async (req, res) => {
             keywords,
             duration,
             outputPath: genResult.outputPath,
-            insertAtSeconds: insert_at || 0
+            insertAtSeconds: insert_at || 0,
           });
         }
       }
@@ -223,12 +237,12 @@ router.post('/broll', requireAuth, async (req, res) => {
           data: {
             generated_count: generatedClips.length,
             output_path: outputPath,
-            clips: generatedClips.map(c => ({
+            clips: generatedClips.map((c) => ({
               keywords: c.keywords,
               duration: c.duration,
-              insert_at: c.insertAtSeconds
-            }))
-          }
+              insert_at: c.insertAtSeconds,
+            })),
+          },
         });
         return;
       }
@@ -237,18 +251,20 @@ router.post('/broll', requireAuth, async (req, res) => {
         success: true,
         data: {
           generated_count: generatedClips.length,
-          clips: generatedClips.map(c => ({
+          clips: generatedClips.map((c) => ({
             keywords: c.keywords,
             duration: c.duration,
             output_path: c.outputPath,
-            insert_at: c.insertAtSeconds
-          }))
-        }
+            insert_at: c.insertAtSeconds,
+          })),
+        },
       });
       return;
     }
 
-    res.status(400).json({ error: 'clips array is required with keywords, duration, and insert_at' });
+    res
+      .status(400)
+      .json({ error: 'clips array is required with keywords, duration, and insert_at' });
   } catch (err: any) {
     Logger.error('[viral] B-Roll error', err);
     res.status(500).json({ error: err.message || 'B-Roll generation/insertion failed' });
@@ -278,7 +294,7 @@ router.post('/emotion', requireAuth, async (req, res) => {
         ? audio_path
         : path.join(process.cwd(), audio_path);
 
-      if (!audioAbsPath || !await fs.pathExists(audioAbsPath)) {
+      if (!audioAbsPath || !(await fs.pathExists(audioAbsPath))) {
         res.status(404).json({ error: 'Audio file not found' });
         return;
       }
@@ -287,7 +303,7 @@ router.post('/emotion', requireAuth, async (req, res) => {
         ? video_path
         : path.join(process.cwd(), video_path);
 
-      if (!await fs.pathExists(videoAbsPath)) {
+      if (!(await fs.pathExists(videoAbsPath))) {
         res.status(404).json({ error: 'Video file not found' });
         return;
       }
@@ -300,12 +316,16 @@ router.post('/emotion', requireAuth, async (req, res) => {
       const { runFFmpeg } = await import('../services/videoService.js');
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-i', videoAbsPath,
+        '-i',
+        videoAbsPath,
         '-vn',
-        '-acodec', 'pcm_s16le',
-        '-ar', '16000',
-        '-ac', '1',
-        audioAbsPath
+        '-acodec',
+        'pcm_s16le',
+        '-ar',
+        '16000',
+        '-ac',
+        '1',
+        audioAbsPath,
       ]);
     }
 
@@ -318,8 +338,8 @@ router.post('/emotion', requireAuth, async (req, res) => {
         data: {
           peak_count: detection.peaks.length,
           duration: detection.durationSeconds,
-          peaks: detection.peaks
-        }
+          peaks: detection.peaks,
+        },
       });
       return;
     }
@@ -348,8 +368,8 @@ router.post('/emotion', requireAuth, async (req, res) => {
           srt_path: srtPath,
           output_path: outputPath,
           peak_count: detection.peaks.length,
-          duration: detection.durationSeconds
-        }
+          duration: detection.durationSeconds,
+        },
       });
       return;
     }
@@ -359,8 +379,8 @@ router.post('/emotion', requireAuth, async (req, res) => {
       data: {
         srt_path: srtPath,
         peak_count: detection.peaks.length,
-        duration: detection.durationSeconds
-      }
+        duration: detection.durationSeconds,
+      },
     });
   } catch (err: any) {
     Logger.error('[viral] Emotion captions error', err);
@@ -383,7 +403,12 @@ router.post('/batch-marketing', requireAuth, async (req, res) => {
       return;
     }
 
-    const platforms: Array<'youtube' | 'tiktok' | 'x' | 'meta'> = ['youtube', 'tiktok', 'x', 'meta'];
+    const platforms: Array<'youtube' | 'tiktok' | 'x' | 'meta'> = [
+      'youtube',
+      'tiktok',
+      'x',
+      'meta',
+    ];
     const [titleResult, ...hashtagResults] = await Promise.all([
       generateViralTitles(topic, 3),
       ...platforms.map((p: any) => generateHashtags(content || topic, p)),

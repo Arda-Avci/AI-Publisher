@@ -4,7 +4,12 @@
  */
 
 // Giriş Sayfası HTML — dil parametreye göre dinamik
-export const buildLoginHTML = (t: Record<string, string>, themeStyles: string, lang: 'tr' | 'en' = 'tr', csrfToken: string = '') => `
+export const buildLoginHTML = (
+  t: Record<string, string>,
+  themeStyles: string,
+  lang: 'tr' | 'en' = 'tr',
+  csrfToken: string = '',
+) => `
 <!DOCTYPE html>
 <html lang="${lang}">
 <head>

@@ -13,10 +13,10 @@ router.post('/enqueue', mediumLimiter, requireAuth, async (req, res) => {
     const { jobId, command, targetScene } = req.body;
     if (!jobId || !command) return res.status(400).json({ error: 'jobId ve command gerekli' });
 
-    const job: any = await db.get(
-      'SELECT id FROM video_jobs WHERE id = ? AND user_id = ?',
-      [jobId, req.session.userId]
-    );
+    const job: any = await db.get('SELECT id FROM video_jobs WHERE id = ? AND user_id = ?', [
+      jobId,
+      req.session.userId,
+    ]);
     if (!job) return res.status(404).json({ error: 'Job bulunamadı' });
 
     const { enqueueEdit } = await import('../services/editQueue.js');
@@ -35,22 +35,22 @@ router.post('/apply/:editIdStr', mediumLimiter, requireAuth, async (req, res) =>
     const jobId = Number(req.body.jobId);
     if (!jobId) return res.status(400).json({ error: 'jobId gerekli' });
 
-    const edit: any = await db.get(
-      'SELECT * FROM edit_queue WHERE id = ? AND user_id = ?',
-      [editId, req.session.userId!]
-    );
+    const edit: any = await db.get('SELECT * FROM edit_queue WHERE id = ? AND user_id = ?', [
+      editId,
+      req.session.userId!,
+    ]);
     if (!edit) return res.status(404).json({ error: 'Edit bulunamadı' });
 
     const scenesBaseDir = path.join(process.cwd(), 'videolar', `job_${jobId}`);
     const sceneDirs = await fs.readdir(scenesBaseDir).catch(() => [] as string[]);
     const scenes = sceneDirs
-      .filter(d => d.startsWith('scene_'))
-      .map(d => ({
+      .filter((d) => d.startsWith('scene_'))
+      .map((d) => ({
         sceneNumber: parseInt(d.replace('scene_', ''), 10),
         videoPath: path.join(scenesBaseDir, d, 'video.mp4'),
         audioPath: path.join(scenesBaseDir, d, 'speech.mp3'),
       }))
-      .filter(s => !isNaN(s.sceneNumber));
+      .filter((s) => !isNaN(s.sceneNumber));
 
     if (scenes.length === 0) return res.status(400).json({ error: 'Sahne bulunamadı' });
 
@@ -72,10 +72,10 @@ router.post('/undo/:editIdStr', mediumLimiter, requireAuth, async (req, res) => 
     const editId = parseInt(req.params.editIdStr as string, 10);
     const jobId = Number(req.body.jobId);
 
-    const edit: any = await db.get(
-      'SELECT * FROM edit_queue WHERE id = ? AND user_id = ?',
-      [editId, req.session.userId!]
-    );
+    const edit: any = await db.get('SELECT * FROM edit_queue WHERE id = ? AND user_id = ?', [
+      editId,
+      req.session.userId!,
+    ]);
     if (!edit) return res.status(404).json({ error: 'Edit bulunamadı' });
 
     const { undoEdit } = await import('../services/editQueue.js');
@@ -92,10 +92,10 @@ router.get('/history/:jobIdStr', mediumLimiter, requireAuth, async (req, res) =>
   try {
     const jobId = parseInt(req.params.jobIdStr as string, 10);
 
-    const job: any = await db.get(
-      'SELECT id FROM video_jobs WHERE id = ? AND user_id = ?',
-      [jobId, req.session.userId!]
-    );
+    const job: any = await db.get('SELECT id FROM video_jobs WHERE id = ? AND user_id = ?', [
+      jobId,
+      req.session.userId!,
+    ]);
     if (!job) return res.status(404).json({ error: 'Job bulunamadı' });
 
     const { getEditHistory } = await import('../services/editQueue.js');

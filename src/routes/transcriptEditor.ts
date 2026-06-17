@@ -6,7 +6,11 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
-import { parseTranscriptEdits, cutVideoByTranscript, type TimeRange } from '../services/transcriptEditor.js';
+import {
+  parseTranscriptEdits,
+  cutVideoByTranscript,
+  type TimeRange,
+} from '../services/transcriptEditor.js';
 import { transcribeVideoAudioWithTimestamps } from '../lib/audio-transcriber.js';
 import path from 'path';
 import fs from 'fs-extra';
@@ -33,18 +37,18 @@ router.post('/cut', requireAuth, async (req, res) => {
     }
 
     const resolved = path.isAbsolute(videoPath) ? videoPath : path.join(process.cwd(), videoPath);
-    if (!await fs.pathExists(resolved)) {
+    if (!(await fs.pathExists(resolved))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
     const outPath = outputPath || resolved.replace(/\.\w+$/, '_edited.mp4');
 
     // Transcribe if deletions provided but no keepRanges
-    let finalKeepRanges: TimeRange[] = keepRanges || [];
-    if ((deletions?.length) && !keepRanges) {
+    const finalKeepRanges: TimeRange[] = keepRanges || [];
+    if (deletions?.length && !keepRanges) {
       const { segments } = await transcribeVideoAudioWithTimestamps(resolved);
-      const allWords = segments.flatMap(s => s.words || []);
-      const transcript = allWords.map(w => w.word).join(' ');
+      const allWords = segments.flatMap((s) => s.words || []);
+      const transcript = allWords.map((w) => w.word).join(' ');
       const rangesToRemove = parseTranscriptEdits(transcript, deletions, allWords);
 
       // Invert: keep everything EXCEPT the removed ranges

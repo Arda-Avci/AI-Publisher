@@ -20,7 +20,7 @@ export function registerCreditRoutes(app: Application): void {
         credits: creditInfo.credits,
         limit: creditInfo.limit,
         resetDate: creditInfo.resetDate,
-        history
+        history,
       });
     } catch (err: any) {
       Logger.error('GET /api/v1/user/credits error:', err);

@@ -5,35 +5,39 @@ import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
 
 export const RAGScriptSchema = z.object({
-  scenes: z.array(z.object({
-    sceneNumber: z.number(),
-    narrativePurpose: z.string(),
-    sourceReferences: z.array(z.string()),
-    videoPrompt: z.string(),
-    speechText: z.string(),
-    sfxPrompt: z.string(),
-    cameraMotion: z.string().optional(),
-    speaker: z.string().optional(),
-    charactersInScene: z.array(z.string()).optional(),
-  })),
-  marketing: z.object({
-    ytTitle: z.string(),
-    ytDesc: z.string(),
-    ytTags: z.string(),
-    ttDesc: z.string(),
-    ttTags: z.string(),
-    xDesc: z.string(),
-    xTags: z.string(),
-    metaDesc: z.string(),
-    metaTags: z.string(),
-  }).optional(),
+  scenes: z.array(
+    z.object({
+      sceneNumber: z.number(),
+      narrativePurpose: z.string(),
+      sourceReferences: z.array(z.string()),
+      videoPrompt: z.string(),
+      speechText: z.string(),
+      sfxPrompt: z.string(),
+      cameraMotion: z.string().optional(),
+      speaker: z.string().optional(),
+      charactersInScene: z.array(z.string()).optional(),
+    }),
+  ),
+  marketing: z
+    .object({
+      ytTitle: z.string(),
+      ytDesc: z.string(),
+      ytTags: z.string(),
+      ttDesc: z.string(),
+      ttTags: z.string(),
+      xDesc: z.string(),
+      xTags: z.string(),
+      metaDesc: z.string(),
+      metaTags: z.string(),
+    })
+    .optional(),
 });
 
 export async function generateRAGScript(
   masterPrompt: string,
   productionNotes: string,
   characterFeatures: string,
-  referenceContent: string
+  referenceContent: string,
 ): Promise<z.infer<typeof RAGScriptSchema>> {
   const models = getAIModelChain();
 
@@ -42,19 +46,20 @@ export async function generateRAGScript(
     contextBlocks.push(`Referans İçerik:\n${referenceContent.slice(0, 3000)}`);
   }
 
-  const result = await withFallbackAndRetry((model) => {
-    const isMinimax = model.modelId?.includes('MiniMax');
-    const system = isMinimax
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen RAG (Retrieval-Augmented Generation) tabanlı bir AI senaristsin. Verilen referans içerikleri analiz edip özgün sahneler üretiyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const isMinimax = model.modelId?.includes('MiniMax');
+      const system = isMinimax
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen RAG (Retrieval-Augmented Generation) tabanlı bir AI senaristsin. Verilen referans içerikleri analiz edip özgün sahneler üretiyorsun.';
 
-    const prompt = isMinimax
-      ? `Generate script in JSON using RAG approach:
+      const prompt = isMinimax
+        ? `Generate script in JSON using RAG approach:
 Master: "${masterPrompt}"
 Notes: "${productionNotes}"
 Characters: "${characterFeatures}"
 Context: ${referenceContent.slice(0, 1000)}`
-      : `Sen RAG tabanlı bir AI senaristsin. Verilen referans içerikleri kullanarak özgün ve bağlama uygun sahneler üret.
+        : `Sen RAG tabanlı bir AI senaristsin. Verilen referans içerikleri kullanarak özgün ve bağlama uygun sahneler üret.
 
 Ana Konu: ${masterPrompt}
 Üretim Notları: ${productionNotes}
@@ -78,14 +83,19 @@ Görevlerin:
 5. Her sahne maksimum 6 saniye olacak
 6. Toplam 4-10 sahne arası`;
 
-    return generateObject({
-      model,
-      schema: RAGScriptSchema,
-      system,
-      abortSignal: AbortSignal.timeout(60000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: RAGScriptSchema,
+        system,
+        abortSignal: AbortSignal.timeout(60000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   Logger.info(`[RAG] Script generated: ${result.object.scenes.length} scenes`);
   return result.object;

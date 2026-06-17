@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║  AI-Publisher Colab Kurulum ve Sunucu Başlatıcı (Tek Hücre)    ║
+# ║  AI-Publisher Colab Docker Kurulum ve Sunucu Başlatıcı          ║
 # ║  Bu hücreyi çalıştırın. Kurulumdan sonra oturum otomatik olarak║
 # ║  yeniden başlatılacaktır. Sonra tekrar çalıştırın!              ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -8,252 +8,156 @@ import os
 import sys
 import subprocess
 import time
+import shutil
 
-# Google Drive mount (G-Drive model önbellekleme desteği için)
+# 1. Google Drive Mount
 if os.path.exists("/content"):
     try:
         from google.colab import drive
-        print("[INFO] Mounting Google Drive for model cache...")
+        print("[INFO] Google Drive model/konteyner önbelleği için bağlanıyor...")
         drive.mount('/content/drive')
-        os.makedirs('/content/drive/MyDrive/Colab_Cache/huggingface', exist_ok=True)
-        os.makedirs('/content/drive/MyDrive/Colab_Cache/torch', exist_ok=True)
-        os.environ["HF_HOME"] = "/content/drive/MyDrive/Colab_Cache/huggingface"
-        os.environ["TORCH_HOME"] = "/content/drive/MyDrive/Colab_Cache/torch"
-        print("[OK] Google Drive model önbellek dizinleri başarıyla bağlandı!")
+        print("[OK] Google Drive başarıyla bağlandı!")
     except Exception as drive_e:
-        print(f"[WARN] Google Drive mount edilemedi, modeller her seferinde sıfırdan indirilecek: {drive_e}")
+        print(f"[WARN] Google Drive mount edilemedi: {drive_e}")
 
-# Modern transformers kütüphanesinde kaldırılan veya değişen is_..._available ve
-# is_..._greater_or_equal fonksiyonlarının coqui-tts (TTS) ile uyumluluk sağlaması
-# amacıyla import_utils modülünün evrensel bir ModuleProxy ile sarmalanması.
-try:
-    import sys
-    import transformers
-    import transformers.utils.import_utils as imp_utils
-
-    class ModuleProxy:
-        def __init__(self, wrapped):
-            self._wrapped = wrapped
-        def __getattr__(self, name):
-            try:
-                return getattr(self._wrapped, name)
-            except AttributeError:
-                if name.startswith('is_') and name.endswith('_available'):
-                    return lambda *args, **kwargs: False
-                if 'greater_or_equal' in name:
-                    return lambda *args, **kwargs: True
-                raise AttributeError(f"module '{self._wrapped.__name__}' has no attribute '{name}'")
-
-    proxy = ModuleProxy(imp_utils)
-    sys.modules['transformers.utils.import_utils'] = proxy
-    transformers.utils.import_utils = proxy
-    print("[INFO] Transformers import_utils proxy-patched.")
-
-    # transformers.pytorch_utils: isin_mps_friendly, coqui-tts (TTS) tarafından istenir
-    # Bu fonksiyon transformers >=4.47'de var; eski sürümlerde monkey patch ile eklenir
-    import transformers.pytorch_utils as pyt_utils
-    if not hasattr(pyt_utils, 'isin_mps_friendly'):
-        def _isin_mps_friendly(elems, test_elem, name):
-            return test_elem in elems
-        pyt_utils.isin_mps_friendly = _isin_mps_friendly
-        transformers.pytorch_utils.isin_mps_friendly = _isin_mps_friendly
-        print("[INFO] transformers.pytorch_utils.isin_mps_friendly patched.")
-except Exception as patch_e:
-    print(f"[WARN] Monkey patch uygulanamadı: {patch_e}")
-
-already_installed = True
-import_errors = []
-
-packages_to_check = [
-    ("diffusers", "import diffusers"),
-    ("transformers", "import transformers"),
-    ("flask", "import flask"),
-    ("pyngrok", "from pyngrok import ngrok"),
-    ("TTS (coqui-tts)", "try:\n            from TTS.api import TTS\n        except Exception as tts_import_e:\n            if 'numpy' in str(tts_import_e):\n                pass # Ignore numpy 2.x migration warnings that throw on import\n            else:\n                raise tts_import_e"),
-    ("faster_whisper", "from faster_whisper import WhisperModel"),
-    ("whisper", "import whisper"),
-    ("yt_dlp", "import yt_dlp"),
-    ("face_recognition", "import face_recognition"),
-    ("decord", "import decord"),
-    ("rembg", "import rembg"),
-    ("pyrubberband", "import pyrubberband"),
-    ("gfpgan", "import gfpgan"),
-    ("realesrgan", "import realesrgan"),
-    ("basicsr", "import basicsr"),
-    ("edge-tts", "import edge_tts")
-]
-
-print("[INFO] Bağımlılıklar kontrol ediliyor...")
-for pkg_name, import_stmt in packages_to_check:
-    try:
-        exec(import_stmt)
-        print(f"[OK] {pkg_name} başarıyla import edildi.")
-    except Exception as e:
-        already_installed = False
-        import_errors.append(f"{pkg_name}: {e}")
-        print(f"[FAIL] {pkg_name} import hatası: {e}")
-
-if not already_installed:
-    print(f"\n[WARN] Bazı bağımlılıklar eksik veya yüklenemedi. Tespit edilen hatalar:")
-    for err in import_errors:
-        print(f"  - {err}")
-
-def run_cmd(cmd, max_retries=3, delay=5):
+# 2. Host Sistem Bağımlılıkları (Sadece Flask, Requests, Pyngrok ve OpenCV yeterlidir)
+def run_cmd(cmd, label="", max_retries=3):
+    print(f"[INFO] Çalıştırılıyor: {label or cmd[:50]}...")
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"[INFO] Running (Attempt {attempt}/{max_retries}): {cmd}")
             subprocess.run(cmd, shell=True, check=True)
             return True
         except Exception as e:
-            print(f"[WARN] Attempt {attempt} failed: {e}")
+            print(f"[WARN] Deneme {attempt} başarısız: {e}")
             if attempt < max_retries:
-                time.sleep(delay)
+                time.sleep(3)
             else:
-                print(f"[ERROR] Command failed after {max_retries} attempts: {cmd}")
+                print(f"[ERROR] Komut tamamen başarısız oldu: {cmd}")
                 return False
 
-if not already_installed:
-    print("[INFO] Gerekli paketler bulunamadı. Kurulum başlatılıyor...")
-
-    # Öncelikle hızlı paket kurulumu için uv paket yöneticisini kuruyoruz
-    run_cmd('pip install uv')
-
-    # NumPy 2.x compile ve cython hatalarını önlemek için NumPy'ı 1.x sürümünde sabitliyoruz
-    run_cmd('uv pip install --system "numpy<2.0.0" --no-cache-dir')
-
-    # SymPy / mpmath AttributeError çakışma önlemi
-    run_cmd('pip uninstall -y sympy mpmath')
-    run_cmd('uv pip install --system sympy mpmath --no-cache-dir')
-
-    # Ana ML kütüphaneleri ve Flask, pyngrok sürüm sabitlemeleriyle
-    # transformers >=4.47 (coqui-tts, isin_mps_friendly fonksiyonunu ister)
-    # Üst sınır yok — monkey patch (ModuleProxy) 4.47+ import_utils değişikliklerini yönetir
-    run_cmd("uv pip install --system --prefer-binary --no-cache-dir --upgrade 'transformers>=4.46' 'diffusers>=0.35,<0.36' accelerate flask pyngrok imageio imageio-ffmpeg scipy opencv-python-headless sentencepiece")
-
-    # Arka plan temizleme (rembg)
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir rembg')
-
-    # ModelScope T2V ek paketler
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir "decord>=0.6.0" "open_clip_torch"')
-
-    # Wav2Lip Repo
-    if not os.path.exists('Wav2Lip'):
-        run_cmd('git clone https://github.com/Rudrabha/Wav2Lip.git')
-
-    # Wav2Lip & Face detection paketleri
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir face_recognition_models')
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir face_recognition opencv-python-headless librosa')
-
-    # Altyazı çıkarıcı (faster-whisper ve openai-whisper fallback)
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir faster-whisper')
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir openai-whisper')
-
-    # Video indirici (yt-dlp) — colab_server.py ve özgünleştirme için
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir yt-dlp')
-
-    # Rubberband ses senkronizasyonu (Auto-Synced-Translated-Dubs)
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir pyrubberband soundfile')
-    run_cmd('apt-get install -y rubberband-cli rubberband-ladspa')
-
-    # XTTS-v2 (coqui-tts) ve sistem bağımlılıkları (espeak-ng)
-    run_cmd('apt-get install -y espeak-ng espeak libsndfile1')
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir coqui-tts')
-
-    # Alternatif TTS sağlayıcıları (Lobe Chat / OpenAI / Edge)
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir openai edge-tts')
-
-    # GFPGAN + RealESRGAN yüz düzeltme ve upscale (stable-diffusion-webui)
-    run_cmd('uv pip install --system --prefer-binary --no-cache-dir gfpgan realesrgan basicsr')
-
-    # Wav2Lip checkpoint (~400MB) indirme zinciri
-    WAV2LIP_CKPT_SOURCES = [
-        "https://huggingface.co/vinthony/SadTalker/resolve/main/wav2lip.pth",
-        "https://huggingface.co/gmk123/wav2lip/resolve/main/wav2lip.pth",
-    ]
-    os.makedirs('/content/Wav2Lip/checkpoints', exist_ok=True)
+# Host bağımlılıklarının hızlı kurulumu
+if not shutil.which("docker") or not os.path.exists("/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"):
+    print("[INFO] Docker ve NVIDIA Container Toolkit kurulumu başlatılıyor...")
     
-    ckpt_ok = False
-    for url in WAV2LIP_CKPT_SOURCES:
-        print(f"[INFO] Wav2Lip deneniyor: {url[:80]}...")
-        run_cmd(f'wget -q --show-progress -O /content/Wav2Lip/checkpoints/wav2lip.pth "{url}"')
-        if os.path.exists('/content/Wav2Lip/checkpoints/wav2lip.pth') and os.path.getsize('/content/Wav2Lip/checkpoints/wav2lip.pth') > 100000000:
-            print("[OK] Wav2Lip checkpoint indirildi.")
-            ckpt_ok = True
-            break
-        else:
-            print("[WARN] İndirilemedi veya dosya boyutu yetersiz (<100MB)")
-
-    if not ckpt_ok:
-        print("⚠️ Wav2Lip checkpoint hiçbir kaynaktan indirilemedi.")
-        print("   Lütfen manuel olarak indirip /content/Wav2Lip/checkpoints/wav2lip.pth konumuna yükleyin.")
-
-    # Opsiyonel GAN varyantı
-    run_cmd('wget -q --show-progress -O /content/Wav2Lip/checkpoints/wav2lip_gan.pth "https://huggingface.co/Nekochu/Wav2Lip/resolve/main/wav2lip_gan.pth"')
-
+    # Docker.io Kurulumu ve Başlatılması
+    run_cmd("apt-get update -q && apt-get install -y -q docker.io", label="Docker.io Kurulumu")
+    run_cmd("service docker start", label="Docker Başlatma")
+    
+    # NVIDIA Container Toolkit Kurulumu (Konteynerlerin GPU'ya erişebilmesi için)
+    run_cmd("curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg", label="NVIDIA GPG Anahtarı")
+    run_cmd("curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list", label="NVIDIA Repo Listesi")
+    run_cmd("apt-get update -q && apt-get install -y -q nvidia-container-toolkit", label="NVIDIA Toolkit Kurulumu")
+    
+    # Docker Runtime Yapılandırması ve Yeniden Başlatılması
+    run_cmd("nvidia-ctk runtime configure --runtime=docker", label="Docker NVIDIA Yapılandırması")
+    run_cmd("service docker restart", label="Docker Yeniden Başlatma")
+    
+    # Python host kütüphaneleri
+    run_cmd("pip install -q flask requests pyngrok opencv-python-headless numpy yt-dlp", label="Host Python Kütüphaneleri")
+    
     print("\n" + "="*60)
-    print("⚠️  ÖNEMLİ: Kurulum tamamlandı!")
-    print("PyTorch ve SymPy kütüphanelerinin çakışmaması ve belleğin yenilenmesi için:")
-    print("👉 Python oturumu (kernel) otomatik olarak YENİDEN BAŞLATILIYOR...")
-    print("👉 Yeniden başlatma tamamlandıktan sonra, lütfen bu hücreyi TEKRAR ÇALIŞTIRIN.")
+    # PyTorch sürüm çakışması olmadığı için kernel restart etmeye gerek olmayabilir, 
+    # ancak temiz bir oturum için kernel'ı sonlandırmak iyi bir pratiktir.
+    print("[INFO] Sistem kurulumu tamamlandı. Belleğin yenilenmesi için oturum kapatılıyor...")
+    print("👉 Lütfen bu hücreyi TEKRAR ÇALIŞTIRIN.")
     print("="*60 + "\n")
     time.sleep(2)
     sys.exit(100)
 
 else:
-    print("[OK] Bağımlılıklar hazır. Sunucu başlatılıyor...")
+    print("[OK] Sistem bağımlılıkları ve Docker hazır.")
     
+    # Google Drive Konteyner Dizinleri
+    DRIVE_DIR = "/content/drive/MyDrive/Colab Notebooks/docker/images"
+    os.makedirs(DRIVE_DIR, exist_ok=True)
+    
+    MODELS = ["cogvideox", "wan", "ltx", "hunyuan", "xtts", "audioldm2", "wav2lip", "musetalk", "whisper", "stablediffusion", "kokorotts"]
+    
+    # 3. Docker Imajlarının Google Drive'dan Yüklenmesi
+    print("[INFO] Docker imajları kontrol ediliyor...")
+    images_loaded = True
+    for model in MODELS:
+        # Imaj yüklü mü kontrol et
+        res = subprocess.run(["docker", "images", "-q", f"ai-publisher-{model}:latest"], capture_output=True, text=True)
+        if not res.stdout.strip():
+            tar_path = f"{DRIVE_DIR}/{model}.tar.gz"
+            if os.path.exists(tar_path):
+                print(f"[INFO] Imaj yükleniyor: {model} (Google Drive'dan)...")
+                run_cmd(f"docker load -i '{tar_path}'", label=f"{model} Docker Load")
+            else:
+                print(f"[WARN] {model} imajı Google Drive'da bulunamadı: {tar_path}")
+                images_loaded = False
+                
+    # Imajlar eksikse build scriptini tetikleme seçeneği sunulur veya otomatik inşa edilir
+    if not images_loaded:
+        print("[INFO] Eksik Docker imajları tespit edildi. İnşa süreci başlatılıyor...")
+        build_script = "/content/AI-Publisher/colab_docker/build_all.sh"
+        if not os.path.exists(build_script):
+            # Yerel kopyalama dene
+            if os.path.exists("colab_docker/build_all.sh"):
+                build_script = "colab_docker/build_all.sh"
+            else:
+                # GitHub fallback
+                import urllib.request
+                os.makedirs("colab_docker", exist_ok=True)
+                for f_name in ["Dockerfile.base", "build_all.sh"]:
+                    urllib.request.urlretrieve(f"https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_docker/{f_name}", f"colab_docker/{f_name}")
+                for model in MODELS:
+                    os.makedirs(f"colab_docker/{model}", exist_ok=True)
+                    for file_in_model in ["Dockerfile", "app.py"]:
+                        try:
+                            urllib.request.urlretrieve(f"https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_docker/{model}/{file_in_model}", f"colab_docker/{model}/{file_in_model}")
+                        except: pass
+                build_script = "colab_docker/build_all.sh"
+                
+        os.chmod(build_script, 0o755)
+        print(f"[INFO] Imajlar sıfırdan inşa ediliyor (Bu işlem uzun sürebilir ve Google Drive'a kaydedilir)...")
+        # Dockerfile dizinine gidip çalıştır
+        current_dir = os.getcwd()
+        os.chdir(os.path.dirname(build_script))
+        run_cmd(f"./{os.path.basename(build_script)}", label="Tüm Konteynerleri İnşa Et")
+        os.chdir(current_dir)
+        
+    # 4. Host Supervisor Sunucusunun Başlatılması
+    print("[INFO] colab_server.py güncelleniyor...")
+    repo_server_path = "/content/AI-Publisher/colab_server.py"
+    if os.path.exists(repo_server_path):
+        import shutil
+        shutil.copy(repo_server_path, "colab_server.py")
+        print("[OK] colab_server.py kopyalandı!")
+    else:
+        try:
+            import urllib.request
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_server.py", "colab_server.py")
+            print("[OK] colab_server.py indirildi!")
+        except Exception as dl_e:
+            print(f"[WARN] colab_server.py güncellenemedi, mevcut olan kullanılacak: {dl_e}")
+            
+    print("[INFO] Eski ngrok süreçleri sonlandırılıyor...")
+    subprocess.run("pkill -9 ngrok", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    if os.path.exists("ngrok_url.txt"):
+        try: os.remove("ngrok_url.txt")
+        except: pass
+        
     NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")
     if not NGROK_TOKEN:
         try:
             from google.colab import userdata
             NGROK_TOKEN = userdata.get('NGROK_TOKEN')
-        except:
-            pass
-
+        except: pass
+        
     if not NGROK_TOKEN or NGROK_TOKEN == "BURAYA_NGROK_TOKEN_GELECEK":
         if sys.stdin.isatty():
-            print("\n🔑 NGROK_TOKEN bulunamadı.")
-            NGROK_TOKEN = input("Lütfen Ngrok Auth Token'ınızı girin: ").strip()
+            NGROK_TOKEN = input("Ngrok Auth Token'ınızı girin: ").strip()
         else:
-            print("\n❌ NGROK_TOKEN bulunamadı ve etkileşimsiz ortamda çalışılıyor. Lütfen çevre değişkeni veya userdata Secrets üzerinden NGROK_TOKEN tanımlayın.")
+            print("[ERROR] NGROK_TOKEN bulunamadı.")
             sys.exit(1)
-
-    print("\n[INFO] colab_server.py güncelleniyor...")
-    repo_server_path = "/content/AI-Publisher/colab_server.py"
-    if os.path.exists(repo_server_path):
-        try:
-            import shutil
-            shutil.copy(repo_server_path, "colab_server.py")
-            print("[OK] colab_server.py yerel git deposundan kopyalandı ve güncellendi!")
-        except Exception as copy_e:
-            print(f"[WARN] Yerel depodan kopyalanamadı: {copy_e}")
-    else:
-        try:
-            import urllib.request
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_server.py", "colab_server.py")
-            print("[OK] colab_server.py GitHub raw URL üzerinden başarıyla indirildi ve güncellendi!")
-        except Exception as dl_e:
-            print(f"[WARN] GitHub'dan otomatik indirilemedi/güncellenemedi: {dl_e}")
-            if not os.path.exists("colab_server.py"):
-                print("❌ colab_server.py bulunamadı ve raw linkten indirilemedi. Başlatma iptal edildi.")
-                sys.exit(1)
-            else:
-                print("[INFO] Mevcut yerel colab_server.py dosyası kullanılacak.")
-
-    print("[INFO] Eski ngrok süreçleri temizleniyor...")
-    try:
-        subprocess.run("pkill -9 ngrok", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except:
-        pass
-
-    print("[INFO] colab_server.py arka planda başlatılıyor...")
-    if os.path.exists("ngrok_url.txt"):
-        try: os.remove("ngrok_url.txt")
-        except: pass
-
+            
     server_env = os.environ.copy()
     server_env["NGROK_TOKEN"] = NGROK_TOKEN
-
+    
+    print("[INFO] Host Supervisor Sunucu başlatılıyor...")
     with open("colab_server.log", "w", encoding="utf-8") as log_file:
         subprocess.Popen(
             [sys.executable, "-u", "colab_server.py"],
@@ -261,17 +165,15 @@ else:
             stderr=subprocess.STDOUT,
             env=server_env
         )
-    print("[OK] Sunucu başlatıldı. Çıktılar colab_server.log dosyasına yazılıyor.")
-
-    print("[INFO] Ngrok bağlantısı kuruluyor ve URL bekleniyor...")
+        
+    print("[INFO] Tünel kuruluyor ve Ngrok URL bekleniyor...")
     for _ in range(60):
         if os.path.exists("ngrok_url.txt"):
             with open("ngrok_url.txt", "r", encoding="utf-8") as f:
                 url = f.read().strip()
             print(f"\n🔗 NODE.JS PROJENİZE YAPIŞTIRACAĞINIZ URL:\n{url}\n")
             
-            # CANLI LOG TAKİBİ (tail -f)
-            print("[INFO] Sunucu logları canlı olarak akıtılıyor. Durdurmak için hücreyi interrupt edebilirsiniz.")
+            # Canlı Log Akışı
             print("====== CANLI SUNUCU LOGLARI ======")
             with open("colab_server.log", "r", encoding="utf-8") as log_f:
                 try:
@@ -283,13 +185,11 @@ else:
                         sys.stdout.write(line)
                         sys.stdout.flush()
                 except KeyboardInterrupt:
-                    print("\n[INFO] Log takibi durduruldu. Sunucu arka planda çalışmaya devam ediyor.")
+                    print("\n[INFO] Log akışı sonlandırıldı. Sunucu arka planda çalışıyor.")
             break
         time.sleep(1)
     else:
-        print("\n⚠️ Ngrok URL'i 60 saniye içinde alınamadı. Detaylar aşağıda sunulmuştur:\n")
+        print("\n⚠️ Ngrok URL alınamadı. Detaylar için colab_server.log dosyasını inceleyin.")
         if os.path.exists("colab_server.log"):
-            print("====== colab_server.log DETAYI ======")
             with open("colab_server.log", "r", encoding="utf-8") as f:
                 print(f.read())
-            print("======================================\n")

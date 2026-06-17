@@ -68,19 +68,27 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
     execFile(
       'ffmpeg',
       [
-        '-i', audioPath,
-        '-af', 'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
-        '-f', 'null', '-'
+        '-i',
+        audioPath,
+        '-af',
+        'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
+        '-f',
+        'null',
+        '-',
       ],
       async (err: any, stdout: string, stderr: string) => {
         if (err) {
-          Logger.warn('[emotionCaptions] FFmpeg astats failed for vocal emphasis', { error: err.message });
+          Logger.warn('[emotionCaptions] FFmpeg astats failed for vocal emphasis', {
+            error: err.message,
+          });
           resolve([]);
           return;
         }
 
         const output = stderr || stdout;
-        const peakMatches = output.match(/time=(\d+):(\d+):(\d+\.\d+).*?Peak_level\s*:\s*([-\d.]+)/gi);
+        const peakMatches = output.match(
+          /time=(\d+):(\d+):(\d+\.\d+).*?Peak_level\s*:\s*([-\d.]+)/gi,
+        );
 
         if (!peakMatches || peakMatches.length === 0) {
           Logger.warn('[emotionCaptions] No astats peak data found');
@@ -118,7 +126,7 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
             }
 
             // Find threshold for high/medium/low peaks
-            const levels = peaks.map(p => p.level).filter(l => isFinite(l));
+            const levels = peaks.map((p) => p.level).filter((l) => isFinite(l));
             if (levels.length === 0) {
               resolve([]);
               return;
@@ -167,7 +175,7 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
 
                 // Avoid duplicates at same word index
                 const existing = wordEmphasisList.find(
-                  w => Math.abs(w.start - start) < chunkDuration * 0.5
+                  (w) => Math.abs(w.start - start) < chunkDuration * 0.5,
                 );
                 if (!existing || (existing.emphasis === 'low' && emphasis !== 'low')) {
                   if (existing) {
@@ -179,7 +187,7 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
                       word: `word_${wordIndex}`,
                       start,
                       end,
-                      emphasis
+                      emphasis,
                     });
                   }
                 }
@@ -192,14 +200,14 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
             Logger.info('[emotionCaptions] Vocal emphasis detected', {
               peakCount: wordEmphasisList.length,
               duration,
-              highCount: wordEmphasisList.filter(w => w.emphasis === 'high').length,
-              medCount: wordEmphasisList.filter(w => w.emphasis === 'medium').length
+              highCount: wordEmphasisList.filter((w) => w.emphasis === 'high').length,
+              medCount: wordEmphasisList.filter((w) => w.emphasis === 'medium').length,
             });
 
             resolve(wordEmphasisList);
-          }
+          },
         );
-      }
+      },
     );
   });
 }
@@ -228,9 +236,7 @@ export interface StyledSrtEntry {
  * @param transcript - Full transcript text with word-level timestamps (optional)
  * @returns Detection result with peaks
  */
-export async function detectEmotionPeaks(
-  audioPath: string
-): Promise<EmotionDetectionResult> {
+export async function detectEmotionPeaks(audioPath: string): Promise<EmotionDetectionResult> {
   Logger.info('[emotionCaptions] Detecting emotion peaks', { audioPath });
 
   return new Promise((resolve) => {
@@ -238,13 +244,19 @@ export async function detectEmotionPeaks(
     execFile(
       'ffmpeg',
       [
-        '-i', audioPath,
-        '-af', 'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
-        '-f', 'null', '-'
+        '-i',
+        audioPath,
+        '-af',
+        'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
+        '-f',
+        'null',
+        '-',
       ],
       (err: any, stdout: string, stderr: string) => {
         if (err) {
-          Logger.warn('[emotionCaptions] FFmpeg astats failed, using fallback detection', { error: err.message });
+          Logger.warn('[emotionCaptions] FFmpeg astats failed, using fallback detection', {
+            error: err.message,
+          });
           resolve({ peaks: [], durationSeconds: 0, error: err.message });
           return;
         }
@@ -293,7 +305,7 @@ export async function detectEmotionPeaks(
 
                 // Count timestamps in this window as proxy for energy
                 const timestampsInWindow = timestamps.filter(
-                  t => t >= windowStart && t < windowEnd
+                  (t) => t >= windowStart && t < windowEnd,
                 );
 
                 if (timestampsInWindow.length > avgLevel * 1.5) {
@@ -313,7 +325,7 @@ export async function detectEmotionPeaks(
                     endSeconds: windowEnd,
                     word: '', // Will be filled from transcript
                     intensity,
-                    suggestedColor: color
+                    suggestedColor: color,
                   });
                 }
               }
@@ -321,13 +333,13 @@ export async function detectEmotionPeaks(
 
             Logger.info('[emotionCaptions] Emotion peaks detected', {
               peakCount: peaks.length,
-              duration
+              duration,
             });
 
             resolve({ peaks, durationSeconds: duration });
-          }
+          },
         );
-      }
+      },
     );
   });
 }
@@ -342,29 +354,32 @@ export async function detectEmotionPeaks(
  */
 export function generateHighlightSrt(
   transcript: string,
-  emotionPeaks: EmotionPeak[]
+  emotionPeaks: EmotionPeak[],
 ): StyledSrtEntry[] {
   Logger.info('[emotionCaptions] Generating highlight SRT', {
     transcriptLength: transcript.length,
-    peakCount: emotionPeaks.length
+    peakCount: emotionPeaks.length,
   });
 
   // Split transcript into sentences
   const sentences = transcript
     .split(/[.!?]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
   // Distribute sentences across the timeline proportionally
   // (Simple approach — in production, would use word-level timestamps from ASR)
   const entries: StyledSrtEntry[] = [];
 
   // Map emotion peaks to sentences
-  const peakColors = emotionPeaks.reduce((acc, peak) => {
-    const key = `${peak.startSeconds.toFixed(1)}-${peak.endSeconds.toFixed(1)}`;
-    acc[key] = peak.suggestedColor;
-    return acc;
-  }, {} as Record<string, string>);
+  const peakColors = emotionPeaks.reduce(
+    (acc, peak) => {
+      const key = `${peak.startSeconds.toFixed(1)}-${peak.endSeconds.toFixed(1)}`;
+      acc[key] = peak.suggestedColor;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 
   for (let i = 0; i < sentences.length; i++) {
     const sentence = sentences[i];
@@ -372,17 +387,37 @@ export function generateHighlightSrt(
 
     // Determine if this sentence should have highlights
     // Heuristic: first and last sentence of each paragraph, or sentences with emotional words
-    const emotionalWords = ['şok', 'wow', 'inanılmaz', 'korkunç', 'harika', 'muhteşem',
-      'sonunda', 'büyük', 'ilk', 'tek', 'en iyi', 'en kötü', 'bekle', 'düşün',
-      'farkettin mi', 'gözlemle', 'dinle', 'bak', 'haydi', 'hadi'];
-    const hasEmotionalWord = emotionalWords.some(w => sentence.toLowerCase().includes(w));
+    const emotionalWords = [
+      'şok',
+      'wow',
+      'inanılmaz',
+      'korkunç',
+      'harika',
+      'muhteşem',
+      'sonunda',
+      'büyük',
+      'ilk',
+      'tek',
+      'en iyi',
+      'en kötü',
+      'bekle',
+      'düşün',
+      'farkettin mi',
+      'gözlemle',
+      'dinle',
+      'bak',
+      'haydi',
+      'hadi',
+    ];
+    const hasEmotionalWord = emotionalWords.some((w) => sentence.toLowerCase().includes(w));
 
     // Highlight color for this entry
-    const peakKey = Object.keys(peakColors).find(key => {
+    const peakKey = Object.keys(peakColors).find((key) => {
       const [start, end] = key.split('-').map(Number);
       // Distribute sentences evenly
       const sentencePosition = i / sentences.length;
-      const totalDuration = emotionPeaks[emotionPeaks.length - 1]?.endSeconds ||
+      const totalDuration =
+        emotionPeaks[emotionPeaks.length - 1]?.endSeconds ||
         (emotionPeaks[0]?.startSeconds || 0) + 1;
       const sentenceStart = sentencePosition * totalDuration;
       return sentenceStart >= start && sentenceStart < end;
@@ -390,13 +425,13 @@ export function generateHighlightSrt(
 
     entries.push({
       index: i + 1,
-      startTime: '',  // Will be filled by caller
+      startTime: '', // Will be filled by caller
       endTime: '',
       text: sentence,
-      highlightColor: peakKey ? peakColors[peakKey] : (hasEmotionalWord ? '#FF9500' : undefined),
+      highlightColor: peakKey ? peakColors[peakKey] : hasEmotionalWord ? '#FF9500' : undefined,
       highlightWords: hasEmotionalWord
-        ? words.filter(w => emotionalWords.some(em => w.toLowerCase().includes(em)))
-        : undefined
+        ? words.filter((w) => emotionalWords.some((em) => w.toLowerCase().includes(em)))
+        : undefined,
     });
   }
 
@@ -414,7 +449,7 @@ export function generateHighlightSrt(
 export function formatHighlightSrt(
   entries: StyledSrtEntry[],
   startOffset = 0,
-  wordsPerSecond = 2.5
+  wordsPerSecond = 2.5,
 ): string {
   let currentTime = startOffset;
   const lines: string[] = [];
@@ -436,7 +471,7 @@ export function formatHighlightSrt(
         const escaped = hw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         text = text.replace(
           new RegExp(escaped, 'i'),
-          `<font color="${entry.highlightColor}">${hw}</font>`
+          `<font color="${entry.highlightColor}">${hw}</font>`,
         );
       }
     } else if (entry.highlightColor) {
@@ -478,7 +513,7 @@ export async function applyEmotionCaptionStyle(
   videoPath: string,
   srtPath: string,
   outputPath: string,
-  primaryColor = '#FFFFFF'
+  primaryColor = '#FFFFFF',
 ): Promise<void> {
   Logger.info('[emotionCaptions] Applying emotion captions', { videoPath, srtPath, outputPath });
 
@@ -516,13 +551,16 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `;
 
   for (const block of blocks) {
-    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lines = block
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (lines.length < 2) continue;
 
     const timeLine = lines[1];
     if (!timeLine || !timeLine.includes('-->')) continue;
 
-    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
+    const [startStr, endStr] = timeLine.split('-->').map((s) => s.trim());
     const startSec = parseSrtTime(startStr);
     const endSec = parseSrtTime(endStr);
     const text = lines.slice(2).join('\n');
@@ -543,10 +581,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       const [full, color, word] = match;
       const assColor = hexToAssColor(color);
       // ASS format for color override within a line
-      assText = assText.replace(
-        full,
-        `{\\c${assColor}}${word}{\\c&H00FFFFFF&}`
-      );
+      assText = assText.replace(full, `{\\c${assColor}}${word}{\\c&H00FFFFFF&}`);
     }
 
     if (hasColor) {
@@ -563,13 +598,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   const { runFFmpegWithFallback } = await import('./videoService.js');
 
   const assFilterPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-  const args = [
-    '-y',
-    '-i', videoPath,
-    '-vf', `ass=${assFilterPath}`,
-    '-c:a', 'copy',
-    outputPath
-  ];
+  const args = ['-y', '-i', videoPath, '-vf', `ass=${assFilterPath}`, '-c:a', 'copy', outputPath];
 
   const cmd: FFmpegCommand = { cmd: 'ffmpeg', args, timeoutMs: 300000 };
 

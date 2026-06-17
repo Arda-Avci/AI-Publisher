@@ -4,7 +4,11 @@ import { Logger } from '../lib/logger.js';
 
 function parseRelationships(raw: string | null | undefined): CharacterRelationship[] {
   if (!raw) return [];
-  try { return JSON.parse(raw); } catch { return []; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
 }
 
 function parseCharacter(row: any): Character {
@@ -22,7 +26,10 @@ function generateSlug(name: string): string {
 export class CharacterService {
   async findAll(userId: number): Promise<Character[]> {
     Logger.debug('CharacterService.findAll', { userId });
-    const rows = await db.all('SELECT * FROM characters WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    const rows = await db.all(
+      'SELECT * FROM characters WHERE user_id = ? ORDER BY created_at DESC',
+      [userId],
+    );
     return rows.map(parseCharacter);
   }
 
@@ -55,7 +62,7 @@ export class CharacterService {
         data.avatar_source || 'upload',
         data.color || '#00F2FE',
         data.relationships ? JSON.stringify(data.relationships) : null,
-      ]
+      ],
     );
     return parseCharacter(row);
   }
@@ -81,7 +88,9 @@ export class CharacterService {
         data.description ?? existing.description,
         slug,
         data.role_archetype ?? existing.role_archetype,
-        data.reference_image_base64 !== undefined ? data.reference_image_base64 : existing.reference_image_base64,
+        data.reference_image_base64 !== undefined
+          ? data.reference_image_base64
+          : existing.reference_image_base64,
         data.tts_voice_id ?? existing.tts_voice_id,
         data.voice_provider ?? existing.voice_provider,
         data.llm_provider ?? existing.llm_provider,
@@ -89,9 +98,11 @@ export class CharacterService {
         data.avatar_style ?? existing.avatar_style,
         data.avatar_source ?? existing.avatar_source,
         data.color ?? existing.color,
-        data.relationships !== undefined ? JSON.stringify(data.relationships) : JSON.stringify(existing.relationships ?? []),
+        data.relationships !== undefined
+          ? JSON.stringify(data.relationships)
+          : JSON.stringify(existing.relationships ?? []),
         id,
-      ]
+      ],
     );
     return parseCharacter(row);
   }

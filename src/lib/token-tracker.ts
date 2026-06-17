@@ -29,13 +29,16 @@ class TokenTracker {
   /**
    * Bir model çağrısından dönen usage bilgisini kaydeder.
    */
-  track(modelName: string, usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined): void {
+  track(
+    modelName: string,
+    usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined,
+  ): void {
     if (!usage) return;
 
     const existing = this.usageMap.get(modelName);
     const promptTokens = usage.promptTokens ?? 0;
     const completionTokens = usage.completionTokens ?? 0;
-    const totalTokens = usage.totalTokens ?? (promptTokens + completionTokens);
+    const totalTokens = usage.totalTokens ?? promptTokens + completionTokens;
 
     if (existing) {
       existing.promptTokens += promptTokens;
@@ -54,7 +57,9 @@ class TokenTracker {
       });
     }
 
-    Logger.info(`[TokenTracker] ${modelName}: +${totalTokens} tokens (prompt: ${promptTokens}, completion: ${completionTokens})`);
+    Logger.info(
+      `[TokenTracker] ${modelName}: +${totalTokens} tokens (prompt: ${promptTokens}, completion: ${completionTokens})`,
+    );
   }
 
   /**
@@ -89,9 +94,13 @@ class TokenTracker {
     }
 
     Logger.info(`[TokenTracker] === ÖZET ===`);
-    Logger.info(`[TokenTracker] Toplam: ${snapshot.totalTokens} tokens (${snapshot.totalCalls} çağrı)`);
+    Logger.info(
+      `[TokenTracker] Toplam: ${snapshot.totalTokens} tokens (${snapshot.totalCalls} çağrı)`,
+    );
     for (const model of snapshot.models) {
-      Logger.info(`[TokenTracker]   ${model.modelName}: ${model.totalTokens} tokens (${model.callCount} çağrı, son: ${model.lastCalledAt.toISOString()})`);
+      Logger.info(
+        `[TokenTracker]   ${model.modelName}: ${model.totalTokens} tokens (${model.callCount} çağrı, son: ${model.lastCalledAt.toISOString()})`,
+      );
     }
   }
 

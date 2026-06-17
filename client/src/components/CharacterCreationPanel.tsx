@@ -1,10 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import type React from 'react';
-import { UserPlus, User, Edit3, Trash2, Image as ImageIcon, Loader, Wand2, Sparkles } from 'lucide-react';
+import {
+  UserPlus,
+  User,
+  Edit3,
+  Trash2,
+  Image as ImageIcon,
+  Loader,
+  Wand2,
+  Sparkles,
+} from 'lucide-react';
 import type { Character } from '../types.js';
 import { PhotoEditor } from './PhotoEditor.js';
 
-const ARCHETYPES = ['protagonist', 'mentor', 'comic_relief', 'antagonist', 'supporting', 'narrator'] as const;
+const ARCHETYPES = [
+  'protagonist',
+  'mentor',
+  'comic_relief',
+  'antagonist',
+  'supporting',
+  'narrator',
+] as const;
 const VOICE_PROVIDERS = ['edge', 'openai', 'xtts'] as const;
 
 const VOICE_DEFAULTS: Record<string, string> = {
@@ -213,7 +229,10 @@ interface CharacterCreationPanelProps {
   onCharactersChange?: (characters: Character[]) => void;
 }
 
-export function CharacterCreationPanel({ csrfToken, onCharactersChange }: CharacterCreationPanelProps) {
+export function CharacterCreationPanel({
+  csrfToken,
+  onCharactersChange,
+}: CharacterCreationPanelProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -307,7 +326,9 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
         setReferenceImage(data.avatar_base64);
         setAvatarSource('ai');
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      /* ignore */
+    } finally {
       setGeneratingAvatar(false);
     }
   };
@@ -381,11 +402,7 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
           KARAKTERLER
         </div>
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            style={s.iconBtn}
-            title="Yeni Karakter"
-          >
+          <button onClick={() => setShowForm(true)} style={s.iconBtn} title="Yeni Karakter">
             <UserPlus size={16} style={{ color: 'var(--primary)' }} />
           </button>
         )}
@@ -463,20 +480,36 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
                 type="button"
                 onClick={() => setAvatarStyle('realistic')}
                 style={{
-                  flex: 1, padding: '6px 8px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
-                  background: avatarStyle === 'realistic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                  flex: 1,
+                  padding: '6px 8px',
+                  fontSize: '11px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  background:
+                    avatarStyle === 'realistic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                   color: avatarStyle === 'realistic' ? '#0b0f19' : 'var(--text-muted)',
                 }}
-              >Gerçekçi</button>
+              >
+                Gerçekçi
+              </button>
               <button
                 type="button"
                 onClick={() => setAvatarStyle('animatic')}
                 style={{
-                  flex: 1, padding: '6px 8px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
-                  background: avatarStyle === 'animatic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                  flex: 1,
+                  padding: '6px 8px',
+                  fontSize: '11px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  background:
+                    avatarStyle === 'animatic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                   color: avatarStyle === 'animatic' ? '#0b0f19' : 'var(--text-muted)',
                 }}
-              >Animatik</button>
+              >
+                Animatik
+              </button>
             </div>
           </div>
 
@@ -501,7 +534,8 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
                   onClick={handleGenerateAvatar}
                   disabled={generatingAvatar || !description.trim()}
                   style={{
-                    ...s.fileBtn, borderStyle: 'solid',
+                    ...s.fileBtn,
+                    borderStyle: 'solid',
                     opacity: generatingAvatar || !description.trim() ? 0.5 : 1,
                   }}
                 >
@@ -523,15 +557,32 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
                 )}
               </div>
               {referenceImage && (
-                <span style={{ fontSize: '10px', color: avatarSource === 'ai' ? 'var(--primary)' : 'var(--success)' }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: avatarSource === 'ai' ? 'var(--primary)' : 'var(--success)',
+                  }}
+                >
                   Kaynak: {avatarSource === 'ai' ? 'AI Üretimi' : 'Yükleme'}
                 </span>
               )}
             </div>
           </div>
           {referenceImage && (
-            <div style={{ width: 80, height: 80, borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-              <img src={referenceImage} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: '6px',
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <img
+                src={referenceImage}
+                alt="preview"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
           )}
 
@@ -579,7 +630,9 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }: Charac
                 <div style={s.cardDesc}>{char.description}</div>
                 <div style={s.cardMeta}>
                   <span>{char.role_archetype.replace(/_/g, ' ')}</span>
-                  <span>{char.voice_provider} / {char.voice_id}</span>
+                  <span>
+                    {char.voice_provider} / {char.voice_id}
+                  </span>
                 </div>
               </div>
               <div style={s.cardActions}>

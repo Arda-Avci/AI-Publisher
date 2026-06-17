@@ -8,60 +8,71 @@ import fs from 'fs-extra';
 
 export const bRollRouter = Router();
 
-bRollRouter.post('/generate-broll', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
-  try {
-    const { prompt, duration = 5 } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ success: false, error: 'Prompt gerekli' });
-    }
+bRollRouter.post(
+  '/generate-broll',
+  mediumLimiter,
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const { prompt, duration = 5 } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ success: false, error: 'Prompt gerekli' });
+      }
 
-    const COLAB_URL = process.env.COLAB_URL;
-    if (!COLAB_URL) {
-      return res.status(503).json({ success: false, error: 'Colab bağlantısı (COLAB_URL) yapılandırılmamış.' });
-    }
-    const response = await axios.post(`${COLAB_URL}/generate-broll`, {
-      prompt,
-      duration,
-      output_format: 'mp4',
-    });
-
-    if (!response?.data?.download_url) {
-      return res.status(502).json({ success: false, error: 'Colab B-roll yanıt vermedi' });
-    }
-
-    const bRollResp = await axios({ url: response.data.download_url, method: 'GET', responseType: 'arraybuffer' });
-
-    const filename = `broll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`;
-    const outputPath = path.join(process.cwd(), 'uploads', filename);
-    await fs.writeFile(outputPath, Buffer.from(bRollResp.data));
-
-    Logger.info(`[B-Roll] Generated: ${filename} (source: ${response.data.source || 'pexels'})`);
-
-    res.json({
-      success: true,
-      data: {
-        filename,
-        url: `/uploads/${filename}`,
-        source: response.data.source || 'pexels',
+      const COLAB_URL = process.env.COLAB_URL;
+      if (!COLAB_URL) {
+        return res
+          .status(503)
+          .json({ success: false, error: 'Colab bağlantısı (COLAB_URL) yapılandırılmamış.' });
+      }
+      const response = await axios.post(`${COLAB_URL}/generate-broll`, {
+        prompt,
         duration,
-      },
-    });
-  } catch (err: any) {
-    Logger.error('[B-Roll] Generation error:', err);
-    res.status(500).json({ success: false, error: err?.message || 'B-roll hatası' });
-  }
-});
+        output_format: 'mp4',
+      });
+
+      if (!response?.data?.download_url) {
+        return res.status(502).json({ success: false, error: 'Colab B-roll yanıt vermedi' });
+      }
+
+      const bRollResp = await axios({
+        url: response.data.download_url,
+        method: 'GET',
+        responseType: 'arraybuffer',
+      });
+
+      const filename = `broll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`;
+      const outputPath = path.join(process.cwd(), 'uploads', filename);
+      await fs.writeFile(outputPath, Buffer.from(bRollResp.data));
+
+      Logger.info(`[B-Roll] Generated: ${filename} (source: ${response.data.source || 'pexels'})`);
+
+      res.json({
+        success: true,
+        data: {
+          filename,
+          url: `/uploads/${filename}`,
+          source: response.data.source || 'pexels',
+          duration,
+        },
+      });
+    } catch (err: any) {
+      Logger.error('[B-Roll] Generation error:', err);
+      res.status(500).json({ success: false, error: err?.message || 'B-roll hatası' });
+    }
+  },
+);
 
 bRollRouter.get('/broll/list', requireAuth, async (_req: Request, res: Response) => {
   try {
     const uploadsDir = path.join(process.cwd(), 'uploads');
-    if (!await fs.pathExists(uploadsDir)) {
+    if (!(await fs.pathExists(uploadsDir))) {
       return res.json({ success: true, data: [] });
     }
     const files = await fs.readdir(uploadsDir);
     const bRollFiles = files
-      .filter(f => f.startsWith('broll_') && f.endsWith('.mp4'))
-      .map(f => ({
+      .filter((f) => f.startsWith('broll_') && f.endsWith('.mp4'))
+      .map((f) => ({
         filename: f,
         url: `/uploads/${f}`,
         createdAt: fs.statSync(path.join(uploadsDir, f)).birthtime,

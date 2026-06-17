@@ -30,7 +30,9 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await fetch(`/opportunity-videos?q=${encodeURIComponent(query)}&lang=${selectedLang}`);
+      const res = await fetch(
+        `/opportunity-videos?q=${encodeURIComponent(query)}&lang=${selectedLang}`,
+      );
       const data = await res.json();
       if (data.success) {
         setVideos(data.videos || []);
@@ -51,16 +53,30 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
   };
 
   return (
-    <div className="opportunities-container" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div
+      className="opportunities-container"
+      style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+    >
       {/* Search Header */}
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
         <TrendingUp size={16} style={{ color: 'var(--primary)' }} />
-        <span style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.5px' }}>FIRSATLAR HUNİSİ (VIRAL TRENDS)</span>
+        <span style={{ fontWeight: 600, fontSize: '14px', letterSpacing: '0.5px' }}>
+          FIRSATLAR HUNİSİ (VIRAL TRENDS)
+        </span>
       </div>
 
       <div style={{ display: 'flex', gap: '10px' }}>
         <div style={{ position: 'relative', flexGrow: 1 }}>
-          <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              left: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+            }}
+          />
           <input
             type="text"
             placeholder="Viral trend araması..."
@@ -75,7 +91,7 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
               color: 'white',
               padding: '8px 12px 8px 36px',
               fontSize: '13px',
-              outline: 'none'
+              outline: 'none',
             }}
           />
         </div>
@@ -92,7 +108,7 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
             padding: '8px',
             fontSize: '13px',
             outline: 'none',
-            cursor: 'pointer'
+            cursor: 'pointer',
           }}
         >
           <option value="tr">TR (Türkçe)</option>
@@ -102,24 +118,31 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
           <option value="es">ES (İspanyolca)</option>
         </select>
 
-        <button onClick={fetchOpportunities} className="btn btn-primary" style={{ padding: '8px 16px' }} disabled={loading}>
+        <button
+          onClick={fetchOpportunities}
+          className="btn btn-primary"
+          style={{ padding: '8px 16px' }}
+          disabled={loading}
+        >
           {loading ? <Loader size={14} className="pulse" /> : 'Ara'}
         </button>
       </div>
 
       {/* Error notification */}
       {errorMsg && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.08)',
-          border: '1px solid rgba(239, 68, 68, 0.2)',
-          borderRadius: 'var(--radius)',
-          padding: '12px',
-          fontSize: '12px',
-          color: 'var(--danger)',
-          display: 'flex',
-          gap: '8px',
-          alignItems: 'flex-start'
-        }}>
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            borderRadius: 'var(--radius)',
+            padding: '12px',
+            fontSize: '12px',
+            color: 'var(--danger)',
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'flex-start',
+          }}
+        >
           <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
           <span>{errorMsg}</span>
         </div>
@@ -127,12 +150,25 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
 
       {/* Horizontal Scroll Cards List */}
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '110px', color: 'var(--text-muted)', fontSize: '13px', gap: '8px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '110px',
+            color: 'var(--text-muted)',
+            fontSize: '13px',
+            gap: '8px',
+          }}
+        >
           <Loader size={18} className="pulse" style={{ color: 'var(--primary)' }} />
           <span>Mevcut viral videolar taranıyor...</span>
         </div>
       ) : videos.length > 0 ? (
-        <div className="horizontal-scroll" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
+        <div
+          className="horizontal-scroll"
+          style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}
+        >
           {videos.map((video) => (
             <div
               key={video.videoId}
@@ -150,7 +186,7 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '8px',
-                position: 'relative'
+                position: 'relative',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--primary)';
@@ -162,52 +198,84 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
               }}
             >
               {/* Thumbnail with Score badge */}
-              <div style={{ height: '90px', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                <img src={video.thumbnail} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                
+              <div
+                style={{
+                  height: '90px',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                <img
+                  src={video.thumbnail}
+                  alt={video.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+
                 {/* Score badge */}
-                <div style={{
-                  position: 'absolute',
-                  top: '4px',
-                  left: '4px',
-                  background: 'linear-gradient(135deg, #ef4444, #ff8c00)',
-                  color: 'white',
-                  fontSize: '9px',
-                  fontWeight: 'bold',
-                  padding: '2px 5px',
-                  borderRadius: '3px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.5)'
-                }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    left: '4px',
+                    background: 'linear-gradient(135deg, #ef4444, #ff8c00)',
+                    color: 'white',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    padding: '2px 5px',
+                    borderRadius: '3px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.5)',
+                  }}
+                >
                   <Flame size={8} /> Skor {video.score}
                 </div>
               </div>
 
               {/* Title & Stats */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'white',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineBreak: 'anywhere',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  height: '32px',
-                  lineHeight: '16px'
-                }}>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: 'white',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineBreak: 'anywhere',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    height: '32px',
+                    lineHeight: '16px',
+                  }}
+                >
                   {video.title}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '9px',
+                    color: 'var(--text-muted)',
+                    marginTop: '2px',
+                  }}
+                >
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '90px',
+                    }}
+                  >
                     {video.channelTitle}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                  <span
+                    style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
+                  >
                     <Eye size={10} /> {formatViews(video.views)}
                   </span>
                 </div>
@@ -216,67 +284,108 @@ export const Opportunities: React.FC<OpportunitiesProps> = ({ onUseAsPrompt }) =
           ))}
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '110px', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', color: 'var(--text-muted)', fontSize: '13px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '110px',
+            border: '1px dashed var(--border)',
+            borderRadius: 'var(--radius)',
+            color: 'var(--text-muted)',
+            fontSize: '13px',
+          }}
+        >
           Taramaya başlamak için arama yapın.
         </div>
       )}
 
       {/* Video Details Modal Overlay */}
       {selectedVideo && (
-        <div className="modal-overlay glass" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          zIndex: 1001,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(5, 7, 12, 0.85)'
-        }} onClick={() => setSelectedVideo(null)}>
-          <div className="modal-card" style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '20px',
-            width: '90%',
-            maxWidth: '500px',
+        <div
+          className="modal-overlay glass"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 1001,
             display: 'flex',
-            flexDirection: 'column',
-            gap: '15px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.8)'
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(5, 7, 12, 0.85)',
+          }}
+          onClick={() => setSelectedVideo(null)}
+        >
+          <div
+            className="modal-card"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '20px',
+              width: '90%',
+              maxWidth: '500px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '15px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+            >
               <h4 style={{ color: 'white', fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>
                 {selectedVideo.title}
               </h4>
             </div>
 
-            <img src={selectedVideo.thumbnail} alt={selectedVideo.title} style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '6px' }} />
+            <img
+              src={selectedVideo.thumbnail}
+              alt={selectedVideo.title}
+              style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '6px' }}
+            />
 
-            <div style={{ display: 'flex', gap: '15px', fontSize: '11px', color: 'var(--text-muted)' }}>
-              <div>Kanal: <strong style={{ color: 'white' }}>{selectedVideo.channelTitle}</strong></div>
-              <div>İzlenme: <strong style={{ color: 'white' }}>{selectedVideo.views.toLocaleString()}</strong></div>
-              <div>Skor: <strong style={{ color: 'var(--primary)' }}>{selectedVideo.score} / 15</strong></div>
+            <div
+              style={{ display: 'flex', gap: '15px', fontSize: '11px', color: 'var(--text-muted)' }}
+            >
+              <div>
+                Kanal: <strong style={{ color: 'white' }}>{selectedVideo.channelTitle}</strong>
+              </div>
+              <div>
+                İzlenme:{' '}
+                <strong style={{ color: 'white' }}>{selectedVideo.views.toLocaleString()}</strong>
+              </div>
+              <div>
+                Skor:{' '}
+                <strong style={{ color: 'var(--primary)' }}>{selectedVideo.score} / 15</strong>
+              </div>
             </div>
 
-            <div style={{
-              background: 'var(--bg-timeline)',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              padding: '10px',
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              maxHeight: '120px',
-              overflowY: 'auto',
-              lineHeight: '16px'
-            }}>
+            <div
+              style={{
+                background: 'var(--bg-timeline)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '10px',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                maxHeight: '120px',
+                overflowY: 'auto',
+                lineHeight: '16px',
+              }}
+            >
               {selectedVideo.description || 'Açıklama bulunmuyor.'}
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <button className="btn btn-secondary" style={{ flexGrow: 1 }} onClick={() => setSelectedVideo(null)}>
+              <button
+                className="btn btn-secondary"
+                style={{ flexGrow: 1 }}
+                onClick={() => setSelectedVideo(null)}
+              >
                 Kapat
               </button>
               <button

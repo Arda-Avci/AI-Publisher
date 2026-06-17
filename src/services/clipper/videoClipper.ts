@@ -45,11 +45,13 @@ export class VideoClipper {
       aspectRatio?: '9:16' | '16:9' | '1:1';
       faceTracking?: boolean;
       trackCenter?: { x: number; y: number }; // Face/object center if tracking enabled
-    } = {}
+    } = {},
   ): Promise<string> {
     const { aspectRatio = '9:16', faceTracking = true, trackCenter } = options;
 
-    Logger.info(`[VideoClipper] Cropping segment ${segment.id}: ${segment.startTime}s - ${segment.endTime}s`);
+    Logger.info(
+      `[VideoClipper] Cropping segment ${segment.id}: ${segment.startTime}s - ${segment.endTime}s`,
+    );
 
     // Ensure output directory exists
     await fs.ensureDir(path.dirname(outputPath));
@@ -62,11 +64,16 @@ export class VideoClipper {
     const duration = segment.duration;
 
     const args = [
-      '-ss', String(startTime),
-      '-i', inputPath,
-      '-t', String(duration),
-      '-vf', cropFilter,
-      '-c:a', 'copy',
+      '-ss',
+      String(startTime),
+      '-i',
+      inputPath,
+      '-t',
+      String(duration),
+      '-vf',
+      cropFilter,
+      '-c:a',
+      'copy',
       '-y',
     ];
 
@@ -103,14 +110,20 @@ export class VideoClipper {
       multiFace?: boolean;
       smoothWindow?: number;
       sceneChangeThreshold?: number;
-    } = {}
+    } = {},
   ): Promise<string> {
     const {
-      aspectRatio = '9:16', outputWidth = 1080, outputHeight = 1920,
-      multiFace = true, smoothWindow = 5, sceneChangeThreshold = 0.3,
+      aspectRatio = '9:16',
+      outputWidth = 1080,
+      outputHeight = 1920,
+      multiFace = true,
+      smoothWindow = 5,
+      sceneChangeThreshold = 0.3,
     } = options;
 
-    Logger.info(`[VideoClipper-v2] Adaptive face-tracking crop ${segment.id}: ${segment.startTime}s-${segment.endTime}s`);
+    Logger.info(
+      `[VideoClipper-v2] Adaptive face-tracking crop ${segment.id}: ${segment.startTime}s-${segment.endTime}s`,
+    );
 
     await fs.ensureDir(path.dirname(outputPath));
 
@@ -122,9 +135,15 @@ export class VideoClipper {
         duration: segment.duration,
       });
 
-      if (faceResult.frames.length === 0 || faceResult.frames.every((f: { confidence: number }) => f.confidence === 0)) {
+      if (
+        faceResult.frames.length === 0 ||
+        faceResult.frames.every((f: { confidence: number }) => f.confidence === 0)
+      ) {
         Logger.warn('[VideoClipper-v2] No faces, fallback to center crop');
-        return this.cropSegment(inputPath, outputPath, segment, { aspectRatio, faceTracking: false });
+        return this.cropSegment(inputPath, outputPath, segment, {
+          aspectRatio,
+          faceTracking: false,
+        });
       }
 
       // Smooth crop positions with moving average window
@@ -145,9 +164,21 @@ export class VideoClipper {
       const mergedSegments = this.mergeSceneChanges(stableSegments, sceneChanges, segment);
 
       if (mergedSegments.length <= 1) {
-        const avgX = Math.round(smoothed.reduce((a: number, f: { cropX: number }) => a + f.cropX, 0) / smoothed.length);
-        const avgY = Math.round(smoothed.reduce((a: number, f: { cropY: number }) => a + f.cropY, 0) / smoothed.length);
-        const cropFilter = this.buildFaceCropFilter(avgX || videoWidth / 2, avgY || videoHeight / 2, videoWidth, videoHeight, aspectRatio, outputWidth, outputHeight);
+        const avgX = Math.round(
+          smoothed.reduce((a: number, f: { cropX: number }) => a + f.cropX, 0) / smoothed.length,
+        );
+        const avgY = Math.round(
+          smoothed.reduce((a: number, f: { cropY: number }) => a + f.cropY, 0) / smoothed.length,
+        );
+        const cropFilter = this.buildFaceCropFilter(
+          avgX || videoWidth / 2,
+          avgY || videoHeight / 2,
+          videoWidth,
+          videoHeight,
+          aspectRatio,
+          outputWidth,
+          outputHeight,
+        );
         return this.runCropCommand(inputPath, outputPath, segment, cropFilter);
       }
 
@@ -160,17 +191,28 @@ export class VideoClipper {
         const clipPath = path.join(tempDir, `segment_${i}.mp4`);
 
         const cropFilter = this.buildMultiFaceCropFilter(
-          seg.cropX, seg.cropY, seg.confidence || 0.5,
-          videoWidth, videoHeight, aspectRatio, outputWidth, outputHeight,
-          multiFace
+          seg.cropX,
+          seg.cropY,
+          seg.confidence || 0.5,
+          videoWidth,
+          videoHeight,
+          aspectRatio,
+          outputWidth,
+          outputHeight,
+          multiFace,
         );
 
         const segArgs = [
-          '-ss', String(seg.startTime),
-          '-i', inputPath,
-          '-t', String(seg.endTime - seg.startTime),
-          '-vf', cropFilter,
-          '-c:a', 'copy',
+          '-ss',
+          String(seg.startTime),
+          '-i',
+          inputPath,
+          '-t',
+          String(seg.endTime - seg.startTime),
+          '-vf',
+          cropFilter,
+          '-c:a',
+          'copy',
           '-y',
           clipPath,
         ];
@@ -180,12 +222,13 @@ export class VideoClipper {
       }
 
       const concatListPath = path.join(tempDir, 'concat.txt');
-      await fs.writeFile(concatListPath, clipPaths.map(p => `file '${p}'`).join('\n'), 'utf-8');
+      await fs.writeFile(concatListPath, clipPaths.map((p) => `file '${p}'`).join('\n'), 'utf-8');
 
-      await runInWorker('ffmpeg', [
-        '-f', 'concat', '-safe', '0', '-i', concatListPath,
-        '-c', 'copy', '-y', outputPath,
-      ], 120000);
+      await runInWorker(
+        'ffmpeg',
+        ['-f', 'concat', '-safe', '0', '-i', concatListPath, '-c', 'copy', '-y', outputPath],
+        120000,
+      );
 
       await fs.remove(tempDir);
       Logger.info(`[VideoClipper-v2] Adaptive face-tracking crop completed: ${outputPath}`);
@@ -199,7 +242,10 @@ export class VideoClipper {
   /**
    * Apply moving average smoothing to face tracking frames
    */
-  private smoothCropFrames(frames: Array<{ cropX: number; cropY: number; confidence: number }>, windowSize: number): Array<{ cropX: number; cropY: number; confidence: number }> {
+  private smoothCropFrames(
+    frames: Array<{ cropX: number; cropY: number; confidence: number }>,
+    windowSize: number,
+  ): Array<{ cropX: number; cropY: number; confidence: number }> {
     if (frames.length <= windowSize) return frames;
     const result: Array<{ cropX: number; cropY: number; confidence: number }> = [];
     for (let i = 0; i < frames.length; i++) {
@@ -223,7 +269,7 @@ export class VideoClipper {
   private detectSceneChanges(
     frames: Array<{ cropX: number; cropY: number; confidence: number }>,
     videoWidth: number,
-    thresholdRatio: number
+    thresholdRatio: number,
   ): number[] {
     const changes: number[] = [];
     const threshold = videoWidth * thresholdRatio;
@@ -243,27 +289,40 @@ export class VideoClipper {
   private mergeSceneChanges(
     stableSegments: Array<{ startTime: number; endTime: number; cropX: number; cropY: number }>,
     sceneChanges: number[],
-    segment: ClipSegment
-  ): Array<{ startTime: number; endTime: number; cropX: number; cropY: number; confidence?: number }> {
+    segment: ClipSegment,
+  ): Array<{
+    startTime: number;
+    endTime: number;
+    cropX: number;
+    cropY: number;
+    confidence?: number;
+  }> {
     if (sceneChanges.length === 0) return stableSegments;
 
     const frameDuration = segment.duration / Math.max(sceneChanges[sceneChanges.length - 1] + 1, 1);
-    const boundaries = sceneChanges.map(idx => segment.startTime + idx * frameDuration);
+    const boundaries = sceneChanges.map((idx) => segment.startTime + idx * frameDuration);
 
-    const merged: Array<{ startTime: number; endTime: number; cropX: number; cropY: number; confidence?: number }> = [];
+    const merged: Array<{
+      startTime: number;
+      endTime: number;
+      cropX: number;
+      cropY: number;
+      confidence?: number;
+    }> = [];
     for (const seg of stableSegments) {
-      const splitPoints = boundaries.filter(b => b > seg.startTime && b < seg.endTime);
+      const splitPoints = boundaries.filter((b) => b > seg.startTime && b < seg.endTime);
       if (splitPoints.length === 0) {
         merged.push(seg);
       } else {
         let prevStart = seg.startTime;
         for (const point of [...splitPoints, seg.endTime]) {
           const matchingFrames = stableSegments.filter(
-            s => s.startTime >= prevStart && s.endTime <= point
+            (s) => s.startTime >= prevStart && s.endTime <= point,
           );
-          const avgX = matchingFrames.length > 0
-            ? Math.round(matchingFrames.reduce((a, s) => a + s.cropX, 0) / matchingFrames.length)
-            : seg.cropX;
+          const avgX =
+            matchingFrames.length > 0
+              ? Math.round(matchingFrames.reduce((a, s) => a + s.cropX, 0) / matchingFrames.length)
+              : seg.cropX;
           merged.push({
             startTime: prevStart,
             endTime: point,
@@ -282,11 +341,15 @@ export class VideoClipper {
    * Build crop filter with adaptive padding based on face confidence
    */
   private buildMultiFaceCropFilter(
-    faceX: number, faceY: number, confidence: number,
-    videoWidth: number, videoHeight: number,
+    faceX: number,
+    faceY: number,
+    confidence: number,
+    videoWidth: number,
+    videoHeight: number,
     targetRatio: '9:16' | '16:9' | '1:1',
-    outputWidth: number, outputHeight: number,
-    multiFace: boolean
+    outputWidth: number,
+    outputHeight: number,
+    multiFace: boolean,
   ): string {
     let cropW: number, cropH: number;
     switch (targetRatio) {
@@ -312,7 +375,10 @@ export class VideoClipper {
     const totalPadding = paddingRatio + confidencePadding;
 
     const paddedW = Math.round(cropW * (1 + totalPadding));
-    const adjustedCropX = Math.max(0, Math.min(videoWidth - paddedW, Math.round(faceX - paddedW / 2)));
+    const adjustedCropX = Math.max(
+      0,
+      Math.min(videoWidth - paddedW, Math.round(faceX - paddedW / 2)),
+    );
 
     return `crop=${paddedW}:${cropH}:${adjustedCropX}:0,scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2`;
   }
@@ -327,7 +393,7 @@ export class VideoClipper {
     videoHeight: number,
     targetRatio: '9:16' | '16:9' | '1:1',
     outputWidth: number,
-    outputHeight: number
+    outputHeight: number,
   ): string {
     let cropW: number, cropH: number;
 
@@ -362,14 +428,19 @@ export class VideoClipper {
     inputPath: string,
     outputPath: string,
     segment: ClipSegment,
-    cropFilter: string
+    cropFilter: string,
   ): Promise<string> {
     const args = [
-      '-ss', String(segment.startTime),
-      '-i', inputPath,
-      '-t', String(segment.duration),
-      '-vf', cropFilter,
-      '-c:a', 'copy',
+      '-ss',
+      String(segment.startTime),
+      '-i',
+      inputPath,
+      '-t',
+      String(segment.duration),
+      '-vf',
+      cropFilter,
+      '-c:a',
+      'copy',
       '-y',
     ];
 
@@ -391,7 +462,7 @@ export class VideoClipper {
   private async calculateCropFilter(
     inputPath: string,
     targetRatio: '9:16' | '16:9' | '1:1',
-    trackCenter?: { x: number; y: number }
+    trackCenter?: { x: number; y: number },
   ): Promise<string> {
     const [width, height] = await this.getVideoDimensions(inputPath);
 
@@ -415,7 +486,9 @@ export class VideoClipper {
     }
 
     // Use provided track center or default to center crop
-    const x = trackCenter ? Math.max(0, Math.min(width - cropW, Math.round(trackCenter.x - cropW / 2))) : Math.round((width - cropW) / 2);
+    const x = trackCenter
+      ? Math.max(0, Math.min(width - cropW, Math.round(trackCenter.x - cropW / 2)))
+      : Math.round((width - cropW) / 2);
     const y = trackCenter ? 0 : Math.round((height - cropH) / 2);
 
     return `crop=${cropW}:${cropH}:${x}:${y},scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2`;
@@ -426,13 +499,21 @@ export class VideoClipper {
    */
   private async getVideoDimensions(inputPath: string): Promise<[number, number]> {
     try {
-      const { stdout } = await runInWorker('ffprobe', [
-        '-v', 'error',
-        '-select_streams', 'v:0',
-        '-show_entries', 'stream=width,height',
-        '-of', 'csv=s=x:p=0',
-        inputPath,
-      ], 30000);
+      const { stdout } = await runInWorker(
+        'ffprobe',
+        [
+          '-v',
+          'error',
+          '-select_streams',
+          'v:0',
+          '-show_entries',
+          'stream=width,height',
+          '-of',
+          'csv=s=x:p=0',
+          inputPath,
+        ],
+        30000,
+      );
 
       const dims = stdout?.trim();
       if (dims) {
@@ -451,7 +532,7 @@ export class VideoClipper {
   async generateSubtitles(
     inputPath: string,
     outputPath: string,
-    segments: { start: number; end: number; text: string }[]
+    segments: { start: number; end: number; text: string }[],
   ): Promise<string> {
     Logger.info(`[VideoClipper] Generating subtitles for ${inputPath}`);
 
@@ -469,9 +550,12 @@ export class VideoClipper {
     // Burn subtitles into video using FFmpeg (use relative path to avoid Windows drive-letter colon)
     const srtFilterPath = filterPath(srtPath);
     const args = [
-      '-i', inputPath,
-      '-vf', `subtitles=${srtFilterPath}`,
-      '-c:a', 'copy',
+      '-i',
+      inputPath,
+      '-vf',
+      `subtitles=${srtFilterPath}`,
+      '-c:a',
+      'copy',
       '-y',
       outputPath,
     ];
@@ -504,18 +588,23 @@ export class VideoClipper {
     inputPath: string,
     musicPath: string,
     outputPath: string,
-    musicVolume: number = 0.3
+    musicVolume: number = 0.3,
   ): Promise<string> {
     Logger.info(`[VideoClipper] Mixing music: ${musicPath}`);
 
     const args = [
-      '-i', inputPath,
-      '-i', musicPath,
+      '-i',
+      inputPath,
+      '-i',
+      musicPath,
       '-filter_complex',
       `[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=2[outa];[outa]volume=${musicVolume}[out]`,
-      '-map', '0:v',
-      '-map', '[out]',
-      '-c:v', 'copy',
+      '-map',
+      '0:v',
+      '-map',
+      '[out]',
+      '-c:v',
+      'copy',
       '-y',
       outputPath,
     ];
@@ -536,21 +625,26 @@ export class VideoClipper {
     topVideoPath: string,
     bottomVideoPath: string,
     outputPath: string,
-    layout: 'horizontal' | 'vertical' = 'vertical'
+    layout: 'horizontal' | 'vertical' = 'vertical',
   ): Promise<string> {
     Logger.info(`[VideoClipper] Creating ${layout} split-screen`);
 
-    const filter = layout === 'vertical'
-      ? `[0:v][1:v]vstack=inputs=2[out]`
-      : `[0:v][1:v]hstack=inputs=2[out]`;
+    const filter =
+      layout === 'vertical' ? `[0:v][1:v]vstack=inputs=2[out]` : `[0:v][1:v]hstack=inputs=2[out]`;
 
     const args = [
-      '-i', topVideoPath,
-      '-i', bottomVideoPath,
-      '-filter_complex', filter,
-      '-map', '[out]',
-      '-c:v', 'libx264',
-      '-preset', 'fast',
+      '-i',
+      topVideoPath,
+      '-i',
+      bottomVideoPath,
+      '-filter_complex',
+      filter,
+      '-map',
+      '[out]',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
       '-y',
       outputPath,
     ];
@@ -571,7 +665,7 @@ export class VideoClipper {
     inputPath: string,
     watermarkPath: string,
     outputPath: string,
-    position: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' = 'bottom-right'
+    position: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' = 'bottom-right',
   ): Promise<string> {
     Logger.info(`[VideoClipper] Adding watermark at ${position}`);
 
@@ -581,10 +675,14 @@ export class VideoClipper {
     const filter = `overlay=${overlayX}:${overlayY}`;
 
     const args = [
-      '-i', inputPath,
-      '-i', watermarkPath,
-      '-filter_complex', filter,
-      '-c:a', 'copy',
+      '-i',
+      inputPath,
+      '-i',
+      watermarkPath,
+      '-filter_complex',
+      filter,
+      '-c:a',
+      'copy',
       '-y',
       outputPath,
     ];

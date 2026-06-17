@@ -116,7 +116,10 @@ const s: Record<string, React.CSSProperties> = {
 };
 
 export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
-  jobId, scenes, csrfToken, onClose,
+  jobId,
+  scenes,
+  csrfToken,
+  onClose,
 }) => {
   const [command, setCommand] = useState('');
   const [targetScene, setTargetScene] = useState<number | ''>('');
@@ -132,7 +135,9 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
       });
       const d = await r.json();
       if (d.success) setHistory(d.history || []);
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }, [jobId, csrfToken]);
 
   useEffect(() => {
@@ -148,7 +153,11 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
       const r = await fetch('/api/v1/edit-queue/enqueue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-        body: JSON.stringify({ jobId, command: command.trim(), targetScene: targetScene || undefined }),
+        body: JSON.stringify({
+          jobId,
+          command: command.trim(),
+          targetScene: targetScene || undefined,
+        }),
       });
       const d = await r.json();
       if (d.success) {
@@ -196,8 +205,18 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
 
   const statusStyle = (status: string): React.CSSProperties => ({
     ...s.statusBadge,
-    background: status === 'applied' ? 'rgba(34,197,94,0.12)' : status === 'failed' ? 'rgba(239,68,68,0.12)' : 'rgba(200,164,92,0.12)',
-    color: status === 'applied' ? 'var(--success)' : status === 'failed' ? 'var(--accent)' : 'var(--gold)',
+    background:
+      status === 'applied'
+        ? 'rgba(34,197,94,0.12)'
+        : status === 'failed'
+          ? 'rgba(239,68,68,0.12)'
+          : 'rgba(200,164,92,0.12)',
+    color:
+      status === 'applied'
+        ? 'var(--success)'
+        : status === 'failed'
+          ? 'var(--accent)'
+          : 'var(--gold)',
   });
 
   return (
@@ -208,7 +227,16 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
           AI EDİT QUEUE
         </div>
         {onClose && (
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '2px',
+            }}
+          >
             <X size={14} />
           </button>
         )}
@@ -220,26 +248,29 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
           <div style={s.inputRow}>
             <input
               value={command}
-              onChange={e => setCommand(e.target.value)}
+              onChange={(e) => setCommand(e.target.value)}
               placeholder='Örn: "2. sahneyi daha parlak yap" veya "ses seviyesini artır"'
               style={s.input}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
             <select
               value={targetScene}
-              onChange={e => setTargetScene(e.target.value ? Number(e.target.value) : '')}
+              onChange={(e) => setTargetScene(e.target.value ? Number(e.target.value) : '')}
               style={s.select}
             >
               <option value="">Tümü</option>
-              {scenes.map(s => (
-                <option key={s.id} value={s.scene_number}>Sahne #{s.scene_number}</option>
+              {scenes.map((s) => (
+                <option key={s.id} value={s.scene_number}>
+                  Sahne #{s.scene_number}
+                </option>
               ))}
             </select>
             <button
               onClick={handleSubmit}
               disabled={submitting || !command.trim()}
               style={{
-                ...s.btn, ...s.btnPrimary,
+                ...s.btn,
+                ...s.btnPrimary,
                 opacity: submitting || !command.trim() ? 0.4 : 1,
                 cursor: submitting || !command.trim() ? 'not-allowed' : 'pointer',
               }}
@@ -249,9 +280,26 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
             </button>
           </div>
           {error && (
-            <div style={{ fontSize: '11px', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
               <AlertCircle size={11} /> {error}
-              <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <button
+                onClick={() => setError('')}
+                style={{
+                  marginLeft: 'auto',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
                 <X size={10} />
               </button>
             </div>
@@ -261,32 +309,77 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
         {/* History */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
           <History size={12} style={{ color: 'var(--text-muted)' }} />
-          <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: 600,
+              color: 'var(--text-muted)',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+            }}
+          >
             Geçmiş ({history.length})
           </span>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>Yükleniyor...</div>
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '16px',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+            }}
+          >
+            Yükleniyor...
+          </div>
         ) : history.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '16px',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+            }}
+          >
             Henüz edit emri gönderilmedi
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '200px', overflowY: 'auto' }}>
-            {history.map(edit => (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              maxHeight: '200px',
+              overflowY: 'auto',
+            }}
+          >
+            {history.map((edit) => (
               <div key={edit.id} style={s.historyItem}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {edit.command}
                   </div>
                   <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
                     <span style={statusStyle(edit.status)}>{edit.status}</span>
                     {edit.target_scene && (
-                      <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Sahne #{edit.target_scene}</span>
+                      <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                        Sahne #{edit.target_scene}
+                      </span>
                     )}
                     <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                      {new Date(edit.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(edit.created_at).toLocaleTimeString('tr-TR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </span>
                   </div>
                 </div>
@@ -294,7 +387,12 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
                   {edit.status !== 'applied' && (
                     <button
                       onClick={() => handleApply(edit.id)}
-                      style={{ ...s.btn, ...s.btnSmall, color: 'var(--success)', borderColor: 'rgba(34,197,94,0.3)' }}
+                      style={{
+                        ...s.btn,
+                        ...s.btnSmall,
+                        color: 'var(--success)',
+                        borderColor: 'rgba(34,197,94,0.3)',
+                      }}
                       title="Uygula"
                     >
                       <CheckCircle size={10} /> Uygula
@@ -303,7 +401,12 @@ export const EditQueuePanel: React.FC<EditQueuePanelProps> = ({
                   {edit.status === 'applied' && (
                     <button
                       onClick={() => handleUndo(edit.id)}
-                      style={{ ...s.btn, ...s.btnSmall, color: 'var(--accent)', borderColor: 'rgba(239,68,68,0.3)' }}
+                      style={{
+                        ...s.btn,
+                        ...s.btnSmall,
+                        color: 'var(--accent)',
+                        borderColor: 'rgba(239,68,68,0.3)',
+                      }}
                       title="Geri Al"
                     >
                       <RotateCcw size={10} /> Geri Al

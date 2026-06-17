@@ -9,19 +9,19 @@ import path from 'path';
 export interface IStorage {
   /** Dosyayı diske (veya buluta) kaydeder ve yolunu (veya URL'sini) döner */
   saveFile(buffer: Buffer | NodeJS.ReadableStream, destinationPath: string): Promise<string>;
-  
+
   /** Dosyanın var olup olmadığını kontrol eder */
   exists(filePath: string): Promise<boolean>;
-  
+
   /** Dosyayı okur ve Buffer olarak döner */
   readFile(filePath: string): Promise<Buffer>;
-  
+
   /** Dosyayı okur ve Stream olarak döner (Video gibi büyük dosyalar için) */
   createReadStream(filePath: string): NodeJS.ReadableStream;
-  
+
   /** Dosyayı siler */
   deleteFile(filePath: string): Promise<void>;
-  
+
   /** Klasör siler veya içini temizler */
   deleteDirectory(dirPath: string): Promise<void>;
 }
@@ -38,7 +38,7 @@ export class LocalStorageProvider implements IStorage {
   async saveFile(data: Buffer | NodeJS.ReadableStream, destinationPath: string): Promise<string> {
     const absPath = this.getAbsolutePath(destinationPath);
     await fs.ensureDir(path.dirname(absPath));
-    
+
     if (Buffer.isBuffer(data)) {
       await fs.writeFile(absPath, data);
     } else {

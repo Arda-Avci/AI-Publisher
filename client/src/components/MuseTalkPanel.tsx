@@ -1,5 +1,15 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Upload, Play, Square, Loader, CheckCircle, AlertCircle, X, User } from 'lucide-react';
+import {
+  Camera,
+  Upload,
+  Play,
+  Square,
+  Loader,
+  CheckCircle,
+  AlertCircle,
+  X,
+  User,
+} from 'lucide-react';
 
 interface MuseTalkPanelProps {
   sceneId?: number;
@@ -159,40 +169,43 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
     if (e.target) e.target.value = '';
   }, []);
 
-  const startPolling = useCallback((id: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    setStatus('processing');
-    setPollCount(0);
+  const startPolling = useCallback(
+    (id: string) => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      setStatus('processing');
+      setPollCount(0);
 
-    pollingRef.current = setInterval(async () => {
-      try {
-        const r = await fetch(`/api/v1/musetalk/status/${id}`, {
-          headers: { 'x-csrf-token': csrfToken },
-        });
-        const d = await r.json();
-        if (!d.success) {
-          setStatus('failed');
-          setError(d.error || 'Status check failed');
+      pollingRef.current = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/v1/musetalk/status/${id}`, {
+            headers: { 'x-csrf-token': csrfToken },
+          });
+          const d = await r.json();
+          if (!d.success) {
+            setStatus('failed');
+            setError(d.error || 'Status check failed');
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            return;
+          }
+          if (d.status === 'completed') {
+            setStatus('completed');
+            setResultUrl(d.outputPath || '');
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            if (d.outputPath && onResult) onResult(d.outputPath);
+          } else if (d.status === 'failed') {
+            setStatus('failed');
+            setError(d.error || 'Generation failed');
+            if (pollingRef.current) clearInterval(pollingRef.current);
+          }
+          setPollCount((prev) => prev + 1);
+        } catch (err: any) {
+          setError(err.message);
           if (pollingRef.current) clearInterval(pollingRef.current);
-          return;
         }
-        if (d.status === 'completed') {
-          setStatus('completed');
-          setResultUrl(d.outputPath || '');
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          if (d.outputPath && onResult) onResult(d.outputPath);
-        } else if (d.status === 'failed') {
-          setStatus('failed');
-          setError(d.error || 'Generation failed');
-          if (pollingRef.current) clearInterval(pollingRef.current);
-        }
-        setPollCount(prev => prev + 1);
-      } catch (err: any) {
-        setError(err.message);
-        if (pollingRef.current) clearInterval(pollingRef.current);
-      }
-    }, 2000);
-  }, [csrfToken, onResult]);
+      }, 2000);
+    },
+    [csrfToken, onResult],
+  );
 
   const uploadFaceToServer = async (): Promise<string | null> => {
     if (!faceFile) return null;
@@ -244,7 +257,11 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
       const r = await fetch('/api/v1/musetalk/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
-        body: JSON.stringify({ faceImagePath: facePath, audioPath, jobId: `mt_${sceneId || Date.now()}` }),
+        body: JSON.stringify({
+          faceImagePath: facePath,
+          audioPath,
+          jobId: `mt_${sceneId || Date.now()}`,
+        }),
       });
       const d = await r.json();
       if (!d.success) {
@@ -274,7 +291,16 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
           MUSE TALK — Dudak Senkronizasyonu
         </div>
         {onClose && (
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '2px',
+            }}
+          >
             <X size={14} />
           </button>
         )}
@@ -289,19 +315,32 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
             <div
               style={s.uploadZone}
               onClick={() => faceInputRef.current?.click()}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--gold)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+              }}
             >
               {facePreview ? (
                 <img src={facePreview} alt="face" style={s.previewImg} />
               ) : (
                 <>
                   <Camera size={24} style={{ color: 'var(--text-muted)' }} />
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Yüz fotoğrafı seç</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Yüz fotoğrafı seç
+                  </span>
                 </>
               )}
             </div>
-            <input ref={faceInputRef} type="file" accept="image/*" capture="user" onChange={handleFaceUpload} style={{ display: 'none' }} />
+            <input
+              ref={faceInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              onChange={handleFaceUpload}
+              style={{ display: 'none' }}
+            />
           </div>
 
           {/* Audio Source */}
@@ -311,7 +350,9 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
               <button
                 onClick={() => setAudioSource('scene')}
                 style={{
-                  ...s.btn, padding: '4px 8px', fontSize: '10px',
+                  ...s.btn,
+                  padding: '4px 8px',
+                  fontSize: '10px',
                   background: audioSource === 'scene' ? 'rgba(200,164,92,0.15)' : 'transparent',
                   borderColor: audioSource === 'scene' ? 'var(--gold)' : 'var(--border)',
                   color: audioSource === 'scene' ? 'var(--gold)' : 'var(--text-muted)',
@@ -320,9 +361,14 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
                 Sahne Sesi
               </button>
               <button
-                onClick={() => { setAudioSource('upload'); audioInputRef.current?.click(); }}
+                onClick={() => {
+                  setAudioSource('upload');
+                  audioInputRef.current?.click();
+                }}
                 style={{
-                  ...s.btn, padding: '4px 8px', fontSize: '10px',
+                  ...s.btn,
+                  padding: '4px 8px',
+                  fontSize: '10px',
                   background: audioSource === 'upload' ? 'rgba(200,164,92,0.15)' : 'transparent',
                   borderColor: audioSource === 'upload' ? 'var(--gold)' : 'var(--border)',
                   color: audioSource === 'upload' ? 'var(--gold)' : 'var(--text-muted)',
@@ -331,14 +377,31 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
                 <Upload size={10} /> Yükle
               </button>
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '6px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div
+              style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                padding: '6px 8px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {audioSource === 'scene' && sceneAudioPath
                 ? `🎤 Sahne sesi: ${sceneAudioPath.split('/').pop() || 'mevcut'}`
                 : audioSource === 'upload' && audioFile
                   ? `📁 ${audioFile.name}`
                   : 'Ses seçilmedi'}
             </div>
-            <input ref={audioInputRef} type="file" accept="audio/*" onChange={handleAudioUpload} style={{ display: 'none' }} />
+            <input
+              ref={audioInputRef}
+              type="file"
+              accept="audio/*"
+              onChange={handleAudioUpload}
+              style={{ display: 'none' }}
+            />
           </div>
         </div>
 
@@ -348,15 +411,23 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
             onClick={handleGenerate}
             disabled={isProcessing || (!faceFile && !facePreview)}
             style={{
-              ...s.btn, ...s.btnPrimary,
+              ...s.btn,
+              ...s.btnPrimary,
               ...(isProcessing || (!faceFile && !facePreview) ? s.btnDisabled : {}),
             }}
           >
-            {isProcessing ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={12} />}
+            {isProcessing ? (
+              <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Play size={12} />
+            )}
             {isProcessing ? 'İşleniyor...' : 'Dudak Senkronizasyonu Oluştur'}
           </button>
           {isProcessing && (
-            <button onClick={handleCancel} style={{ ...s.btn, color: 'var(--accent)', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <button
+              onClick={handleCancel}
+              style={{ ...s.btn, color: 'var(--accent)', borderColor: 'rgba(239,68,68,0.3)' }}
+            >
               <Square size={12} /> İptal
             </button>
           )}
@@ -364,16 +435,42 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
 
         {/* Status / Error */}
         {status === 'processing' && (
-          <div style={{ ...s.statusBar, background: 'rgba(200,164,92,0.08)', border: '1px solid rgba(200,164,92,0.15)' }}>
-            <Loader size={14} style={{ color: 'var(--gold)', animation: 'spin 1s linear infinite' }} />
-            <span style={{ color: 'var(--gold)' }}>Dudak senkronizasyonu oluşturuluyor... ({pollCount}s)</span>
+          <div
+            style={{
+              ...s.statusBar,
+              background: 'rgba(200,164,92,0.08)',
+              border: '1px solid rgba(200,164,92,0.15)',
+            }}
+          >
+            <Loader
+              size={14}
+              style={{ color: 'var(--gold)', animation: 'spin 1s linear infinite' }}
+            />
+            <span style={{ color: 'var(--gold)' }}>
+              Dudak senkronizasyonu oluşturuluyor... ({pollCount}s)
+            </span>
           </div>
         )}
         {error && (
-          <div style={{ ...s.statusBar, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}>
+          <div
+            style={{
+              ...s.statusBar,
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.15)',
+            }}
+          >
             <AlertCircle size={14} style={{ color: 'var(--accent)' }} />
             <span style={{ color: 'var(--accent)' }}>{error}</span>
-            <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <button
+              onClick={() => setError('')}
+              style={{
+                marginLeft: 'auto',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
+            >
               <X size={12} />
             </button>
           </div>
@@ -382,9 +479,17 @@ export const MuseTalkPanel: React.FC<MuseTalkPanelProps> = ({
         {/* Result */}
         {status === 'completed' && resultUrl && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ ...s.statusBar, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)' }}>
+            <div
+              style={{
+                ...s.statusBar,
+                background: 'rgba(34,197,94,0.08)',
+                border: '1px solid rgba(34,197,94,0.15)',
+              }}
+            >
               <CheckCircle size={14} style={{ color: 'var(--success)' }} />
-              <span style={{ color: 'var(--success)', fontWeight: 600 }}>Dudak senkronizasyonu tamamlandı</span>
+              <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                Dudak senkronizasyonu tamamlandı
+              </span>
             </div>
             <video src={resultUrl} controls style={s.resultVideo} autoPlay loop muted />
           </div>

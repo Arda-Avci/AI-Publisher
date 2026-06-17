@@ -39,7 +39,12 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }
   cancelled: { bg: 'rgba(107, 114, 128, 0.2)', color: '#9CA3AF', label: 'İptal Edildi' },
 };
 
-export function BatchUpload({ language: _language, t, onShowToast, onUploadComplete }: BatchUploadProps) {
+export function BatchUpload({
+  language: _language,
+  t,
+  onShowToast,
+  onUploadComplete,
+}: BatchUploadProps) {
   const [jobs, setJobs] = useState<BatchJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upload' | 'folder' | 'history'>('upload');
@@ -93,10 +98,8 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
   };
 
   const togglePlatform = (platform: Platform) => {
-    setSelectedPlatforms(prev =>
-      prev.includes(platform)
-        ? prev.filter(p => p !== platform)
-        : [...prev, platform]
+    setSelectedPlatforms((prev) =>
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform],
     );
   };
 
@@ -192,56 +195,67 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
   };
 
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      overflowY: 'auto',
-      padding: '20px',
-      background: 'rgba(10, 10, 20, 0.6)',
-      borderRadius: '12px',
-      backdropFilter: 'blur(20px)',
-      border: '1px solid rgba(59, 130, 246, 0.2)',
-      minHeight: '450px',
-    }}>
-      {/* Header */}
-      <div style={{
+    <div
+      style={{
+        flex: 1,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '20px',
-      }}>
-        <h2 style={{
-          margin: 0,
-          fontSize: '18px',
-          fontWeight: 700,
-          background: 'linear-gradient(135deg, #E5E7EB, #60A5FA)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}>
+        flexDirection: 'column',
+        overflowY: 'auto',
+        padding: '20px',
+        background: 'rgba(10, 10, 20, 0.6)',
+        borderRadius: '12px',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(59, 130, 246, 0.2)',
+        minHeight: '450px',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '20px',
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '18px',
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #E5E7EB, #60A5FA)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
           {t('batch_upload')}
         </h2>
 
         {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          background: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '8px',
-          padding: '4px',
-          gap: '4px',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            background: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '8px',
+            padding: '4px',
+            gap: '4px',
+          }}
+        >
           {[
             { key: 'upload', label: t('file_upload') },
             { key: 'folder', label: t('folder_watch') },
             { key: 'history', label: t('history') },
-          ].map(tab => (
+          ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
               style={{
                 padding: '8px 16px',
                 background: activeTab === tab.key ? 'rgba(59, 130, 246, 0.3)' : 'transparent',
-                border: activeTab === tab.key ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid transparent',
+                border:
+                  activeTab === tab.key
+                    ? '1px solid rgba(59, 130, 246, 0.5)'
+                    : '1px solid transparent',
                 borderRadius: '6px',
                 color: activeTab === tab.key ? '#60A5FA' : '#9CA3AF',
                 fontSize: '12px',
@@ -281,21 +295,23 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
               type="file"
               multiple
               accept="video/*"
-              onChange={e => handleFileSelect(e.target.files)}
+              onChange={(e) => handleFileSelect(e.target.files)}
               style={{ display: 'none' }}
             />
 
-            <div style={{
-              width: '56px',
-              height: '56px',
-              margin: '0 auto 16px',
-              background: 'rgba(59, 130, 246, 0.15)',
-              borderRadius: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-            }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                margin: '0 auto 16px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                borderRadius: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+              }}
+            >
               📁
             </div>
 
@@ -305,7 +321,11 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                   {selectedFiles.length} {t('files_selected')}
                 </div>
                 <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                  {Array.from(selectedFiles).map(f => f.name).join(', ').substring(0, 100)}...
+                  {Array.from(selectedFiles)
+                    .map((f) => f.name)
+                    .join(', ')
+                    .substring(0, 100)}
+                  ...
                 </div>
               </div>
             ) : (
@@ -313,43 +333,65 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                 <div style={{ fontSize: '14px', color: '#E5E7EB', marginBottom: '4px' }}>
                   {t('drop_files_here')}
                 </div>
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                  {t('or_click_to_select')}
-                </div>
+                <div style={{ fontSize: '12px', color: '#6B7280' }}>{t('or_click_to_select')}</div>
               </>
             )}
           </div>
 
           {/* Selected Files Preview */}
           {selectedFiles && selectedFiles.length > 0 && (
-            <div style={{
-              padding: '12px',
-              background: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              maxHeight: '120px',
-              overflowY: 'auto',
-            }}>
-              <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                padding: '12px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                maxHeight: '120px',
+                overflowY: 'auto',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: '#6B7280',
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                }}
+              >
                 {t('selected_files')} ({selectedFiles.length})
               </div>
-              {Array.from(selectedFiles).slice(0, 5).map((file, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 0',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                }}>
-                  <span style={{ fontSize: '14px' }}>🎬</span>
-                  <span style={{ fontSize: '12px', color: '#D1D5DB', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {file.name}
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#6B7280', fontFamily: 'var(--font-mono)' }}>
-                    {(file.size / (1024 * 1024)).toFixed(1)} MB
-                  </span>
-                </div>
-              ))}
+              {Array.from(selectedFiles)
+                .slice(0, 5)
+                .map((file, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 0',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px' }}>🎬</span>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: '#D1D5DB',
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {file.name}
+                    </span>
+                    <span
+                      style={{ fontSize: '10px', color: '#6B7280', fontFamily: 'var(--font-mono)' }}
+                    >
+                      {(file.size / (1024 * 1024)).toFixed(1)} MB
+                    </span>
+                  </div>
+                ))}
               {selectedFiles.length > 5 && (
                 <div style={{ fontSize: '11px', color: '#6B7280', paddingTop: '8px' }}>
                   +{selectedFiles.length - 5} {t('more_files')}
@@ -360,18 +402,20 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
 
           {/* Platform Selection */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '11px',
-              color: '#9CA3AF',
-              marginBottom: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '11px',
+                color: '#9CA3AF',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               {t('target_platforms')}
             </label>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {(Object.keys(PLATFORM_COLORS) as Platform[]).map(platform => {
+              {(Object.keys(PLATFORM_COLORS) as Platform[]).map((platform) => {
                 const p = PLATFORM_COLORS[platform];
                 const isSelected = selectedPlatforms.includes(platform);
                 return (
@@ -402,20 +446,22 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
 
           {/* Schedule */}
           <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '11px',
-              color: '#9CA3AF',
-              marginBottom: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '11px',
+                color: '#9CA3AF',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               {t('schedule_publish')} ({t('optional')})
             </label>
             <input
               type="datetime-local"
               value={scheduleDate}
-              onChange={e => setScheduleDate(e.target.value)}
+              onChange={(e) => setScheduleDate(e.target.value)}
               style={{
                 padding: '10px 12px',
                 background: 'rgba(0, 0, 0, 0.4)',
@@ -435,15 +481,19 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
             style={{
               width: '100%',
               padding: '14px',
-              background: selectedFiles && selectedFiles.length > 0
-                ? 'linear-gradient(135deg, #3B82F6, #2563EB)'
-                : 'rgba(59, 130, 246, 0.3)',
+              background:
+                selectedFiles && selectedFiles.length > 0
+                  ? 'linear-gradient(135deg, #3B82F6, #2563EB)'
+                  : 'rgba(59, 130, 246, 0.3)',
               border: 'none',
               borderRadius: '8px',
               color: 'white',
               fontSize: '14px',
               fontWeight: 600,
-              cursor: selectedFiles && selectedFiles.length > 0 && !isUploading ? 'pointer' : 'not-allowed',
+              cursor:
+                selectedFiles && selectedFiles.length > 0 && !isUploading
+                  ? 'pointer'
+                  : 'not-allowed',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -468,20 +518,22 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
       {activeTab === 'folder' && (
         <div>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '11px',
-              color: '#9CA3AF',
-              marginBottom: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '11px',
+                color: '#9CA3AF',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               {t('folder_path')}
             </label>
             <input
               type="text"
               value={folderPath}
-              onChange={e => setFolderPath(e.target.value)}
+              onChange={(e) => setFolderPath(e.target.value)}
               placeholder="C:\Videos\BatchUpload"
               style={{
                 width: '100%',
@@ -497,12 +549,14 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
             />
           </div>
 
-          <div style={{
-            padding: '20px',
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            marginBottom: '20px',
-          }}>
+          <div
+            style={{
+              padding: '20px',
+              background: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              marginBottom: '20px',
+            }}
+          >
             <div style={{ fontSize: '12px', color: '#6B7280' }}>
               {t('folder_watch_description')}
             </div>
@@ -541,19 +595,19 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
               {t('loading')}...
             </div>
           ) : jobs.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px',
-              background: 'rgba(0, 0, 0, 0.2)',
-              borderRadius: '10px',
-            }}>
-              <div style={{ fontSize: '14px', color: '#9CA3AF' }}>
-                {t('no_batch_jobs')}
-              </div>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '40px',
+                background: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '10px',
+              }}
+            >
+              <div style={{ fontSize: '14px', color: '#9CA3AF' }}>{t('no_batch_jobs')}</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {jobs.map(job => {
+              {jobs.map((job) => {
                 const status = STATUS_STYLES[job.status];
                 const progress = getProgressPercent(job);
 
@@ -567,9 +621,23 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                       border: '1px solid rgba(255, 255, 255, 0.05)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                      }}
+                    >
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#E5E7EB', marginBottom: '2px' }}>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: '#E5E7EB',
+                            marginBottom: '2px',
+                          }}
+                        >
                           {job.name}
                         </div>
                         <div style={{ fontSize: '11px', color: '#6B7280' }}>
@@ -578,14 +646,16 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{
-                          padding: '4px 10px',
-                          background: status.bg,
-                          borderRadius: '4px',
-                          fontSize: '10px',
-                          color: status.color,
-                          fontFamily: 'var(--font-mono)',
-                        }}>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            background: status.bg,
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            color: status.color,
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        >
                           {status.label}
                         </span>
 
@@ -611,29 +681,40 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
 
                     {/* Progress Bar */}
                     <div style={{ marginBottom: '8px' }}>
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '10px',
-                        color: '#6B7280',
-                        marginBottom: '4px',
-                      }}>
-                        <span>{job.processedVideos} / {job.totalVideos} {t('videos')}</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '10px',
+                          color: '#6B7280',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        <span>
+                          {job.processedVideos} / {job.totalVideos} {t('videos')}
+                        </span>
                         <span>{progress}%</span>
                       </div>
-                      <div style={{
-                        height: '6px',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        borderRadius: '3px',
-                        overflow: 'hidden',
-                      }}>
-                        <div style={{
-                          height: '100%',
-                          width: `${progress}%`,
-                          background: job.status === 'failed' ? '#EF4444' : 'linear-gradient(90deg, #3B82F6, #60A5FA)',
+                      <div
+                        style={{
+                          height: '6px',
+                          background: 'rgba(0, 0, 0, 0.4)',
                           borderRadius: '3px',
-                          transition: 'width 0.3s ease',
-                        }} />
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${progress}%`,
+                            background:
+                              job.status === 'failed'
+                                ? '#EF4444'
+                                : 'linear-gradient(90deg, #3B82F6, #60A5FA)',
+                            borderRadius: '3px',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
                       </div>
                     </div>
 

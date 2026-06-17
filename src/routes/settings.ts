@@ -40,28 +40,65 @@ export function registerSettingsRoutes(app: Application): void {
       if (!current) return res.status(404).json({ success: false, error: 'User not found' });
 
       // Sadece gönderilen değerleri güncelle, gönderilmeyenleri (undefined) mevcut haliyle bırak
-      const youtube_api_key = req.body.youtube_api_key !== undefined ? req.body.youtube_api_key : current.youtube_api_key;
-      const sample_cover_base64 = req.body.sample_cover_base64 !== undefined ? req.body.sample_cover_base64 : current.sample_cover_base64;
-      
+      const youtube_api_key =
+        req.body.youtube_api_key !== undefined ? req.body.youtube_api_key : current.youtube_api_key;
+      const sample_cover_base64 =
+        req.body.sample_cover_base64 !== undefined
+          ? req.body.sample_cover_base64
+          : current.sample_cover_base64;
+
       let avatarToSave = current.personal_avatar_base64;
       if (req.body.personal_avatar_base64 !== undefined) {
         avatarToSave = req.body.personal_avatar_base64 || current.personal_avatar_base64;
       }
 
-      const text_position_grid = req.body.text_position_grid !== undefined ? req.body.text_position_grid : current.text_position_grid;
-      const default_preset_tone = req.body.default_preset_tone !== undefined ? req.body.default_preset_tone : current.default_preset_tone;
-      const preferred_language = req.body.preferred_language !== undefined ? req.body.preferred_language : current.preferred_language;
-      const selected_theme = req.body.selected_theme !== undefined ? req.body.selected_theme : current.selected_theme;
+      const text_position_grid =
+        req.body.text_position_grid !== undefined
+          ? req.body.text_position_grid
+          : current.text_position_grid;
+      const default_preset_tone =
+        req.body.default_preset_tone !== undefined
+          ? req.body.default_preset_tone
+          : current.default_preset_tone;
+      const preferred_language =
+        req.body.preferred_language !== undefined
+          ? req.body.preferred_language
+          : current.preferred_language;
+      const selected_theme =
+        req.body.selected_theme !== undefined ? req.body.selected_theme : current.selected_theme;
 
       // Brand Kit Fields
-      const brand_logo_base64 = req.body.brand_logo_base64 !== undefined ? req.body.brand_logo_base64 : current.brand_logo_base64;
-      const brand_primary_color = req.body.brand_primary_color !== undefined ? req.body.brand_primary_color : current.brand_primary_color;
-      const brand_secondary_color = req.body.brand_secondary_color !== undefined ? req.body.brand_secondary_color : current.brand_secondary_color;
-      const brand_font_path = req.body.brand_font_path !== undefined ? req.body.brand_font_path : current.brand_font_path;
-      const personal_voice_base64 = req.body.personal_voice_base64 !== undefined ? req.body.personal_voice_base64 : current.personal_voice_base64;
+      const brand_logo_base64 =
+        req.body.brand_logo_base64 !== undefined
+          ? req.body.brand_logo_base64
+          : current.brand_logo_base64;
+      const brand_primary_color =
+        req.body.brand_primary_color !== undefined
+          ? req.body.brand_primary_color
+          : current.brand_primary_color;
+      const brand_secondary_color =
+        req.body.brand_secondary_color !== undefined
+          ? req.body.brand_secondary_color
+          : current.brand_secondary_color;
+      const brand_font_path =
+        req.body.brand_font_path !== undefined ? req.body.brand_font_path : current.brand_font_path;
+      const personal_voice_base64 =
+        req.body.personal_voice_base64 !== undefined
+          ? req.body.personal_voice_base64
+          : current.personal_voice_base64;
 
-      const applyLipsyncToSave = req.body.apply_lipsync !== undefined ? (req.body.apply_lipsync ? 1 : 0) : current.apply_lipsync;
-      const applyEndScreenToSave = req.body.apply_end_screen !== undefined ? (req.body.apply_end_screen ? 1 : 0) : current.apply_end_screen;
+      const applyLipsyncToSave =
+        req.body.apply_lipsync !== undefined
+          ? req.body.apply_lipsync
+            ? 1
+            : 0
+          : current.apply_lipsync;
+      const applyEndScreenToSave =
+        req.body.apply_end_screen !== undefined
+          ? req.body.apply_end_screen
+            ? 1
+            : 0
+          : current.apply_end_screen;
 
       let passwordToSave = current.password;
       if (req.body.new_password && req.body.new_password.trim() !== '') {
@@ -102,8 +139,8 @@ export function registerSettingsRoutes(app: Application): void {
           brand_secondary_color,
           brand_font_path,
           personal_voice_base64,
-          req.session.userId
-        ]
+          req.session.userId,
+        ],
       );
 
       // Session synchronization
@@ -132,7 +169,7 @@ export function registerSettingsRoutes(app: Application): void {
         userId: req.session.userId,
         action: 'settings.save',
         details: { keysChanged: Object.keys(req.body) },
-        req
+        req,
       });
 
       res.json({ success: true });

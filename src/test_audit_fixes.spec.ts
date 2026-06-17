@@ -24,7 +24,7 @@ describe('Sprint 10 — Production Audit Fixes', () => {
     it('retry_count column exists on video_jobs table', async () => {
       const col = await db.get(
         `SELECT column_name FROM information_schema.columns
-         WHERE table_name = 'video_jobs' AND column_name = 'retry_count'`
+         WHERE table_name = 'video_jobs' AND column_name = 'retry_count'`,
       );
       expect(col).toBeTruthy();
     });
@@ -33,7 +33,7 @@ describe('Sprint 10 — Production Audit Fixes', () => {
       const encrypted = encryptUsername(`${TEST_PREFIX}retry_test_user`);
       await db.run(
         `INSERT INTO users (username, password) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [encrypted, await bcrypt.hash('test', 10)]
+        [encrypted, await bcrypt.hash('test', 10)],
       );
       const user = await db.get('SELECT id FROM users WHERE username = $1', [encrypted]);
       expect(user).toBeTruthy();
@@ -42,7 +42,7 @@ describe('Sprint 10 — Production Audit Fixes', () => {
 
       const result = await db.run(
         `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES ($1, $2, 'pending')`,
-        [user.id, 'Retry test']
+        [user.id, 'Retry test'],
       );
       expect(result.lastID).toBeTruthy();
       const jobId = result.lastID as number;
@@ -57,7 +57,7 @@ describe('Sprint 10 — Production Audit Fixes', () => {
       const encrypted = encryptUsername(`${TEST_PREFIX}retry_update_user`);
       await db.run(
         `INSERT INTO users (username, password) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [encrypted, await bcrypt.hash('test', 10)]
+        [encrypted, await bcrypt.hash('test', 10)],
       );
       const user = await db.get('SELECT id FROM users WHERE username = $1', [encrypted]);
       expect(user).toBeTruthy();
@@ -66,15 +66,14 @@ describe('Sprint 10 — Production Audit Fixes', () => {
 
       const result = await db.run(
         `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES ($1, $2, 'pending')`,
-        [user.id, 'Retry update test']
+        [user.id, 'Retry update test'],
       );
       expect(result.lastID).toBeTruthy();
       const jobId = result.lastID as number;
 
-      await db.run(
-        "UPDATE video_jobs SET status = 'pending', retry_count = 2 WHERE id = $1",
-        [jobId]
-      );
+      await db.run("UPDATE video_jobs SET status = 'pending', retry_count = 2 WHERE id = $1", [
+        jobId,
+      ]);
       const job = await db.get('SELECT retry_count FROM video_jobs WHERE id = $1', [jobId]);
       expect(job).toBeTruthy();
       expect(Number(job.retry_count)).toBe(2);
@@ -84,7 +83,12 @@ describe('Sprint 10 — Production Audit Fixes', () => {
 
   describe('2. VideoJob interface includes retry_count', () => {
     it('VideoJob type allows retry_count property', () => {
-      const job: Partial<import('./types/job.js').VideoJob> = { retry_count: 3, id: 1, user_id: 1, status: 'pending' };
+      const job: Partial<import('./types/job.js').VideoJob> = {
+        retry_count: 3,
+        id: 1,
+        user_id: 1,
+        status: 'pending',
+      };
       expect(job.retry_count).toBe(3);
     });
   });

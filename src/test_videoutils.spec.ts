@@ -1,71 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import path from 'path';
-import fs from 'fs-extra';
-import { execFile } from 'child_process';
-
-// ── Mocks ─────────────────────────────────────────────────────────────────────
-
-vi.mock('fs-extra', () => ({
-  default: {
-    ensureDir: vi.fn().mockResolvedValue(undefined),
-    copy: vi.fn().mockResolvedValue(undefined),
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    readFile: vi.fn().mockResolvedValue(Buffer.alloc(0)),
-    remove: vi.fn().mockResolvedValue(undefined),
-    pathExists: vi.fn().mockImplementation((p: string) => Promise.resolve(p.includes('_exists'))),
-    existsSync: vi.fn().mockImplementation((p: string) => p.includes('_exists')),
-  },
-  ensureDir: vi.fn().mockResolvedValue(undefined),
-  copy: vi.fn().mockResolvedValue(undefined),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  readFile: vi.fn().mockResolvedValue(Buffer.alloc(0)),
-  remove: vi.fn().mockResolvedValue(undefined),
-  pathExists: vi.fn().mockImplementation((p: string) => Promise.resolve(p.includes('_exists'))),
-  existsSync: vi.fn().mockImplementation((p: string) => p.includes('_exists')),
-}));
-
-vi.mock('./lib/logger.js', () => ({
-  Logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-vi.mock('child_process', () => ({
-  execFile: vi.fn((cmd, args, opts, cb) => {
-    if (typeof opts === 'function') { cb = opts; }
-    const argsStr = args ? args.join(' ') : '';
-    
-    // ffprobe video dimensions
-    if (cmd === 'ffprobe' && argsStr.includes('stream=width,height')) {
-      cb(null, '1920x1080\n', '');
-      return { on: vi.fn(), kill: vi.fn() };
-    }
-    
-    // ffprobe duration
-    if (cmd === 'ffprobe' && argsStr.includes('format=duration')) {
-      const videoPath = args[args.length - 1];
-      if (videoPath === 'nonexistent.mp4') {
-        cb(null, 'invalid\n', '');
-      } else if (videoPath.includes('seg1')) {
-        cb(null, '10.0\n', '');
-      } else if (videoPath.includes('seg2')) {
-        cb(null, '10.0\n', '');
-      } else {
-        cb(null, '30.5\n', '');
-      }
-      return { on: vi.fn(), kill: vi.fn() };
-    }
-    
-    // Default success for ffmpeg
-    cb(null, '', '');
-    return { on: vi.fn(), kill: vi.fn() };
-  }),
-}));
-
-// ── Import under test ─────────────────────────────────────────────────────────
+import os from 'os';
+import { FIXTURES } from './__fixtures__/index.js';
 
 import {
   getVideoDuration,
@@ -76,92 +12,53 @@ import {
   getGridCoordinates,
 } from './services/videoService.js';
 
+const outputPath = () => path.join(os.tmpdir(), `test_videoutils_${Date.now()}.mp4`);
+
 describe('videoService utilities', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
-
-  // ── getVideoDuration ───────────────────────────────────────────────────────
-
   it('getVideoDuration returns number', async () => {
-    const dur = await getVideoDuration('test_video_exists.mp4');
+    const dur = await getVideoDuration(FIXTURES.video);
     expect(typeof dur).toBe('number');
-    expect(dur).toBe(30.5);
-  });
+    expect(dur).toBeGreaterThan(0);
+  }, 30000);
 
   it('getVideoDuration returns 0 for invalid path', async () => {
     const dur = await getVideoDuration('nonexistent.mp4');
     expect(dur).toBe(0);
-  });
-
-  // ── extractLastFrame ────────────────────────────────────────────────────────
+  }, 30000);
 
   it('extractLastFrame creates output file', async () => {
-    const frame = await extractLastFrame('test_video_exists.mp4');
+    const frame = await extractLastFrame(FIXTURES.video);
     expect(typeof frame).toBe('string');
-  });
-
-  // ── applyEndScreen ─────────────────────────────────────────────────────────
+  }, 30000);
 
   it('applyEndScreen produces output', async () => {
-    await applyEndScreen(
-      'test_video_exists.mp4',
-      'endscreen.png_exists',
-      'output.mp4',
-      true
-    );
-    expect(execFile).toHaveBeenCalled();
-  });
-
-  // ── concatVideosWithCrossfade ───────────────────────────────────────────────
+    await expect(
+      applyEndScreen(FIXTURES.video, 'endscreen.png_exists', outputPath(), true),
+    ).resolves.toBeUndefined();
+  }, 30000);
 
   it('concatVideosWithCrossfade with 2 segments', async () => {
-    await concatVideosWithCrossfade(
-      ['seg1.mp4_exists', 'seg2.mp4_exists'],
-      'output.mp4',
-      1.0
-    );
-    expect(execFile).toHaveBeenCalled();
-  });
+    await expect(
+      concatVideosWithCrossfade([FIXTURES.seg1, FIXTURES.seg2], outputPath(), 1.0),
+    ).resolves.toBeUndefined();
+  }, 30000);
 
   it('concatVideosWithCrossfade handles empty array', async () => {
     await expect(
-      concatVideosWithCrossfade([], 'output.mp4')
+      concatVideosWithCrossfade([], outputPath()),
     ).rejects.toThrow('Video listesi bos');
-  });
+  }, 30000);
 
-  // ── convertSrtToKineticAss ──────────────────────────────────────────────────
- 
   it('convertSrtToKineticAss creates ASS file', async () => {
-    const srtContent = `1
-00:00:00,000 --> 00:00:02,000
-Hello world test
+    const assPath = path.join(os.tmpdir(), `test_${Date.now()}.ass`);
+    await convertSrtToKineticAss(FIXTURES.srt, assPath);
 
-2
-00:00:02,000 --> 00:00:04,000
-Goodbye world
-`;
-    const srtPath = path.join(process.cwd(), 'uploads', `test_${Date.now()}.srt`);
-    const assPath = srtPath.replace('.srt', '.ass');
- 
-    const fsExtra = await import('fs-extra');
-    vi.mocked(fsExtra.readFile).mockResolvedValue(srtContent as any);
-    vi.mocked(fsExtra.default.readFile).mockResolvedValue(srtContent as any);
-    vi.mocked(fsExtra.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fsExtra.default.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fsExtra.pathExists).mockResolvedValue(true as any);
-    vi.mocked(fsExtra.default.pathExists).mockResolvedValue(true as any);
-    vi.mocked(fsExtra.remove).mockResolvedValue(undefined);
-    vi.mocked(fsExtra.default.remove).mockResolvedValue(undefined);
- 
-    await convertSrtToKineticAss(srtPath, assPath);
-    expect(fsExtra.default.writeFile).toHaveBeenCalled();
-    const calls = vi.mocked(fsExtra.default.writeFile).mock.calls;
-    const assContent = calls[calls.length - 1][1];
-    expect(assContent).toContain('[Script Info]');
-    expect(assContent).toContain('Kinetic Subtitles');
-    expect(assContent).toContain('Dialogue:');
-  });
-
-  // ── getGridCoordinates ──────────────────────────────────────────────────────
+    const fs = await import('fs-extra');
+    const content = await fs.readFile(assPath, 'utf-8');
+    expect(content).toContain('[Script Info]');
+    expect(content).toContain('Kinetic Subtitles');
+    expect(content).toContain('Dialogue:');
+  }, 30000);
 
   it('getGridCoordinates returns {x, y}', () => {
     const coords = getGridCoordinates('top_right', 1920, 1080, 300, 150);

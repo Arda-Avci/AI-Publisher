@@ -7,8 +7,8 @@ export type WordAnimationType = 'bounce' | 'pulse' | 'shake' | 'pop' | 'wave';
 
 interface SubtitleWordProps {
   word: string;
-  start: number;    // seconds
-  end: number;      // seconds
+  start: number; // seconds
+  end: number; // seconds
   isActive: boolean;
   animationType?: WordAnimationType;
   highlightColor?: string;

@@ -12,22 +12,25 @@ import { Logger } from '../lib/logger.js';
 export async function downloadYouTubeVideo(videoId: string): Promise<string> {
   const uploadDir = path.resolve(process.cwd(), 'uploads');
   await fs.ensureDir(uploadDir);
-  
+
   const tempName = crypto.randomBytes(8).toString('hex');
   const outputPath = path.join(uploadDir, `${tempName}_source.mp4`);
-  
+
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  
+
   // Best video+audio, merged into mp4
   const args = [
-    '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-    '--merge-output-format', 'mp4',
-    '-o', outputPath,
-    videoUrl
+    '-f',
+    'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+    '--merge-output-format',
+    'mp4',
+    '-o',
+    outputPath,
+    videoUrl,
   ];
-  
+
   Logger.info(`İndiriliyor: ${videoUrl}`);
-  
+
   await new Promise<void>((resolve, reject) => {
     execFile('yt-dlp', args, (err, stdout, stderr) => {
       if (err) {
@@ -38,10 +41,10 @@ export async function downloadYouTubeVideo(videoId: string): Promise<string> {
       }
     });
   });
-  
+
   if (!fs.existsSync(outputPath)) {
     throw new Error('İndirme işlemi bitti fakat dosya bulunamadı: ' + outputPath);
   }
-  
+
   return outputPath;
 }

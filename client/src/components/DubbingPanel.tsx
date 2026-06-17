@@ -91,7 +91,9 @@ export function DubbingPanel({ value, onChange, compact }: DubbingPanelProps) {
           style={selectStyle}
         >
           {LANGUAGES.map((l) => (
-            <option key={l.value} value={l.value}>{l.label}</option>
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
           ))}
         </select>
       </div>
@@ -106,7 +108,9 @@ export function DubbingPanel({ value, onChange, compact }: DubbingPanelProps) {
             style={selectStyle}
           >
             {voices.map((v) => (
-              <option key={v} value={v}>{v}</option>
+              <option key={v} value={v}>
+                {v}
+              </option>
             ))}
           </select>
         </div>
@@ -115,10 +119,16 @@ export function DubbingPanel({ value, onChange, compact }: DubbingPanelProps) {
       {/* Beat-Sync Toggle */}
       {isEnabled && (
         <div>
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            fontSize: compact ? '11px' : '12px', cursor: 'pointer', color: 'var(--text-muted)',
-          }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: compact ? '11px' : '12px',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+            }}
+          >
             <input
               type="checkbox"
               checked={value.beatSyncEnabled}
@@ -161,7 +171,9 @@ export function DubbingPanel({ value, onChange, compact }: DubbingPanelProps) {
               max="10"
               step="0.5"
               value={value.beatSyncMinSegment}
-              onChange={(e) => onChange({ ...value, beatSyncMinSegment: parseFloat(e.target.value) || 2.0 })}
+              onChange={(e) =>
+                onChange({ ...value, beatSyncMinSegment: parseFloat(e.target.value) || 2.0 })
+              }
               style={{
                 width: '100%',
                 background: 'var(--bg-primary)',

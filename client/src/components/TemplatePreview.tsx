@@ -75,17 +75,26 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
 
   if (loading) {
     return (
-      <div style={{
-        padding: '16px',
-        borderRadius: '12px',
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
-          <div className="pulse" style={{
-            width: '16px', height: '16px', borderRadius: '50%',
-            background: 'var(--accent)'
-          }} />
+      <div
+        style={{
+          padding: '16px',
+          borderRadius: '12px',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+        }}
+      >
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}
+        >
+          <div
+            className="pulse"
+            style={{
+              width: '16px',
+              height: '16px',
+              borderRadius: '50%',
+              background: 'var(--accent)',
+            }}
+          />
           <span style={{ fontSize: '12px' }}>Şablon önizlemesi yükleniyor...</span>
         </div>
       </div>
@@ -94,32 +103,40 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
 
   if (!preview) return null;
 
-  const displayedPrompts = expandedPrompts ? preview.samplePrompts : preview.samplePrompts.slice(0, 2);
+  const displayedPrompts = expandedPrompts
+    ? preview.samplePrompts
+    : preview.samplePrompts.slice(0, 2);
 
   return (
-    <div style={{
-      padding: '16px',
-      borderRadius: '12px',
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-    }}>
+    <div
+      style={{
+        padding: '16px',
+        borderRadius: '12px',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+      }}
+    >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{
-          width: '48px', height: '48px', borderRadius: '12px',
-          background: templateGradients[template],
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '24px',
-        }}>
+        <div
+          style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: templateGradients[template],
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+          }}
+        >
           {templateIcons[template]}
         </div>
         <div>
-          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
-            {preview.title} Şablonu
-          </h4>
+          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{preview.title} Şablonu</h4>
           <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
             {preview.recommendedScenes} sahne öneriliyor
           </p>
@@ -133,21 +150,35 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
 
       {/* Strengths */}
       <div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          marginBottom: '8px', fontSize: '11px', fontWeight: 700,
-          color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '8px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--accent)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           <Sparkles size={12} />
           Güçlü Yönler
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {preview.strengths.map((strength, i) => (
-            <span key={i} style={{
-              fontSize: '11px', padding: '4px 10px', borderRadius: '20px',
-              background: 'var(--accent-light)', color: 'var(--accent)',
-              fontWeight: 600,
-            }}>
+            <span
+              key={i}
+              style={{
+                fontSize: '11px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                background: 'var(--accent-light)',
+                color: 'var(--accent)',
+                fontWeight: 600,
+              }}
+            >
               {strength}
             </span>
           ))}
@@ -156,21 +187,35 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
 
       {/* Best For */}
       <div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          marginBottom: '8px', fontSize: '11px', fontWeight: 700,
-          color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '0.5px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '8px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           <Info size={12} />
           İdeal Kullanım
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {preview.bestFor.map((item, i) => (
-            <span key={i} style={{
-              fontSize: '11px', padding: '4px 10px', borderRadius: '20px',
-              background: 'rgba(167,139,250,0.1)', color: 'var(--secondary)',
-              fontWeight: 500,
-            }}>
+            <span
+              key={i}
+              style={{
+                fontSize: '11px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                background: 'rgba(167,139,250,0.1)',
+                color: 'var(--secondary)',
+                fontWeight: 500,
+              }}
+            >
               {item}
             </span>
           ))}
@@ -180,11 +225,18 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
       {/* Camera & Color */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            marginBottom: '6px', fontSize: '11px', fontWeight: 700,
-            color: 'var(--text-muted)', textTransform: 'uppercase'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+            }}
+          >
             <Camera size={12} />
             Kamera
           </div>
@@ -197,11 +249,18 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
           </div>
         </div>
         <div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            marginBottom: '6px', fontSize: '11px', fontWeight: 700,
-            color: 'var(--text-muted)', textTransform: 'uppercase'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+            }}
+          >
             <Palette size={12} />
             Renkler
           </div>
@@ -217,18 +276,32 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
 
       {/* Sample Prompts */}
       <div>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: '8px', fontSize: '11px', fontWeight: 700,
-          color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '8px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           <span>Örnek Prompt&apos;lar</span>
           <button
             onClick={() => setExpandedPrompts(!expandedPrompts)}
             style={{
-              background: 'none', border: 'none', color: 'var(--accent)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-              fontSize: '11px', fontWeight: 600,
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              fontWeight: 600,
             }}
           >
             {expandedPrompts ? 'Daralt' : `+${preview.samplePrompts.length - 2} daha`}
@@ -237,30 +310,49 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {displayedPrompts.map((prompt, i) => (
-            <div key={i} style={{
-              padding: '10px 12px', borderRadius: '8px',
-              background: 'var(--bg-primary)', border: '1px solid var(--border)',
-              position: 'relative',
-            }}>
-              <p style={{
-                margin: 0, fontSize: '11px', color: 'var(--text-muted)',
-                lineHeight: 1.5, display: '-webkit-box',
-                WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}>
+            <div
+              key={i}
+              style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border)',
+                position: 'relative',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '11px',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.5,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
                 {prompt}
               </p>
-              <div style={{
-                display: 'flex', gap: '4px', marginTop: '8px',
-                justifyContent: 'flex-end',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '4px',
+                  marginTop: '8px',
+                  justifyContent: 'flex-end',
+                }}
+              >
                 <button
                   onClick={() => copyPrompt(prompt, i)}
                   style={{
-                    background: 'none', border: 'none',
+                    background: 'none',
+                    border: 'none',
                     color: copiedPrompt === i ? 'var(--success)' : 'var(--text-muted)',
-                    cursor: 'pointer', padding: '4px',
-                    display: 'flex', alignItems: 'center', gap: '4px',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                     fontSize: '10px',
                   }}
                 >
@@ -270,11 +362,17 @@ export function TemplatePreview({ template, onApplyPrompt, t: _t }: TemplatePrev
                 <button
                   onClick={() => onApplyPrompt(prompt)}
                   style={{
-                    background: 'var(--accent-light)', border: 'none',
-                    color: 'var(--accent)', cursor: 'pointer',
-                    padding: '4px 8px', borderRadius: '4px',
-                    fontSize: '10px', fontWeight: 600,
-                    display: 'flex', alignItems: 'center', gap: '4px',
+                    background: 'var(--accent-light)',
+                    border: 'none',
+                    color: 'var(--accent)',
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
                   <Sparkles size={10} />

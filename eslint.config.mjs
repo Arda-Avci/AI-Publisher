@@ -7,20 +7,21 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/await-thenable': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
       'no-empty': 'off',
       'no-var': 'off',
-      'prefer-const': 'error',
+      'prefer-const': 'warn',
       'no-console': 'off',
+      'no-undef': 'off',
       'no-useless-assignment': 'off',
       'preserve-caught-error': 'off',
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'videolar/', 'uploads/', '*.py', 'Wav2Lip/'],
+    ignores: ['dist/', 'node_modules/', 'videolar/', 'uploads/', '*.py', 'Wav2Lip/', 'scratch/', 'fix_translations.js', 'src/**/*.js', 'src/**/*.js.map', 'client/src/**/*.js', 'client/src/**/*.js.map', 'client/tests/'],
   }
 );

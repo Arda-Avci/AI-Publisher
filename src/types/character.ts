@@ -15,7 +15,13 @@ export interface Character {
   name: string;
   description: string;
   slug: string;
-  role_archetype: 'protagonist' | 'mentor' | 'comic_relief' | 'antagonist' | 'supporting' | 'narrator';
+  role_archetype:
+    | 'protagonist'
+    | 'mentor'
+    | 'comic_relief'
+    | 'antagonist'
+    | 'supporting'
+    | 'narrator';
   reference_image_base64?: string;
   tts_voice_id: string;
   voice_provider: 'edge' | 'openai' | 'xtts';
@@ -37,11 +43,11 @@ export function characterPromptLine(c: Character | { name: string; description: 
 /** All characters as a single prompt block with consistency guard (ppt-anything one-liner pattern). */
 export function characterConsistencyBlock(characters: Character[]): string {
   if (characters.length === 0) return '';
-  const lines = characters.map(c => characterPromptLine(c));
+  const lines = characters.map((c) => characterPromptLine(c));
   return [
     '',
     'CHARACTERS (maintain these across all scenes):',
-    ...lines.map(l => `- ${l}`),
+    ...lines.map((l) => `- ${l}`),
     '',
     'CRITICAL CONSISTENCY REQUIREMENTS:',
     '- Same appearance for each character across all scenes',

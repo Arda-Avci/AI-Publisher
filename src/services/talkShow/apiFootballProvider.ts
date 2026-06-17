@@ -1,7 +1,7 @@
 /**
  * API-Football provider for the Talk-Show.
  * Uses the existing API key from dashbord.api-football.com_key.txt
- * 
+ *
  * Free plan: 100 requests/day, access to seasons 2022-2024.
  * League ID 203 = Süper Lig.
  */
@@ -37,7 +37,11 @@ export interface TeamInfo {
 }
 
 /** Fetch fixture by team names (find the most recent match between two teams). */
-export async function findFixture(homeTeam: string, awayTeam: string, season = DEFAULT_SEASON): Promise<any | null> {
+export async function findFixture(
+  homeTeam: string,
+  awayTeam: string,
+  season = DEFAULT_SEASON,
+): Promise<any | null> {
   try {
     const res = await client.get('/fixtures', {
       params: { league: SUPER_LIG_ID, season: season, status: 'FT' },
@@ -78,49 +82,86 @@ export async function fetchMatchFeed(match: MatchContext): Promise<MatchFeed> {
   const awayGoals = score?.away ?? 0;
 
   // Head to head
-  const h2hRes = await client.get('/fixtures/headtohead', {
-    params: { h2h: `${fixture.teams?.home?.id}-${fixture.teams?.away?.id}`, season: season, last: 5 },
-  }).catch(() => null);
+  const h2hRes = await client
+    .get('/fixtures/headtohead', {
+      params: {
+        h2h: `${fixture.teams?.home?.id}-${fixture.teams?.away?.id}`,
+        season: season,
+        last: 5,
+      },
+    })
+    .catch(() => null);
   const h2hData = h2hRes?.data?.response || [];
   const headToHead = h2hData.slice(0, 5).map((f: any) => ({
-    winner: (f.goals?.home ?? 0) > (f.goals?.away ?? 0) ? 'home' as const
-      : (f.goals?.away ?? 0) > (f.goals?.home ?? 0) ? 'away' as const
-      : 'draw' as const,
+    winner:
+      (f.goals?.home ?? 0) > (f.goals?.away ?? 0)
+        ? ('home' as const)
+        : (f.goals?.away ?? 0) > (f.goals?.home ?? 0)
+          ? ('away' as const)
+          : ('draw' as const),
     score: `${f.goals?.home ?? 0}-${f.goals?.away ?? 0}`,
   }));
 
   // Recent form (last 5)
   const teamHomeId = fixture.teams?.home?.id;
   const teamAwayId = fixture.teams?.away?.id;
-  const formRes = await client.get('/fixtures', {
-    params: { league: SUPER_LIG_ID, season: season, team: teamHomeId, last: 5 },
-  }).catch(() => null);
+  const formRes = await client
+    .get('/fixtures', {
+      params: { league: SUPER_LIG_ID, season: season, team: teamHomeId, last: 5 },
+    })
+    .catch(() => null);
   const homeFixtures = formRes?.data?.response || [];
   const recentHome = homeFixtures.map((f: any) => {
     const hGoals = f.goals?.home ?? 0;
     const aGoals = f.goals?.away ?? 0;
     const isHome = f.teams?.home?.id === teamHomeId;
-    return isHome ? (hGoals > aGoals ? 'W' : hGoals < aGoals ? 'L' : 'D') : (aGoals > hGoals ? 'W' : aGoals < hGoals ? 'L' : 'D');
+    return isHome
+      ? hGoals > aGoals
+        ? 'W'
+        : hGoals < aGoals
+          ? 'L'
+          : 'D'
+      : aGoals > hGoals
+        ? 'W'
+        : aGoals < hGoals
+          ? 'L'
+          : 'D';
   });
 
-  const formResAway = await client.get('/fixtures', {
-    params: { league: SUPER_LIG_ID, season: season, team: teamAwayId, last: 5 },
-  }).catch(() => null);
+  const formResAway = await client
+    .get('/fixtures', {
+      params: { league: SUPER_LIG_ID, season: season, team: teamAwayId, last: 5 },
+    })
+    .catch(() => null);
   const awayFixtures = formResAway?.data?.response || [];
   const recentAway = awayFixtures.map((f: any) => {
     const hGoals = f.goals?.home ?? 0;
     const aGoals = f.goals?.away ?? 0;
     const isHome = f.teams?.home?.id === teamAwayId;
-    return isHome ? (hGoals > aGoals ? 'W' : hGoals < aGoals ? 'L' : 'D') : (aGoals > hGoals ? 'W' : aGoals < hGoals ? 'L' : 'D');
+    return isHome
+      ? hGoals > aGoals
+        ? 'W'
+        : hGoals < aGoals
+          ? 'L'
+          : 'D'
+      : aGoals > hGoals
+        ? 'W'
+        : aGoals < hGoals
+          ? 'L'
+          : 'D';
   });
 
   // Top scorers
-  const scorersRes = await client.get('/players/topscorers', {
-    params: { league: SUPER_LIG_ID, season: season },
-  }).catch(() => null);
+  const scorersRes = await client
+    .get('/players/topscorers', {
+      params: { league: SUPER_LIG_ID, season: season },
+    })
+    .catch(() => null);
   const scorers = (scorersRes?.data?.response || []).slice(0, 3).map((p: any) => ({
     name: `${p.player?.firstname || ''} ${p.player?.lastname || ''}`.trim() || 'Bilinmeyen',
-    team: (p.statistics?.[0]?.team?.name?.toLowerCase().includes('galatasaray') ? 'home' : 'away') as 'home' | 'away',
+    team: (p.statistics?.[0]?.team?.name?.toLowerCase().includes('galatasaray')
+      ? 'home'
+      : 'away') as 'home' | 'away',
     goals: p.statistics?.[0]?.goals?.total || 0,
   }));
 

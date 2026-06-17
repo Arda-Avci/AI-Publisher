@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import express from 'express';
 import session from 'express-session';
 import request from 'supertest';
@@ -8,22 +8,6 @@ import bcrypt from 'bcrypt';
 import { orchestrateTalkShow, __test__ } from './services/talkShow/orchestrator.js';
 import { OrchestratorInput, OrchestratorResult, AgentMessage } from './services/talkShow/types.js';
 
-vi.mock('./middleware/rate-limit.js', () => ({
-  authLimiter: (_req: any, _res: any, next: any) => next(),
-  mediumLimiter: (_req: any, _res: any, next: any) => next(),
-  heavyLimiter: (_req: any, _res: any, next: any) => next(),
-  sseLimiter: (_req: any, _res: any, next: any) => next(),
-}));
-
-vi.mock('./lib/redis.js', () => ({
-  broadcastProgress: () => {},
-  clients: new Map(),
-}));
-
-vi.mock('./lib/audit.js', () => ({
-  logAudit: () => {},
-}));
-
 const MOCK_MATCH = {
   homeTeam: 'Galatasaray',
   awayTeam: 'Fenerbahçe',
@@ -31,7 +15,7 @@ const MOCK_MATCH = {
   venue: 'Rams Park',
   competition: 'Süper Lig',
   xg: { home: 1.6, away: 1.2 },
-  odds: { home: 2.05, draw: 3.40, away: 3.30 },
+  odds: { home: 2.05, draw: 3.4, away: 3.3 },
 };
 
 const SAMPLE_INPUT: OrchestratorInput = {
@@ -54,7 +38,10 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const existing = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
     if (!existing) {
-      await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedAdmin, hashedPassword]);
+      await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [
+        encryptedAdmin,
+        hashedPassword,
+      ]);
     } else {
       await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existing.id]);
     }
@@ -75,7 +62,9 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
     registerAuthRoutes(app);
     app.use('/api/v1/talkshow', talkShowRouter);
 
-    const loginRes = await request(app).post('/login').send({ username: 'admin', password: 'admin123' });
+    const loginRes = await request(app)
+      .post('/login')
+      .send({ username: 'admin', password: 'admin123' });
     expect(loginRes.status).toBe(200);
     authCookie = loginRes.headers['set-cookie'][0].split(';')[0];
   });
@@ -88,7 +77,9 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
       expect(result.transcript[0].role).toBe('meta_orchestrator');
       expect(result.transcript[result.transcript.length - 1].role).toBe('meta_orchestrator');
       for (let i = 1; i < result.transcript.length - 1; i++) {
-        expect(['match_analyst', 'former_player', 'bookmaker', 'data_scout']).toContain(result.transcript[i].role);
+        expect(['match_analyst', 'former_player', 'bookmaker', 'data_scout']).toContain(
+          result.transcript[i].role,
+        );
       }
     });
 
@@ -153,13 +144,34 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
   describe('2. Helper exports', () => {
     it('averageSentiment reflects bullish/bearish majority', () => {
       const msgs: AgentMessage[] = [
-        { role: 'match_analyst', speaker: 'A', content: 'x', confidence: 0.7, sentiment: 'bullish', timestamp: 0 },
-        { role: 'match_analyst', speaker: 'A', content: 'x', confidence: 0.7, sentiment: 'bearish', timestamp: 0 },
+        {
+          role: 'match_analyst',
+          speaker: 'A',
+          content: 'x',
+          confidence: 0.7,
+          sentiment: 'bullish',
+          timestamp: 0,
+        },
+        {
+          role: 'match_analyst',
+          speaker: 'A',
+          content: 'x',
+          confidence: 0.7,
+          sentiment: 'bearish',
+          timestamp: 0,
+        },
       ];
       expect(__test__.averageSentiment(msgs)).toBe('neutral');
       const bullish: AgentMessage[] = [
         ...msgs,
-        { role: 'match_analyst', speaker: 'A', content: 'x', confidence: 0.7, sentiment: 'bullish', timestamp: 0 },
+        {
+          role: 'match_analyst',
+          speaker: 'A',
+          content: 'x',
+          confidence: 0.7,
+          sentiment: 'bullish',
+          timestamp: 0,
+        },
       ];
       expect(__test__.averageSentiment(bullish)).toBe('bullish');
     });
@@ -213,9 +225,7 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
     });
 
     it('GET /api/v1/talkshow/health — returns agent roster', async () => {
-      const res = await request(app)
-        .get('/api/v1/talkshow/health')
-        .set('Cookie', authCookie);
+      const res = await request(app).get('/api/v1/talkshow/health').set('Cookie', authCookie);
 
       expect(res.status).toBe(200);
       expect(res.body.data.agents).toContain('meta_orchestrator');
@@ -223,9 +233,7 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
     });
 
     it('rejects unauthenticated requests with redirect to /login', async () => {
-      const res = await request(app)
-        .post('/api/v1/talkshow/orchestrate')
-        .send(SAMPLE_INPUT);
+      const res = await request(app).post('/api/v1/talkshow/orchestrate').send(SAMPLE_INPUT);
 
       // requireAuth redirects to /login
       expect([302, 401, 403]).toContain(res.status);

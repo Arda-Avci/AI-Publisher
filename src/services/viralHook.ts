@@ -35,37 +35,50 @@ export const HookQualitySchema = z.object({
   improvementTips: z.array(z.string()),
   // Extended fields for first-3-second analysis
   openerStrength: z.number().min(0).max(100).optional(),
-  patternMatch: z.object({
-    curiosity: z.number().min(0).max(100).optional(),
-    controversy: z.number().min(0).max(100).optional(),
-    authority: z.number().min(0).max(100).optional(),
-    numbers: z.number().min(0).max(100).optional()
-  }).optional()
+  patternMatch: z
+    .object({
+      curiosity: z.number().min(0).max(100).optional(),
+      controversy: z.number().min(0).max(100).optional(),
+      authority: z.number().min(0).max(100).optional(),
+      numbers: z.number().min(0).max(100).optional(),
+    })
+    .optional(),
 });
 
 /**
  * Viral title suggestion.
  */
 export const ViralTitlesSchema = z.object({
-  titles: z.array(z.object({
-    title: z.string(),
-    style: z.enum(['curiosity', 'controversial', 'stat-driven', 'emotional', 'how-to', 'listicle']),
-    ctaIncluded: z.boolean(),
-    emojiCount: z.number()
-  }))
+  titles: z.array(
+    z.object({
+      title: z.string(),
+      style: z.enum([
+        'curiosity',
+        'controversial',
+        'stat-driven',
+        'emotional',
+        'how-to',
+        'listicle',
+      ]),
+      ctaIncluded: z.boolean(),
+      emojiCount: z.number(),
+    }),
+  ),
 });
 
 /**
  * Hashtag suggestion result.
  */
 export const HashtagsSchema = z.object({
-  hashtags: z.array(z.object({
-    tag: z.string(),
-    platform: z.string(),
-    category: z.enum(['niche', 'trend', 'brand', 'community', 'generic']),
-    estimatedReach: z.string()
-  })),
-  trendingTopics: z.array(z.string()).optional()
+  hashtags: z.array(
+    z.object({
+      tag: z.string(),
+      platform: z.string(),
+      category: z.enum(['niche', 'trend', 'brand', 'community', 'generic']),
+      estimatedReach: z.string(),
+    }),
+  ),
+  trendingTopics: z.array(z.string()).optional(),
 });
 
 /**
@@ -79,7 +92,9 @@ export const HashtagsSchema = z.object({
  * @param videoPath - Absolute path to the video file
  * @returns Hook quality analysis with opener strength and pattern match
  */
-export async function analyzeHookQuality(videoPath: string): Promise<z.infer<typeof HookQualitySchema>> {
+export async function analyzeHookQuality(
+  videoPath: string,
+): Promise<z.infer<typeof HookQualitySchema>> {
   Logger.info('[viralHook] Analyzing hook quality (first 3 seconds)', { videoPath });
 
   // Extract first 3-second clip and reference frame
@@ -91,13 +106,19 @@ export async function analyzeHookQuality(videoPath: string): Promise<z.infer<typ
 
   try {
     await runFFmpeg('ffmpeg', [
-      '-y', '-i', videoPath,
-      '-t', '3',
-      '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-vf', 'scale=720:-2',
+      '-y',
+      '-i',
+      videoPath,
+      '-t',
+      '3',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'ultrafast',
+      '-vf',
+      'scale=720:-2',
       '-an',
-      clipPath
+      clipPath,
     ]);
   } catch {
     Logger.warn('[viralHook] Could not extract 3s clip, using frame only');
@@ -105,22 +126,23 @@ export async function analyzeHookQuality(videoPath: string): Promise<z.infer<typ
 
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    const contentParts: any[] = [];
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const contentParts: any[] = [];
 
-    if (frameBase64) {
-      const cleanB64 = frameBase64.replace(/^data:image\/\w+;base64,/, '');
-      const frameBuffer = Buffer.from(cleanB64, 'base64');
+      if (frameBase64) {
+        const cleanB64 = frameBase64.replace(/^data:image\/\w+;base64,/, '');
+        const frameBuffer = Buffer.from(cleanB64, 'base64');
+        contentParts.push({
+          type: 'image' as const,
+          image: frameBuffer,
+          mimeType: 'image/jpeg',
+        });
+      }
+
       contentParts.push({
-        type: 'image' as const,
-        image: frameBuffer,
-        mimeType: 'image/jpeg'
-      });
-    }
-
-    contentParts.push({
-      type: 'text' as const,
-      text: `Analyze the FIRST 3 SECONDS of this video specifically for hook quality.
+        type: 'text' as const,
+        text: `Analyze the FIRST 3 SECONDS of this video specifically for hook quality.
 
 Rate the following (0-10):
 1. Overall hook quality (does it grab attention immediately?)
@@ -141,16 +163,21 @@ Also identify:
 - Strengths and weaknesses
 - Concrete improvement tips for the first 3 seconds
 
-Respond in Turkish with all fields.`
-    });
+Respond in Turkish with all fields.`,
+      });
 
-    return generateObject({
-      model,
-      schema: HookQualitySchema,
-      abortSignal: AbortSignal.timeout(45000),
-      messages: [{ role: 'user', content: contentParts }]
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: HookQualitySchema,
+        abortSignal: AbortSignal.timeout(45000),
+        messages: [{ role: 'user', content: contentParts }],
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   // Cleanup preview clip
   if (await fs.pathExists(clipPath)) {
@@ -159,7 +186,7 @@ Respond in Turkish with all fields.`
 
   Logger.info('[viralHook] Hook analysis complete', {
     score: result.object.score,
-    openerStrength: result.object.openerStrength
+    openerStrength: result.object.openerStrength,
   });
   return result.object;
 }
@@ -173,18 +200,19 @@ Respond in Turkish with all fields.`
  */
 export async function generateViralTitles(
   topic: string,
-  count = 5
+  count = 5,
 ): Promise<z.infer<typeof ViralTitlesSchema>> {
   Logger.info('[viralHook] Generating viral titles', { topic, count });
 
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    return generateObject({
-      model,
-      schema: ViralTitlesSchema,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt: `Sen profesyonel bir YouTube/TikTok başlık uzmanısın.
+  const result = await withFallbackAndRetry(
+    (model) => {
+      return generateObject({
+        model,
+        schema: ViralTitlesSchema,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt: `Sen profesyonel bir YouTube/TikTok başlık uzmanısın.
 Konu: "${topic}"
 
 Görevin: Bu konu için ${count} adet yüksek tıklama oranına sahip viral başlık üretmek.
@@ -200,9 +228,14 @@ Kurallar:
 3. Her başlık farklı bir yaklaşım sergelesin
 4. Türkçe ve İngilizce karışık kullanabilirsin (YouTube algoritması İngilizce keyword'leri sever)
 5. "2026", " Şok", "İlk defa", "Büyük sır" gibi dikkat çekici ifadeler kullan
-6. Sadece JSON array döndür, açıklama yazma`
-    });
-  }, models, 2, 2000, true);
+6. Sadece JSON array döndür, açıklama yazma`,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -216,7 +249,7 @@ Kurallar:
  */
 export async function generateHashtags(
   content: string,
-  platform: Platform
+  platform: Platform,
 ): Promise<z.infer<typeof HashtagsSchema>> {
   Logger.info('[viralHook] Generating hashtags', { platform, contentLength: content.length });
 
@@ -224,17 +257,18 @@ export async function generateHashtags(
     youtube: 'YouTube Shorts',
     tiktok: 'TikTok',
     x: 'X (Twitter)',
-    meta: 'Meta Reels'
+    meta: 'Meta Reels',
   };
 
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    return generateObject({
-      model,
-      schema: HashtagsSchema,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt: `Sen bir sosyal medya hashtag uzmanısın.
+  const result = await withFallbackAndRetry(
+    (model) => {
+      return generateObject({
+        model,
+        schema: HashtagsSchema,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt: `Sen bir sosyal medya hashtag uzmanısın.
 Platform: ${platformLabel[platform]}
 İçerik: ${content}
 
@@ -249,9 +283,14 @@ Kurallar:
 - TikTok: 3-5 hashtag (1-2 çok büyük, 2-3 niş)
 - X: 2-4 hashtag
 - Meta: 5-10 hashtag
-- Sadece JSON döndür, açıklama yazma`
-    });
-  }, models, 2, 2000, true);
+- Sadece JSON döndür, açıklama yazma`,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -276,23 +315,23 @@ export interface ViralOptimizationResult {
 export async function optimizeForViral(
   videoPath: string,
   topic: string,
-  platform: Platform = 'youtube'
+  platform: Platform = 'youtube',
 ): Promise<ViralOptimizationResult> {
   Logger.info('[viralHook] Running full viral optimization', { videoPath, topic, platform });
 
   const [hookAnalysis, titles, hashtags] = await Promise.all([
-    analyzeHookQuality(videoPath).catch(err => {
+    analyzeHookQuality(videoPath).catch((err) => {
       Logger.warn('[viralHook] Hook analysis failed, using defaults', { error: err.message });
       return { score: 5, hookType: 'other' } as any;
     }),
     generateViralTitles(topic, 5),
-    generateHashtags(topic, platform)
+    generateHashtags(topic, platform),
   ]);
 
   return {
     hookScore: hookAnalysis.score,
     titles: titles.titles,
-    hashtags: hashtags.hashtags
+    hashtags: hashtags.hashtags,
   };
 }
 
@@ -302,7 +341,7 @@ export async function optimizeForViral(
 export const ViralContentSchema = z.object({
   titles: z.array(z.string()),
   hashtags: z.array(z.string()),
-  hookScore: z.number().min(0).max(100)
+  hookScore: z.number().min(0).max(100),
 });
 
 /**
@@ -317,31 +356,35 @@ export const ViralContentSchema = z.object({
  */
 export async function generateViralContent(
   videoPath: string,
-  transcript: string
+  transcript: string,
 ): Promise<{ titles: string[]; hashtags: string[]; hookScore: number }> {
-  Logger.info('[viralHook] Generating viral content', { videoPath, transcriptLength: transcript.length });
+  Logger.info('[viralHook] Generating viral content', {
+    videoPath,
+    transcriptLength: transcript.length,
+  });
 
   // Extract preview frame for visual analysis
   const frameBase64 = await extractReferenceFrame(videoPath);
 
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    const contentParts: any[] = [];
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const contentParts: any[] = [];
 
-    if (frameBase64) {
-      const cleanB64 = frameBase64.replace(/^data:image\/\w+;base64,/, '');
-      const frameBuffer = Buffer.from(cleanB64, 'base64');
+      if (frameBase64) {
+        const cleanB64 = frameBase64.replace(/^data:image\/\w+;base64,/, '');
+        const frameBuffer = Buffer.from(cleanB64, 'base64');
+        contentParts.push({
+          type: 'image' as const,
+          image: frameBuffer,
+          mimeType: 'image/jpeg',
+        });
+      }
+
       contentParts.push({
-        type: 'image' as const,
-        image: frameBuffer,
-        mimeType: 'image/jpeg'
-      });
-    }
-
-    contentParts.push({
-      type: 'text' as const,
-      text: `You are a viral content strategist for YouTube Shorts and TikTok.
+        type: 'text' as const,
+        text: `You are a viral content strategist for YouTube Shorts and TikTok.
 Analyze this video and its transcript to generate viral-optimized content.
 
 TRANSCRIPT:
@@ -353,26 +396,31 @@ Generate:
 3. Hook score (0-100): rate the video's hook effectiveness based on opener strength, curiosity gap, and engagement potential
 
 Return JSON with: titles (array of strings), hashtags (array of strings starting with #), hookScore (0-100 integer).
-Sadece JSON döndür, açıklama yazma.`
-    });
+Sadece JSON döndür, açıklama yazma.`,
+      });
 
-    return generateObject({
-      model,
-      schema: ViralContentSchema,
-      abortSignal: AbortSignal.timeout(45000),
-      messages: [{ role: 'user', content: contentParts }]
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: ViralContentSchema,
+        abortSignal: AbortSignal.timeout(45000),
+        messages: [{ role: 'user', content: contentParts }],
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   Logger.info('[viralHook] Viral content generated', {
     titleCount: result.object.titles.length,
     hashtagCount: result.object.hashtags.length,
-    hookScore: result.object.hookScore
+    hookScore: result.object.hookScore,
   });
 
   return {
     titles: result.object.titles,
     hashtags: result.object.hashtags,
-    hookScore: result.object.hookScore
+    hookScore: result.object.hookScore,
   };
 }

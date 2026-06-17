@@ -35,7 +35,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
 
       // Draw background image
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
+
       // We will overlay a second transparent canvas for drawing masks,
       // or we can draw directly and keep a backup of the original image
       // Let's create an offscreen canvas for the mask
@@ -64,7 +64,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
     const rect = canvas.getBoundingClientRect();
     return {
       x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      y: e.clientY - rect.top,
     };
   };
 
@@ -145,13 +145,13 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
       // Overlay mask as red
       const maskData = mCtx.getImageData(0, 0, mCanvas.width, mCanvas.height);
       const visualData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      
+
       for (let i = 0; i < maskData.data.length; i += 4) {
         // If mask is white (drawn area), make it red overlay
         if (maskData.data[i] > 128) {
-          visualData.data[i] = 239;     // R
-          visualData.data[i + 1] = 68;  // G
-          visualData.data[i + 2] = 68;  // B
+          visualData.data[i] = 239; // R
+          visualData.data[i + 1] = 68; // G
+          visualData.data[i + 2] = 68; // B
           visualData.data[i + 3] = 200; // Alpha
         }
       }
@@ -184,7 +184,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
 
       const res = await fetch('/api/v1/editor/remove-background', {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       const data = await res.json();
@@ -227,7 +227,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
 
       const res = await fetch('/api/v1/editor/inpaint', {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       const data = await res.json();
@@ -251,49 +251,68 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
   };
 
   return (
-    <div className="photo-editor-modal glass" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      zIndex: 1000,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(5, 7, 12, 0.9)'
-    }}>
-      <div className="editor-card" style={{
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '12px',
-        padding: '24px',
-        width: '90%',
-        maxWidth: '900px',
-        display: 'grid',
-        gridTemplateColumns: '1fr 300px',
-        gap: '20px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.8)'
-      }}>
+    <div
+      className="photo-editor-modal glass"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(5, 7, 12, 0.9)',
+      }}
+    >
+      <div
+        className="editor-card"
+        style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '24px',
+          width: '90%',
+          maxWidth: '900px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 300px',
+          gap: '20px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+        }}
+      >
         {/* Left Side: Canvas Drawing Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-          <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}
+        >
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Wand2 size={18} style={{ color: 'var(--primary)' }} />
               Gelişmiş Görsel Stüdyo & Editör
             </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Odysseus tabanlı AI araçları</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Odysseus tabanlı AI araçları
+            </span>
           </div>
 
-          <div style={{
-            position: 'relative',
-            width: '500px',
-            background: '#070a14',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: '1px solid var(--border)',
-            boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
-          }}>
+          <div
+            style={{
+              position: 'relative',
+              width: '500px',
+              background: '#070a14',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              border: '1px solid var(--border)',
+              boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)',
+            }}
+          >
             <canvas
               ref={canvasRef}
               onMouseDown={startDrawing}
@@ -305,7 +324,18 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
           </div>
 
           {/* Brush Controls */}
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: '100%', background: 'var(--bg-timeline)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '15px',
+              alignItems: 'center',
+              width: '100%',
+              background: 'var(--bg-timeline)',
+              padding: '10px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+            }}
+          >
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Fırça Modu:</span>
             <button
               onClick={() => setIsEraser(false)}
@@ -317,7 +347,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
                 color: !isEraser ? '#0b0f19' : 'white',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
               }}
             >
               <Paintbrush size={12} /> Maske Çiz
@@ -332,13 +362,21 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
                 color: isEraser ? '#0b0f19' : 'white',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
               }}
             >
               <Eraser size={12} /> Silici (Erase)
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, marginLeft: '10px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexGrow: 1,
+                marginLeft: '10px',
+              }}
+            >
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Fırça Boyutu:</span>
               <input
                 type="range"
@@ -354,29 +392,58 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
         </div>
 
         {/* Right Side: AI Tooling Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', borderLeft: '1px solid var(--border)', paddingLeft: '20px', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px',
+            borderLeft: '1px solid var(--border)',
+            paddingLeft: '20px',
+            justifyContent: 'space-between',
+          }}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '8px', color: 'var(--text-muted)' }}>
+            <div
+              style={{
+                fontWeight: 'bold',
+                fontSize: '14px',
+                borderBottom: '1px solid var(--border)',
+                paddingBottom: '8px',
+                color: 'var(--text-muted)',
+              }}
+            >
               AI ARAÇLARI
             </div>
 
             {/* Remove Background tool */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>1. ARKA PLAN KALDIR (rembg)</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                1. ARKA PLAN KALDIR (rembg)
+              </span>
               <button
                 onClick={handleRemoveBackground}
                 disabled={isProcessing}
                 className="btn btn-secondary"
-                style={{ width: '100%', justifyContent: 'flex-start', fontSize: '12px', gap: '8px', borderColor: 'var(--primary-glow)' }}
+                style={{
+                  width: '100%',
+                  justifyContent: 'flex-start',
+                  fontSize: '12px',
+                  gap: '8px',
+                  borderColor: 'var(--primary-glow)',
+                }}
               >
                 <Scissors size={14} style={{ color: 'var(--primary)' }} />
-                {isProcessing && statusMsg.includes('Arka plan') ? 'Kaldırılıyor...' : 'Arka Planı Temizle'}
+                {isProcessing && statusMsg.includes('Arka plan')
+                  ? 'Kaldırılıyor...'
+                  : 'Arka Planı Temizle'}
               </button>
             </div>
 
             {/* SD Inpainting tool */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>2. BÖLGESEL YENİDEN ÇİZ (Inpaint)</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                2. BÖLGESEL YENİDEN ÇİZ (Inpaint)
+              </span>
               <textarea
                 placeholder="Maskelediğiniz alanın yerine çizilmesini istediğiniz nesneyi tarif edin..."
                 value={inpaintPrompt}
@@ -391,7 +458,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
                   padding: '8px',
                   fontSize: '11px',
                   resize: 'none',
-                  outline: 'none'
+                  outline: 'none',
                 }}
               />
               <button
@@ -401,24 +468,28 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
                 style={{ width: '100%', fontSize: '12px', gap: '8px' }}
               >
                 <Sparkles size={14} />
-                {isProcessing && statusMsg.includes('Inpaint') ? 'Sentezleniyor...' : 'Seçili Alanı AI İle Çiz'}
+                {isProcessing && statusMsg.includes('Inpaint')
+                  ? 'Sentezleniyor...'
+                  : 'Seçili Alanı AI İle Çiz'}
               </button>
             </div>
 
             {/* Status updates */}
             {statusMsg && (
-              <div style={{
-                background: 'rgba(234, 179, 8, 0.08)',
-                border: '1px solid rgba(234, 179, 8, 0.2)',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '11px',
-                color: 'var(--warning)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                wordBreak: 'break-all'
-              }}>
+              <div
+                style={{
+                  background: 'rgba(234, 179, 8, 0.08)',
+                  border: '1px solid rgba(234, 179, 8, 0.2)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  fontSize: '11px',
+                  color: 'var(--warning)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  wordBreak: 'break-all',
+                }}
+              >
                 <RefreshCw size={12} className="pulse" />
                 {statusMsg}
               </div>
@@ -426,7 +497,15 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
           </div>
 
           {/* Modal Actions */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '15px' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '10px',
+              marginTop: '20px',
+              borderTop: '1px solid var(--border)',
+              paddingTop: '15px',
+            }}
+          >
             <button onClick={onClose} className="btn btn-secondary" style={{ flexGrow: 1 }}>
               İptal Et
             </button>

@@ -89,7 +89,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     lastHealthCheck: null,
     lastError: null,
     startedAt: null,
-    runtimeSeconds: null
+    runtimeSeconds: null,
   };
 
   private proc: ChildProcess | null = null;
@@ -105,12 +105,13 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     if (envUrl && envUrl.startsWith('http')) {
       this.state.startedAt = new Date().toISOString();
       this.setStatus('running', envUrl, null);
-      
+
       // Run initial check asynchronously to verify availability immediately
-      axios.get(`${envUrl}/health`, { 
-        timeout: 5000,
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-      })
+      axios
+        .get(`${envUrl}/health`, {
+          timeout: 5000,
+          headers: { 'ngrok-skip-browser-warning': 'true' },
+        })
         .then(() => {
           this.startHealthChecks();
         })
@@ -135,12 +136,12 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     if (envUrl && envUrl.startsWith('http')) {
       if (!this.state.startedAt) this.state.startedAt = new Date().toISOString();
       this.setStatus('running', envUrl, null);
-      
+
       // Perform a quick health check to verify the adopted URL is actually alive
       try {
-        await axios.get(`${envUrl}/health`, { 
+        await axios.get(`${envUrl}/health`, {
           timeout: 5000,
-          headers: { 'ngrok-skip-browser-warning': 'true' }
+          headers: { 'ngrok-skip-browser-warning': 'true' },
         });
         this.startHealthChecks();
         return { ngrokUrl: envUrl };
@@ -149,7 +150,9 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           this.startHealthChecks();
           return { ngrokUrl: envUrl };
         }
-        Logger.warn(`Existing COLAB_URL connection failed (${err.message}). Starting new Colab server...`);
+        Logger.warn(
+          `Existing COLAB_URL connection failed (${err.message}). Starting new Colab server...`,
+        );
         this.state.status = 'starting';
       }
     }
@@ -191,9 +194,9 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     try {
       // Validate health
       try {
-        await axios.get(`${finalUrl}/health`, { 
+        await axios.get(`${finalUrl}/health`, {
           timeout: 8000,
-          headers: { 'ngrok-skip-browser-warning': 'true' }
+          headers: { 'ngrok-skip-browser-warning': 'true' },
         });
       } catch (err: any) {
         if (!err.response) throw err;
@@ -242,17 +245,13 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
 
         // We use detached on Linux/Mac so the whole process group can be killed.
         // On Windows detached behaves differently, so we use taskkill /F /T /PID.
-        const proc = spawn(
-          process.platform === 'win32' ? 'python' : 'python3',
-          [setupPath],
-          {
-            cwd: process.cwd(),
-            stdio: ['ignore', 'pipe', 'pipe'],
-            detached: !isWindows,
-            windowsHide: true,
-            env: process.env
-          }
-        );
+        const proc = spawn(process.platform === 'win32' ? 'python' : 'python3', [setupPath], {
+          cwd: process.cwd(),
+          stdio: ['ignore', 'pipe', 'pipe'],
+          detached: !isWindows,
+          windowsHide: true,
+          env: process.env,
+        });
 
         this.proc = proc;
 
@@ -348,10 +347,14 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     if (url) {
       try {
         Logger.info(`[colab] Sending shutdown request to Colab at ${url}/shutdown`);
-        await axios.post(`${url}/shutdown`, {}, {
-          timeout: 4000,
-          headers: { 'ngrok-skip-browser-warning': 'true' }
-        });
+        await axios.post(
+          `${url}/shutdown`,
+          {},
+          {
+            timeout: 4000,
+            headers: { 'ngrok-skip-browser-warning': 'true' },
+          },
+        );
       } catch (e: any) {
         Logger.warn(`[colab] Failed to call /shutdown endpoint: ${e.message}`);
       }
@@ -388,7 +391,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           const { spawn: spawnSync } = require('child_process');
           spawnSync('taskkill', ['/F', '/T', '/PID', String(proc.pid)], {
             stdio: 'ignore',
-            windowsHide: true
+            windowsHide: true,
           });
         } else {
           // Negative PID targets the whole group (detached: true required)
@@ -416,7 +419,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
   getState(): ColabState {
     return {
       ...this.state,
-      uptimeSeconds: this.computeUptime()
+      uptimeSeconds: this.computeUptime(),
     };
   }
 
@@ -460,11 +463,11 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     try {
       const res = await axios.get(`${url}/verify-libs`, {
         timeout: 15000,
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: { 'ngrok-skip-browser-warning': 'true' },
       });
       return {
         success: res.data?.success === true,
-        report: res.data?.report
+        report: res.data?.report,
       };
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message;
@@ -472,7 +475,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       return {
         success: false,
         error: `Colab kütüphane doğrulaması başarısız: ${errMsg}`,
-        report
+        report,
       };
     }
   }
@@ -527,7 +530,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
         total_jobs_success: 4,
         total_jobs_failed: 1,
         last_job_time: new Date().toISOString(),
-        last_job_status: "success",
+        last_job_status: 'success',
         last_job_error: null,
         callbacks: {
           total_attempted: 5,
@@ -536,25 +539,25 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           last_sent_at: new Date().toISOString(),
           last_status_code: 200,
           last_error: null,
-          last_url: "http://localhost:4000/api/v1/video/callback",
-          tunnel_connectivity: "healthy"
+          last_url: 'http://localhost:4000/api/v1/video/callback',
+          tunnel_connectivity: 'healthy',
         },
         outputs: {
           videos_generated: 4,
           speech_synthesized: 4,
           sfx_generated: 4,
           lipsync_applied: 4,
-          subtitles_generated: 4
+          subtitles_generated: 4,
         },
         models_loaded: {
           tts: true,
           wav2lip: true,
           whisper: true,
-          musetalk: false
+          musetalk: false,
         },
         recent_activities: [
-          `[${new Date().toISOString()}] Mock diagnostics initialized (MOCK_COLAB=true)`
-        ]
+          `[${new Date().toISOString()}] Mock diagnostics initialized (MOCK_COLAB=true)`,
+        ],
       };
       this.emit('state-change', this.getState());
       return;
@@ -564,7 +567,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
     try {
       const res = await axios.get(`${url}/health`, {
         timeout: 10_000,
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: { 'ngrok-skip-browser-warning': 'true' },
       });
       const mem = res.data?.memory || {};
       const gpuUtil = res.data?.gpu_utilization || {};
@@ -574,7 +577,8 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
       this.state.gpuMemoryGB = typeof mem.gpu_total_gb === 'number' ? mem.gpu_total_gb : null;
       this.state.gpuUsedGB = typeof mem.gpu_used_gb === 'number' ? mem.gpu_used_gb : null;
       this.state.gpuUtilizationPct = typeof gpuUtil.gpu_pct === 'number' ? gpuUtil.gpu_pct : null;
-      this.state.runtimeSeconds = typeof runtime.uptime_seconds === 'number' ? runtime.uptime_seconds : null;
+      this.state.runtimeSeconds =
+        typeof runtime.uptime_seconds === 'number' ? runtime.uptime_seconds : null;
       this.state.diagnostics = diagnostics;
       this.state.lastHealthCheck = new Date().toISOString();
       if (this.state.status === 'running') {

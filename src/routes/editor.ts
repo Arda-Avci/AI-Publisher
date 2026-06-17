@@ -21,29 +21,33 @@ export function registerEditorRoutes(app: Application): void {
 
       const colabState = colab.getState();
       if (!colabState.ngrokUrl) {
-        return res.status(503).json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
+        return res
+          .status(503)
+          .json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
       }
 
       try {
-        Logger.info(`✂️ [remove-background] Colab sunucusuna gönderiliyor... Dosya: ${req.file.path}`);
-        
+        Logger.info(
+          `✂️ [remove-background] Colab sunucusuna gönderiliyor... Dosya: ${req.file.path}`,
+        );
+
         // Native FormData & fetch
         const fs = await import('fs-extra');
         const fileBuffer = await fs.readFile(req.file.path);
         const blob = new Blob([fileBuffer], { type: req.file.mimetype });
-        
+
         const formData = new FormData();
         formData.append('image', blob, req.file.originalname);
 
         const bypassHeaders = {
           'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true'
+          'bypass-tunnel-reminder': 'true',
         };
 
         const response = await fetch(`${colabState.ngrokUrl}/remove-background`, {
           method: 'POST',
           body: formData,
-          headers: bypassHeaders
+          headers: bypassHeaders,
         });
 
         if (!response.ok) {
@@ -55,11 +59,11 @@ export function registerEditorRoutes(app: Application): void {
         // Şeffaf resmi al ve Node diskine kaydet (uploads klasörü)
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        
+
         const outputFilename = `nobg_${Date.now()}_${req.file.filename}.png`;
         const outputPath = `/uploads/${outputFilename}`;
         const outputFullPath = `${process.cwd()}${outputPath}`;
-        
+
         await fs.writeFile(outputFullPath, buffer);
         Logger.info(`💾 [remove-background] Temizlenmiş resim kaydedildi: ${outputFullPath}`);
 
@@ -69,13 +73,13 @@ export function registerEditorRoutes(app: Application): void {
         return res.json({
           success: true,
           url: outputPath,
-          filename: outputFilename
+          filename: outputFilename,
         });
       } catch (err: any) {
         Logger.error('❌ remove-background proxy hatası:', err);
         return res.status(500).json({ success: false, error: err.message || 'SUNUCU_HATASI' });
       }
-    }
+    },
   );
 
   // ─── 2. Inpaint (Proxy to Colab) ───────────────────────────────────────────
@@ -85,7 +89,7 @@ export function registerEditorRoutes(app: Application): void {
     requireAuth,
     upload.fields([
       { name: 'image', maxCount: 1 },
-      { name: 'mask', maxCount: 1 }
+      { name: 'mask', maxCount: 1 },
     ]),
     async (req: Request, res: Response) => {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -94,22 +98,26 @@ export function registerEditorRoutes(app: Application): void {
       const { prompt } = req.body;
 
       if (!imageFile || !maskFile || !prompt) {
-        return res.status(400).json({ success: false, error: 'Görsel, maske ve prompt zorunludur.' });
+        return res
+          .status(400)
+          .json({ success: false, error: 'Görsel, maske ve prompt zorunludur.' });
       }
 
       const colabState = colab.getState();
       if (!colabState.ngrokUrl) {
-        return res.status(503).json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
+        return res
+          .status(503)
+          .json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
       }
 
       try {
         Logger.info(`🎨 [inpaint] Colab sunucusuna gönderiliyor... Prompt: ${prompt}`);
-        
+
         const fs = await import('fs-extra');
-        
+
         const imgBuffer = await fs.readFile(imageFile.path);
         const imgBlob = new Blob([imgBuffer], { type: imageFile.mimetype });
-        
+
         const maskBuffer = await fs.readFile(maskFile.path);
         const maskBlob = new Blob([maskBuffer], { type: maskFile.mimetype });
 
@@ -120,13 +128,13 @@ export function registerEditorRoutes(app: Application): void {
 
         const bypassHeaders = {
           'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true'
+          'bypass-tunnel-reminder': 'true',
         };
 
         const response = await fetch(`${colabState.ngrokUrl}/inpaint-image`, {
           method: 'POST',
           body: formData,
-          headers: bypassHeaders
+          headers: bypassHeaders,
         });
 
         if (!response.ok) {
@@ -137,11 +145,11 @@ export function registerEditorRoutes(app: Application): void {
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        
+
         const outputFilename = `inpaint_${Date.now()}_${imageFile.filename}.png`;
         const outputPath = `/uploads/${outputFilename}`;
         const outputFullPath = `${process.cwd()}${outputPath}`;
-        
+
         await fs.writeFile(outputFullPath, buffer);
         Logger.info(`💾 [inpaint] Düzenlenen resim kaydedildi: ${outputFullPath}`);
 
@@ -152,13 +160,13 @@ export function registerEditorRoutes(app: Application): void {
         return res.json({
           success: true,
           url: outputPath,
-          filename: outputFilename
+          filename: outputFilename,
         });
       } catch (err: any) {
         Logger.error('❌ inpaint proxy hatası:', err);
         return res.status(500).json({ success: false, error: err.message || 'SUNUCU_HATASI' });
       }
-    }
+    },
   );
 
   // ─── 3. Görsel Üret (Proxy to Colab) ───────────────────────────────────────
@@ -174,22 +182,24 @@ export function registerEditorRoutes(app: Application): void {
 
       const colabState = colab.getState();
       if (!colabState.ngrokUrl) {
-        return res.status(503).json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
+        return res
+          .status(503)
+          .json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
       }
 
       try {
         Logger.info(`🎨 [generate-image] Colab sunucusuna istek atılıyor... Prompt: ${prompt}`);
-        
+
         const bypassHeaders = {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true'
+          'bypass-tunnel-reminder': 'true',
         };
 
         const response = await fetch(`${colabState.ngrokUrl}/generate-image`, {
           method: 'POST',
           headers: bypassHeaders,
-          body: JSON.stringify({ prompt, model_type: model_type || 'dreamshaper' })
+          body: JSON.stringify({ prompt, model_type: model_type || 'dreamshaper' }),
         });
 
         if (!response.ok) {
@@ -200,11 +210,11 @@ export function registerEditorRoutes(app: Application): void {
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        
+
         const outputFilename = `gen_${Date.now()}.png`;
         const outputPath = `/uploads/${outputFilename}`;
         const outputFullPath = `${process.cwd()}${outputPath}`;
-        
+
         const fs = await import('fs-extra');
         await fs.writeFile(outputFullPath, buffer);
         Logger.info(`💾 [generate-image] Görsel kaydedildi: ${outputFullPath}`);
@@ -212,13 +222,13 @@ export function registerEditorRoutes(app: Application): void {
         return res.json({
           success: true,
           url: outputPath,
-          filename: outputFilename
+          filename: outputFilename,
         });
       } catch (err: any) {
         Logger.error('❌ generate-image proxy hatası:', err);
         return res.status(500).json({ success: false, error: err.message || 'SUNUCU_HATASI' });
       }
-    }
+    },
   );
 
   // ─── 4. Akıllı Reframe (16:9 → 9:16) ─────────────────────────────────────
@@ -268,7 +278,7 @@ export function registerEditorRoutes(app: Application): void {
         Logger.error('❌ reframe hatası:', err);
         res.status(500).json({ success: false, error: err.message || 'REFAME_HATASI' });
       }
-    }
+    },
   );
 
   // ─── 5. Studio Sound Ses İyileştirme ──────────────────────────────────────
@@ -300,7 +310,7 @@ export function registerEditorRoutes(app: Application): void {
         Logger.error('❌ enhance-audio hatası:', err);
         res.status(500).json({ success: false, error: err.message || 'SES_HATASI' });
       }
-    }
+    },
   );
 
   // 6. Gaze correction (göz teması düzeltme)
@@ -308,12 +318,17 @@ export function registerEditorRoutes(app: Application): void {
     const { videoPath, smooth = true } = req.body;
     if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });
     const { pathExists } = await import('fs-extra');
-    if (!await pathExists(videoPath)) return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
+    if (!(await pathExists(videoPath)))
+      return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
     const outPath = path.join(process.cwd(), 'videolar', `gaze_fixed_${Date.now()}.mp4`);
     try {
       const { correctEyeContact } = await import('../services/eyeContact.js');
       const result = await correctEyeContact(videoPath, outPath);
-      res.json({ success: true, outputPath: result.processedVideoPath, usedFallback: result.usedFallback });
+      res.json({
+        success: true,
+        outputPath: result.processedVideoPath,
+        usedFallback: result.usedFallback,
+      });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -324,7 +339,8 @@ export function registerEditorRoutes(app: Application): void {
     const { videoPath, masks = [], strength = 0.8 } = req.body;
     if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });
     const { pathExists } = await import('fs-extra');
-    if (!await pathExists(videoPath)) return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
+    if (!(await pathExists(videoPath)))
+      return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
     const outPath = path.join(process.cwd(), 'videolar', `inpainted_${Date.now()}.mp4`);
     try {
       const { inpaintObjects } = await import('../services/inpainting.js');

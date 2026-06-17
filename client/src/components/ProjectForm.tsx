@@ -104,14 +104,29 @@ const ALL_MODELS = [
   { value: 'dynamic', label: 'Dinamik Sosyal Medya', model: 'Wan 2.1', speed: '⭐⭐' },
   { value: 'simple', label: 'Hızlı & Basit Render', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
   { value: 'pixar', label: 'Pixar Animasyon', model: 'Wan 2.1', speed: '⭐⭐' },
-  { value: 'cogvideox5b' as ProductionTemplate, label: 'CogVideoX-5b (Varsayılan)', model: 'CogVideoX-5b', speed: '⭐⭐⭐' },
-  { value: 'cogvideox2b' as ProductionTemplate, label: 'CogVideoX-2b (Hızlı)', model: 'CogVideoX-2b', speed: '⭐⭐⭐⭐' },
+  {
+    value: 'cogvideox5b' as ProductionTemplate,
+    label: 'CogVideoX-5b (Varsayılan)',
+    model: 'CogVideoX-5b',
+    speed: '⭐⭐⭐',
+  },
+  {
+    value: 'cogvideox2b' as ProductionTemplate,
+    label: 'CogVideoX-2b (Hızlı)',
+    model: 'CogVideoX-2b',
+    speed: '⭐⭐⭐⭐',
+  },
 ];
 
 function TemplateCard({
-  tpl, isSelected, onSelect, t,
+  tpl,
+  isSelected,
+  onSelect,
+  t,
 }: {
-  tpl: ProductionTemplate; isSelected: boolean; onSelect: () => void;
+  tpl: ProductionTemplate;
+  isSelected: boolean;
+  onSelect: () => void;
   t: (key: string) => string;
 }) {
   const titleKey = `template${tpl.charAt(0).toUpperCase() + tpl.slice(1)}`;
@@ -122,27 +137,63 @@ function TemplateCard({
       onClick={onSelect}
       className="glass"
       style={{
-        padding: '10px 12px', borderRadius: '8px',
+        padding: '10px 12px',
+        borderRadius: '8px',
         border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-        cursor: 'pointer', transition: 'var(--transition)',
-        display: 'flex', flexDirection: 'column', gap: '4px',
+        cursor: 'pointer',
+        transition: 'var(--transition)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
       }}
-      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--accent)'; }}
-      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border)'; }}
+      onMouseEnter={(e) => {
+        if (!isSelected) e.currentTarget.style.borderColor = 'var(--accent)';
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) e.currentTarget.style.borderColor = 'var(--border)';
+      }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{
-          width: '14px', height: '14px', borderRadius: '50%',
-          border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--text-muted)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {isSelected && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)' }} />}
+        <div
+          style={{
+            width: '14px',
+            height: '14px',
+            borderRadius: '50%',
+            border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--text-muted)'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isSelected && (
+            <div
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: 'var(--accent)',
+              }}
+            />
+          )}
         </div>
-        <span style={{ fontSize: '12px', fontWeight: 'bold', color: isSelected ? 'white' : 'var(--text-muted)' }}>
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: isSelected ? 'white' : 'var(--text-muted)',
+          }}
+        >
           {t(titleKey) || tpl.toUpperCase()}
         </span>
         {modelInfo && (
-          <span style={{ fontSize: '9px', color: 'var(--gold)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>
+          <span
+            style={{
+              fontSize: '9px',
+              color: 'var(--gold)',
+              fontFamily: 'var(--font-mono)',
+              marginLeft: 'auto',
+            }}
+          >
             {modelInfo.model} {modelInfo.speed}
           </span>
         )}
@@ -167,8 +218,8 @@ export function ProjectForm(props: ProjectFormProps) {
         body: JSON.stringify({
           prompt: props.masterPrompt,
           templateStyle: props.productionTemplate,
-          characterFeatures: props.characterFeatures
-        })
+          characterFeatures: props.characterFeatures,
+        }),
       });
       const data = await res.json();
       if (data.success && data.enhancedPrompt) {
@@ -186,23 +237,35 @@ export function ProjectForm(props: ProjectFormProps) {
   const insufficient = props.userCredits !== null && props.userCredits.credits < 15;
 
   const sectionStyle: React.CSSProperties = {
-    display: 'flex', flexDirection: 'column', gap: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: '10px', fontWeight: 'bold', color: 'var(--text-muted)',
-    textTransform: 'uppercase', letterSpacing: '0.1em',
+    fontSize: '10px',
+    fontWeight: 'bold',
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
     fontFamily: 'var(--font-sans)',
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--border)',
-    borderRadius: '8px', padding: '10px', fontSize: '13px',
-    color: 'var(--text-primary)', outline: 'none',
+    width: '100%',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '10px',
+    fontSize: '13px',
+    color: 'var(--text-primary)',
+    outline: 'none',
   };
 
   const textareaStyle: React.CSSProperties = {
-    ...inputStyle, resize: 'none', fontFamily: 'var(--font-mono)',
+    ...inputStyle,
+    resize: 'none',
+    fontFamily: 'var(--font-mono)',
     minHeight: '70px',
   };
 
@@ -213,15 +276,27 @@ export function ProjectForm(props: ProjectFormProps) {
   };
 
   return (
-    <aside style={{
-      width: '288px', borderRight: '1px solid var(--border)',
-      background: 'rgba(24,24,27,0.3)', display: 'flex', flexDirection: 'column',
-      flexShrink: 0, overflow: 'hidden',
-    }}>
-      <div style={{
-        padding: '20px', display: 'flex', flexDirection: 'column',
-        gap: '32px', overflowY: 'auto', flex: 1,
-      }}>
+    <aside
+      style={{
+        width: '288px',
+        borderRight: '1px solid var(--border)',
+        background: 'rgba(24,24,27,0.3)',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '32px',
+          overflowY: 'auto',
+          flex: 1,
+        }}
+      >
         {/* ---- Section 1: Model Motoru ---- */}
         <div style={sectionStyle}>
           <div style={{ ...labelStyle, display: 'flex', justifyContent: 'space-between' }}>
@@ -233,22 +308,31 @@ export function ProjectForm(props: ProjectFormProps) {
             onChange={(e) => props.onSetSelectedModel(e.target.value)}
             style={{
               ...inputStyle,
-              appearance: 'none', cursor: 'pointer',
+              appearance: 'none',
+              cursor: 'pointer',
               backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-              backgroundPosition: 'right 10px center', backgroundRepeat: 'no-repeat',
-              backgroundSize: '16px', paddingRight: '32px',
+              backgroundPosition: 'right 10px center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '16px',
+              paddingRight: '32px',
             }}
           >
-            {MODELS.map((m) => <option key={m}>{m}</option>)}
+            {MODELS.map((m) => (
+              <option key={m}>{m}</option>
+            ))}
           </select>
         </div>
 
         {/* ---- Section 2: En-Boy Oranı ---- */}
         <div style={sectionStyle}>
           <div style={labelStyle}>En-Boy Oranı</div>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '8px',
+            }}
+          >
             {RATIOS.map((ratio) => {
               const isActive = props.aspectRatio === ratio;
               const dims = aspectIconDims[ratio];
@@ -260,9 +344,14 @@ export function ProjectForm(props: ProjectFormProps) {
                   style={{
                     background: isActive ? 'var(--accent-light)' : 'var(--bg-primary)',
                     border: `1px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}`,
-                    borderRadius: '8px', padding: '10px 0',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: '6px', cursor: 'pointer', transition: 'border-color 0.2s',
+                    borderRadius: '8px',
+                    padding: '10px 0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s',
                     color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                   }}
                   onMouseEnter={(e) => {
@@ -272,14 +361,15 @@ export function ProjectForm(props: ProjectFormProps) {
                     if (!isActive) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
                   }}
                 >
-                  <div style={{
-                    width: dims.w, height: dims.h,
-                    border: `1px solid ${isActive ? 'var(--accent)' : 'var(--text-muted)'}`,
-                    borderRadius: '2px',
-                  }} />
-                  <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
-                    {ratio}
-                  </span>
+                  <div
+                    style={{
+                      width: dims.w,
+                      height: dims.h,
+                      border: `1px solid ${isActive ? 'var(--accent)' : 'var(--text-muted)'}`,
+                      borderRadius: '2px',
+                    }}
+                  />
+                  <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }}>{ratio}</span>
                 </button>
               );
             })}
@@ -290,27 +380,43 @@ export function ProjectForm(props: ProjectFormProps) {
         <div style={{ ...sectionStyle, gap: '16px' }}>
           <div style={labelStyle}>Kamera Hareketi</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              fontSize: '12px', color: 'var(--text-muted)',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+              }}
+            >
               <span>Pan & Zoom</span>
-              <span style={{
-                fontFamily: 'var(--font-mono)', background: 'var(--bg-surface-hover)',
-                padding: '0 4px', borderRadius: '4px', color: 'white',
-                fontSize: '11px',
-              }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  background: 'var(--bg-surface-hover)',
+                  padding: '0 4px',
+                  borderRadius: '4px',
+                  color: 'white',
+                  fontSize: '11px',
+                }}
+              >
                 {props.camIntensity.toFixed(2)}
               </span>
             </div>
             <input
-              type="range" min="0" max="2" step="0.1"
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
               value={props.camIntensity}
               onChange={(e) => props.onSetCamIntensity(parseFloat(e.target.value))}
               style={{
-                width: '100%', accentColor: 'var(--accent)',
-                height: '4px', background: 'var(--bg-surface-hover)',
-                borderRadius: '8px', cursor: 'pointer', outline: 'none',
+                width: '100%',
+                accentColor: 'var(--accent)',
+                height: '4px',
+                background: 'var(--bg-surface-hover)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                outline: 'none',
               }}
             />
           </div>
@@ -320,7 +426,10 @@ export function ProjectForm(props: ProjectFormProps) {
         <div style={{ borderTop: '1px solid var(--border)' }} />
 
         {/* ---- Existing Form Fields ---- */}
-        <form onSubmit={props.onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form
+          onSubmit={props.onSubmit}
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+        >
           <Field
             label={props.t('masterPrompt')}
             labelStyle={labelStyle}
@@ -350,7 +459,8 @@ export function ProjectForm(props: ProjectFormProps) {
             }
           >
             <textarea
-              required value={props.masterPrompt}
+              required
+              value={props.masterPrompt}
               onChange={(e) => props.onSetMasterPrompt(e.target.value)}
               placeholder="Yapay zeka modellerinin video hikayesini oluşturması için master prompt girin..."
               style={{ ...textareaStyle, height: '80px' }}
@@ -370,7 +480,8 @@ export function ProjectForm(props: ProjectFormProps) {
 
           <Field label={props.t('charSpecs')} labelStyle={labelStyle}>
             <input
-              type="text" value={props.characterFeatures}
+              type="text"
+              value={props.characterFeatures}
               onChange={(e) => props.onSetCharacterFeatures(e.target.value)}
               placeholder="Örn: Mavi gözlü sarışın erkek çocuk, Pixar stili"
               style={inputStyle}
@@ -381,17 +492,27 @@ export function ProjectForm(props: ProjectFormProps) {
 
           <Field label="Başlangıç Referans Görseli / Videosu" labelStyle={labelStyle}>
             <input
-              type="file" accept="image/*,video/*"
+              type="file"
+              accept="image/*,video/*"
               onChange={(e) => props.onSetSelectedFile(e.target.files?.[0] || null)}
-              style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)',
+              }}
             />
           </Field>
 
           <Field label="Arka Plan Müziği (Background Music)" labelStyle={labelStyle}>
             <input
-              type="file" accept="audio/*"
+              type="file"
+              accept="audio/*"
               onChange={(e) => props.onSetSelectedMusicFile(e.target.files?.[0] || null)}
-              style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)',
+              }}
             />
           </Field>
 
@@ -404,25 +525,52 @@ export function ProjectForm(props: ProjectFormProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {TEMPLATES.map((tpl) => (
                 <TemplateCard
-                  key={tpl.key} tpl={tpl.key}
+                  key={tpl.key}
+                  tpl={tpl.key}
                   isSelected={props.productionTemplate === tpl.key}
                   onSelect={() => props.onSetProductionTemplate(tpl.key)}
                   t={props.t}
                 />
               ))}
-              <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-                <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: '8px 10px',
+                  borderRadius: 6,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    display: 'block',
+                    marginBottom: 4,
+                  }}
+                >
                   Model (Gelişmiş)
                 </label>
-                <select value={props.productionTemplate}
-                  onChange={e => props.onSetProductionTemplate(e.target.value as ProductionTemplate)}
+                <select
+                  value={props.productionTemplate}
+                  onChange={(e) =>
+                    props.onSetProductionTemplate(e.target.value as ProductionTemplate)
+                  }
                   style={{
-                    width: '100%', padding: '6px 8px', borderRadius: 4,
-                    border: '1px solid var(--border)', background: 'var(--bg-primary)',
-                    color: 'var(--text-primary)', fontSize: 11, fontFamily: 'var(--font-mono)',
-                  }}>
-                  {ALL_MODELS.map(m => (
-                    <option key={m.value} value={m.value}>{m.label} — {m.model} {m.speed}</option>
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: 4,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: 11,
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  {ALL_MODELS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label} — {m.model} {m.speed}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -451,10 +599,13 @@ export function ProjectForm(props: ProjectFormProps) {
               }}
               style={{
                 ...inputStyle,
-                appearance: 'none', cursor: 'pointer',
+                appearance: 'none',
+                cursor: 'pointer',
                 backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                backgroundPosition: 'right 10px center', backgroundRepeat: 'no-repeat',
-                backgroundSize: '16px', paddingRight: '32px',
+                backgroundPosition: 'right 10px center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '16px',
+                paddingRight: '32px',
               }}
             >
               <option value="edge">Edge Speech (Ücretsiz)</option>
@@ -464,13 +615,18 @@ export function ProjectForm(props: ProjectFormProps) {
 
           <Field label={props.t('ttsVoice')} labelStyle={labelStyle}>
             {props.ttsProvider === 'openai' ? (
-              <select value={props.ttsVoice} onChange={(e) => props.onSetTtsVoice(e.target.value)}
+              <select
+                value={props.ttsVoice}
+                onChange={(e) => props.onSetTtsVoice(e.target.value)}
                 style={{
                   ...inputStyle,
-                  appearance: 'none', cursor: 'pointer',
+                  appearance: 'none',
+                  cursor: 'pointer',
                   backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 10px center', backgroundRepeat: 'no-repeat',
-                  backgroundSize: '16px', paddingRight: '32px',
+                  backgroundPosition: 'right 10px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '16px',
+                  paddingRight: '32px',
                 }}
               >
                 <option value="alloy">Alloy</option>
@@ -481,13 +637,18 @@ export function ProjectForm(props: ProjectFormProps) {
                 <option value="shimmer">Shimmer</option>
               </select>
             ) : (
-              <select value={props.ttsVoice} onChange={(e) => props.onSetTtsVoice(e.target.value)}
+              <select
+                value={props.ttsVoice}
+                onChange={(e) => props.onSetTtsVoice(e.target.value)}
                 style={{
                   ...inputStyle,
-                  appearance: 'none', cursor: 'pointer',
+                  appearance: 'none',
+                  cursor: 'pointer',
                   backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: 'right 10px center', backgroundRepeat: 'no-repeat',
-                  backgroundSize: '16px', paddingRight: '32px',
+                  backgroundPosition: 'right 10px center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '16px',
+                  paddingRight: '32px',
                 }}
               >
                 <option value="tr-TR-AhmetNeural">Ahmet (TR - Erkek)</option>
@@ -501,13 +662,41 @@ export function ProjectForm(props: ProjectFormProps) {
           <Divider />
 
           <CheckboxGroup>
-            <Checkbox label="Dikey Shorts Varyantı Üret (9:16)" checked={props.hasShorts} onChange={props.onSetHasShorts} />
-            <Checkbox label="Sarı Altyazı Ekle (Burn-in SRT)" checked={props.hasSubtitles} onChange={props.onSetHasSubtitles} />
-            <Checkbox label="Marka Kiti Aktif" checked={props.brandKitEnabled} onChange={props.onSetBrandKitEnabled} />
-            <Checkbox label="Kinetik Altyazı" checked={props.kineticSubtitles} onChange={props.onSetKineticSubtitles} />
-            <Checkbox label="Uzamsal Ses" checked={props.autoSfxPlacement} onChange={props.onSetAutoSfxPlacement} />
-            <Checkbox label="Ses Ördekleme" checked={props.audioDucking} onChange={props.onSetAudioDucking} />
-            <Checkbox label="Sessiz Kısımları Kes (Auto-Cut)" checked={props.autoCutEnabled} onChange={props.onSetAutoCutEnabled} />
+            <Checkbox
+              label="Dikey Shorts Varyantı Üret (9:16)"
+              checked={props.hasShorts}
+              onChange={props.onSetHasShorts}
+            />
+            <Checkbox
+              label="Sarı Altyazı Ekle (Burn-in SRT)"
+              checked={props.hasSubtitles}
+              onChange={props.onSetHasSubtitles}
+            />
+            <Checkbox
+              label="Marka Kiti Aktif"
+              checked={props.brandKitEnabled}
+              onChange={props.onSetBrandKitEnabled}
+            />
+            <Checkbox
+              label="Kinetik Altyazı"
+              checked={props.kineticSubtitles}
+              onChange={props.onSetKineticSubtitles}
+            />
+            <Checkbox
+              label="Uzamsal Ses"
+              checked={props.autoSfxPlacement}
+              onChange={props.onSetAutoSfxPlacement}
+            />
+            <Checkbox
+              label="Ses Ördekleme"
+              checked={props.audioDucking}
+              onChange={props.onSetAudioDucking}
+            />
+            <Checkbox
+              label="Sessiz Kısımları Kes (Auto-Cut)"
+              checked={props.autoCutEnabled}
+              onChange={props.onSetAutoCutEnabled}
+            />
           </CheckboxGroup>
 
           {props.autoCutEnabled && (
@@ -527,7 +716,12 @@ export function ProjectForm(props: ProjectFormProps) {
           {props.kineticSubtitles && (
             <Field label="Kinetik Altyazı Ayarları" labelStyle={labelStyle}>
               <KineticSubtitlesPanel
-                value={{ style: props.kineticSubtitlesStyle as any || 'bounce', highlightColor: '#FFD700', baseColor: '#FFFFFF', fontSize: 24 }}
+                value={{
+                  style: (props.kineticSubtitlesStyle as any) || 'bounce',
+                  highlightColor: '#FFD700',
+                  baseColor: '#FFFFFF',
+                  fontSize: 24,
+                }}
                 onChange={(v) => props.onSetKineticSubtitlesStyle(v.style)}
                 compact
               />
@@ -537,10 +731,7 @@ export function ProjectForm(props: ProjectFormProps) {
           <Divider />
 
           <Field label="Dublaj & Beat-Sync" labelStyle={labelStyle}>
-            <DubbingPanel
-              value={props.dubbingConfig}
-              onChange={props.onSetDubbingConfig}
-            />
+            <DubbingPanel value={props.dubbingConfig} onChange={props.onSetDubbingConfig} />
           </Field>
 
           <Field label="Altyazı Stili (Gelecek Faz)" labelStyle={labelStyle}>
@@ -555,20 +746,24 @@ export function ProjectForm(props: ProjectFormProps) {
             </select>
           </Field>
 
-          <Checkbox label="Renk Derecelendirme" checked={props.colorGradingEnabled} onChange={props.onSetColorGradingEnabled} />
+          <Checkbox
+            label="Renk Derecelendirme"
+            checked={props.colorGradingEnabled}
+            onChange={props.onSetColorGradingEnabled}
+          />
 
           {props.colorGradingEnabled && (
             <Field label="" labelStyle={labelStyle}>
-              <ColorGraderPanel value={props.colorGrading} onChange={props.onSetColorGrading} compact />
+              <ColorGraderPanel
+                value={props.colorGrading}
+                onChange={props.onSetColorGrading}
+                compact
+              />
             </Field>
           )}
 
           <Field label="Viral Motor" labelStyle={labelStyle}>
-            <ViralPanel
-              value={props.viralConfig}
-              onChange={props.onSetViralConfig}
-              compact
-            />
+            <ViralPanel value={props.viralConfig} onChange={props.onSetViralConfig} compact />
           </Field>
 
           <Divider />
@@ -590,11 +785,19 @@ export function ProjectForm(props: ProjectFormProps) {
           <Field label={props.t('platformSelect')} labelStyle={labelStyle}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {(['youtube', 'tiktok', 'x', 'meta'] as Platform[]).map((plat) => (
-                <label key={plat} style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  fontSize: '11px', textTransform: 'capitalize', cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)', color: 'var(--text-muted)',
-                }}>
+                <label
+                  key={plat}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    textTransform: 'capitalize',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={props.targetPlatforms.includes(plat)}
@@ -612,8 +815,13 @@ export function ProjectForm(props: ProjectFormProps) {
             disabled={props.formLoading || insufficient}
             className="btn btn-primary"
             style={{
-              padding: '12px', width: '100%', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '8px', marginTop: '4px',
+              padding: '12px',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginTop: '4px',
               background: insufficient ? 'rgba(239, 68, 68, 0.15)' : undefined,
               color: insufficient ? 'var(--danger)' : undefined,
               border: insufficient ? '1px solid rgba(239,68,68,0.2)' : undefined,
@@ -632,7 +840,17 @@ function Divider() {
   return <div style={{ borderTop: '1px solid var(--border)' }} />;
 }
 
-function Field({ label, children, labelStyle, extra }: { label: string; children: React.ReactNode; labelStyle: React.CSSProperties; extra?: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  labelStyle,
+  extra,
+}: {
+  label: string;
+  children: React.ReactNode;
+  labelStyle: React.CSSProperties;
+  extra?: React.ReactNode;
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -648,14 +866,29 @@ function CheckboxGroup({ children }: { children: React.ReactNode }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{children}</div>;
 }
 
-function Checkbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Checkbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
-    <label style={{
-      display: 'flex', alignItems: 'center', gap: '6px',
-      fontSize: '12px', cursor: 'pointer', color: 'var(--text-muted)',
-    }}>
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: '12px',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+      }}
+    >
       <input
-        type="checkbox" checked={checked}
+        type="checkbox"
+        checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         style={{ accentColor: 'var(--accent)' }}
       />

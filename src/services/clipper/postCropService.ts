@@ -12,7 +12,7 @@ import type { ClipSegment } from './types.js';
 
 export interface SubtitleOptions {
   enabled: boolean;
-  primaryColor?: string;   // default '#00F2FE' (neon cyan)
+  primaryColor?: string; // default '#00F2FE' (neon cyan)
   secondaryColor?: string;
   fontPath?: string;
   style?: 'kinetic' | 'static' | 'caption';
@@ -21,7 +21,7 @@ export interface SubtitleOptions {
 export interface MusicOptions {
   enabled: boolean;
   musicPath: string;
-  volume?: number;         // 0.0-1.0, default 0.3
+  volume?: number; // 0.0-1.0, default 0.3
   duckingEnabled?: boolean;
 }
 
@@ -49,16 +49,17 @@ export function formatSRTTime(seconds: number): string {
  */
 async function generateSRTFromSegments(
   segments: ClipSegment[],
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   let srtContent = '';
   segments.forEach((seg, i) => {
     const startTime = formatSRTTime(seg.startTime);
     const endTime = formatSRTTime(seg.endTime);
     // Use highlights as subtitle text if available, otherwise use suggested caption
-    const text = seg.highlights && seg.highlights.length > 0
-      ? seg.highlights.join(' ')
-      : (seg.suggestedCaption || '');
+    const text =
+      seg.highlights && seg.highlights.length > 0
+        ? seg.highlights.join(' ')
+        : seg.suggestedCaption || '';
     srtContent += `${i + 1}\n${startTime} --> ${endTime}\n${text}\n\n`;
   });
 
@@ -72,15 +73,13 @@ async function generateSRTFromSegments(
 /**
  * Generate simple SRT for a single clip segment
  */
-async function generateSRTForSegment(
-  segment: ClipSegment,
-  outputPath: string
-): Promise<string> {
+async function generateSRTForSegment(segment: ClipSegment, outputPath: string): Promise<string> {
   const startTime = formatSRTTime(segment.startTime);
   const endTime = formatSRTTime(segment.endTime);
-  const text = segment.highlights && segment.highlights.length > 0
-    ? segment.highlights.join(' ')
-    : (segment.suggestedCaption || '');
+  const text =
+    segment.highlights && segment.highlights.length > 0
+      ? segment.highlights.join(' ')
+      : segment.suggestedCaption || '';
 
   const srtContent = `1
 ${startTime} --> ${endTime}
@@ -100,13 +99,7 @@ ${text}
  * 3. Mix background music with smart ducking using applySmartAudioDucking
  */
 export async function processPostCrop(options: PostCropOptions): Promise<string> {
-  const {
-    croppedVideoPath,
-    outputPath,
-    clipSegment,
-    subtitleOptions,
-    musicOptions,
-  } = options;
+  const { croppedVideoPath, outputPath, clipSegment, subtitleOptions, musicOptions } = options;
 
   Logger.info(`[PostCropService] Starting post-crop pipeline for: ${croppedVideoPath}`);
 
@@ -135,7 +128,7 @@ export async function processPostCrop(options: PostCropOptions): Promise<string>
         subbedPath,
         primaryColor,
         secondaryColor,
-        fontPath
+        fontPath,
       );
 
       currentPath = subbedPath;
@@ -149,11 +142,15 @@ export async function processPostCrop(options: PostCropOptions): Promise<string>
 
       // Check if music file exists
       if (!(await fs.pathExists(musicOptions.musicPath))) {
-        Logger.warn(`[PostCropService] Music file not found: ${musicOptions.musicPath}, skipping audio mix`);
+        Logger.warn(
+          `[PostCropService] Music file not found: ${musicOptions.musicPath}, skipping audio mix`,
+        );
       } else {
         const musicMixedPath = outputPath.replace(/\.mp4$/, '_music.mp4');
 
-        Logger.info(`[PostCropService] Mixing background music with ducking=${duckingEnabled}, volume=${musicVolume}`);
+        Logger.info(
+          `[PostCropService] Mixing background music with ducking=${duckingEnabled}, volume=${musicVolume}`,
+        );
 
         if (duckingEnabled) {
           // Use smart audio ducking when enabled
@@ -162,26 +159,33 @@ export async function processPostCrop(options: PostCropOptions): Promise<string>
             currentPath,
             currentPath, // speech audio (same as video audio)
             musicOptions.musicPath,
-            musicMixedPath
+            musicMixedPath,
           );
         } else {
           // Simple music mix without ducking
           const filter = [
             `[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
-            `[outa]volume=${musicVolume}[out]`
+            `[outa]volume=${musicVolume}[out]`,
           ].join(';');
 
           const args = [
             '-y',
-            '-i', currentPath,
-            '-i', musicOptions.musicPath,
-            '-filter_complex', filter,
-            '-map', '0:v',
-            '-map', '[out]',
-            '-c:v', 'copy',
-            '-c:a', 'aac',
+            '-i',
+            currentPath,
+            '-i',
+            musicOptions.musicPath,
+            '-filter_complex',
+            filter,
+            '-map',
+            '0:v',
+            '-map',
+            '[out]',
+            '-c:v',
+            'copy',
+            '-c:a',
+            'aac',
             '-shortest',
-            musicMixedPath
+            musicMixedPath,
           ];
 
           await runInWorker('ffmpeg', args, 120000);
@@ -197,7 +201,6 @@ export async function processPostCrop(options: PostCropOptions): Promise<string>
     Logger.info(`[PostCropService] Post-crop pipeline complete: ${outputPath}`);
 
     return outputPath;
-
   } catch (error) {
     Logger.error(`[PostCropService] Post-crop pipeline failed:`, error);
     // On failure, return original cropped video
@@ -206,7 +209,7 @@ export async function processPostCrop(options: PostCropOptions): Promise<string>
   } finally {
     // Cleanup temp files (but not the final output)
     for (const tempFile of tempFiles) {
-      if (tempFile !== outputPath && await fs.pathExists(tempFile)) {
+      if (tempFile !== outputPath && (await fs.pathExists(tempFile))) {
         await fs.remove(tempFile).catch(() => {});
       }
     }

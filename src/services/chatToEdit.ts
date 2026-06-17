@@ -17,38 +17,42 @@ import fs from 'fs-extra';
 
 export const EditOperationSchema = z.object({
   reasoning: z.string(),
-  operations: z.array(z.object({
-    type: z.enum([
-      'trim',
-      'speed',
-      'enhance',
-      'remove_silence',
-      'add_broll',
-      'add_transition',
-      'add_text',
-      'add_logo',
-      'adjust_audio',
-      'add_sfx',
-      'resize',
-      'add_pings',
-      'add_subtitles',
-      'duck_audio',
-      'color_grade',
-    ]),
-    targetScene: z.number().optional(),
-    params: z.record(z.string(), z.any()).optional(),
-  })),
+  operations: z.array(
+    z.object({
+      type: z.enum([
+        'trim',
+        'speed',
+        'enhance',
+        'remove_silence',
+        'add_broll',
+        'add_transition',
+        'add_text',
+        'add_logo',
+        'adjust_audio',
+        'add_sfx',
+        'resize',
+        'add_pings',
+        'add_subtitles',
+        'duck_audio',
+        'color_grade',
+      ]),
+      targetScene: z.number().optional(),
+      params: z.record(z.string(), z.any()).optional(),
+    }),
+  ),
 });
 
 export const SceneScoreSchema = z.object({
-  scenes: z.array(z.object({
-    sceneNumber: z.number(),
-    hookScore: z.number().min(0).max(100),
-    flowScore: z.number().min(0).max(100),
-    valueScore: z.number().min(0).max(100),
-    overallScore: z.number().min(0).max(100),
-    suggestions: z.array(z.string()),
-  })),
+  scenes: z.array(
+    z.object({
+      sceneNumber: z.number(),
+      hookScore: z.number().min(0).max(100),
+      flowScore: z.number().min(0).max(100),
+      valueScore: z.number().min(0).max(100),
+      overallScore: z.number().min(0).max(100),
+      suggestions: z.array(z.string()),
+    }),
+  ),
 });
 
 export type EditOperation = z.infer<typeof EditOperationSchema>;
@@ -65,22 +69,23 @@ interface SceneInfo {
 export async function parseEditCommand(
   command: string,
   sceneCount: number,
-  sceneDetails?: string
+  sceneDetails?: string,
 ): Promise<EditOperation> {
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    const isMinimax = model.modelId?.includes('MiniMax');
-    const system = isMinimax
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen profesyonel bir video kurgu yönetmenisin. Kullanıcının doğal dil komutlarını anlayıp uygun FFmpeg operasyonlarına dönüştürüyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const isMinimax = model.modelId?.includes('MiniMax');
+      const system = isMinimax
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen profesyonel bir video kurgu yönetmenisin. Kullanıcının doğal dil komutlarını anlayıp uygun FFmpeg operasyonlarına dönüştürüyorsun.';
 
-    const prompt = isMinimax
-      ? `Parse this editing command into JSON operations:
+      const prompt = isMinimax
+        ? `Parse this editing command into JSON operations:
 Command: "${command}"
 Scene count: ${sceneCount}
 ${sceneDetails ? `Scene details: ${sceneDetails}` : ''}`
-      : `Kullanıcının video kurgu komutunu analiz et ve uygun operasyonlara dönüştür.
+        : `Kullanıcının video kurgu komutunu analiz et ve uygun operasyonlara dönüştür.
 
 Kullanıcı Komutu: "${command}"
 Toplam Sahne Sayısı: ${sceneCount}
@@ -108,37 +113,41 @@ Her operasyon için:
 - targetScene: Hangi sahneye uygulanacağı (belirtilmemişse tümü)
 - params: Operasyona özel parametreler (opsiyonel)`;
 
-    return generateObject({
-      model,
-      schema: EditOperationSchema,
-      system,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: EditOperationSchema,
+        system,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
 
-export async function scoreScenes(
-  scenes: SceneInfo[]
-): Promise<SceneScore> {
+export async function scoreScenes(scenes: SceneInfo[]): Promise<SceneScore> {
   const models = getAIModelChain();
 
-  const sceneDescriptions = scenes.map(s =>
-    `Sahne ${s.sceneNumber}: "${s.speechText?.slice(0, 100) || 'Görsel sahne'}"`
-  ).join('\n');
+  const sceneDescriptions = scenes
+    .map((s) => `Sahne ${s.sceneNumber}: "${s.speechText?.slice(0, 100) || 'Görsel sahne'}"`)
+    .join('\n');
 
-  const result = await withFallbackAndRetry((model) => {
-    const isMinimax = model.modelId?.includes('MiniMax');
-    const system = isMinimax
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen bir video içerik analisti ve viral pazarlama uzmanısın.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const isMinimax = model.modelId?.includes('MiniMax');
+      const system = isMinimax
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen bir video içerik analisti ve viral pazarlama uzmanısın.';
 
-    const prompt = isMinimax
-      ? `Score these scenes for hook, flow, and value:
+      const prompt = isMinimax
+        ? `Score these scenes for hook, flow, and value:
 ${sceneDescriptions}`
-      : `Sen videoların viral potansiyelini değerlendiren bir içerik stratejistisin.
+        : `Sen videoların viral potansiyelini değerlendiren bir içerik stratejistisin.
 Her sahneyi 3 kriterde 0-100 arası puanla:
 
 hookScore (Kanca): İzleyicinin dikkatini çekme ve tutma başarısı
@@ -164,14 +173,19 @@ ${sceneDescriptions}
 
 Her sahne için ayrı ayrı değerlendir. suggestions alanında en az 1 iyileştirme önerisi ekle.`;
 
-    return generateObject({
-      model,
-      schema: SceneScoreSchema,
-      system,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: SceneScoreSchema,
+        system,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -179,7 +193,7 @@ Her sahne için ayrı ayrı değerlendir. suggestions alanında en az 1 iyileşt
 export async function applyEditOperations(
   operations: EditOperation['operations'],
   scenes: SceneInfo[],
-  outputDir: string
+  outputDir: string,
 ): Promise<string[]> {
   const results: string[] = [];
   const tempDir = path.join(outputDir, 'chat_edit_temp');
@@ -187,11 +201,11 @@ export async function applyEditOperations(
 
   for (const op of operations) {
     const targetScenes = op.targetScene
-      ? scenes.filter(s => s.sceneNumber === op.targetScene)
+      ? scenes.filter((s) => s.sceneNumber === op.targetScene)
       : scenes;
 
     for (const scene of targetScenes) {
-      if (!scene.videoPath || !await fs.pathExists(scene.videoPath)) {
+      if (!scene.videoPath || !(await fs.pathExists(scene.videoPath))) {
         Logger.warn(`[ChatToEdit] Scene ${scene.sceneNumber} has no valid video path, skipping`);
         continue;
       }
@@ -216,14 +230,14 @@ export async function applyEditOperations(
 
         case 'add_subtitles': {
           const srtPath = p.srtPath as string | undefined;
-          if (srtPath && await fs.pathExists(srtPath)) {
+          if (srtPath && (await fs.pathExists(srtPath))) {
             const outPath = path.join(tempDir, `subs_${scene.sceneNumber}_${Date.now()}.mp4`);
             await applyKineticSubtitles(
               scene.videoPath,
               srtPath,
               outPath,
               p.primaryColor as string | undefined,
-              p.secondaryColor as string | undefined
+              p.secondaryColor as string | undefined,
             );
             results.push(outPath);
           }
@@ -244,7 +258,12 @@ export async function applyEditOperations(
         case 'duck_audio': {
           const speechPath = scene.audioPath;
           const bgMusicPath = p.bgMusicPath as string | undefined;
-          if (speechPath && bgMusicPath && await fs.pathExists(speechPath) && await fs.pathExists(bgMusicPath)) {
+          if (
+            speechPath &&
+            bgMusicPath &&
+            (await fs.pathExists(speechPath)) &&
+            (await fs.pathExists(bgMusicPath))
+          ) {
             const outPath = path.join(tempDir, `ducked_${scene.sceneNumber}_${Date.now()}.mp4`);
             await applySmartAudioDucking(scene.videoPath, speechPath, bgMusicPath, outPath);
             results.push(outPath);
@@ -255,7 +274,7 @@ export async function applyEditOperations(
         case 'add_sfx': {
           const sfxPath = p.sfxPath as string | undefined;
           const positionX = (p.positionX as number) ?? 0;
-          if (sfxPath && await fs.pathExists(sfxPath)) {
+          if (sfxPath && (await fs.pathExists(sfxPath))) {
             const outPath = path.join(tempDir, `sfx_${scene.sceneNumber}_${Date.now()}.mp4`);
             await applySpatialAudioMix(scene.videoPath, sfxPath, positionX, outPath);
             results.push(outPath);
@@ -275,7 +294,9 @@ export async function applyEditOperations(
         }
 
         default:
-          Logger.info(`[ChatToEdit] Operation type '${op.type}' not yet implemented, skipping scene ${scene.sceneNumber}`);
+          Logger.info(
+            `[ChatToEdit] Operation type '${op.type}' not yet implemented, skipping scene ${scene.sceneNumber}`,
+          );
           continue;
       }
     }
@@ -287,14 +308,19 @@ export async function applyEditOperations(
 export async function processEditCommand(
   command: string,
   scenes: SceneInfo[],
-  outputDir: string
+  outputDir: string,
 ): Promise<{ operations: EditOperation['operations']; processedPaths: string[] }> {
-  const sceneDetails = scenes.map(s =>
-    `Sahne ${s.sceneNumber}: ${s.speechText ? `Metin: "${s.speechText}"` : 'Görsel sahne'}`
-  ).join('\n');
+  const sceneDetails = scenes
+    .map(
+      (s) =>
+        `Sahne ${s.sceneNumber}: ${s.speechText ? `Metin: "${s.speechText}"` : 'Görsel sahne'}`,
+    )
+    .join('\n');
 
   const parsed = await parseEditCommand(command, scenes.length, sceneDetails);
-  Logger.info(`[ChatToEdit] Parsed command: "${command}" -> ${parsed.operations.length} operations`);
+  Logger.info(
+    `[ChatToEdit] Parsed command: "${command}" -> ${parsed.operations.length} operations`,
+  );
 
   const processedPaths = await applyEditOperations(parsed.operations, scenes, outputDir);
 

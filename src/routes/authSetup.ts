@@ -9,21 +9,21 @@ export const AUTH_FILE_MAP: Record<string, string> = {
   youtube: 'auth_youtube.json',
   tiktok: 'auth_tiktok.json',
   x: 'auth_x.json',
-  meta: 'auth_meta.json'
+  meta: 'auth_meta.json',
 };
 
 const LOGIN_URLS: Record<string, string> = {
   youtube: 'https://studio.youtube.com',
   tiktok: 'https://www.tiktok.com/login',
   x: 'https://x.com/i/flow/login',
-  meta: 'https://business.facebook.com/latest/reels_composer'
+  meta: 'https://business.facebook.com/latest/reels_composer',
 };
 
 const PLATFORM_KEYS: Record<string, string> = {
   youtube: 'authPlatformYoutube',
   tiktok: 'authPlatformTiktok',
   x: 'authPlatformX',
-  meta: 'authPlatformMeta'
+  meta: 'authPlatformMeta',
 };
 
 function isValidPlatform(p: string): p is keyof typeof AUTH_FILE_MAP {
@@ -40,7 +40,7 @@ function tt(key: string, lang: 'tr' | 'en', params?: Record<string, string>): st
 async function saveAuthSession(
   platform: keyof typeof AUTH_FILE_MAP,
   lang: 'tr' | 'en',
-  browser: Browser
+  browser: Browser,
 ): Promise<void> {
   const authFile = AUTH_FILE_MAP[platform];
   const authPath = path.join(process.cwd(), authFile);
@@ -59,7 +59,9 @@ async function saveAuthSession(
 /**
  * Verifies that a saved auth file is valid by checking it exists and is valid JSON.
  */
-async function verifyAuthFile(platform: keyof typeof AUTH_FILE_MAP): Promise<{ valid: boolean; errorKey?: string }> {
+async function verifyAuthFile(
+  platform: keyof typeof AUTH_FILE_MAP,
+): Promise<{ valid: boolean; errorKey?: string }> {
   const authFile = AUTH_FILE_MAP[platform];
   const authPath = path.join(process.cwd(), authFile);
 
@@ -101,7 +103,7 @@ async function handleAuthStatus(req: Request, res: Response) {
     platform,
     authFile,
     configured: result.valid,
-    error: result.errorKey ? tt(result.errorKey, lang) : null
+    error: result.errorKey ? tt(result.errorKey, lang) : null,
   });
 }
 
@@ -139,12 +141,13 @@ async function handleAuthSetup(req: Request, res: Response) {
   try {
     browser = await chromium.launch({
       headless: false,
-      args: ['--start-maximized', '--disable-blink-features=AutomationControlled']
+      args: ['--start-maximized', '--disable-blink-features=AutomationControlled'],
     });
 
     const context = await browser.newContext({
       acceptDownloads: true,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      userAgent:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
 
     const page = await context.newPage();
@@ -168,7 +171,7 @@ async function handleAuthSetup(req: Request, res: Response) {
       youtube: ['studio.youtube.com', 'www.youtube.com/upload'],
       tiktok: ['creator.tiktok.com', 'www.tiktok.com/upload'],
       x: ['x.com/home', 'twitter.com/home'],
-      meta: ['business.facebook.com', 'www.facebook.com']
+      meta: ['business.facebook.com', 'www.facebook.com'],
     };
 
     const successPatterns = postLoginUrls[platform] || [];
@@ -176,12 +179,14 @@ async function handleAuthSetup(req: Request, res: Response) {
     page.on('framenavigated', async (frame) => {
       try {
         const url = frame.url();
-        if (successPatterns.some(p => url.includes(p))) {
+        if (successPatterns.some((p) => url.includes(p))) {
           Logger.info(`[Auth] ${platform} login detected at: ${url}`);
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise((r) => setTimeout(r, 2000));
           await (page as any).__authSaveSuccess?.();
         }
-      } catch (err) { Logger.warn(`[Auth] Frame nav error: ${err}`); }
+      } catch (err) {
+        Logger.warn(`[Auth] Frame nav error: ${err}`);
+      }
     });
 
     // Also detect via logged-in DOM indicators
@@ -189,7 +194,7 @@ async function handleAuthSetup(req: Request, res: Response) {
       youtube: ['#avatar-btn', '#yt-core-sticky-avater', '[aria-label="Avatar"]'],
       tiktok: ['[data-e2e="upload-icon"]', '.upload-title'],
       x: ['[aria-label="Account menu"]', '[href="/home"]'],
-      meta: ['[aria-label="Facebook"]', '.sideNavContent']
+      meta: ['[aria-label="Facebook"]', '.sideNavContent'],
     };
 
     const selectors = loggedInSelectors[platform] || [];
@@ -197,10 +202,12 @@ async function handleAuthSetup(req: Request, res: Response) {
       try {
         await page.waitForSelector(selector, { state: 'visible', timeout: 120000 });
         Logger.info(`[Auth] ${platform} login confirmed via selector: ${selector}`);
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 2000));
         await (page as any).__authSaveSuccess?.();
         break;
-      } catch { /* try next selector */ }
+      } catch {
+        /* try next selector */
+      }
     }
 
     return res.json({
@@ -208,13 +215,14 @@ async function handleAuthSetup(req: Request, res: Response) {
       platform,
       authFile,
       message: tt('authBrowserOpened', lang, { platform: platformLabel }),
-      loginUrl
+      loginUrl,
     });
-
   } catch (err: any) {
     Logger.error(`[Auth] ${tt('authSetupFailed', lang, { platform, error: err.message })}`);
     if (browser) await browser.close().catch(() => {});
-    return res.status(500).json({ success: false, error: tt('authLoginError', lang, { error: err.message }) });
+    return res
+      .status(500)
+      .json({ success: false, error: tt('authLoginError', lang, { error: err.message }) });
   }
 }
 
@@ -239,7 +247,11 @@ async function handleAuthRemove(req: Request, res: Response) {
     Logger.info(`[Auth] Removed ${authFile}`);
   }
 
-  return res.json({ success: true, platform, message: tt('authRemoved', lang, { platform: platformLabel }) });
+  return res.json({
+    success: true,
+    platform,
+    message: tt('authRemoved', lang, { platform: platformLabel }),
+  });
 }
 
 export function registerAuthSetupRoutes(app: Application): void {

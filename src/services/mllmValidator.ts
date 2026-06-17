@@ -10,18 +10,22 @@ import fs from 'fs-extra';
 export const ConsistencyReportSchema = z.object({
   passed: z.boolean(),
   globalConsistencyScore: z.number().min(0).max(100),
-  characterConsistency: z.array(z.object({
-    characterName: z.string(),
-    appearsInScenes: z.array(z.number()),
-    consistencyScore: z.number().min(0).max(100),
-    issues: z.array(z.string()),
-  })),
-  settingConsistency: z.array(z.object({
-    setting: z.string(),
-    appearsInScenes: z.array(z.number()),
-    consistencyScore: z.number().min(0).max(100),
-    issues: z.array(z.string()),
-  })),
+  characterConsistency: z.array(
+    z.object({
+      characterName: z.string(),
+      appearsInScenes: z.array(z.number()),
+      consistencyScore: z.number().min(0).max(100),
+      issues: z.array(z.string()),
+    }),
+  ),
+  settingConsistency: z.array(
+    z.object({
+      setting: z.string(),
+      appearsInScenes: z.array(z.number()),
+      consistencyScore: z.number().min(0).max(100),
+      issues: z.array(z.string()),
+    }),
+  ),
   recommendations: z.array(z.string()),
 });
 
@@ -34,16 +38,20 @@ export async function validateSceneConsistency(
     speechText?: string;
     settingDescription?: string;
     charactersInScene?: string[];
-  }>
+  }>,
 ): Promise<ConsistencyReport> {
   const models = getAIModelChain();
 
-  const sceneTable = scenes.map(s =>
-    `Sahne ${s.sceneNumber} | "${s.videoPrompt.slice(0, 80)}" | Karakterler: ${(s.charactersInScene || []).join(', ')} | Ortam: ${s.settingDescription || 'belirtilmemiş'}`
-  ).join('\n');
+  const sceneTable = scenes
+    .map(
+      (s) =>
+        `Sahne ${s.sceneNumber} | "${s.videoPrompt.slice(0, 80)}" | Karakterler: ${(s.charactersInScene || []).join(', ')} | Ortam: ${s.settingDescription || 'belirtilmemiş'}`,
+    )
+    .join('\n');
 
-  const result = await withFallbackAndRetry((model) => {
-    const prompt = `Sen bir MLLM (Multi-modal Large Language Model) video tutarlılık uzmanısın.
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const prompt = `Sen bir MLLM (Multi-modal Large Language Model) video tutarlılık uzmanısın.
 
 Sahneler:
 ${sceneTable}
@@ -60,13 +68,18 @@ Kurallar:
 - Mekan değişiklikleri anlamlı olmalı
 - Görsel prompt'lardaki stil/ton tutarlı olmalı`;
 
-    return generateObject({
-      model,
-      schema: ConsistencyReportSchema,
-      abortSignal: AbortSignal.timeout(45000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: ConsistencyReportSchema,
+        abortSignal: AbortSignal.timeout(45000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -74,7 +87,7 @@ Kurallar:
 export async function validateFinalVideo(
   videoPath: string,
   jobId: number,
-  expectedScenes: number
+  expectedScenes: number,
 ): Promise<{
   passed: boolean;
   duration: number;
@@ -83,8 +96,13 @@ export async function validateFinalVideo(
 }> {
   const issues: string[] = [];
 
-  if (!await fs.pathExists(videoPath)) {
-    return { passed: false, duration: 0, expectedDuration: expectedScenes * 6, issues: ['Video dosyası bulunamadı'] };
+  if (!(await fs.pathExists(videoPath))) {
+    return {
+      passed: false,
+      duration: 0,
+      expectedDuration: expectedScenes * 6,
+      issues: ['Video dosyası bulunamadı'],
+    };
   }
 
   const stat = await fs.stat(videoPath);
@@ -104,12 +122,18 @@ export async function validateFinalVideo(
   const maxDuration = expectedDuration * 1.3;
 
   if (duration < minDuration) {
-    issues.push(`Video süresi beklenenden kısa: ${duration.toFixed(1)}s (beklenen: ~${expectedDuration}s)`);
+    issues.push(
+      `Video süresi beklenenden kısa: ${duration.toFixed(1)}s (beklenen: ~${expectedDuration}s)`,
+    );
   } else if (duration > maxDuration) {
-    issues.push(`Video süresi beklenenden uzun: ${duration.toFixed(1)}s (beklenen: ~${expectedDuration}s)`);
+    issues.push(
+      `Video süresi beklenenden uzun: ${duration.toFixed(1)}s (beklenen: ~${expectedDuration}s)`,
+    );
   }
 
-  Logger.info(`[MLLM] Final video validation: ${videoPath}, ${duration.toFixed(1)}s/${expectedDuration}s, ${issues.length} issues`);
+  Logger.info(
+    `[MLLM] Final video validation: ${videoPath}, ${duration.toFixed(1)}s/${expectedDuration}s, ${issues.length} issues`,
+  );
 
   return {
     passed: issues.length === 0,

@@ -31,10 +31,17 @@ interface StoryBible {
 
 interface AIStoryAssistantProps {
   language: 'tr' | 'en';
-  onApplyPrompts?: (prompts: { masterPrompt: string; productionNotes: string; characterFeatures: string }) => void;
+  onApplyPrompts?: (prompts: {
+    masterPrompt: string;
+    productionNotes: string;
+    characterFeatures: string;
+  }) => void;
 }
 
-export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: AIStoryAssistantProps) {
+export function AIStoryAssistant({
+  language,
+  onApplyPrompts: _onApplyPrompts,
+}: AIStoryAssistantProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [message, setMessage] = useState('');
@@ -59,7 +66,7 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
         createBible: 'Yeni Hikaye Kitabı',
         selectBible: 'Hikaye Kitabı Seç',
         noBible: 'Hikaye bağlamı yok - sadece genel sohbet',
-        suggestedPrompts: 'Önerilen Prompt\'lar',
+        suggestedPrompts: "Önerilen Prompt'lar",
         apply: 'Uygula',
         generating: 'Yanıt üretiliyor...',
       },
@@ -196,29 +203,49 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
     setTimeout(() => setCopiedMessage(null), 2000);
   };
 
-
-
   return (
-    <div style={{
-      display: 'flex', flex: 1, minHeight: 0, background: 'var(--bg-primary)',
-      borderLeft: '1px solid var(--border)',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flex: 1,
+        minHeight: 0,
+        background: 'var(--bg-primary)',
+        borderLeft: '1px solid var(--border)',
+      }}
+    >
       {/* Sessions Sidebar */}
-      <div style={{
-        width: '280px', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)',
-      }}>
-        <div style={{
-          padding: '16px', borderBottom: '1px solid var(--border)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
+      <div
+        style={{
+          width: '280px',
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--bg-surface)',
+        }}
+      >
+        <div
+          style={{
+            padding: '16px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <span style={{ fontSize: '14px', fontWeight: 700 }}>{t('sessions')}</span>
           <button
             onClick={() => setShowNewSession(true)}
             style={{
-              background: 'var(--accent)', border: 'none', borderRadius: '6px',
-              padding: '6px 10px', cursor: 'pointer', color: 'white',
-              display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px',
+              background: 'var(--accent)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 10px',
+              cursor: 'pointer',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '12px',
             }}
           >
             <Plus size={14} /> {t('newChat')}
@@ -227,32 +254,47 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
 
         {/* New Session Modal */}
         {showNewSession && (
-          <div style={{
-            padding: '16px', borderBottom: '1px solid var(--border)',
-            background: 'var(--bg-primary)',
-          }}>
+          <div
+            style={{
+              padding: '16px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+            }}
+          >
             <select
               value={selectedBibleId || ''}
               onChange={(e) => setSelectedBibleId(e.target.value ? parseInt(e.target.value) : null)}
               style={{
-                width: '100%', padding: '8px', borderRadius: '6px',
-                background: 'var(--bg-surface)', color: 'var(--text-primary)',
-                border: '1px solid var(--border)', marginBottom: '12px',
+                width: '100%',
+                padding: '8px',
+                borderRadius: '6px',
+                background: 'var(--bg-surface)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+                marginBottom: '12px',
                 fontSize: '12px',
               }}
             >
               <option value="">{t('noBible')}</option>
               {storyBibles.map((bible) => (
-                <option key={bible.id} value={bible.id}>{bible.title}</option>
+                <option key={bible.id} value={bible.id}>
+                  {bible.title}
+                </option>
               ))}
             </select>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={createSession}
                 style={{
-                  flex: 1, padding: '8px', background: 'var(--accent)',
-                  border: 'none', borderRadius: '6px', color: 'white',
-                  cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                  flex: 1,
+                  padding: '8px',
+                  background: 'var(--accent)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
                 }}
               >
                 {t('newChat')}
@@ -260,9 +302,13 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
               <button
                 onClick={() => setShowNewSession(false)}
                 style={{
-                  padding: '8px 12px', background: 'var(--bg-surface)',
-                  border: '1px solid var(--border)', borderRadius: '6px',
-                  color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px',
+                  padding: '8px 12px',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '12px',
                 }}
               >
                 ✕
@@ -274,7 +320,14 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
         {/* Sessions List */}
         <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
           {sessions.length === 0 ? (
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
+            <p
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+                padding: '20px',
+              }}
+            >
               {t('noSessions')}
             </p>
           ) : (
@@ -283,11 +336,16 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                 key={session.id}
                 onClick={() => loadSession(session.id)}
                 style={{
-                  padding: '12px', borderRadius: '8px', marginBottom: '4px',
-                  cursor: 'pointer', background: currentSession?.id === session.id
-                    ? 'var(--accent-light)' : 'transparent',
-                  border: currentSession?.id === session.id
-                    ? '1px solid var(--accent)' : '1px solid transparent',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  marginBottom: '4px',
+                  cursor: 'pointer',
+                  background:
+                    currentSession?.id === session.id ? 'var(--accent-light)' : 'transparent',
+                  border:
+                    currentSession?.id === session.id
+                      ? '1px solid var(--accent)'
+                      : '1px solid transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (currentSession?.id !== session.id) {
@@ -300,13 +358,28 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                   }
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <p style={{
-                      fontSize: '13px', fontWeight: 600, margin: 0,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      <MessageSquare size={12} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <MessageSquare
+                        size={12}
+                        style={{ marginRight: '6px', verticalAlign: 'middle' }}
+                      />
                       {session.lastMessage?.slice(0, 30) || 'Yeni Sohbet'}...
                     </p>
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
@@ -314,10 +387,16 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                     </p>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(session.id);
+                    }}
                     style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--text-muted)', padding: '4px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      padding: '4px',
                     }}
                   >
                     <Trash2 size={14} />
@@ -332,30 +411,49 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
       {/* Chat Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {!currentSession ? (
-          <div style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexDirection: 'column', gap: '16px', color: 'var(--text-muted)',
-          }}>
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              gap: '16px',
+              color: 'var(--text-muted)',
+            }}
+          >
             <Sparkles size={48} style={{ opacity: 0.5 }} />
             <p style={{ fontSize: '14px' }}>
-              {language === 'tr' ? 'Sohbet seçin veya yeni başlatın' : 'Select or start a conversation'}
+              {language === 'tr'
+                ? 'Sohbet seçin veya yeni başlatın'
+                : 'Select or start a conversation'}
             </p>
           </div>
         ) : (
           <>
             {/* Chat Header */}
-            <div style={{
-              padding: '12px 16px', borderBottom: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', gap: '12px',
-            }}>
+            <div
+              style={{
+                padding: '12px 16px',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
               <Sparkles size={18} style={{ color: 'var(--accent)' }} />
               <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('title')}</span>
               {selectedBibleId && (
-                <span style={{
-                  fontSize: '11px', padding: '2px 8px', borderRadius: '10px',
-                  background: 'var(--accent-light)', color: 'var(--accent)',
-                }}>
-                  {storyBibles.find(b => b.id === selectedBibleId)?.title || ''}
+                <span
+                  style={{
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: 'var(--accent-light)',
+                    color: 'var(--accent)',
+                  }}
+                >
+                  {storyBibles.find((b) => b.id === selectedBibleId)?.title || ''}
                 </span>
               )}
             </div>
@@ -372,16 +470,21 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                     alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
                   }}
                 >
-                  <div style={{
-                    maxWidth: '80%',
-                    padding: '12px 16px', borderRadius: '12px',
-                    background: msg.role === 'user'
-                      ? 'linear-gradient(135deg, var(--accent), var(--accent-600))'
-                      : 'var(--bg-surface)',
-                    color: msg.role === 'user' ? 'white' : 'var(--text-primary)',
-                    fontSize: '13px', lineHeight: 1.5,
-                    border: msg.role === 'user' ? 'none' : '1px solid var(--border)',
-                  }}>
+                  <div
+                    style={{
+                      maxWidth: '80%',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      background:
+                        msg.role === 'user'
+                          ? 'linear-gradient(135deg, var(--accent), var(--accent-600))'
+                          : 'var(--bg-surface)',
+                      color: msg.role === 'user' ? 'white' : 'var(--text-primary)',
+                      fontSize: '13px',
+                      lineHeight: 1.5,
+                      border: msg.role === 'user' ? 'none' : '1px solid var(--border)',
+                    }}
+                  >
                     {msg.content}
                   </div>
                   {msg.role === 'assistant' && (
@@ -389,9 +492,14 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                       <button
                         onClick={() => copyMessage(msg.content, idx)}
                         style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
                           color: copiedMessage === idx ? 'var(--success)' : 'var(--text-muted)',
-                          fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px',
+                          fontSize: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}
                       >
                         {copiedMessage === idx ? <Check size={12} /> : <Copy size={12} />}
@@ -402,15 +510,26 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                 </div>
               ))}
               {loading && (
-                <div style={{
-                  padding: '12px 16px', borderRadius: '12px',
-                  background: 'var(--bg-surface)', border: '1px solid var(--border)',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  <div className="pulse" style={{
-                    width: '8px', height: '8px', borderRadius: '50%',
-                    background: 'var(--accent)',
-                  }} />
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <div
+                    className="pulse"
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: 'var(--accent)',
+                    }}
+                  />
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {t('generating')}
                   </span>
@@ -420,10 +539,14 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
             </div>
 
             {/* Input */}
-            <div style={{
-              padding: '16px', borderTop: '1px solid var(--border)',
-              display: 'flex', gap: '12px',
-            }}>
+            <div
+              style={{
+                padding: '16px',
+                borderTop: '1px solid var(--border)',
+                display: 'flex',
+                gap: '12px',
+              }}
+            >
               <input
                 type="text"
                 value={message}
@@ -431,23 +554,37 @@ export function AIStoryAssistant({ language, onApplyPrompts: _onApplyPrompts }: 
                 onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                 placeholder={t('typeMessage')}
                 style={{
-                  flex: 1, padding: '12px 16px', borderRadius: '12px',
-                  background: 'var(--bg-surface)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', fontSize: '13px',
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: 'var(--bg-surface)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  fontSize: '13px',
                   outline: 'none',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                }}
               />
               <button
                 onClick={sendMessage}
                 disabled={!message.trim() || loading}
                 style={{
-                  padding: '12px 20px', borderRadius: '12px',
+                  padding: '12px 20px',
+                  borderRadius: '12px',
                   background: message.trim() ? 'var(--accent)' : 'var(--bg-surface)',
-                  border: 'none', color: 'white', cursor: message.trim() ? 'pointer' : 'not-allowed',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  fontSize: '13px', fontWeight: 600,
+                  border: 'none',
+                  color: 'white',
+                  cursor: message.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
                   opacity: loading ? 0.7 : 1,
                 }}
               >

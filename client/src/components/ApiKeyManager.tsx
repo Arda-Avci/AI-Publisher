@@ -74,9 +74,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
 
     setIsSubmitting(true);
     try {
-      const url = editingKey
-        ? `/api/v1/api-keys/${editingKey.id}`
-        : '/api/v1/api-keys';
+      const url = editingKey ? `/api/v1/api-keys/${editingKey.id}` : '/api/v1/api-keys';
       const method = editingKey ? 'PUT' : 'POST';
 
       const r = await fetch(url, {
@@ -160,43 +158,51 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
   };
 
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      overflowY: 'auto',
-      padding: '20px',
-      background: 'rgba(10, 10, 20, 0.6)',
-      borderRadius: '12px',
-      backdropFilter: 'blur(20px)',
-      border: '1px solid rgba(139, 92, 246, 0.2)',
-      minHeight: '400px',
-    }}>
-      {/* Header */}
-      <div style={{
+    <div
+      style={{
+        flex: 1,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '20px',
-        paddingBottom: '16px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-      }}>
+        flexDirection: 'column',
+        overflowY: 'auto',
+        padding: '20px',
+        background: 'rgba(10, 10, 20, 0.6)',
+        borderRadius: '12px',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(139, 92, 246, 0.2)',
+        minHeight: '400px',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '20px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        }}
+      >
         <div>
-          <h2 style={{
-            margin: 0,
-            fontSize: '18px',
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #E5E7EB, #A78BFA)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #E5E7EB, #A78BFA)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             {t('api_keys')}
           </h2>
-          <p style={{
-            margin: '4px 0 0 0',
-            fontSize: '12px',
-            color: '#6B7280',
-          }}>
+          <p
+            style={{
+              margin: '4px 0 0 0',
+              fontSize: '12px',
+              color: '#6B7280',
+            }}
+          >
             {t('api_keys_description')}
           </p>
         </div>
@@ -217,8 +223,8 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
             gap: '8px',
             transition: 'all 0.2s ease',
           }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
         >
           <span style={{ fontSize: '16px' }}>+</span>
           {t('add_api_key')}
@@ -231,37 +237,39 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
           {t('loading')}...
         </div>
       ) : apiKeys.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 20px',
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '10px',
-          border: '1px dashed rgba(139, 92, 246, 0.3)',
-        }}>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            margin: '0 auto 16px',
-            background: 'rgba(139, 92, 246, 0.1)',
-            borderRadius: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '24px',
-            opacity: 0.5,
-          }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '10px',
+            border: '1px dashed rgba(139, 92, 246, 0.3)',
+          }}
+        >
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              margin: '0 auto 16px',
+              background: 'rgba(139, 92, 246, 0.1)',
+              borderRadius: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              opacity: 0.5,
+            }}
+          >
             🔑
           </div>
           <div style={{ fontSize: '14px', color: '#9CA3AF', marginBottom: '8px' }}>
             {t('no_api_keys')}
           </div>
-          <div style={{ fontSize: '12px', color: '#6B7280' }}>
-            {t('add_first_key')}
-          </div>
+          <div style={{ fontSize: '12px', color: '#6B7280' }}>{t('add_first_key')}</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {apiKeys.map(apiKey => {
+          {apiKeys.map((apiKey) => {
             const colors = PROVIDER_COLORS[apiKey.provider] || PROVIDER_COLORS.custom;
             const logo = PROVIDER_LOGOS[apiKey.provider] || PROVIDER_LOGOS.custom;
 
@@ -278,50 +286,75 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                   gap: '14px',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = `${colors.accent}60`}
-                onMouseLeave={e => e.currentTarget.style.borderColor = `${colors.accent}30`}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = `${colors.accent}60`)}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = `${colors.accent}30`)}
               >
                 {/* Provider Logo */}
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  background: colors.bg,
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  color: colors.accent,
-                  border: `1px solid ${colors.accent}40`,
-                  boxShadow: `0 0 15px ${colors.accent}20`,
-                }}>
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    background: colors.bg,
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    color: colors.accent,
+                    border: `1px solid ${colors.accent}40`,
+                    boxShadow: `0 0 15px ${colors.accent}20`,
+                  }}
+                >
                   {logo}
                 </div>
 
                 {/* Key Info */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '4px',
+                    }}
+                  >
                     <span style={{ fontSize: '14px', fontWeight: 600, color: '#E5E7EB' }}>
                       {apiKey.name}
                     </span>
-                    <span style={{
-                      padding: '2px 8px',
-                      background: colors.bg,
-                      borderRadius: '4px',
-                      fontSize: '10px',
-                      color: colors.accent,
-                      fontFamily: 'var(--font-mono)',
-                      textTransform: 'uppercase',
-                    }}>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        background: colors.bg,
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        color: colors.accent,
+                        fontFamily: 'var(--font-mono)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       {apiKey.provider}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#6B7280' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      fontSize: '11px',
+                      color: '#6B7280',
+                    }}
+                  >
                     <span style={{ fontFamily: 'var(--font-mono)' }}>{apiKey.keyHash}</span>
                     {apiKey.baseUrl && (
                       <>
                         <span>•</span>
-                        <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span
+                          style={{
+                            maxWidth: '200px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
                           {apiKey.baseUrl}
                         </span>
                       </>
@@ -330,12 +363,14 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                 </div>
 
                 {/* Stats */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                  gap: '2px',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: '2px',
+                  }}
+                >
                   <span style={{ fontSize: '10px', color: '#6B7280' }}>
                     {t('added')} {formatDate(apiKey.createdAt)}
                   </span>
@@ -365,8 +400,12 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                       justifyContent: 'center',
                       transition: 'all 0.2s ease',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)')}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)')
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)')
+                    }
                   >
                     ✓
                   </button>
@@ -388,8 +427,12 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                       justifyContent: 'center',
                       transition: 'all 0.2s ease',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)')}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)')
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)')
+                    }
                   >
                     ✎
                   </button>
@@ -411,8 +454,12 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                       justifyContent: 'center',
                       transition: 'all 0.2s ease',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)')}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)')
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)')
+                    }
                   >
                     ×
                   </button>
@@ -425,54 +472,60 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(6px)',
-        }}
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(6px)',
+          }}
           onClick={() => resetForm()}
         >
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(25, 25, 50, 0.98), rgba(15, 15, 35, 0.99))',
-            padding: '28px',
-            borderRadius: '14px',
-            border: '1px solid rgba(139, 92, 246, 0.4)',
-            width: '420px',
-            maxWidth: '90vw',
-            boxShadow: '0 0 60px rgba(139, 92, 246, 0.3)',
-          }}
-            onClick={e => e.stopPropagation()}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(25, 25, 50, 0.98), rgba(15, 15, 35, 0.99))',
+              padding: '28px',
+              borderRadius: '14px',
+              border: '1px solid rgba(139, 92, 246, 0.4)',
+              width: '420px',
+              maxWidth: '90vw',
+              boxShadow: '0 0 60px rgba(139, 92, 246, 0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{
-              margin: '0 0 20px 0',
-              fontSize: '16px',
-              fontWeight: 700,
-              color: '#E5E7EB',
-            }}>
+            <h3
+              style={{
+                margin: '0 0 20px 0',
+                fontSize: '16px',
+                fontWeight: 700,
+                color: '#E5E7EB',
+              }}
+            >
               {editingKey ? t('edit_api_key') : t('add_new_api_key')}
             </h3>
 
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  color: '#9CA3AF',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    color: '#9CA3AF',
+                    marginBottom: '6px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
                   {t('key_name')}
                 </label>
                 <input
                   type="text"
                   value={formName}
-                  onChange={e => setFormName(e.target.value)}
+                  onChange={(e) => setFormName(e.target.value)}
                   placeholder="My OpenAI Key"
                   required
                   style={{
@@ -486,25 +539,27 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                     outline: 'none',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)'}
-                  onBlur={e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)'}
+                  onFocus={(e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)')}
                 />
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  color: '#9CA3AF',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    color: '#9CA3AF',
+                    marginBottom: '6px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
                   {t('provider')}
                 </label>
                 <select
                   value={formProvider}
-                  onChange={e => setFormProvider(e.target.value)}
+                  onChange={(e) => setFormProvider(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '12px 14px',
@@ -528,20 +583,22 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
 
               {formProvider === 'custom' && (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '11px',
-                    color: '#9CA3AF',
-                    marginBottom: '6px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '11px',
+                      color: '#9CA3AF',
+                      marginBottom: '6px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
                     Base URL
                   </label>
                   <input
                     type="url"
                     value={formBaseUrl}
-                    onChange={e => setFormBaseUrl(e.target.value)}
+                    onChange={(e) => setFormBaseUrl(e.target.value)}
                     placeholder="https://api.example.com/v1"
                     style={{
                       width: '100%',
@@ -554,28 +611,34 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                       outline: 'none',
                       boxSizing: 'border-box',
                     }}
-                    onFocus={e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)'}
+                    onFocus={(e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)')}
                   />
                 </div>
               )}
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  color: '#9CA3AF',
-                  marginBottom: '6px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    color: '#9CA3AF',
+                    marginBottom: '6px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
                   {t('api_key')}
-                  {editingKey && <span style={{ fontWeight: 400, marginLeft: '8px' }}>({t('leave_empty_keep')})</span>}
+                  {editingKey && (
+                    <span style={{ fontWeight: 400, marginLeft: '8px' }}>
+                      ({t('leave_empty_keep')})
+                    </span>
+                  )}
                 </label>
                 <input
                   type="password"
                   value={formKey}
-                  onChange={e => setFormKey(e.target.value)}
+                  onChange={(e) => setFormKey(e.target.value)}
                   placeholder={editingKey ? '••••••••••••••••' : 'sk-...'}
                   required={!editingKey}
                   style={{
@@ -590,8 +653,8 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                     boxSizing: 'border-box',
                     fontFamily: editingKey ? 'var(--font-mono)' : 'inherit',
                   }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)'}
-                  onBlur={e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)'}
+                  onFocus={(e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)')}
                 />
               </div>
 
@@ -622,11 +685,12 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
                     color: 'white',
                     fontSize: '13px',
                     fontWeight: 600,
-                    cursor: (isSubmitting || (!editingKey && !formKey.trim())) ? 'not-allowed' : 'pointer',
-                    opacity: (isSubmitting || (!editingKey && !formKey.trim())) ? 0.5 : 1,
+                    cursor:
+                      isSubmitting || (!editingKey && !formKey.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting || (!editingKey && !formKey.trim()) ? 0.5 : 1,
                   }}
                 >
-                  {isSubmitting ? t('saving') : (editingKey ? t('update') : t('save'))}
+                  {isSubmitting ? t('saving') : editingKey ? t('update') : t('save')}
                 </button>
               </div>
             </form>

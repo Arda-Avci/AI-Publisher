@@ -54,8 +54,8 @@ router.post('/upload', requireAuth, async (req, res) => {
     batchJobs.set(job.id, job);
 
     // Start processing in background
-    processBatchJob(job.id, files, platform, schedule).catch(err =>
-      Logger.error('[batch] Background processing failed', err)
+    processBatchJob(job.id, files, platform, schedule).catch((err) =>
+      Logger.error('[batch] Background processing failed', err),
     );
 
     res.status(201).json({ job });
@@ -78,15 +78,13 @@ router.post('/from-folder', requireAuth, async (req, res) => {
     }
 
     // Check if folder exists
-    if (!await fs.pathExists(folderPath)) {
+    if (!(await fs.pathExists(folderPath))) {
       return res.status(400).json({ error: 'Folder does not exist' });
     }
 
     // Get video files from folder
     const files = await fs.readdir(folderPath);
-    const videoFiles = files.filter(f =>
-      /\.(mp4|avi|mov|mkv|webm)$/i.test(f)
-    );
+    const videoFiles = files.filter((f) => /\.(mp4|avi|mov|mkv|webm)$/i.test(f));
 
     if (videoFiles.length === 0) {
       return res.status(400).json({ error: 'No video files found in folder' });
@@ -106,9 +104,9 @@ router.post('/from-folder', requireAuth, async (req, res) => {
     batchJobs.set(job.id, job);
 
     // Start processing
-    const fullPaths = videoFiles.map(f => path.join(folderPath, f));
-    processBatchJob(job.id, fullPaths, platform, schedule).catch(err =>
-      Logger.error('[batch] Background processing failed', err)
+    const fullPaths = videoFiles.map((f) => path.join(folderPath, f));
+    processBatchJob(job.id, fullPaths, platform, schedule).catch((err) =>
+      Logger.error('[batch] Background processing failed', err),
     );
 
     res.status(201).json({ job });
@@ -187,7 +185,7 @@ async function processBatchJob(
   jobId: string,
   files: string[],
   platform: string,
-  schedule?: string
+  schedule?: string,
 ): Promise<void> {
   const job = batchJobs.get(jobId);
   if (!job) return;

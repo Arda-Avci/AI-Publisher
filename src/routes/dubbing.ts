@@ -47,7 +47,7 @@ router.post('/dub', async (req, res) => {
       ? videoPath
       : path.join(process.cwd(), videoPath);
 
-    if (!await fs.pathExists(resolvedPath)) {
+    if (!(await fs.pathExists(resolvedPath))) {
       res.status(404).json({ error: 'Video file not found' });
       return;
     }
@@ -61,39 +61,33 @@ router.post('/dub', async (req, res) => {
     }
 
     // Output path
-    const outputPath = path.join(
-      process.cwd(),
-      'videolar',
-      `dubbed_${userId}_${Date.now()}.mp4`
-    );
+    const outputPath = path.join(process.cwd(), 'videolar', `dubbed_${userId}_${Date.now()}.mp4`);
 
     // Start dubbing in background (non-blocking)
     autoDub(resolvedPath, {
       sourceLang: sourceLang || 'tr',
       targetLang,
       voice: voice || 'Claribel Dervla',
-      outputPath
-    }).then(async (result) => {
-      // Deduct credits on success
-      await db.run(
-        'UPDATE users SET credits = credits - ? WHERE id = ?',
-        [DUBBING_COST, userId]
-      );
-      Logger.info('[dubbing] Dubbing job completed', {
-        jobId: result.outputPath,
-        originalDuration: result.originalDuration,
-        dubbedDuration: result.dubbedDuration
+      outputPath,
+    })
+      .then(async (result) => {
+        // Deduct credits on success
+        await db.run('UPDATE users SET credits = credits - ? WHERE id = ?', [DUBBING_COST, userId]);
+        Logger.info('[dubbing] Dubbing job completed', {
+          jobId: result.outputPath,
+          originalDuration: result.originalDuration,
+          dubbedDuration: result.dubbedDuration,
+        });
+      })
+      .catch(async (err) => {
+        Logger.error('[dubbing] Dubbing job failed', err);
       });
-    }).catch(async (err) => {
-      Logger.error('[dubbing] Dubbing job failed', err);
-    });
 
     res.json({
       status: 'processing',
       outputPath: `/videolar/${path.basename(outputPath)}`,
-      message: 'Dubbing started. Check status endpoint for progress.'
+      message: 'Dubbing started. Check status endpoint for progress.',
     });
-
   } catch (err: any) {
     Logger.error('[dubbing] POST /dub error', err);
     res.status(500).json({ error: err.message });
@@ -129,15 +123,14 @@ router.get('/status/:jobId', async (req, res) => {
     if (foundFile) {
       res.json({
         status: 'completed',
-        outputPath: `/videolar/${foundFile}`
+        outputPath: `/videolar/${foundFile}`,
       });
     } else {
       res.json({
         status: 'processing',
-        message: 'Dubbing still in progress'
+        message: 'Dubbing still in progress',
       });
     }
-
   } catch (err: any) {
     Logger.error('[dubbing] GET /status error', err);
     res.status(500).json({ error: err.message });

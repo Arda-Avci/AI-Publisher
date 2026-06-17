@@ -22,7 +22,10 @@ const MCP_TOOLS: MCPTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        status: { type: 'string', description: 'Filter by status (pending/processing/completed/failed)' },
+        status: {
+          type: 'string',
+          description: 'Filter by status (pending/processing/completed/failed)',
+        },
         limit: { type: 'number', description: 'Max results (default 10)' },
       },
     },
@@ -71,7 +74,8 @@ async function executeTool(name: string, args: any): Promise<any> {
   switch (name) {
     case 'list_jobs': {
       const { status, limit = 10 } = args;
-      let query = 'SELECT id, master_prompt, status, current_stage, progress_percent, total_scenes, completed_scenes, created_at FROM video_jobs';
+      let query =
+        'SELECT id, master_prompt, status, current_stage, progress_percent, total_scenes, completed_scenes, created_at FROM video_jobs';
       const params: any[] = [];
 
       if (status) {
@@ -106,7 +110,7 @@ async function executeTool(name: string, args: any): Promise<any> {
       const fs = await import('fs-extra');
       const path = await import('path');
       const uploadsDir = path.join(process.cwd(), 'uploads');
-      if (!await fs.pathExists(uploadsDir)) return { success: true, data: [] };
+      if (!(await fs.pathExists(uploadsDir))) return { success: true, data: [] };
       const files = await fs.readdir(uploadsDir);
       const bRollFiles = files
         .filter((f: string) => f.startsWith('broll_') && f.endsWith('.mp4'))
@@ -118,7 +122,7 @@ async function executeTool(name: string, args: any): Promise<any> {
       const { jobId } = args;
       const job = await db.get(
         'SELECT id, status, current_stage, progress_percent, total_scenes, completed_scenes FROM video_jobs WHERE id = ?',
-        [jobId]
+        [jobId],
       );
       if (!job) return { success: false, error: 'Job not found' };
       return { success: true, data: job };
@@ -168,7 +172,7 @@ export function createMCPServer(): Application {
 
       const systemPrompt = `Sen AI-Publisher sisteminin MCP (Model Context Protocol) ajanısın.
 Kullanıcının isteğini analiz edip uygun MCP tool'larını kullanarak yanıt üretiyorsun.
-Mevcut tool'lar: ${MCP_TOOLS.map(t => `- ${t.name}: ${t.description}`).join('\n')}`;
+Mevcut tool'lar: ${MCP_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join('\n')}`;
 
       const result = await generateText({
         model,

@@ -12,16 +12,21 @@ import { Script, ScriptSegment, ScriptWithSegments, SceneType } from '../../type
 import type { SportotoDiscussion } from './discussionSource.js';
 
 const OutlineSchema = z.object({
-  scenes: z.array(z.object({
-    scene_type: z.enum(['opening', 'talk', 'reaction', 'wide', 'closing']),
-    character_name: z.string(),
-    camera_instruction: z.string(),
-    duration_seconds: z.number().min(2).max(10),
-    dialogue_context: z.string(),
-  })),
+  scenes: z.array(
+    z.object({
+      scene_type: z.enum(['opening', 'talk', 'reaction', 'wide', 'closing']),
+      character_name: z.string(),
+      camera_instruction: z.string(),
+      duration_seconds: z.number().min(2).max(10),
+      dialogue_context: z.string(),
+    }),
+  ),
 });
 
-function getModelForCharacter(char: { llm_provider?: string | null; llm_model?: string | null }): any {
+function getModelForCharacter(char: {
+  llm_provider?: string | null;
+  llm_model?: string | null;
+}): any {
   const modelId = char.llm_model || undefined;
   const chain = getAIModelChain();
   const provider = char.llm_provider || 'zen';
@@ -31,8 +36,14 @@ function getModelForCharacter(char: { llm_provider?: string | null; llm_model?: 
       return google(modelId || 'gemini-2.5-flash');
     case 'claude':
       if (process.env.ANTHROPIC_API_KEY) {
-        const baseURL = (process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic').replace(/\/+$/, '') + '/v1';
-        return createAnthropic({ baseURL, apiKey: process.env.ANTHROPIC_API_KEY })(modelId || 'MiniMax-M3');
+        const baseURL =
+          (process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic').replace(
+            /\/+$/,
+            '',
+          ) + '/v1';
+        return createAnthropic({ baseURL, apiKey: process.env.ANTHROPIC_API_KEY })(
+          modelId || 'MiniMax-M3',
+        );
       }
       break;
     case 'deepseek':
@@ -60,7 +71,7 @@ function parseScriptRow(row: any): Script {
   if (!row) return row;
   return {
     ...row,
-    metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {}),
+    metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata || {},
   };
 }
 
@@ -68,7 +79,7 @@ function parseSegmentRow(row: any): ScriptSegment {
   if (!row) return row;
   return {
     ...row,
-    metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {}),
+    metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata || {},
   };
 }
 
@@ -76,20 +87,25 @@ export class ScriptEngine {
   async generateOutline(
     masterPrompt: string,
     productionNotes: string | null | undefined,
-    characters: Character[]
+    characters: Character[],
   ): Promise<z.infer<typeof OutlineSchema>['scenes']> {
     const models = getAIModelChain();
-    const charList = characters.map(c =>
-      `- ${c.name} (${c.role_archetype || 'supporting'}): ${c.description || 'Açıklama yok'}`
-    ).join('\n');
+    const charList = characters
+      .map(
+        (c) =>
+          `- ${c.name} (${c.role_archetype || 'supporting'}): ${c.description || 'Açıklama yok'}`,
+      )
+      .join('\n');
 
-    const result = await withFallbackAndRetry((model) => {
-      return generateObject({
-        model,
-        schema: OutlineSchema,
-        abortSignal: AbortSignal.timeout(60000),
-        system: 'Sen bir talk-show yapımcısısın. Çıktıyı sadece JSON formatında üret, açıklama ekleme.',
-        prompt: `Bir talk-show için sahne sahne taslak hazırla.
+    const result = await withFallbackAndRetry(
+      (model) => {
+        return generateObject({
+          model,
+          schema: OutlineSchema,
+          abortSignal: AbortSignal.timeout(60000),
+          system:
+            'Sen bir talk-show yapımcısısın. Çıktıyı sadece JSON formatında üret, açıklama ekleme.',
+          prompt: `Bir talk-show için sahne sahne taslak hazırla.
 
 Konu: ${masterPrompt}
 Üretim Notları: ${productionNotes || 'Yok'}
@@ -105,8 +121,13 @@ Her sahne için:
 - dialogue_context: Bu sahnede ne konuşulacağına dair kısa not
 
 Toplam 5-8 sahne planla. İlk sahne opening (sunucu açılışı), son sahne closing (kapanış) olsun.`,
-      });
-    }, models, 2, 2000, true);
+        });
+      },
+      models,
+      2,
+      2000,
+      true,
+    );
 
     return result.object.scenes;
   }
@@ -116,11 +137,11 @@ Toplam 5-8 sahne planla. İlk sahne opening (sunucu açılışı), son sahne clo
     sceneType: SceneType,
     dialogueContext: string,
     priorDialogue: string,
-    showTopic: string
+    showTopic: string,
   ): Promise<string> {
     const model = getModelForCharacter({
       llm_provider: character.llm_provider || 'zen',
-      llm_model: character.llm_model || null
+      llm_model: character.llm_model || null,
     });
     const systemPrompt = `Sen bir talk-show karakterisin. Karakter bilgilerin:
 Ad: ${character.name}
@@ -147,26 +168,32 @@ ${priorDialogue || 'Henüz konuşma yok.'}
       });
       return res.text.trim().slice(0, 500);
     } catch (err: any) {
-      Logger.warn(`[ScriptEngine] Dialogue failed for ${character.name}: ${err.message}. Using fallback.`);
+      Logger.warn(
+        `[ScriptEngine] Dialogue failed for ${character.name}: ${err.message}. Using fallback.`,
+      );
       return `${character.name} bu konuda düşüncelerini paylaşıyor: ${dialogueContext}`;
     }
   }
 
   async generateFullScript(showId: number, userId: number): Promise<ScriptWithSegments> {
-    const show = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [showId, userId]);
+    const show = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [
+      showId,
+      userId,
+    ]);
     if (!show) throw new Error('Show not found');
 
     const characters: Character[] = await db.all(
       'SELECT * FROM characters WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
+      [userId],
     );
-    if (characters.length === 0) throw new Error('No characters found. Create at least one character first.');
+    if (characters.length === 0)
+      throw new Error('No characters found. Create at least one character first.');
 
     const title = show.master_prompt?.substring(0, 100) || `Talk-Show #${showId}`;
 
     const scriptRow = await db.get(
       `INSERT INTO scripts (show_id, user_id, title, status) VALUES (?, ?, ?, 'generating') RETURNING *`,
-      [showId, userId, title]
+      [showId, userId, title],
     );
     const script = parseScriptRow(scriptRow);
 
@@ -175,7 +202,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
       const scenes = await this.generateOutline(
         show.master_prompt,
         show.production_notes,
-        characters
+        characters,
       );
 
       const charMap = new Map<string, Character>();
@@ -190,7 +217,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
         const character = charMap.get(characterName.toLowerCase().trim());
 
         const priorDialogue = segments
-          .map(s => `${s.character_name}: ${s.dialogue_text}`)
+          .map((s) => `${s.character_name}: ${s.dialogue_text}`)
           .join('\n');
 
         let dialogue = '';
@@ -200,7 +227,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
             scene.scene_type,
             scene.dialogue_context,
             priorDialogue,
-            show.master_prompt
+            show.master_prompt,
           );
         } else {
           dialogue = `${characterName}: ${scene.dialogue_context}`;
@@ -219,14 +246,14 @@ ${priorDialogue || 'Henüz konuşma yok.'}
             scene.camera_instruction,
             scene.duration_seconds,
             i + 1,
-          ]
+          ],
         );
         segments.push(parseSegmentRow(segmentRow));
       }
 
       const updated = await db.get(
         `UPDATE scripts SET status = 'completed', scene_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *`,
-        [segments.length, script.id]
+        [segments.length, script.id],
       );
 
       return { ...parseScriptRow(updated), segments };
@@ -234,7 +261,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
       Logger.error(`[ScriptEngine] Generation failed: ${err.message}`);
       await db.run(
         `UPDATE scripts SET status = 'error', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [script.id]
+        [script.id],
       );
       throw err;
     }
@@ -243,26 +270,34 @@ ${priorDialogue || 'Henüz konuşma yok.'}
   async generateFromDiscussion(
     showId: number,
     userId: number,
-    discussion: SportotoDiscussion
+    discussion: SportotoDiscussion,
   ): Promise<ScriptWithSegments> {
-    const show = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [showId, userId]);
+    const show = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [
+      showId,
+      userId,
+    ]);
     if (!show) throw new Error('Show not found');
 
     const characters: Character[] = await db.all(
       'SELECT * FROM characters WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
+      [userId],
     );
 
-    const title = discussion.title || show.master_prompt?.substring(0, 100) || `Sportoto Hafta ${discussion.sportoto_week}`;
+    const title =
+      discussion.title ||
+      show.master_prompt?.substring(0, 100) ||
+      `Sportoto Hafta ${discussion.sportoto_week}`;
 
     const scriptRow = await db.get(
       `INSERT INTO scripts (show_id, user_id, title, status) VALUES (?, ?, ?, 'generating') RETURNING *`,
-      [showId, userId, title]
+      [showId, userId, title],
     );
     const script = parseScriptRow(scriptRow);
 
     try {
-      Logger.info(`[ScriptEngine] Generating script from Sportoto discussion: "${discussion.title}"`);
+      Logger.info(
+        `[ScriptEngine] Generating script from Sportoto discussion: "${discussion.title}"`,
+      );
 
       const charMap = new Map<string, Character>();
       for (const c of characters) {
@@ -293,7 +328,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
         if (character) {
           try {
             const priorDialogue = segments
-              .map(s => `${s.character_name}: ${s.dialogue_text}`)
+              .map((s) => `${s.character_name}: ${s.dialogue_text}`)
               .join('\n');
 
             const model = getModelForCharacter({
@@ -318,13 +353,15 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
             });
             dialogue = res.text.trim().slice(0, 500);
           } catch (err: any) {
-            Logger.warn(`[ScriptEngine] Dialogue enhancement failed for ${characterName}: ${err.message}. Using fallback.`);
+            Logger.warn(
+              `[ScriptEngine] Dialogue enhancement failed for ${characterName}: ${err.message}. Using fallback.`,
+            );
             dialogue = `${characterName}: ${'Bu sahne hakkında yorum yapıyor...'}`;
           }
         }
 
         const wordCount = dialogue.split(/\s+/).length;
-        const durationSeconds = Math.max(3, Math.min(10, Math.ceil(wordCount / 150 * 60)));
+        const durationSeconds = Math.max(3, Math.min(10, Math.ceil((wordCount / 150) * 60)));
 
         const segmentRow = await db.get(
           `INSERT INTO script_segments (script_id, scene_number, scene_type, character_id, character_name, dialogue_text, camera_instruction, duration_seconds, order_index)
@@ -339,14 +376,14 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
             isFirst ? 'zoom_in' : isLast ? 'zoom_out' : 'two_shot',
             durationSeconds,
             i + 1,
-          ]
+          ],
         );
         segments.push(parseSegmentRow(segmentRow));
       }
 
       const updated = await db.get(
         `UPDATE scripts SET status = 'completed', scene_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *`,
-        [segments.length, script.id]
+        [segments.length, script.id],
       );
 
       return { ...parseScriptRow(updated), segments };
@@ -354,7 +391,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
       Logger.error(`[ScriptEngine] Sportoto script generation failed: ${err.message}`);
       await db.run(
         `UPDATE scripts SET status = 'error', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [script.id]
+        [script.id],
       );
       throw err;
     }
@@ -377,7 +414,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
     try {
       const priorSegments = await db.all(
         'SELECT * FROM script_segments WHERE script_id = ? AND order_index < ? ORDER BY order_index',
-        [scriptId, segment.order_index]
+        [scriptId, segment.order_index],
       );
       const priorDialogue = priorSegments
         .map((s: any) => `${s.character_name}: ${s.dialogue_text}`)
@@ -390,7 +427,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
           segment.scene_type,
           segment.dialogue_text || segment.camera_instruction,
           priorDialogue,
-          script.title
+          script.title,
         );
       } else {
         dialogue = `${segment.character_name}: ${segment.camera_instruction || 'Bu sahne hakkında yorum yapıyor...'}`;
@@ -398,7 +435,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
 
       const updated = await db.get(
         `UPDATE script_segments SET dialogue_text = ? WHERE id = ? RETURNING *`,
-        [dialogue, segmentId]
+        [dialogue, segmentId],
       );
 
       await db.exec('COMMIT');
@@ -410,10 +447,9 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
   }
 
   async listScripts(showId: number): Promise<Script[]> {
-    const rows = await db.all(
-      'SELECT * FROM scripts WHERE show_id = ? ORDER BY created_at DESC',
-      [showId]
-    );
+    const rows = await db.all('SELECT * FROM scripts WHERE show_id = ? ORDER BY created_at DESC', [
+      showId,
+    ]);
     return rows.map(parseScriptRow);
   }
 
@@ -423,7 +459,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
 
     const segments = await db.all(
       'SELECT * FROM script_segments WHERE script_id = ? ORDER BY order_index',
-      [scriptId]
+      [scriptId],
     );
 
     return { ...parseScriptRow(script), segments: segments.map(parseSegmentRow) };
@@ -431,19 +467,22 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
 
   async updateScript(
     scriptId: number,
-    data: { title?: string; metadata?: Record<string, unknown> }
+    data: { title?: string; metadata?: Record<string, unknown> },
   ): Promise<Script | null> {
     const existing = await db.get('SELECT * FROM scripts WHERE id = ?', [scriptId]);
     if (!existing) return null;
 
     const title = data.title ?? existing.title;
-    const metadata = data.metadata !== undefined
-      ? JSON.stringify(data.metadata)
-      : (typeof existing.metadata === 'string' ? existing.metadata : JSON.stringify(existing.metadata ?? {}));
+    const metadata =
+      data.metadata !== undefined
+        ? JSON.stringify(data.metadata)
+        : typeof existing.metadata === 'string'
+          ? existing.metadata
+          : JSON.stringify(existing.metadata ?? {});
 
     const updated = await db.get(
       `UPDATE scripts SET title = ?, metadata = ?::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *`,
-      [title, metadata, scriptId]
+      [title, metadata, scriptId],
     );
     return parseScriptRow(updated);
   }
@@ -460,7 +499,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
       camera_instruction?: string;
       duration_seconds?: number;
       scene_type?: SceneType;
-    }
+    },
   ): Promise<ScriptSegment | null> {
     const existing = await db.get('SELECT * FROM script_segments WHERE id = ?', [segmentId]);
     if (!existing) return null;
@@ -472,7 +511,7 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
 
     const updated = await db.get(
       `UPDATE script_segments SET dialogue_text = ?, camera_instruction = ?, duration_seconds = ?, scene_type = ? WHERE id = ? RETURNING *`,
-      [dialogue_text, camera_instruction, duration_seconds, scene_type, segmentId]
+      [dialogue_text, camera_instruction, duration_seconds, scene_type, segmentId],
     );
     return parseSegmentRow(updated);
   }

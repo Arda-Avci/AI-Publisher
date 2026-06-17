@@ -14,7 +14,18 @@ import { subtitleMixer } from '../services/clipper/subtitleMixer.js';
 import { autoProcessClip } from '../services/clipper/autoSubtitleBgm.js';
 import { generateText } from 'ai';
 import { getAIModelChain } from '../lib/ai-provider.js';
-import { splitScreenVertical, splitScreenHorizontal, splitScreenGrid, overlayMascot, overlayMascotWithAnimation, pipOverlay, SplitScreenOptions, OverlayPosition, AnimationType, PipPosition } from '../services/clipper/splitScreenService.js';
+import {
+  splitScreenVertical,
+  splitScreenHorizontal,
+  splitScreenGrid,
+  overlayMascot,
+  overlayMascotWithAnimation,
+  pipOverlay,
+  SplitScreenOptions,
+  OverlayPosition,
+  AnimationType,
+  PipPosition,
+} from '../services/clipper/splitScreenService.js';
 import { broadcastProgress } from '../lib/redis.js';
 import Redis from 'ioredis';
 import path from 'path';
@@ -34,7 +45,7 @@ router.post('/extract', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'videoPath is required' });
     }
 
-    if (!await fs.pathExists(videoPath)) {
+    if (!(await fs.pathExists(videoPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
@@ -43,11 +54,13 @@ router.post('/extract', requireAuth, async (req, res) => {
     const result = await db.run(
       `INSERT INTO clip_jobs (user_id, source_video_path, title, status, priority)
        VALUES ($1, $2, $3, 'pending', $4) RETURNING id`,
-      [req.session.userId, videoPath, title || '', jobPriority]
+      [req.session.userId, videoPath, title || '', jobPriority],
     );
     const clipJobId = result.lastID || (result as any)?.id || 0;
 
-    Logger.info(`[Clipper] Clip job #${clipJobId} created for ${videoPath} (priority=${jobPriority})`);
+    Logger.info(
+      `[Clipper] Clip job #${clipJobId} created for ${videoPath} (priority=${jobPriority})`,
+    );
 
     try {
       await sendClipToQueue({
@@ -62,7 +75,12 @@ router.post('/extract', requireAuth, async (req, res) => {
       });
     } catch (queueErr) {
       Logger.warn('[Clipper] Queue unavailable, processing inline:', queueErr);
-      processInlineExtraction(clipJobId, videoPath, { minDuration, maxDuration, targetCount, title });
+      processInlineExtraction(clipJobId, videoPath, {
+        minDuration,
+        maxDuration,
+        targetCount,
+        title,
+      });
     }
 
     res.status(201).json({ jobId: clipJobId, status: 'pending', priority: jobPriority });
@@ -80,16 +98,21 @@ router.get('/list', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(
       'SELECT id, source_video_path, title, status, segments, overall_score, created_at, completed_at FROM clip_jobs WHERE user_id = $1 ORDER BY id DESC',
-      [req.session.userId]
+      [req.session.userId],
     );
 
     const parseSegments = (row: any) => {
       if (!row.segments) return [];
       const segs = typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments;
-      return Array.isArray(segs) ? segs.map((s: any) => ({
-        id: s.id, startTime: s.startTime, endTime: s.endTime,
-        duration: s.duration, score: s.score,
-      })) : [];
+      return Array.isArray(segs)
+        ? segs.map((s: any) => ({
+            id: s.id,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            duration: s.duration,
+            score: s.score,
+          }))
+        : [];
     };
 
     const clips = rows.map((row: any) => ({
@@ -117,16 +140,18 @@ router.get('/list', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const jobId = parseInt(String(req.params.id), 10);
-    const row = await db.get(
-      'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
-      [jobId, req.session.userId]
-    );
+    const row = await db.get('SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2', [
+      jobId,
+      req.session.userId,
+    ]);
     if (!row) {
       return res.status(404).json({ error: 'Clip not found' });
     }
 
     const segments = row.segments
-      ? (typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments)
+      ? typeof row.segments === 'string'
+        ? JSON.parse(row.segments)
+        : row.segments
       : [];
 
     res.json({
@@ -139,7 +164,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         segments,
         createdAt: row.created_at,
         completedAt: row.completed_at,
-      }
+      },
     });
   } catch (error) {
     Logger.error('[Clipper] Get failed:', error);
@@ -159,10 +184,11 @@ router.post('/:id/retry', requireAuth, async (req, res) => {
     if (!retried) {
       const row: any = await db.get(
         'SELECT id, status, retry_count, max_retries FROM clip_jobs WHERE id = $1 AND user_id = $2',
-        [jobId, req.session.userId]
+        [jobId, req.session.userId],
       );
       if (!row) return res.status(404).json({ error: 'Clip not found' });
-      if (row.status !== 'failed') return res.status(400).json({ error: 'Only failed jobs can be retried' });
+      if (row.status !== 'failed')
+        return res.status(400).json({ error: 'Only failed jobs can be retried' });
       return res.status(400).json({ error: 'Max retries exceeded' });
     }
 
@@ -184,10 +210,10 @@ router.get('/progress/:id', requireAuth, async (req, res) => {
   }
 
   // Ownership kontrolü
-  const row = await db.get(
-    'SELECT id, status FROM clip_jobs WHERE id = $1 AND user_id = $2',
-    [jobId, req.session.userId]
-  );
+  const row = await db.get('SELECT id, status FROM clip_jobs WHERE id = $1 AND user_id = $2', [
+    jobId,
+    req.session.userId,
+  ]);
   if (!row) {
     return res.status(404).json({ error: 'Clip not found' });
   }
@@ -196,7 +222,7 @@ router.get('/progress/:id', requireAuth, async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
 
@@ -239,10 +265,10 @@ router.get('/progress/:id', requireAuth, async (req, res) => {
 router.post('/:id/export', requireAuth, async (req, res) => {
   try {
     const jobId = parseInt(String(req.params.id), 10);
-    const row = await db.get(
-      'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
-      [jobId, req.session.userId]
-    );
+    const row = await db.get('SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2', [
+      jobId,
+      req.session.userId,
+    ]);
     if (!row) {
       return res.status(404).json({ error: 'Clip not found' });
     }
@@ -261,7 +287,9 @@ router.post('/:id/export', requireAuth, async (req, res) => {
     } = req.body;
 
     const segments: ClipSegment[] = row.segments
-      ? (typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments)
+      ? typeof row.segments === 'string'
+        ? JSON.parse(row.segments)
+        : row.segments
       : [];
 
     const outputDir = path.join(process.cwd(), 'videolar', `clip_${row.id}`);
@@ -284,15 +312,12 @@ router.post('/:id/export', requireAuth, async (req, res) => {
             row.source_video_path,
             clipPath,
             segment,
-            { aspectRatio }
+            { aspectRatio },
           );
         } else {
-          currentPath = await videoClipper.cropSegment(
-            row.source_video_path,
-            clipPath,
-            segment,
-            { aspectRatio }
-          );
+          currentPath = await videoClipper.cropSegment(row.source_video_path, clipPath, segment, {
+            aspectRatio,
+          });
         }
 
         if (addSubtitles) {
@@ -325,8 +350,10 @@ router.post('/:id/export', requireAuth, async (req, res) => {
       }
     }
 
-    await db.run('UPDATE clip_jobs SET output_paths = $1 WHERE id = $2',
-      [JSON.stringify(outputPaths), row.id]);
+    await db.run('UPDATE clip_jobs SET output_paths = $1 WHERE id = $2', [
+      JSON.stringify(outputPaths),
+      row.id,
+    ]);
 
     res.json({ jobId: row.id, outputPaths });
   } catch (error) {
@@ -342,10 +369,10 @@ router.post('/:id/export', requireAuth, async (req, res) => {
 router.post('/:id/auto', requireAuth, async (req, res) => {
   try {
     const jobId = parseInt(String(req.params.id), 10);
-    const row = await db.get(
-      'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
-      [jobId, req.session.userId]
-    );
+    const row = await db.get('SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2', [
+      jobId,
+      req.session.userId,
+    ]);
     if (!row) {
       return res.status(404).json({ error: 'Clip not found' });
     }
@@ -366,7 +393,9 @@ router.post('/:id/auto', requireAuth, async (req, res) => {
     } = req.body;
 
     const segments: ClipSegment[] = row.segments
-      ? (typeof row.segments === 'string' ? JSON.parse(row.segments) : row.segments)
+      ? typeof row.segments === 'string'
+        ? JSON.parse(row.segments)
+        : row.segments
       : [];
 
     const outputDir = path.join(process.cwd(), 'videolar', `clip_${row.id}`);
@@ -393,28 +422,35 @@ router.post('/:id/auto', requireAuth, async (req, res) => {
         let croppedPath: string;
         if (useFaceTracking) {
           croppedPath = await videoClipper.cropSegmentWithFaceTracking(
-            row.source_video_path, clipPath, segment, { aspectRatio }
+            row.source_video_path,
+            clipPath,
+            segment,
+            { aspectRatio },
           );
         } else {
-          croppedPath = await videoClipper.cropSegment(
-            row.source_video_path, clipPath, segment, { aspectRatio }
-          );
+          croppedPath = await videoClipper.cropSegment(row.source_video_path, clipPath, segment, {
+            aspectRatio,
+          });
         }
 
         // 2. Otomatik altyazı + BGM
         const finalPath = clipPath.replace('.mp4', '_final.mp4');
         const result = await autoProcessClip(croppedPath, finalPath, segment, {
-          subtitle: autoSubtitle ? {
-            subtitleStyle: subtitleStyle || { primaryColor: '#FFFFFF', bold: true },
-            maxCharsPerLine: 35,
-            position: 'bottom',
-          } : undefined,
-          bgm: autoBgm ? {
-            musicPath,
-            musicVolume,
-            duckingEnabled: true,
-            duckingThresholdDb: -18,
-          } : undefined,
+          subtitle: autoSubtitle
+            ? {
+                subtitleStyle: subtitleStyle || { primaryColor: '#FFFFFF', bold: true },
+                maxCharsPerLine: 35,
+                position: 'bottom',
+              }
+            : undefined,
+          bgm: autoBgm
+            ? {
+                musicPath,
+                musicVolume,
+                duckingEnabled: true,
+                duckingThresholdDb: -18,
+              }
+            : undefined,
         });
 
         results.push({
@@ -430,9 +466,11 @@ router.post('/:id/auto', requireAuth, async (req, res) => {
       }
     }
 
-    const outputPaths = results.map(r => r.outputPath);
-    await db.run('UPDATE clip_jobs SET output_paths = $1 WHERE id = $2',
-      [JSON.stringify(outputPaths), row.id]);
+    const outputPaths = results.map((r) => r.outputPath);
+    await db.run('UPDATE clip_jobs SET output_paths = $1 WHERE id = $2', [
+      JSON.stringify(outputPaths),
+      row.id,
+    ]);
 
     res.json({ jobId: row.id, results });
   } catch (error) {
@@ -444,10 +482,7 @@ router.post('/:id/auto', requireAuth, async (req, res) => {
 /**
  * Generate word-level SRT entries from a segment caption using AI timestamps
  */
-async function generateWordLevelSrt(
-  segment: ClipSegment,
-  outputPath: string
-): Promise<string> {
+async function generateWordLevelSrt(segment: ClipSegment, outputPath: string): Promise<string> {
   const caption = segment.suggestedCaption || '';
   if (!caption.trim()) return outputPath;
   const words = caption.split(/\s+/).filter(Boolean);
@@ -460,7 +495,7 @@ async function generateWordLevelSrt(
     const mm = Math.floor((s % 3600) / 60);
     const ss = s % 60;
     const secs = ss.toFixed(3).replace('.', ',');
-    return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${secs.padStart(7,'0')}`;
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${secs.padStart(7, '0')}`;
   };
 
   try {
@@ -475,7 +510,7 @@ async function generateWordLevelSrt(
       const wordData = JSON.parse(match[0]) as Array<{ word: string; start: number; end: number }>;
       const lines: string[] = [];
       wordData.forEach((w, i) => {
-        lines.push(`${i+1}\n${fmtSrt(w.start)} --> ${fmtSrt(w.end)}\n${w.word}\n`);
+        lines.push(`${i + 1}\n${fmtSrt(w.start)} --> ${fmtSrt(w.end)}\n${w.word}\n`);
       });
       await fs.writeFile(outputPath, lines.join('\n'), 'utf-8');
       return outputPath;
@@ -485,7 +520,9 @@ async function generateWordLevelSrt(
   // Fallback: even spacing
   const lines: string[] = [];
   for (let i = 0; i < words.length; i++) {
-    lines.push(`${i+1}\n${fmtSrt(i * secPerWord)} --> ${fmtSrt((i + 1) * secPerWord)}\n${words[i]}\n`);
+    lines.push(
+      `${i + 1}\n${fmtSrt(i * secPerWord)} --> ${fmtSrt((i + 1) * secPerWord)}\n${words[i]}\n`,
+    );
   }
   await fs.writeFile(outputPath, lines.join('\n'), 'utf-8');
   return outputPath;
@@ -509,7 +546,7 @@ router.post('/split-screen', requireAuth, async (req, res) => {
       topVideoPath,
       bottomVideoPath,
       output,
-      layout
+      layout,
     );
 
     res.json({ outputPath: result });
@@ -554,11 +591,11 @@ router.post('/split-screen-vertical', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'topVideoPath and bottomVideoPath are required' });
     }
 
-    if (!await fs.pathExists(topVideoPath)) {
+    if (!(await fs.pathExists(topVideoPath))) {
       return res.status(400).json({ error: 'Top video file not found' });
     }
 
-    if (!await fs.pathExists(bottomVideoPath)) {
+    if (!(await fs.pathExists(bottomVideoPath))) {
       return res.status(400).json({ error: 'Bottom video file not found' });
     }
 
@@ -589,11 +626,11 @@ router.post('/split-screen-horizontal', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'leftVideoPath and rightVideoPath are required' });
     }
 
-    if (!await fs.pathExists(leftVideoPath)) {
+    if (!(await fs.pathExists(leftVideoPath))) {
       return res.status(400).json({ error: 'Left video file not found' });
     }
 
-    if (!await fs.pathExists(rightVideoPath)) {
+    if (!(await fs.pathExists(rightVideoPath))) {
       return res.status(400).json({ error: 'Right video file not found' });
     }
 
@@ -625,12 +662,13 @@ router.post('/split-screen-grid', requireAuth, async (req, res) => {
     }
 
     for (const p of videoPaths) {
-      if (!await fs.pathExists(p)) {
+      if (!(await fs.pathExists(p))) {
         return res.status(400).json({ error: `Video file not found: ${p}` });
       }
     }
 
-    const output = outputPath || path.join(process.cwd(), 'videolar', `split_grid_${Date.now()}.mp4`);
+    const output =
+      outputPath || path.join(process.cwd(), 'videolar', `split_grid_${Date.now()}.mp4`);
 
     await splitScreenGrid(videoPaths, output, gridCols);
 
@@ -653,17 +691,22 @@ router.post('/mascot-overlay', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'videoPath and mascotPngPath are required' });
     }
 
-    if (!await fs.pathExists(videoPath)) {
+    if (!(await fs.pathExists(videoPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
-    if (!await fs.pathExists(mascotPngPath)) {
+    if (!(await fs.pathExists(mascotPngPath))) {
       return res.status(400).json({ error: 'Mascot PNG file not found' });
     }
 
     const output = outputPath || videoPath.replace('.mp4', '_mascot.mp4');
 
-    const overlayPos: OverlayPosition = position || { x: 'W-w-30', y: 'H-h-30', scale: 0.5, opacity: 1.0 };
+    const overlayPos: OverlayPosition = position || {
+      x: 'W-w-30',
+      y: 'H-h-30',
+      scale: 0.5,
+      opacity: 1.0,
+    };
 
     await overlayMascot(videoPath, mascotPngPath, output, overlayPos);
 
@@ -686,11 +729,11 @@ router.post('/mascot-overlay-animated', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'videoPath and mascotPngPath are required' });
     }
 
-    if (!await fs.pathExists(videoPath)) {
+    if (!(await fs.pathExists(videoPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
-    if (!await fs.pathExists(mascotPngPath)) {
+    if (!(await fs.pathExists(mascotPngPath))) {
       return res.status(400).json({ error: 'Mascot PNG file not found' });
     }
 
@@ -721,17 +764,25 @@ router.post('/pip-overlay', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'mainVideoPath and pipVideoPath are required' });
     }
 
-    if (!await fs.pathExists(mainVideoPath)) {
+    if (!(await fs.pathExists(mainVideoPath))) {
       return res.status(400).json({ error: 'Main video file not found' });
     }
 
-    if (!await fs.pathExists(pipVideoPath)) {
+    if (!(await fs.pathExists(pipVideoPath))) {
       return res.status(400).json({ error: 'PIP video file not found' });
     }
 
-    const validPositions: PipPosition[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+    const validPositions: PipPosition[] = [
+      'top-left',
+      'top-right',
+      'bottom-left',
+      'bottom-right',
+      'center',
+    ];
     if (!validPositions.includes(position)) {
-      return res.status(400).json({ error: `position must be one of: ${validPositions.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `position must be one of: ${validPositions.join(', ')}` });
     }
 
     const output = outputPath || mainVideoPath.replace('.mp4', '_pip.mp4');
@@ -764,7 +815,7 @@ router.post('/smart-crop', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'videoPath is required' });
     }
 
-    if (!await fs.pathExists(videoPath)) {
+    if (!(await fs.pathExists(videoPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
@@ -812,15 +863,15 @@ router.post('/subtitle-mix', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'videoPath is required' });
     }
 
-    if (!await fs.pathExists(videoPath)) {
+    if (!(await fs.pathExists(videoPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
-    if (srtPath && !await fs.pathExists(srtPath)) {
+    if (srtPath && !(await fs.pathExists(srtPath))) {
       return res.status(400).json({ error: 'SRT file not found' });
     }
 
-    if (musicPath && !await fs.pathExists(musicPath)) {
+    if (musicPath && !(await fs.pathExists(musicPath))) {
       return res.status(400).json({ error: 'Music file not found' });
     }
 
@@ -886,7 +937,7 @@ async function processInlineExtraction(
     maxDuration?: number;
     targetCount?: number;
     title?: string;
-  }
+  },
 ): Promise<void> {
   try {
     await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['processing', clipJobId]);
@@ -924,10 +975,18 @@ async function processInlineExtraction(
 
     await db.run(
       'UPDATE clip_jobs SET segments = $1, overall_score = $2, top_reason = $3, status = $4, completed_at = CURRENT_TIMESTAMP WHERE id = $5',
-      [JSON.stringify(result.segments), result.overallScore, result.topReason, 'completed', clipJobId]
+      [
+        JSON.stringify(result.segments),
+        result.overallScore,
+        result.topReason,
+        'completed',
+        clipJobId,
+      ],
     );
 
-    Logger.info(`[Clipper] Job ${clipJobId} completed (inline): ${result.segments.length} segments`);
+    Logger.info(
+      `[Clipper] Job ${clipJobId} completed (inline): ${result.segments.length} segments`,
+    );
   } catch (error) {
     Logger.error(`[Clipper] Job ${clipJobId} failed (inline):`, error);
     await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['failed', clipJobId]);

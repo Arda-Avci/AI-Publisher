@@ -47,7 +47,7 @@ export class Scheduler {
     userId: number,
     videoId: number,
     platform: Platform,
-    scheduledTime: Date
+    scheduledTime: Date,
   ): Promise<SchedulePublishJob> {
     let schedule = await this.getSchedule(userId);
     if (!schedule) {
@@ -97,7 +97,7 @@ export class Scheduler {
 
       // Placeholder - actual publishing will be implemented when connecting to publisher.ts
       // For now, just mark as published after a delay to simulate the flow
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       job.status = 'published';
       job.publishedAt = new Date();
@@ -114,7 +114,7 @@ export class Scheduler {
    */
   async cancelJob(jobId: string): Promise<boolean> {
     for (const schedule of this.schedules.values()) {
-      const job = schedule.jobs.find(j => j.id === jobId);
+      const job = schedule.jobs.find((j) => j.id === jobId);
       if (job && job.status === 'scheduled') {
         job.status = 'cancelled';
         Logger.info(`Scheduled job ${jobId} cancelled`);
@@ -131,7 +131,7 @@ export class Scheduler {
     const allJobs: SchedulePublishJob[] = [];
 
     for (const schedule of this.schedules.values()) {
-      const videoJobs = schedule.jobs.filter(j => j.videoId === videoId);
+      const videoJobs = schedule.jobs.filter((j) => j.videoId === videoId);
       allJobs.push(...videoJobs);
     }
 

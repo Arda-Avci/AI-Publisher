@@ -17,7 +17,7 @@ const execFileAsync = promisify(execFile);
 
 export interface TimeRange {
   start: number; // saniye
-  end: number;   // saniye
+  end: number; // saniye
 }
 
 export interface AutoCutOptions {
@@ -53,21 +53,17 @@ interface VolumeDetectEntry {
 export async function detectSilenceRanges(
   audioPath: string,
   thresholdDb: number = -40,
-  minDurationSec: number = 0.5
+  minDurationSec: number = 0.5,
 ): Promise<TimeRange[]> {
-  Logger.debug(`detectSilenceRanges: audio=${audioPath}, threshold=${thresholdDb}dB, minDur=${minDurationSec}s`);
+  Logger.debug(
+    `detectSilenceRanges: audio=${audioPath}, threshold=${thresholdDb}dB, minDur=${minDurationSec}s`,
+  );
 
   // volumedetect filtresi ile ses seviyesi analizi
   const { stdout } = await runInWorker<WorkerResult>(
     'ffmpeg',
-    [
-      '-y',
-      '-i', audioPath,
-      '-af', `volumedetect=csv=1`,
-      '-f', 'null',
-      '-'
-    ],
-    60000
+    ['-y', '-i', audioPath, '-af', `volumedetect=csv=1`, '-f', 'null', '-'],
+    60000,
   );
 
   const lines = (stdout || '').split('\n');
@@ -141,17 +137,21 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
       'ffmpeg',
       [
         '-y',
-        '-i', videoPath,
-        '-vf', 'select=not(mod(n,5))',
-        '-vsync', 'vfr',
-        '-frame_pts', '1',
-        path.join(tempDir, 'frame_%08d.png').replace(/\\/g, '/')
+        '-i',
+        videoPath,
+        '-vf',
+        'select=not(mod(n,5))',
+        '-vsync',
+        'vfr',
+        '-frame_pts',
+        '1',
+        path.join(tempDir, 'frame_%08d.png').replace(/\\/g, '/'),
       ],
-      120000
+      120000,
     );
 
     const files = await fs.readdir(tempDir);
-    const pngFiles = files.filter(f => f.endsWith('.png')).sort();
+    const pngFiles = files.filter((f) => f.endsWith('.png')).sort();
 
     if (pngFiles.length < 2) {
       Logger.warn('detectMotionLevels: yeterli frame bulunamadi');
@@ -169,20 +169,26 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
         'ffmpeg',
         [
           '-y',
-          '-i', currPath,
-          '-i', prevPath,
-          '-filter_complex', 'framesrc=src=0:v=0; framedst=src=1:v=0; [framesrc][framedst]blend=difference:timeout=0[out]',
-          '-map', '[out]',
-          '-f', 'null',
-          '-'
+          '-i',
+          currPath,
+          '-i',
+          prevPath,
+          '-filter_complex',
+          'framesrc=src=0:v=0; framedst=src=1:v=0; [framesrc][framedst]blend=difference:timeout=0[out]',
+          '-map',
+          '[out]',
+          '-f',
+          'null',
+          '-',
         ],
-        30000
+        30000,
       );
 
       // Basit bir proxy: dosya boyutu farkı (gerçek OpenCV yerine)
       const prevStats = await fs.stat(prevPath);
       const currStats = await fs.stat(currPath);
-      const sizeDiff = Math.abs(currStats.size - prevStats.size) / Math.max(prevStats.size, currStats.size, 1);
+      const sizeDiff =
+        Math.abs(currStats.size - prevStats.size) / Math.max(prevStats.size, currStats.size, 1);
       diffs.push(sizeDiff);
     }
 
@@ -200,7 +206,7 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
  */
 export async function findStaticRanges(
   videoPath: string,
-  threshold: number = 0.01
+  threshold: number = 0.01,
 ): Promise<TimeRange[]> {
   Logger.debug(`findStaticRanges: video=${videoPath}, threshold=${threshold}`);
 
@@ -211,7 +217,7 @@ export async function findStaticRanges(
   const { stdout: durStr } = await runInWorker<WorkerResult>(
     'ffprobe',
     ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath],
-    10000
+    10000,
   );
   const totalDuration = parseFloat((durStr || '0').trim());
 
@@ -231,7 +237,8 @@ export async function findStaticRanges(
       inStatic = false;
       const staticEnd = i * sampleInterval;
       const duration = staticEnd - staticStart;
-      if (duration >= 1.0) { // minimum 1 saniye
+      if (duration >= 1.0) {
+        // minimum 1 saniye
         staticRanges.push({ start: staticStart, end: staticEnd });
       }
     }
@@ -257,17 +264,14 @@ export async function findStaticRanges(
  * @param options — Kesim seçenekleri
  * @returns Kesilmiş video çıktı yolu
  */
-export async function autoCutVideo(
-  videoPath: string,
-  options: AutoCutOptions
-): Promise<string> {
+export async function autoCutVideo(videoPath: string, options: AutoCutOptions): Promise<string> {
   const {
     silenceThresholdDb = -40,
     minSilenceSec = 0.5,
     staticThreshold = 0.01,
     minStaticSec = 1.0,
     aggressive = false,
-    addDissolveMs = 200
+    addDissolveMs = 200,
   } = options;
 
   Logger.info(`autoCutVideo: input=${videoPath}, aggressive=${aggressive}`);
@@ -283,8 +287,20 @@ export async function autoCutVideo(
     const tempAudio = path.join(uploadsDir, `temp_audio_${Date.now()}.wav`);
     await runInWorker<WorkerResult>(
       'ffmpeg',
-      ['-y', '-i', videoPath, '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', tempAudio.replace(/\\/g, '/')],
-      60000
+      [
+        '-y',
+        '-i',
+        videoPath,
+        '-vn',
+        '-acodec',
+        'pcm_s16le',
+        '-ar',
+        '44100',
+        '-ac',
+        '2',
+        tempAudio.replace(/\\/g, '/'),
+      ],
+      60000,
     );
 
     silenceRanges = await detectSilenceRanges(tempAudio, silenceThresholdDb, minSilenceSec);
@@ -324,7 +340,9 @@ export async function autoCutVideo(
   // Kesim uygula
   await applySmartCut(videoPath, keepRanges, outputPath);
 
-  Logger.info(`autoCutVideo: tamamlandi, cikti=${outputPath}, kesilen=${mergedRanges.length} aralik`);
+  Logger.info(
+    `autoCutVideo: tamamlandi, cikti=${outputPath}, kesilen=${mergedRanges.length} aralik`,
+  );
   return outputPath;
 }
 
@@ -337,7 +355,7 @@ export async function autoCutVideo(
 export async function applySmartCut(
   videoPath: string,
   cutRanges: TimeRange[],
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   Logger.debug(`applySmartCut: ranges=${JSON.stringify(cutRanges)}`);
 
@@ -351,14 +369,22 @@ export async function applySmartCut(
     await runInWorker<WorkerResult>(
       'ffmpeg',
       [
-        '-y', '-i', videoPath,
-        '-ss', r.start.toFixed(3),
-        '-to', r.end.toFixed(3),
-        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        outputPath
+        '-y',
+        '-i',
+        videoPath,
+        '-ss',
+        r.start.toFixed(3),
+        '-to',
+        r.end.toFixed(3),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        outputPath,
       ],
-      120000
+      120000,
     );
     return;
   }
@@ -379,34 +405,49 @@ export async function applySmartCut(
       await runInWorker<WorkerResult>(
         'ffmpeg',
         [
-          '-y', '-i', videoPath,
-          '-ss', r.start.toFixed(3),
-          '-to', r.end.toFixed(3),
-          '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-          '-c:a', 'aac',
-          segPath.replace(/\\/g, '/')
+          '-y',
+          '-i',
+          videoPath,
+          '-ss',
+          r.start.toFixed(3),
+          '-to',
+          r.end.toFixed(3),
+          '-c:v',
+          'libx264',
+          '-pix_fmt',
+          'yuv420p',
+          '-c:a',
+          'aac',
+          segPath.replace(/\\/g, '/'),
         ],
-        60000
+        60000,
       );
     }
 
     // Concat demuxer ile birleştir
     const concatListPath = path.join(tempDir, 'concat.txt');
-    const concatContent = segmentPaths
-      .map(p => `file '${p.replace(/\\/g, '/')}'`)
-      .join('\n');
+    const concatContent = segmentPaths.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n');
     await fs.writeFile(concatListPath, concatContent);
 
     await runInWorker<WorkerResult>(
       'ffmpeg',
       [
-        '-y', '-f', 'concat', '-safe', '0',
-        '-i', concatListPath.replace(/\\/g, '/'),
-        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        outputPath
+        '-y',
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        concatListPath.replace(/\\/g, '/'),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        outputPath,
       ],
-      120000
+      120000,
     );
   } finally {
     await fs.remove(tempDir);
@@ -461,7 +502,7 @@ async function getVideoDurationFFprobe(videoPath: string): Promise<number> {
   const { stdout } = await runInWorker<WorkerResult>(
     'ffprobe',
     ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', videoPath],
-    10000
+    10000,
   );
   const d = parseFloat((stdout || '0').trim());
   return isNaN(d) ? 0 : d;
@@ -485,9 +526,9 @@ export interface TranscriptSegment {
  */
 export function removeWordsFromTranscript(
   transcript: string,
-  wordsToRemove: string[]
+  wordsToRemove: string[],
 ): { segments: TranscriptSegment[] } {
-  const lines = transcript.split(/\r?\n/).filter(l => l.trim());
+  const lines = transcript.split(/\r?\n/).filter((l) => l.trim());
   const segments: TranscriptSegment[] = [];
 
   for (const line of lines) {
@@ -532,16 +573,23 @@ export async function parseSrtToSegments(srtPath: string): Promise<TranscriptSeg
   const segments: TranscriptSegment[] = [];
 
   for (const block of blocks) {
-    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lines = block
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     if (lines.length < 3) continue;
 
     const timeLine = lines[1];
     if (!timeLine || !timeLine.includes('-->')) continue;
 
-    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
+    const [startStr, endStr] = timeLine.split('-->').map((s) => s.trim());
     const start = parseSrtTimeToSeconds(startStr);
     const end = parseSrtTimeToSeconds(endStr);
-    const text = lines.slice(2).join(' ').replace(/<[^>]+>/g, '').trim();
+    const text = lines
+      .slice(2)
+      .join(' ')
+      .replace(/<[^>]+>/g, '')
+      .trim();
 
     if (!isNaN(start) && !isNaN(end)) {
       segments.push({ start, end, text });
@@ -573,7 +621,7 @@ function parseSrtTimeToSeconds(srtTime: string): number {
 export async function cutVideoByTranscript(
   videoPath: string,
   segments: { start: number; end: number }[],
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   if (segments.length === 0) {
     await fs.copy(videoPath, outputPath);
@@ -594,40 +642,55 @@ export async function cutVideoByTranscript(
       await runInWorker<WorkerResult>(
         'ffmpeg',
         [
-          '-y', '-i', videoPath,
-          '-ss', start.toFixed(3),
-          '-to', end.toFixed(3),
-          '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-          '-c:a', 'aac',
-          segPath.replace(/\\/g, '/')
+          '-y',
+          '-i',
+          videoPath,
+          '-ss',
+          start.toFixed(3),
+          '-to',
+          end.toFixed(3),
+          '-c:v',
+          'libx264',
+          '-pix_fmt',
+          'yuv420p',
+          '-c:a',
+          'aac',
+          segPath.replace(/\\/g, '/'),
         ],
-        120000
+        120000,
       );
       segmentPaths.push(segPath);
     }
 
     // Concat demuxer ile birleştir
     const concatListPath = path.join(tempDir, 'concat.txt');
-    const concatContent = segmentPaths
-      .map(p => `file '${p.replace(/\\/g, '/')}'`)
-      .join('\n');
+    const concatContent = segmentPaths.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n');
     await fs.writeFile(concatListPath, concatContent);
 
     await runInWorker<WorkerResult>(
       'ffmpeg',
       [
-        '-y', '-f', 'concat', '-safe', '0',
-        '-i', concatListPath.replace(/\\/g, '/'),
-        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        outputPath
+        '-y',
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        concatListPath.replace(/\\/g, '/'),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        outputPath,
       ],
-      120000
+      120000,
     );
 
     Logger.info('[cutVideoByTranscript] tamamlandi', {
       outputPath,
-      segmentCount: segments.length
+      segmentCount: segments.length,
     });
     return outputPath;
   } finally {

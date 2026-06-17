@@ -9,10 +9,34 @@ interface Stats {
 }
 
 const statCards = [
-  { label: 'Total Users', key: 'totalUsers' as const, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { label: 'Total Jobs', key: 'totalJobs' as const, icon: Video, color: 'text-violet-400', bg: 'bg-violet-500/10' },
-  { label: 'Active Jobs', key: 'activeJobs' as const, icon: Play, color: 'text-green-400', bg: 'bg-green-500/10' },
-  { label: 'Videos Published', key: 'totalVideos' as const, icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  {
+    label: 'Total Users',
+    key: 'totalUsers' as const,
+    icon: Users,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+  },
+  {
+    label: 'Total Jobs',
+    key: 'totalJobs' as const,
+    icon: Video,
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10',
+  },
+  {
+    label: 'Active Jobs',
+    key: 'activeJobs' as const,
+    icon: Play,
+    color: 'text-green-400',
+    bg: 'bg-green-500/10',
+  },
+  {
+    label: 'Videos Published',
+    key: 'totalVideos' as const,
+    icon: TrendingUp,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+  },
 ];
 
 export default function AdminDashboard() {
@@ -21,8 +45,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetch('/api/v1/admin/stats')
-      .then(r => r.json())
-      .then(d => { if (d.success) setStats(d.stats); })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setStats(d.stats);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -44,17 +70,24 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statCards.map(({ label, key, icon: Icon, color, bg }) => (
-          <div key={key} className="bg-gray-900/60 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
+          <div
+            key={key}
+            className="bg-gray-900/60 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors"
+          >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</span>
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {label}
+              </span>
               <div className={`p-2 rounded-lg ${bg}`}>
                 <Icon size={16} className={color} />
               </div>
             </div>
             <span className="text-3xl font-bold text-gray-100">{stats?.[key] ?? 0}</span>
             <div className="mt-2 h-1 bg-gray-800 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full ${color.replace('text-', 'bg-')} opacity-60`}
-                style={{ width: `${Math.min(100, ((stats?.[key] ?? 0) / 100) * 100)}%` }} />
+              <div
+                className={`h-full rounded-full ${color.replace('text-', 'bg-')} opacity-60`}
+                style={{ width: `${Math.min(100, ((stats?.[key] ?? 0) / 100) * 100)}%` }}
+              />
             </div>
           </div>
         ))}
@@ -65,7 +98,9 @@ export default function AdminDashboard() {
           <Activity size={20} className="text-amber-400" />
           <h2 className="text-lg font-semibold text-gray-100">Quick Actions</h2>
         </div>
-        <p className="text-sm text-gray-500">Select a section from the sidebar to manage users, help videos, or system settings.</p>
+        <p className="text-sm text-gray-500">
+          Select a section from the sidebar to manage users, help videos, or system settings.
+        </p>
       </div>
     </div>
   );

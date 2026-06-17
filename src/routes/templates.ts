@@ -4,7 +4,12 @@
  */
 
 import { Router } from 'express';
-import { generateTemplatePreview, getAllTemplatePreviews, enhancePromptForTemplate, ProductionTemplate } from '../services/templatePromptService';
+import {
+  generateTemplatePreview,
+  getAllTemplatePreviews,
+  enhancePromptForTemplate,
+  ProductionTemplate,
+} from '../services/templatePromptService';
 import { Logger } from '../lib/logger.js';
 
 const router = Router();

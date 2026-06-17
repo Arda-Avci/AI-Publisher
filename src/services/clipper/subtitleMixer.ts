@@ -63,7 +63,7 @@ export async function embedSubtitles(
   videoPath: string,
   srtPath: string,
   outputPath: string,
-  styleOptions?: SubtitleStyleOptions
+  styleOptions?: SubtitleStyleOptions,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
 
@@ -78,7 +78,7 @@ export async function embedSubtitles(
 
   // Convert hex color to FFmpeg format (BGR)
   const hexToFfmpegColor = (hex: string): string => {
-    let cleaned = hex.replace('#', '');
+    const cleaned = hex.replace('#', '');
     if (cleaned.length === 6) {
       const r = cleaned.substring(0, 2);
       const g = cleaned.substring(2, 4);
@@ -93,19 +93,35 @@ export async function embedSubtitles(
   const marginV = position === 'top' ? marginY : position === 'bottom' ? marginY : 'h/2';
 
   // Video boyutlarını al (original_size Windows FFmpeg bug fix için)
-  let videoWidth = 1920, videoHeight = 1080;
+  let videoWidth = 1920,
+    videoHeight = 1080;
   try {
-    const { stdout } = await runFFmpeg('ffprobe', [
-      '-v', 'error', '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height',
-      '-of', 'csv=s=x:p=0', videoPath
-    ], 15000);
+    const { stdout } = await runFFmpeg(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        '-of',
+        'csv=s=x:p=0',
+        videoPath,
+      ],
+      15000,
+    );
     const dims = stdout?.trim();
     if (dims) {
       const [w, h] = dims.split('x').map(Number);
-      if (w && h) { videoWidth = w; videoHeight = h; }
+      if (w && h) {
+        videoWidth = w;
+        videoHeight = h;
+      }
     }
-  } catch { /* use defaults */ }
+  } catch {
+    /* use defaults */
+  }
 
   // Build force_style string for libass
   const forceStyle = [
@@ -125,13 +141,20 @@ export async function embedSubtitles(
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-vf', vf,
-    '-c:a', 'copy',
-    '-c:v', 'libx264',
-    '-preset', 'fast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
+    '-i',
+    videoPath,
+    '-vf',
+    vf,
+    '-c:a',
+    'copy',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'fast',
+    '-crf',
+    '23',
+    '-pix_fmt',
+    'yuv420p',
     outputPath,
   ];
 
@@ -158,7 +181,7 @@ export async function mixBackgroundMusic(
   videoPath: string,
   musicPath: string,
   outputPath: string,
-  musicVolume = 0.15
+  musicVolume = 0.15,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
 
@@ -168,9 +191,12 @@ export async function mixBackgroundMusic(
   let musicDuration = 0;
   try {
     const { stdout } = await runFFmpeg('ffprobe', [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'csv=p=0',
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'csv=p=0',
       musicPath,
     ]);
     musicDuration = parseFloat(stdout.trim()) || 0;
@@ -190,15 +216,24 @@ export async function mixBackgroundMusic(
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-stream_loop', String(loopCount),
-    '-i', musicPath,
-    '-filter_complex', filter,
-    '-map', '0:v',
-    '-map', '[aout]',
-    '-c:v', 'copy',
-    '-c:a', 'aac',
-    '-b:a', '192k',
+    '-i',
+    videoPath,
+    '-stream_loop',
+    String(loopCount),
+    '-i',
+    musicPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:v',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
     '-shortest',
     outputPath,
   ];
@@ -231,7 +266,7 @@ export async function applyAudioDuck(
   outputPath: string,
   threshold = -20,
   attack = 0.3,
-  release = 0.8
+  release = 0.8,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
 
@@ -247,12 +282,18 @@ export async function applyAudioDuck(
 
   const args = [
     '-y',
-    '-i', voicePath,
-    '-i', musicPath,
-    '-filter_complex', filter,
-    '-map', '[aout]',
-    '-c:a', 'aac',
-    '-b:a', '192k',
+    '-i',
+    voicePath,
+    '-i',
+    musicPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '[aout]',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
     outputPath,
   ];
 
@@ -276,9 +317,12 @@ export async function applyAudioDuck(
  * @param maxCharsPerLine - Maximum characters per subtitle line (default 42)
  */
 export async function generateSrtFromWhisper(
-  transcript: { text: string; segments: Array<{ start: number; end: number; text: string; words?: WhisperWord[] }> },
+  transcript: {
+    text: string;
+    segments: Array<{ start: number; end: number; text: string; words?: WhisperWord[] }>;
+  },
   outputPath: string,
-  maxCharsPerLine = 42
+  maxCharsPerLine = 42,
 ): Promise<string> {
   const entries: SrtEntry[] = [];
   let index = 1;
@@ -336,7 +380,7 @@ export async function generateSrtFromWhisper(
 
   // Build SRT content
   const srtContent = entries
-    .map(entry => {
+    .map((entry) => {
       const start = secondsToSrtTime(entry.startTime);
       const end = secondsToSrtTime(entry.endTime);
       return `${entry.index}\n${start} --> ${end}\n${entry.text}`;
@@ -381,10 +425,7 @@ export class SubtitleMixer {
    * @param options - Mixer options
    * @returns Mixer result with output paths and flags
    */
-  async process(
-    videoPath: string,
-    options: SubtitleMixerOptions
-  ): Promise<SubtitleMixerResult> {
+  async process(videoPath: string, options: SubtitleMixerOptions): Promise<SubtitleMixerResult> {
     const {
       srtPath,
       outputPath,
@@ -402,7 +443,7 @@ export class SubtitleMixer {
     let subtitlesEmbedded = false;
     let musicMixed = false;
     let duckingApplied = false;
-    let finalSrtPath = srtPath;
+    const finalSrtPath = srtPath;
 
     // Step 1: Embed subtitles if SRT path is provided
     if (srtPath) {
@@ -425,7 +466,7 @@ export class SubtitleMixer {
           duckedMusicPath,
           duckingOptions.thresholdDb ?? -20,
           duckingOptions.attackSec ?? 0.3,
-          duckingOptions.releaseSec ?? 0.8
+          duckingOptions.releaseSec ?? 0.8,
         );
         await mixBackgroundMusic(currentPath, duckedMusicPath, withMusicPath, musicVolume);
         duckingApplied = true;
@@ -457,9 +498,12 @@ export class SubtitleMixer {
    * Alias for the standalone generateSrtFromWhisper function.
    */
   async generateSrtFromWhisper(
-    transcript: { text: string; segments: Array<{ start: number; end: number; text: string; words?: WhisperWord[] }> },
+    transcript: {
+      text: string;
+      segments: Array<{ start: number; end: number; text: string; words?: WhisperWord[] }>;
+    },
     outputPath: string,
-    maxCharsPerLine = 42
+    maxCharsPerLine = 42,
   ): Promise<string> {
     return generateSrtFromWhisper(transcript, outputPath, maxCharsPerLine);
   }

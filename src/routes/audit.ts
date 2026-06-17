@@ -53,9 +53,7 @@ export function registerAuditRoutes(app: Application): void {
 
   app.get('/api/v1/audit-logs/actions', requireAuth, async (_req: Request, res: Response) => {
     try {
-      const rows = await db.all(
-        'SELECT DISTINCT action FROM audit_log ORDER BY action'
-      );
+      const rows = await db.all('SELECT DISTINCT action FROM audit_log ORDER BY action');
       res.json({ success: true, data: rows.map((r: any) => r.action) });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });

@@ -20,7 +20,7 @@ export interface AutoCameoResult {
 
 export async function extractCharacters(
   characterFeatures: string,
-  materialPath?: string
+  materialPath?: string,
 ): Promise<CharacterImage[]> {
   const characters: CharacterImage[] = [];
 
@@ -29,7 +29,7 @@ export async function extractCharacters(
     return characters;
   }
 
-  const lines = characterFeatures.split('\n').filter(l => l.trim());
+  const lines = characterFeatures.split('\n').filter((l) => l.trim());
   for (const line of lines) {
     const match = line.match(/@(\w+)/);
     if (match) {
@@ -45,7 +45,7 @@ export async function extractCharacters(
 }
 
 export async function generateAvatarImages(
-  characters: CharacterImage[]
+  characters: CharacterImage[],
 ): Promise<CharacterImage[]> {
   const results: CharacterImage[] = [];
 
@@ -85,7 +85,7 @@ export async function generateAvatarImages(
 
 export async function saveCharacterImages(
   characters: CharacterImage[],
-  jobId: number
+  jobId: number,
 ): Promise<string[]> {
   const outputDir = path.join(process.cwd(), 'videolar', `job_${jobId}`, 'characters');
   await fs.ensureDir(outputDir);
@@ -105,13 +105,11 @@ export async function saveCharacterImages(
   return savedPaths;
 }
 
-export async function loadCharacterImages(
-  jobId: number
-): Promise<Map<string, string>> {
+export async function loadCharacterImages(jobId: number): Promise<Map<string, string>> {
   const charDir = path.join(process.cwd(), 'videolar', `job_${jobId}`, 'characters');
   const charMap = new Map<string, string>();
 
-  if (!await fs.pathExists(charDir)) return charMap;
+  if (!(await fs.pathExists(charDir))) return charMap;
 
   const files = await fs.readdir(charDir);
   for (const file of files) {

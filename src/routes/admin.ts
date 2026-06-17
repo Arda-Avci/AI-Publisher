@@ -11,7 +11,8 @@ router.use(requireAdmin);
 router.get('/users', async (req, res) => {
   try {
     const { search, offset = '0', limit = '50' } = req.query;
-    let query = 'SELECT id, username, is_admin, preferred_language, selected_theme, created_at, last_login_at FROM users';
+    let query =
+      'SELECT id, username, is_admin, preferred_language, selected_theme, created_at, last_login_at FROM users';
     const params: any[] = [];
 
     if (search) {
@@ -23,10 +24,19 @@ router.get('/users', async (req, res) => {
     params.push(parseInt(limit as string, 10), parseInt(offset as string, 10));
 
     const users = await db.all(query, params);
-    const countResult = await db.get('SELECT COUNT(*) as total FROM users' + (search ? ' WHERE username LIKE $1' : ''), search ? [`%${search}%`] : []);
+    const countResult = await db.get(
+      'SELECT COUNT(*) as total FROM users' + (search ? ' WHERE username LIKE $1' : ''),
+      search ? [`%${search}%`] : [],
+    );
     const total = (countResult as any)?.total || 0;
 
-    res.json({ success: true, users, total, offset: parseInt(offset as string), limit: parseInt(limit as string) });
+    res.json({
+      success: true,
+      users,
+      total,
+      offset: parseInt(offset as string),
+      limit: parseInt(limit as string),
+    });
   } catch (error) {
     Logger.error('Failed to fetch users', error);
     res.status(500).json({ success: false, error: 'Failed to fetch users' });
@@ -73,8 +83,12 @@ router.get('/stats', async (req, res) => {
     const [totalUsers, totalJobs, activeJobs, totalVideos] = await Promise.all([
       db.get('SELECT COUNT(*) as count FROM users'),
       db.get('SELECT COUNT(*) as count FROM video_jobs'),
-      db.get("SELECT COUNT(*) as count FROM video_jobs WHERE status = 'processing' OR status = 'queued'"),
-      db.get("SELECT COUNT(*) as count FROM video_jobs WHERE status = 'completed' AND final_filename IS NOT NULL"),
+      db.get(
+        "SELECT COUNT(*) as count FROM video_jobs WHERE status = 'processing' OR status = 'queued'",
+      ),
+      db.get(
+        "SELECT COUNT(*) as count FROM video_jobs WHERE status = 'completed' AND final_filename IS NOT NULL",
+      ),
     ]);
     res.json({
       success: true,
@@ -100,7 +114,9 @@ router.get('/system', async (req, res) => {
       db.get("SELECT COUNT(*) as count FROM video_jobs WHERE status = 'failed'"),
     ]);
 
-    const [activeJobs, queuedJobs, completedJobs, failedJobs] = jobStats.map((r: any) => r?.count || 0);
+    const [activeJobs, queuedJobs, completedJobs, failedJobs] = jobStats.map(
+      (r: any) => r?.count || 0,
+    );
 
     res.json({
       success: true,

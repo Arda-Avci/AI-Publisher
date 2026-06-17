@@ -2,12 +2,7 @@ import { getRabbitChannel, PUBLISH_JOBS_QUEUE, registerReconnectCallback } from 
 import { db } from '../db.js';
 import { broadcastProgress } from './redis.js';
 import { Logger } from './logger.js';
-import {
-  uploadToYouTube,
-  uploadToTikTok,
-  uploadToX,
-  uploadToMeta
-} from '../publisher.js';
+import { uploadToYouTube, uploadToTikTok, uploadToX, uploadToMeta } from '../publisher.js';
 
 export interface PublishJobData {
   jobId: number;
@@ -32,7 +27,7 @@ export async function startPublishQueueWorker() {
   const setupWorker = async () => {
     try {
       const channel = getRabbitChannel();
-      
+
       // OOM (Out Of Memory) hatalarını önlemek için Playwright işlemlerini
       // aynı anda 1 adet çalışacak şekilde sınırla (Concurrency = 1)
       await channel.prefetch(1);
@@ -56,19 +51,36 @@ export async function startPublishQueueWorker() {
 
         try {
           if (platform === 'youtube') {
-            success = await uploadToYouTube(videoPath, jobData.yt_title || '', jobData.yt_desc || '', jobData.yt_tags || '', jobData.playlist_id, jobId);
+            success = await uploadToYouTube(
+              videoPath,
+              jobData.yt_title || '',
+              jobData.yt_desc || '',
+              jobData.yt_tags || '',
+              jobData.playlist_id,
+              jobId,
+            );
           } else if (platform === 'tiktok') {
-            success = await uploadToTikTok(videoPath, jobData.tt_desc || '', jobData.tt_tags || '', jobId);
+            success = await uploadToTikTok(
+              videoPath,
+              jobData.tt_desc || '',
+              jobData.tt_tags || '',
+              jobId,
+            );
           } else if (platform === 'x') {
             success = await uploadToX(videoPath, jobData.x_desc || '', jobData.x_tags || '', jobId);
           } else if (platform === 'meta') {
-            success = await uploadToMeta(videoPath, jobData.meta_desc || '', jobData.meta_tags || '', jobId);
+            success = await uploadToMeta(
+              videoPath,
+              jobData.meta_desc || '',
+              jobData.meta_tags || '',
+              jobId,
+            );
           }
 
-          await db.run(
-            `UPDATE video_jobs SET ${statusField} = $1 WHERE id = $2`,
-            [success ? 'published' : 'failed', jobId]
-          );
+          await db.run(`UPDATE video_jobs SET ${statusField} = $1 WHERE id = $2`, [
+            success ? 'published' : 'failed',
+            jobId,
+          ]);
 
           // Broadcast SSE
           try {
@@ -77,22 +89,22 @@ export async function startPublishQueueWorker() {
               platform,
               success,
               stage: success ? 'Yayın tamamlandı' : 'Yayın başarısız',
-              percent: 100
+              percent: 100,
             });
           } catch (broadcastErr) {
             Logger.warn('publish broadcast failed', broadcastErr);
           }
 
           Logger.info(`[publish ${platform}] job #${jobId} -> ${success ? 'success' : 'failed'}`);
-          
+
           channel.ack(msg);
         } catch (err: any) {
           Logger.error(`${platform} yayın hatası`, err);
           try {
-            await db.run(
-              `UPDATE video_jobs SET ${statusField} = $1 WHERE id = $2`,
-              ['failed', jobId]
-            );
+            await db.run(`UPDATE video_jobs SET ${statusField} = $1 WHERE id = $2`, [
+              'failed',
+              jobId,
+            ]);
             const errStr = String(err);
             const isAuthError = /auth|login|cookie|expired|session/i.test(errStr);
             await broadcastProgress(jobId, {
@@ -102,7 +114,7 @@ export async function startPublishQueueWorker() {
               error: errStr,
               needsRecovery: isAuthError,
               stage: 'Yayın hatası: ' + (err?.message || 'bilinmeyen'),
-              percent: 100
+              percent: 100,
             });
           } catch (innerErr) {
             Logger.error('publish failure handler crashed', innerErr);

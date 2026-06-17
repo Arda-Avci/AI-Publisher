@@ -57,10 +57,7 @@ export class AgentGraph<TState extends Record<string, any>> {
     return null;
   }
 
-  async run(
-    initialState: TState,
-    maxIterations = 10
-  ): Promise<GraphRunResult<TState>> {
+  async run(initialState: TState, maxIterations = 10): Promise<GraphRunResult<TState>> {
     if (!this.entryPoint) throw new Error('No entry point set');
 
     let state = { ...initialState };

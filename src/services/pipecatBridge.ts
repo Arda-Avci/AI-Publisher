@@ -108,7 +108,9 @@ class PipecatBridge {
           this.connectWebSocket();
           resolve();
         } else if (this.process) {
-          Logger.warn(`[Pipecat] Process exited with code ${this.process.exitCode}, server başlatılamadı`);
+          Logger.warn(
+            `[Pipecat] Process exited with code ${this.process.exitCode}, server başlatılamadı`,
+          );
           this.process = null;
           resolve();
         }
@@ -141,9 +143,7 @@ class PipecatBridge {
           Logger.info('[Pipecat] Auto-restarting in 3s...');
           if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
           this.reconnectTimer = setTimeout(() => {
-            this.start().catch((err) =>
-              Logger.error('[Pipecat] Auto-restart failed:', err)
-            );
+            this.start().catch((err) => Logger.error('[Pipecat] Auto-restart failed:', err));
           }, 3000);
         }
       });
@@ -188,7 +188,9 @@ class PipecatBridge {
       this.ws.on('error', () => {
         // İlk hatada bir kere uyar, sonra sessizce bekle (close tetiklenecek)
         if (!this._wsWarned) {
-          Logger.warn('[Pipecat] WebSocket bağlantısı kurulamadı (Pipecat Python sunucusu çalışmıyor olabilir)');
+          Logger.warn(
+            '[Pipecat] WebSocket bağlantısı kurulamadı (Pipecat Python sunucusu çalışmıyor olabilir)',
+          );
           this._wsWarned = true;
         }
       });
@@ -200,12 +202,21 @@ class PipecatBridge {
   private handleWsMessage(msg: any): void {
     const action = msg.action;
 
-    if (action === 'pipeline_update' || action === 'pipeline_completed' || action === 'pipeline_cancelled') {
+    if (
+      action === 'pipeline_update' ||
+      action === 'pipeline_completed' ||
+      action === 'pipeline_cancelled'
+    ) {
       const status: PipelineStatus = {
         pipelineId: msg.pipeline_id,
-        status: msg.status === 'completed' ? 'completed' :
-                msg.status === 'cancelled' ? 'cancelled' :
-                msg.status === 'failed' ? 'failed' : 'processing',
+        status:
+          msg.status === 'completed'
+            ? 'completed'
+            : msg.status === 'cancelled'
+              ? 'cancelled'
+              : msg.status === 'failed'
+                ? 'failed'
+                : 'processing',
         currentScene: msg.current_scene || 0,
         totalScenes: msg.total_scenes || 0,
         progress: msg.progress || 0,
@@ -228,7 +239,7 @@ class PipecatBridge {
     const callbacks = this.statusCallbacks.get(pipelineId) || [];
     this.statusCallbacks.set(
       pipelineId,
-      callbacks.filter((cb) => cb !== callback)
+      callbacks.filter((cb) => cb !== callback),
     );
   }
 

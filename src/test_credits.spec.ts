@@ -15,7 +15,7 @@ describe('SaaS Kredi Sistemi Birim Testleri', () => {
     await db.run('DELETE FROM users WHERE username = ?', [testUsername]);
     await db.run(
       'INSERT INTO users (username, password, credits, monthly_credit_limit, credit_reset_date) VALUES (?, ?, ?, ?, ?)',
-      [testUsername, 'testpass', 100, 100, new Date().toISOString()]
+      [testUsername, 'testpass', 100, 100, new Date().toISOString()],
     );
 
     const user = await db.get('SELECT id FROM users WHERE username = ?', [testUsername]);
@@ -41,7 +41,10 @@ describe('SaaS Kredi Sistemi Birim Testleri', () => {
     pastDate.setMonth(pastDate.getMonth() - 2); // 2 ay önceye set et
 
     // Kullanıcının kredisini 10 yapalım
-    await db.run('UPDATE users SET credits = 10, credit_reset_date = ? WHERE id = ?', [pastDate.toISOString(), testUserId]);
+    await db.run('UPDATE users SET credits = 10, credit_reset_date = ? WHERE id = ?', [
+      pastDate.toISOString(),
+      testUserId,
+    ]);
 
     // Kredileri sorguladığımızda yenilenmesi gerekir
     const renewedInfo = await CreditService.getUserCredits(testUserId);
@@ -61,7 +64,7 @@ describe('SaaS Kredi Sistemi Birim Testleri', () => {
     const success = await CreditService.deductAfterProduction(
       testUserId,
       30,
-      'Test kredi harcaması'
+      'Test kredi harcaması',
     );
 
     expect(success).toBe(true);

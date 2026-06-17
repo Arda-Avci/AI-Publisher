@@ -10,7 +10,7 @@ import {
   differentiateVideoPhase2,
   isValidDurationMode,
   type SourceVideoMeta,
-  type DurationMode
+  type DurationMode,
 } from '../lib/differentiate.js';
 import { Logger } from '../lib/logger.js';
 
@@ -49,9 +49,10 @@ export function registerDifferentiationRoutes(app: Application): void {
     }
 
     try {
-      const meta: SourceVideoMeta = (sourceMeta && typeof sourceMeta === 'object')
-        ? sourceMeta
-        : { videoId, title: '', channelTitle: '', thumbnail: '' };
+      const meta: SourceVideoMeta =
+        sourceMeta && typeof sourceMeta === 'object'
+          ? sourceMeta
+          : { videoId, title: '', channelTitle: '', thumbnail: '' };
 
       // Create the pending job (fast, ~50ms)
       const created = await createDifferentiationJob(
@@ -59,7 +60,7 @@ export function registerDifferentiationRoutes(app: Application): void {
         meta,
         targetLang,
         durationMode as DurationMode,
-        userId
+        userId,
       );
 
       // Queue the job immediately to RabbitMQ
@@ -71,13 +72,13 @@ export function registerDifferentiationRoutes(app: Application): void {
         entityType: 'video_job',
         entityId: created.jobId,
         details: { sourceVideoId: videoId, targetLang, durationMode },
-        req
+        req,
       });
 
       // Return immediately with the jobId so the client can poll
       return res.json({
         success: true,
-        jobId: created.jobId
+        jobId: created.jobId,
       });
     } catch (err: any) {
       Logger.error('/differentiate-video failed', err);
@@ -108,7 +109,7 @@ export function registerDifferentiationRoutes(app: Application): void {
                 transcript, transcript_cleaned, transcript_translated,
                 master_prompt, production_notes, material_path
          FROM video_jobs WHERE id = ? AND user_id = ?`,
-        [jobId, userId]
+        [jobId, userId],
       );
 
       if (!job) {
@@ -122,7 +123,7 @@ export function registerDifferentiationRoutes(app: Application): void {
         stage: job.current_stage,
         progress: job.progress_percent,
         targetLang: job.differentiation_target_lang,
-        sourceVideoMeta: job.source_video_meta ? JSON.parse(job.source_video_meta) : null
+        sourceVideoMeta: job.source_video_meta ? JSON.parse(job.source_video_meta) : null,
       };
 
       if (job.status === 'pending') {
@@ -160,13 +161,20 @@ export function registerDifferentiationRoutes(app: Application): void {
     try {
       const job: any = await db.get(
         'SELECT id, status FROM video_jobs WHERE id = ? AND user_id = ?',
-        [jobId, userId]
+        [jobId, userId],
       );
       if (!job) {
         return res.json({ success: false, error: 'Job bulunamadı.' });
       }
-      if (job.status !== 'awaiting_approval' && job.status !== 'processing_phase1' && job.status !== 'failed') {
-        return res.json({ success: false, error: 'Sadece onay bekleyen / işlenen joblar iptal edilebilir.' });
+      if (
+        job.status !== 'awaiting_approval' &&
+        job.status !== 'processing_phase1' &&
+        job.status !== 'failed'
+      ) {
+        return res.json({
+          success: false,
+          error: 'Sadece onay bekleyen / işlenen joblar iptal edilebilir.',
+        });
       }
       await db.run('DELETE FROM video_jobs WHERE id = ?', [jobId]);
 
@@ -175,7 +183,7 @@ export function registerDifferentiationRoutes(app: Application): void {
         action: 'differentiate.cancel',
         entityType: 'video_job',
         entityId: jobId,
-        req
+        req,
       });
 
       return res.json({ success: true });
@@ -204,19 +212,19 @@ export function registerDifferentiationRoutes(app: Application): void {
 
     try {
       const result = await differentiateVideoPhase2(jobId, userId, editedTranslation);
-      
+
       logAudit({
         userId,
         action: 'differentiate.approve',
         entityType: 'video_job',
         entityId: jobId,
         details: { sceneCount: result.sceneCount },
-        req
+        req,
       });
 
       return res.json({
         success: true,
-        jobId: result.jobId
+        jobId: result.jobId,
       });
     } catch (err: any) {
       Logger.error('/approve-translation failed', err);

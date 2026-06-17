@@ -1,5 +1,16 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Film, Volume2, Music, Trash2, RefreshCw, Plus, Headphones, Upload, Mic, GripVertical } from 'lucide-react';
+import {
+  Film,
+  Volume2,
+  Music,
+  Trash2,
+  RefreshCw,
+  Plus,
+  Headphones,
+  Upload,
+  Mic,
+  GripVertical,
+} from 'lucide-react';
 
 export interface Scene {
   id: number;
@@ -276,8 +287,8 @@ export const Timeline: React.FC<TimelineProps> = ({
 
   useEffect(() => {
     fetch('/api/v1/characters')
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.status === 'success' && Array.isArray(data.data)) {
           setDbCharacters(data.data);
         }
@@ -302,9 +313,7 @@ export const Timeline: React.FC<TimelineProps> = ({
     flexDirection: 'column',
     justifyContent: 'center',
     border: isSelected ? '2px solid var(--gold)' : '1px solid rgba(255,255,255,0.06)',
-    background: isSelected
-      ? 'rgba(200,164,92,0.08)'
-      : 'rgba(255,255,255,0.03)',
+    background: isSelected ? 'rgba(200,164,92,0.08)' : 'rgba(255,255,255,0.03)',
     boxShadow: isSelected ? '0 0 16px rgba(200,164,92,0.2)' : 'none',
   });
 
@@ -324,7 +333,7 @@ export const Timeline: React.FC<TimelineProps> = ({
   };
 
   const updateSceneField = (id: number, field: keyof Scene, value: any) => {
-    onUpdateScenes(scenes.map(s => s.id === id ? { ...s, [field]: value } : s));
+    onUpdateScenes(scenes.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   };
 
   const handleAudioUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,7 +344,7 @@ export const Timeline: React.FC<TimelineProps> = ({
     if (e.target) e.target.value = '';
   }, []);
 
-  const selectedScene = scenes.find(s => s.id === selectedSceneId);
+  const selectedScene = scenes.find((s) => s.id === selectedSceneId);
 
   const renderWaveform = (height: number) => {
     const bars = 40;
@@ -399,7 +408,9 @@ export const Timeline: React.FC<TimelineProps> = ({
         <div style={s.headerLeft}>
           <Film size={14} style={{ color: 'var(--gold)' }} />
           <span style={s.headerTitle}>TIMELINE</span>
-          <span style={s.headerBadge}>{scenes.length} sahne · {totalDuration}s</span>
+          <span style={s.headerBadge}>
+            {scenes.length} sahne · {totalDuration}s
+          </span>
         </div>
         <div style={s.headerActions}>
           <button
@@ -447,7 +458,8 @@ export const Timeline: React.FC<TimelineProps> = ({
                         color: isMajor ? 'var(--text-primary)' : 'var(--text-muted)',
                       }}
                     >
-                      {isMajor ? `${sec / SCENE_DURATION + 1}` : ''}{isMajor ? ` (${sec}s)` : `${sec}s`}
+                      {isMajor ? `${sec / SCENE_DURATION + 1}` : ''}
+                      {isMajor ? ` (${sec}s)` : `${sec}s`}
                     </div>
                   </React.Fragment>
                 );
@@ -466,23 +478,63 @@ export const Timeline: React.FC<TimelineProps> = ({
                   <img
                     src={scene.image_path}
                     alt=""
-                    style={{ width: '48px', height: '48px', borderRadius: '4px', objectFit: 'cover' }}
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '4px',
+                      objectFit: 'cover',
+                    }}
                   />
                 ) : (
-                  <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '4px',
+                      background: 'rgba(0,0,0,0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <Film size={16} style={{ color: 'var(--text-muted)' }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     Sahne #{scene.scene_number}
                   </div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div
+                    style={{
+                      fontSize: '10px',
+                      color: 'var(--text-muted)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {scene.video_prompt || 'Prompt girilmedi'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  <span style={{ fontSize: '9px', padding: '1px 4px', borderRadius: '3px', background: 'rgba(200,164,92,0.15)', color: 'var(--gold)' }}>
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
+                      background: 'rgba(200,164,92,0.15)',
+                      color: 'var(--gold)',
+                    }}
+                  >
                     {scene.camera_motion || 'static'}
                   </span>
                 </div>
@@ -497,9 +549,26 @@ export const Timeline: React.FC<TimelineProps> = ({
             <Volume2 size={12} style={{ color: '#9b51e0' }} />,
             'Ses',
             (scene) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px', height: '100%' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 8px',
+                  height: '100%',
+                }}
+              >
                 {renderWaveform(24)}
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: '10px',
+                    color: 'var(--text-muted)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                  }}
+                >
                   {scene.speech_text || 'Sessiz'}
                 </div>
                 <Mic size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -514,8 +583,24 @@ export const Timeline: React.FC<TimelineProps> = ({
             <Music size={12} style={{ color: 'var(--primary)' }} />,
             'SFX',
             (scene) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px', height: '100%' }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 8px',
+                  height: '100%',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: 'var(--text-muted)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {scene.sfx_prompt || 'Efekt yok'}
                 </span>
               </div>
@@ -548,11 +633,23 @@ export const Timeline: React.FC<TimelineProps> = ({
                   }}
                 >
                   <Headphones size={12} style={{ color: 'var(--success)' }} />
-                  <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600 }}>{uploadedAudio.name}</span>
-                  <audio src={uploadedAudio.url} controls style={{ height: '24px', opacity: 0.7, flex: 1, maxWidth: '200px' }} />
+                  <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600 }}>
+                    {uploadedAudio.name}
+                  </span>
+                  <audio
+                    src={uploadedAudio.url}
+                    controls
+                    style={{ height: '24px', opacity: 0.7, flex: 1, maxWidth: '200px' }}
+                  />
                   <button
                     onClick={() => setUploadedAudio(null)}
-                    style={{ ...s.btn, padding: '2px 6px', fontSize: '10px', color: 'var(--accent)', borderColor: 'rgba(239,68,68,0.3)' }}
+                    style={{
+                      ...s.btn,
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      color: 'var(--accent)',
+                      borderColor: 'rgba(239,68,68,0.3)',
+                    }}
                   >
                     <Trash2 size={10} />
                   </button>
@@ -577,8 +674,14 @@ export const Timeline: React.FC<TimelineProps> = ({
                     fontSize: '11px',
                     transition: 'all 0.15s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--gold)';
+                    e.currentTarget.style.color = 'var(--gold)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                  }}
                 >
                   <Upload size={12} />
                   Arkaplan Müziği Yükle
@@ -603,25 +706,58 @@ export const Timeline: React.FC<TimelineProps> = ({
       {/* Detail Panel - Selected Scene Controls */}
       {selectedScene && (
         <div style={s.detailPanel}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', marginBottom: '4px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              width: '100%',
+              marginBottom: '4px',
+            }}
+          >
             <GripVertical size={12} style={{ color: 'var(--text-muted)' }} />
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>
               Sahne #{selectedScene.scene_number}
             </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               {selectedScene.status === 'generating' ? 'Üretiliyor...' : selectedScene.status}
             </span>
             <div style={{ flex: 1 }} />
             <button
-              style={{ ...s.btn, padding: '3px 8px', fontSize: '10px', color: 'var(--primary)', borderColor: 'rgba(0,242,254,0.3)' }}
-              onClick={(e) => { e.stopPropagation(); onRegenerateScene(selectedScene.id); }}
+              style={{
+                ...s.btn,
+                padding: '3px 8px',
+                fontSize: '10px',
+                color: 'var(--primary)',
+                borderColor: 'rgba(0,242,254,0.3)',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRegenerateScene(selectedScene.id);
+              }}
               title="Yeniden Üret"
             >
               <RefreshCw size={10} />
             </button>
             <button
-              style={{ ...s.btn, padding: '3px 8px', fontSize: '10px', color: 'var(--accent)', borderColor: 'rgba(239,68,68,0.3)' }}
-              onClick={(e) => { e.stopPropagation(); onDeleteScene(selectedScene.id); }}
+              style={{
+                ...s.btn,
+                padding: '3px 8px',
+                fontSize: '10px',
+                color: 'var(--accent)',
+                borderColor: 'rgba(239,68,68,0.3)',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteScene(selectedScene.id);
+              }}
               title="Sil"
             >
               <Trash2 size={10} />
@@ -633,7 +769,9 @@ export const Timeline: React.FC<TimelineProps> = ({
               <span style={s.fieldLabel}>Kamera</span>
               <select
                 value={selectedScene.camera_motion}
-                onChange={(e) => updateSceneField(selectedScene.id, 'camera_motion', e.target.value)}
+                onChange={(e) =>
+                  updateSceneField(selectedScene.id, 'camera_motion', e.target.value)
+                }
                 style={s.select}
               >
                 <option value="none">Yok</option>
@@ -654,8 +792,10 @@ export const Timeline: React.FC<TimelineProps> = ({
               >
                 <option value="">Yok</option>
                 <option value="@me">@me (Ben)</option>
-                {dbCharacters.map(char => (
-                  <option key={char.id} value={`@${char.name}`}>@{char.name}</option>
+                {dbCharacters.map((char) => (
+                  <option key={char.id} value={`@${char.name}`}>
+                    @{char.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -668,10 +808,19 @@ export const Timeline: React.FC<TimelineProps> = ({
                 max="1"
                 step="0.05"
                 value={selectedScene.music_volume ?? 0.1}
-                onChange={(e) => updateSceneField(selectedScene.id, 'music_volume', parseFloat(e.target.value))}
+                onChange={(e) =>
+                  updateSceneField(selectedScene.id, 'music_volume', parseFloat(e.target.value))
+                }
                 style={s.slider}
               />
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)', width: '28px', textAlign: 'right' }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                  width: '28px',
+                  textAlign: 'right',
+                }}
+              >
                 {Math.round((selectedScene.music_volume ?? 0.1) * 100)}%
               </span>
             </div>

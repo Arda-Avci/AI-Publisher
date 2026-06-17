@@ -8,19 +8,6 @@ import { sendToQueue, getRabbitChannel, VIDEO_JOBS_QUEUE } from './lib/rabbitmq.
 import { encryptUsername } from './lib/crypto.js';
 import bcrypt from 'bcrypt';
 import http from 'http';
-import { vi } from 'vitest';
-
-vi.mock('axios', () => ({
-  default: {
-    get: vi.fn(async (url) => {
-      if (url.includes('/health')) {
-        return { data: { success: true, status: 'healthy', gpu_model: 'Tesla T4' } };
-      }
-      return { data: {} };
-    }),
-    post: vi.fn(async () => ({ data: {} })),
-  }
-}));
 
 // ── Minimal app for integration tests ─────────────────────────────────────────
 
@@ -64,7 +51,10 @@ beforeAll(async () => {
   const hashedPassword = await bcrypt.hash('admin1234!!', 10);
   const existing = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
   if (!existing) {
-    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedAdmin, hashedPassword]);
+    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [
+      encryptedAdmin,
+      hashedPassword,
+    ]);
   } else {
     await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existing.id]);
   }
@@ -75,7 +65,9 @@ beforeAll(async () => {
   app = await createTestApp();
 
   // Establish authenticated session
-  const loginRes = await request(app).post('/login').send({ username: 'admin', password: 'admin1234!!' });
+  const loginRes = await request(app)
+    .post('/login')
+    .send({ username: 'admin', password: 'admin1234!!' });
   console.log('LOGIN RESPONSE STATUS:', loginRes.status);
   console.log('LOGIN RESPONSE BODY:', loginRes.body);
   if (loginRes.status === 200) {
@@ -99,7 +91,7 @@ describe('1. DB Job CRUD', () => {
   it('creates a job and returns the id', async () => {
     const result: any = await db.run(
       `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES (?, ?, ?)`,
-      [adminUserId, 'Integration test prompt', 'pending']
+      [adminUserId, 'Integration test prompt', 'pending'],
     );
     jobId = Number(result.lastID);
     expect(jobId).toBeGreaterThan(0);
@@ -115,9 +107,12 @@ describe('1. DB Job CRUD', () => {
   it('updates job status and stage', async () => {
     await db.run(
       'UPDATE video_jobs SET status = ?, current_stage = ?, progress_percent = ? WHERE id = ?',
-      ['processing', 'Aşama 1', 25, jobId]
+      ['processing', 'Aşama 1', 25, jobId],
     );
-    const job: any = await db.get('SELECT status, current_stage, progress_percent FROM video_jobs WHERE id = ?', [jobId]);
+    const job: any = await db.get(
+      'SELECT status, current_stage, progress_percent FROM video_jobs WHERE id = ?',
+      [jobId],
+    );
     expect(job.status).toBe('processing');
     expect(job.current_stage).toBe('Aşama 1');
     expect(job.progress_percent).toBe(25);
@@ -180,7 +175,7 @@ describe('3. SSE endpoint', () => {
     // Create a job first
     const result: any = await db.run(
       `INSERT INTO video_jobs (user_id, master_prompt, status, current_stage) VALUES (?, ?, ?, ?)`,
-      [adminUserId, 'Integration test SSE', 'pending', 'Beklemede']
+      [adminUserId, 'Integration test SSE', 'pending', 'Beklemede'],
     );
     const jobId = Number(result.lastID);
 
@@ -188,16 +183,20 @@ describe('3. SSE endpoint', () => {
     const port = (server.address() as any).port;
 
     await new Promise<void>((resolve, reject) => {
-      const httpReq = http.get(`http://127.0.0.1:${port}/progress/${jobId}`, {
-        headers: { 'Cookie': authCookie }
-      }, (res) => {
-        expect(res.statusCode).toBe(200);
-        expect(res.headers['content-type']).toContain('text/event-stream');
-        res.destroy();
-        httpReq.destroy();
-        server.close();
-        resolve();
-      });
+      const httpReq = http.get(
+        `http://127.0.0.1:${port}/progress/${jobId}`,
+        {
+          headers: { Cookie: authCookie },
+        },
+        (res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.headers['content-type']).toContain('text/event-stream');
+          res.destroy();
+          httpReq.destroy();
+          server.close();
+          resolve();
+        },
+      );
       httpReq.on('error', (err) => {
         server.close();
         reject(err);
@@ -211,7 +210,7 @@ describe('3. SSE endpoint', () => {
     // Create a job
     const result: any = await db.run(
       `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES (?, ?, ?)`,
-      [adminUserId, 'Integration test SSE no-auth', 'pending']
+      [adminUserId, 'Integration test SSE no-auth', 'pending'],
     );
     const jobId = Number(result.lastID);
 
@@ -236,13 +235,11 @@ describe('4. API auth', () => {
     // Create a real job so the ownership check passes
     const result: any = await db.run(
       `INSERT INTO video_jobs (user_id, master_prompt, status) VALUES (?, ?, ?)`,
-      [adminUserId, 'Integration test auth', 'pending']
+      [adminUserId, 'Integration test auth', 'pending'],
     );
     const jobId = Number(result.lastID);
 
-    const res = await request(app)
-      .get(`/api/v1/jobs/${jobId}/scenes`)
-      .set('Cookie', authCookie);
+    const res = await request(app).get(`/api/v1/jobs/${jobId}/scenes`).set('Cookie', authCookie);
 
     // Returns 200 (empty scenes array) — not 401
     expect(res.status).toBe(200);
@@ -295,7 +292,7 @@ describe('6. RabbitMQ publish', () => {
               resolve(true);
             }
           },
-          { noAck: false }
+          { noAck: false },
         );
       } catch {
         resolve(false);

@@ -66,7 +66,7 @@ export class HeyGenService {
             'Content-Type': 'application/json',
           },
           timeout: 60000,
-        }
+        },
       );
 
       const taskId = response.data?.data?.task_id;
@@ -160,7 +160,7 @@ export class TavusService {
             'Content-Type': 'application/json',
           },
           timeout: 60000,
-        }
+        },
       );
 
       const taskId = response.data?.id || response.data?.task_id;

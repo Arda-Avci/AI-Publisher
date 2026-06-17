@@ -90,16 +90,28 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
       <button
         onClick={() => setSelectedVideo(videos[0])}
         style={{
-          position: 'fixed', bottom: '24px', right: '24px',
-          width: '48px', height: '48px', borderRadius: '50%',
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
           background: 'linear-gradient(135deg, var(--accent), var(--secondary))',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           boxShadow: '0 4px 20px var(--accent-glow)',
-          zIndex: 50, transition: 'transform 0.2s ease',
+          zIndex: 50,
+          transition: 'transform 0.2s ease',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
         title={language === 'tr' ? 'Yardım Videoları' : 'Help Videos'}
       >
         <HelpCircle size={24} color="white" />
@@ -109,9 +121,16 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
       {selectedVideo && (
         <div
           style={{
-            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-            background: 'rgba(3, 5, 10, 0.9)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 5, 10, 0.9)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             zIndex: 100,
           }}
           onClick={(e) => {
@@ -120,18 +139,30 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
             }
           }}
         >
-          <div style={{
-            width: '90%', maxWidth: '800px', maxHeight: '90vh',
-            background: 'var(--bg-surface)', borderRadius: '16px',
-            border: '1px solid var(--border)', overflow: 'hidden',
-            display: 'flex', flexDirection: 'column',
-          }}>
+          <div
+            style={{
+              width: '90%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              background: 'var(--bg-surface)',
+              borderRadius: '16px',
+              border: '1px solid var(--border)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {/* Modal Header */}
-            <div style={{
-              padding: '16px 20px', display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', borderBottom: '1px solid var(--border)',
-              background: 'var(--bg-primary)',
-            }}>
+            <div
+              style={{
+                padding: '16px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--bg-primary)',
+              }}
+            >
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}>
                   {language === 'tr' ? 'YARDIM VİDEOSU' : 'HELP VIDEO'}
@@ -147,10 +178,14 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
                     onClick={goToPrev}
                     disabled={currentIndex === 0}
                     style={{
-                      background: 'var(--bg-surface)', border: '1px solid var(--border)',
-                      borderRadius: '6px', padding: '6px', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      padding: '6px',
+                      cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
                       opacity: currentIndex === 0 ? 0.5 : 1,
-                      display: 'flex', alignItems: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
                   >
                     <ChevronLeft size={16} />
@@ -159,10 +194,14 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
                     onClick={goToNext}
                     disabled={currentIndex === videos.length - 1}
                     style={{
-                      background: 'var(--bg-surface)', border: '1px solid var(--border)',
-                      borderRadius: '6px', padding: '6px', cursor: currentIndex === videos.length - 1 ? 'not-allowed' : 'pointer',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      padding: '6px',
+                      cursor: currentIndex === videos.length - 1 ? 'not-allowed' : 'pointer',
                       opacity: currentIndex === videos.length - 1 ? 0.5 : 1,
-                      display: 'flex', alignItems: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
                   >
                     <ChevronRight size={16} />
@@ -174,8 +213,12 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
                 <button
                   onClick={() => setSelectedVideo(null)}
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--text-muted)', display: 'flex', alignItems: 'center',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                 >
                   <X size={20} />
@@ -184,17 +227,30 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
             </div>
 
             {/* Video Content Area */}
-            <div style={{
-              flex: 1, padding: '20px', overflow: 'auto',
-              display: 'flex', flexDirection: 'column', gap: '16px',
-            }}>
+            <div
+              style={{
+                flex: 1,
+                padding: '20px',
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+              }}
+            >
               {/* Video Player Placeholder / Embed */}
-              <div style={{
-                aspectRatio: '16/9', background: 'var(--bg-primary)',
-                borderRadius: '12px', border: '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                position: 'relative', overflow: 'hidden',
-              }}>
+              <div
+                style={{
+                  aspectRatio: '16/9',
+                  background: 'var(--bg-primary)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
                 {selectedVideo.videoUrl ? (
                   <video
                     src={selectedVideo.videoUrl}
@@ -211,28 +267,48 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     )}
-                    <div style={{
-                      position: 'absolute', inset: 0,
-                      background: 'rgba(0,0,0,0.5)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <div style={{
-                        width: '64px', height: '64px', borderRadius: '50%',
-                        background: 'linear-gradient(135deg, var(--accent), var(--secondary))',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 0 30px var(--accent-glow)',
-                      }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--accent), var(--secondary))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 0 30px var(--accent-glow)',
+                        }}
+                      >
                         <Play size={28} fill="white" style={{ marginLeft: '3px' }} />
                       </div>
                     </div>
                     {/* Duration badge */}
                     {selectedVideo.durationSeconds > 0 && (
-                      <div style={{
-                        position: 'absolute', bottom: '12px', right: '12px',
-                        background: 'rgba(0,0,0,0.8)', padding: '4px 8px',
-                        borderRadius: '4px', fontSize: '12px', color: 'white',
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                      }}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '12px',
+                          right: '12px',
+                          background: 'rgba(0,0,0,0.8)',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
                         <Clock size={12} />
                         {formatDuration(selectedVideo.durationSeconds)}
                       </div>
@@ -243,17 +319,34 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
 
               {/* Video Description */}
               <div>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                <p
+                  style={{
+                    fontSize: '14px',
+                    color: 'var(--text-muted)',
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}
+                >
                   {selectedVideo.description}
                 </p>
               </div>
 
               {/* Video List (thumbnails) */}
               <div>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    marginBottom: '8px',
+                    display: 'block',
+                  }}
+                >
                   {language === 'tr' ? 'TÜM VİDEOLAR' : 'ALL VIDEOS'}
                 </span>
-                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+                <div
+                  style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}
+                >
                   {videos.map((video, idx) => (
                     <div
                       key={video.id}
@@ -262,28 +355,48 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
                         setCurrentIndex(idx);
                       }}
                       style={{
-                        flex: '0 0 160px', cursor: 'pointer',
-                        borderRadius: '8px', overflow: 'hidden',
-                        border: idx === currentIndex ? '2px solid var(--accent)' : '2px solid transparent',
+                        flex: '0 0 160px',
+                        cursor: 'pointer',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        border:
+                          idx === currentIndex
+                            ? '2px solid var(--accent)'
+                            : '2px solid transparent',
                         opacity: idx === currentIndex ? 1 : 0.7,
                         transition: 'var(--transition)',
                       }}
                     >
-                      <div style={{
-                        height: '90px', background: 'var(--bg-primary)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
+                      <div
+                        style={{
+                          height: '90px',
+                          background: 'var(--bg-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
                         {video.thumbnailUrl ? (
-                          <img src={video.thumbnailUrl} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img
+                            src={video.thumbnailUrl}
+                            alt={video.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
                         ) : (
                           <Play size={24} color="var(--text-muted)" />
                         )}
                       </div>
                       <div style={{ padding: '8px', background: 'var(--bg-surface)' }}>
-                        <p style={{
-                          fontSize: '11px', fontWeight: 600, margin: 0,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
+                        <p
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            margin: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {video.title}
                         </p>
                         <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
@@ -297,17 +410,27 @@ export function HelpVideoPanel({ feature, language, onClose }: HelpVideoPanelPro
             </div>
 
             {/* Modal Footer */}
-            <div style={{
-              padding: '12px 20px', display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', borderTop: '1px solid var(--border)',
-              background: 'var(--bg-primary)',
-            }}>
+            <div
+              style={{
+                padding: '12px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--bg-primary)',
+              }}
+            >
               <button
                 onClick={dismissHelp}
                 style={{
-                  background: 'none', border: 'none',
-                  color: 'var(--text-muted)', cursor: 'pointer',
-                  fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
                 <Check size={14} />
@@ -344,30 +467,57 @@ export function HelpVideoModal({
 }) {
   if (!isOpen) return null;
 
-
-
   return (
     <div
       style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-        background: 'rgba(3, 5, 10, 0.9)', backdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(3, 5, 10, 0.9)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 100,
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div style={{
-        width: '90%', maxWidth: '640px', maxHeight: '90vh',
-        background: 'var(--bg-surface)', borderRadius: '16px',
-        border: '1px solid var(--border)', overflow: 'hidden',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{
-          padding: '16px 20px', display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', borderBottom: '1px solid var(--border)',
-        }}>
+      <div
+        style={{
+          width: '90%',
+          maxWidth: '640px',
+          maxHeight: '90vh',
+          background: 'var(--bg-surface)',
+          borderRadius: '16px',
+          border: '1px solid var(--border)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            padding: '16px 20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{title}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+            }}
+          >
             <X size={20} />
           </button>
         </div>
@@ -375,15 +525,30 @@ export function HelpVideoModal({
           {videoUrl ? (
             <video src={videoUrl} controls style={{ width: '100%', borderRadius: '8px' }} />
           ) : (
-            <div style={{
-              aspectRatio: '16/9', background: 'var(--bg-primary)', borderRadius: '8px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ color: 'var(--text-muted)' }}>{language === 'tr' ? 'Video yakında eklenecek' : 'Video coming soon'}</span>
+            <div
+              style={{
+                aspectRatio: '16/9',
+                background: 'var(--bg-primary)',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ color: 'var(--text-muted)' }}>
+                {language === 'tr' ? 'Video yakında eklenecek' : 'Video coming soon'}
+              </span>
             </div>
           )}
           {description && (
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '16px', lineHeight: 1.6 }}>
+            <p
+              style={{
+                fontSize: '14px',
+                color: 'var(--text-muted)',
+                marginTop: '16px',
+                lineHeight: 1.6,
+              }}
+            >
               {description}
             </p>
           )}

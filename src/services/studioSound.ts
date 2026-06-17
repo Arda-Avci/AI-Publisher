@@ -33,7 +33,7 @@ const DEFAULT_OPTIONS: StudioSoundOptions = {
   denoise: true,
   equalize: false,
   deecho: true,
-  levelDb: -3
+  levelDb: -3,
 };
 
 /**
@@ -52,7 +52,7 @@ const DEFAULT_OPTIONS: StudioSoundOptions = {
 export async function enhanceAudio(
   inputVideo: string,
   outputVideo: string,
-  options: StudioSoundOptions = DEFAULT_OPTIONS
+  options: StudioSoundOptions = DEFAULT_OPTIONS,
 ): Promise<void> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   Logger.info('[studioSound] Starting audio enhancement', { inputVideo, outputVideo, opts });
@@ -86,20 +86,25 @@ export async function enhanceAudio(
 
   // Loudness normalization (EBU R128)
   filterParts.push(
-    `loudnorm=I=${opts.levelDb ?? -3}:LRA=11:TP=${(opts.levelDb ?? -3) + 1}:measured_type=integrated`
+    `loudnorm=I=${opts.levelDb ?? -3}:LRA=11:TP=${(opts.levelDb ?? -3) + 1}:measured_type=integrated`,
   );
 
   const filterChain = filterParts.join(',');
 
   const args = [
     '-y',
-    '-i', inputVideo,
-    '-vn',                          // Skip video stream
-    '-af', filterChain,
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ar', '48000',                 // Sample rate
-    outputVideo
+    '-i',
+    inputVideo,
+    '-vn', // Skip video stream
+    '-af',
+    filterChain,
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-ar',
+    '48000', // Sample rate
+    outputVideo,
   ];
 
   const cmd: FFmpegCommand = { cmd: 'ffmpeg', args, timeoutMs: 120000 };
@@ -124,7 +129,7 @@ export async function enhanceAudio(
 export async function enhanceVideoAudio(
   inputVideo: string,
   outputVideo: string,
-  options: StudioSoundOptions = DEFAULT_OPTIONS
+  options: StudioSoundOptions = DEFAULT_OPTIONS,
 ): Promise<void> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   Logger.info('[studioSound] Starting video+audio enhancement', { inputVideo, outputVideo, opts });
@@ -149,20 +154,26 @@ export async function enhanceVideoAudio(
   }
 
   filterParts.push(
-    `loudnorm=I=${opts.levelDb ?? -3}:LRA=11:TP=${(opts.levelDb ?? -3) + 1}:measured_type=integrated`
+    `loudnorm=I=${opts.levelDb ?? -3}:LRA=11:TP=${(opts.levelDb ?? -3) + 1}:measured_type=integrated`,
   );
 
   const filterChain = filterParts.join(',');
 
   const args = [
     '-y',
-    '-i', inputVideo,
-    '-af', filterChain,
-    '-c:v', 'copy',               // Pass-through video
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ar', '48000',
-    outputVideo
+    '-i',
+    inputVideo,
+    '-af',
+    filterChain,
+    '-c:v',
+    'copy', // Pass-through video
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-ar',
+    '48000',
+    outputVideo,
   ];
 
   const cmd: FFmpegCommand = { cmd: 'ffmpeg', args, timeoutMs: 120000 };
@@ -185,18 +196,23 @@ export async function enhanceVideoAudio(
  */
 export async function removeBackgroundNoise(
   audioPath: string,
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   Logger.info('[studioSound] Removing background noise', { audioPath, outputPath });
 
   const args = [
     '-y',
-    '-i', audioPath,
-    '-af', 'afftdn=nl=1:nh=0.5:nf=-25',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ar', '48000',
-    outputPath
+    '-i',
+    audioPath,
+    '-af',
+    'afftdn=nl=1:nh=0.5:nf=-25',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-ar',
+    '48000',
+    outputPath,
   ];
 
   try {
@@ -216,20 +232,22 @@ export async function removeBackgroundNoise(
  * @param outputPath - Absolute path for output audio file
  * @returns Path to the reverb-reduced audio file
  */
-export async function removeReverb(
-  audioPath: string,
-  outputPath: string
-): Promise<string> {
+export async function removeReverb(audioPath: string, outputPath: string): Promise<string> {
   Logger.info('[studioSound] Removing reverb', { audioPath, outputPath });
 
   const args = [
     '-y',
-    '-i', audioPath,
-    '-af', 'aecho=0.8:0.88:60:0.4:200:0.3',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ar', '48000',
-    outputPath
+    '-i',
+    audioPath,
+    '-af',
+    'aecho=0.8:0.88:60:0.4:200:0.3',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-ar',
+    '48000',
+    outputPath,
   ];
 
   try {

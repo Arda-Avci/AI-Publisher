@@ -31,7 +31,7 @@ router.post('/analyze', requireAuth, async (req, res) => {
       fullPath = path.join(process.cwd(), audioPath);
     }
 
-    if (!await fs.pathExists(fullPath)) {
+    if (!(await fs.pathExists(fullPath))) {
       return res.status(400).json({ error: 'Audio file not found' });
     }
 
@@ -44,14 +44,13 @@ router.post('/analyze', requireAuth, async (req, res) => {
       bpm: result.bpm,
       duration: result.duration,
       beatCount: result.beats.length,
-      beats: result.beats.map(b => ({
+      beats: result.beats.map((b) => ({
         timestamp: b.timestamp,
         strength: b.strength,
         beatNumber: b.beatNumber,
-        bar: b.bar
-      }))
+        bar: b.bar,
+      })),
     });
-
   } catch (error) {
     Logger.error('[BeatSync] Analysis failed:', error);
     res.status(500).json({ error: 'Audio analysis failed' });
@@ -72,7 +71,7 @@ router.post('/apply', requireAuth, async (req, res) => {
       crossfadeDur = 0.5,
       minSegmentDur = 2.0,
       alignToBeats = true,
-      outputPath: requestedOutputPath
+      outputPath: requestedOutputPath,
     } = req.body;
 
     if (!videoPath) {
@@ -85,23 +84,20 @@ router.post('/apply', requireAuth, async (req, res) => {
       videoFullPath = path.join(process.cwd(), videoPath);
     }
 
-    if (!await fs.pathExists(videoFullPath)) {
+    if (!(await fs.pathExists(videoFullPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
     let audioFullPath: string | undefined;
     if (audioPath) {
-      audioFullPath = path.isAbsolute(audioPath)
-        ? audioPath
-        : path.join(process.cwd(), audioPath);
+      audioFullPath = path.isAbsolute(audioPath) ? audioPath : path.join(process.cwd(), audioPath);
     }
 
     // Determine output path
     const outputDir = path.join(process.cwd(), 'videolar');
     await fs.ensureDir(outputDir);
 
-    const outputPath = requestedOutputPath
-      || path.join(outputDir, `beatsync_${Date.now()}.mp4`);
+    const outputPath = requestedOutputPath || path.join(outputDir, `beatsync_${Date.now()}.mp4`);
 
     // Get beat markers: either use provided beats or detect them
     let beatMarkers: BeatMarker[];
@@ -112,7 +108,7 @@ router.post('/apply', requireAuth, async (req, res) => {
         timestamp: b.timestamp,
         strength: b.strength || 0.8,
         beatNumber: b.beatNumber || 0,
-        bar: b.bar || 1
+        bar: b.bar || 1,
       }));
       Logger.info(`[BeatSync] Using provided ${beatMarkers.length} beat markers`);
     } else if (bpm) {
@@ -124,7 +120,9 @@ router.post('/apply', requireAuth, async (req, res) => {
       // Auto-detect from audio
       const analysisResult = await buildBeatMarkers(videoFullPath);
       beatMarkers = analysisResult.beats;
-      Logger.info(`[BeatSync] Auto-detected ${beatMarkers.length} beats at ${analysisResult.bpm} BPM`);
+      Logger.info(
+        `[BeatSync] Auto-detected ${beatMarkers.length} beats at ${analysisResult.bpm} BPM`,
+      );
     }
 
     const options: BeatSyncOptions = {
@@ -132,7 +130,7 @@ router.post('/apply', requireAuth, async (req, res) => {
       audioPath: audioFullPath,
       crossfadeDur,
       minSegmentDur,
-      alignToBeats
+      alignToBeats,
     };
 
     Logger.info(`[BeatSync] Applying beat-sync to: ${videoFullPath}`);
@@ -151,9 +149,8 @@ router.post('/apply', requireAuth, async (req, res) => {
       success: true,
       message: 'Beat-sync processing started',
       outputPath,
-      beatCount: beatMarkers.length
+      beatCount: beatMarkers.length,
     });
-
   } catch (error) {
     Logger.error('[BeatSync] Apply failed:', error);
     res.status(500).json({ error: 'Beat-sync processing failed' });
@@ -176,15 +173,15 @@ router.post('/quick', requireAuth, async (req, res) => {
       ? videoPath
       : path.join(process.cwd(), videoPath);
 
-    if (!await fs.pathExists(videoFullPath)) {
+    if (!(await fs.pathExists(videoFullPath))) {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
     const outputDir = path.join(process.cwd(), 'videolar');
     await fs.ensureDir(outputDir);
 
-    const outputPath = requestedOutputPath
-      || path.join(outputDir, `beatsync_quick_${Date.now()}.mp4`);
+    const outputPath =
+      requestedOutputPath || path.join(outputDir, `beatsync_quick_${Date.now()}.mp4`);
 
     Logger.info(`[BeatSync] Quick beat-sync starting: ${videoFullPath}`);
 
@@ -200,9 +197,8 @@ router.post('/quick', requireAuth, async (req, res) => {
     res.json({
       success: true,
       message: 'Quick beat-sync processing started',
-      outputPath
+      outputPath,
     });
-
   } catch (error) {
     Logger.error('[BeatSync] Quick beat-sync failed:', error);
     res.status(500).json({ error: 'Quick beat-sync failed' });

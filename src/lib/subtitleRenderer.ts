@@ -9,7 +9,7 @@
 export interface WordTiming {
   word: string;
   start: number; // seconds
-  end: number;   // seconds
+  end: number; // seconds
 }
 
 /**
@@ -18,7 +18,7 @@ export interface WordTiming {
 interface SubtitleCue {
   index: number;
   startTime: number; // seconds
-  endTime: number;   // seconds
+  endTime: number; // seconds
   text: string;
 }
 
@@ -37,7 +37,7 @@ export function parseSrtToWords(srtContent: string): WordTiming[] {
       .replace(/\s+/g, ' ')
       .trim()
       .split(' ')
-      .filter(w => w.length > 0);
+      .filter((w) => w.length > 0);
 
     if (cueWords.length === 0) continue;
 
@@ -66,12 +66,12 @@ function parseSrtCues(srtContent: string): SubtitleCue[] {
   const blocks = srtContent.trim().split(/\n\n+/);
 
   for (const block of blocks) {
-    const lines = block.split('\n').filter(l => l.trim());
+    const lines = block.split('\n').filter((l) => l.trim());
     if (lines.length < 3) continue;
 
     const timeLine = lines[1];
     const timeMatch = timeLine.match(
-      /(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/
+      /(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/,
     );
     if (!timeMatch) continue;
 
@@ -87,7 +87,10 @@ function parseSrtCues(srtContent: string): SubtitleCue[] {
       parseInt(timeMatch[7]) +
       parseInt(timeMatch[8]) / 1000;
 
-    const text = lines.slice(2).join(' ').replace(/<[^>]+>/g, '');
+    const text = lines
+      .slice(2)
+      .join(' ')
+      .replace(/<[^>]+>/g, '');
 
     cues.push({
       index: parseInt(lines[0]) || cues.length + 1,
@@ -111,9 +114,9 @@ function parseSrtCues(srtContent: string): SubtitleCue[] {
 export function generateWordTimings(
   text: string,
   duration: number,
-  wpm: number = 150
+  wpm: number = 150,
 ): WordTiming[] {
-  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
   if (words.length === 0) return [];
 
   const wordDurationSec = 60 / wpm;
@@ -150,10 +153,7 @@ export function generateWordTimings(
  * @param _audioPath - Path to audio file (reserved for future ffmpeg/Whisper integration)
  * @returns Array of word timings aligned to audio
  */
-export function alignSubtitlesToAudio(
-  srtContent: string,
-  _audioPath: string
-): WordTiming[] {
+export function alignSubtitlesToAudio(srtContent: string, _audioPath: string): WordTiming[] {
   // Try to extract word-level timing from SRT if available
   // In production this would use Whisper word timestamps or similar
   const words = parseSrtToWords(srtContent);
@@ -208,5 +208,5 @@ export function mergeWordTimings(arrays: WordTiming[][]): WordTiming[] {
  */
 export function extractTextFromSrt(srtContent: string): string {
   const cues = parseSrtCues(srtContent);
-  return cues.map(c => c.text).join(' ');
+  return cues.map((c) => c.text).join(' ');
 }

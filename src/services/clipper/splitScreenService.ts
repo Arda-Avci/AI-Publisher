@@ -49,14 +49,20 @@ export type PipPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-rig
 async function buildScalePadChain(
   input0Path: string,
   input1Path: string,
-  isVertical: boolean
+  isVertical: boolean,
 ): Promise<{ filterComplex: string; inputs: string[] }> {
   // Get dimensions of both inputs
   const getDims = async (p: string): Promise<[number, number]> => {
     const { stdout } = await runFFmpeg('ffprobe', [
-      '-v', 'error', '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height',
-      '-of', 'csv=s=x:p=0', p
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=width,height',
+      '-of',
+      'csv=s=x:p=0',
+      p,
     ]);
     const [w, h] = stdout.trim().split('x').map(Number);
     return [w || 1920, h || 1080];
@@ -75,7 +81,7 @@ async function buildScalePadChain(
 
   return {
     filterComplex: `${scale0};${scale1}`,
-    inputs: ['-i', input0Path, '-i', input1Path]
+    inputs: ['-i', input0Path, '-i', input1Path],
   };
 }
 
@@ -90,7 +96,7 @@ export async function splitScreenVertical(
   topVideo: string,
   bottomVideo: string,
   output: string,
-  options: SplitScreenOptions = {}
+  options: SplitScreenOptions = {},
 ): Promise<void> {
   const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight } = options;
 
@@ -107,7 +113,7 @@ export async function splitScreenVertical(
       `[1:v]scale=-1:${halfH}[bottom];`,
       `[top]pad=iw:ih+${gapPx}:0:${gapPx}:color=${borderColor}[top_padded];`,
       `[bottom]pad=iw:ih+${gapPx}:0:0:color=${borderColor}[bottom_padded];`,
-      `[top_padded][bottom_padded]vstack=inputs=2:shortest=1[out]`
+      `[top_padded][bottom_padded]vstack=inputs=2:shortest=1[out]`,
     ].join('');
   } else {
     // Direct vstack after scale/pad to equalize
@@ -118,13 +124,19 @@ export async function splitScreenVertical(
   const args = [
     '-y',
     ...inputs,
-    '-filter_complex', filterComplex,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac',
-    output
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    output,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
@@ -142,7 +154,7 @@ export async function splitScreenHorizontal(
   leftVideo: string,
   rightVideo: string,
   output: string,
-  options: SplitScreenOptions = {}
+  options: SplitScreenOptions = {},
 ): Promise<void> {
   const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight } = options;
 
@@ -159,7 +171,7 @@ export async function splitScreenHorizontal(
       `[1:v]scale=${halfW}:-1[right];`,
       `[left]pad=iw+${gapPx}:ih:0:0:color=${borderColor}[left_padded];`,
       `[right]pad=iw+${gapPx}:ih:${gapPx}:0:color=${borderColor}[right_padded];`,
-      `[left_padded][right_padded]hstack=inputs=2:shortest=1[out]`
+      `[left_padded][right_padded]hstack=inputs=2:shortest=1[out]`,
     ].join('');
   } else {
     // Direct hstack after scale/pad to equalize
@@ -170,13 +182,19 @@ export async function splitScreenHorizontal(
   const args = [
     '-y',
     ...inputs,
-    '-filter_complex', filterComplex,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac',
-    output
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    output,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
@@ -192,23 +210,31 @@ export async function splitScreenHorizontal(
 export async function splitScreenGrid(
   videos: string[],
   output: string,
-  gridCols: number = 2
+  gridCols: number = 2,
 ): Promise<void> {
   if (videos.length === 0) {
     throw new Error('splitScreenGrid: Video listesi bos');
   }
 
-  Logger.info(`[SplitScreen] Creating grid split with ${videos.length} videos, ${gridCols} columns`);
+  Logger.info(
+    `[SplitScreen] Creating grid split with ${videos.length} videos, ${gridCols} columns`,
+  );
 
   // Build input arguments
   const inputs: string[] = [];
-  videos.forEach(v => inputs.push('-i', v));
+  videos.forEach((v) => inputs.push('-i', v));
 
   // Get dimensions of first video as reference
   const { stdout: dims } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=s=x:p=0', videos[0]
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    videos[0],
   ]);
   const [refW, refH] = dims.trim().split('x').map(Number);
 
@@ -220,7 +246,9 @@ export async function splitScreenGrid(
   // Build scale+pad for each input
   const scaleFilters: string[] = [];
   for (let i = 0; i < videos.length; i++) {
-    scaleFilters.push(`[${i}:v]scale=${cellW}:${cellH}:force_original_aspect_ratio=decrease,pad=${cellW}:${cellH}:(ow-iw)/2:(oh-ih)/2:color=black[v${i}]`);
+    scaleFilters.push(
+      `[${i}:v]scale=${cellW}:${cellH}:force_original_aspect_ratio=decrease,pad=${cellW}:${cellH}:(ow-iw)/2:(oh-ih)/2:color=black[v${i}]`,
+    );
   }
 
   // Stack rows first, then hstack rows together
@@ -236,7 +264,9 @@ export async function splitScreenGrid(
     if (rowInputs.length > 0) {
       const stackType = rowInputs.length > 1 ? 'hstack' : 'null';
       if (rowInputs.length > 1) {
-        rowFilters.push(`${rowInputs.join('')}hstack=inputs=${rowInputs.length}:shortest=1[row${r}]`);
+        rowFilters.push(
+          `${rowInputs.join('')}hstack=inputs=${rowInputs.length}:shortest=1[row${r}]`,
+        );
       } else {
         rowFilters.push(`${rowInputs.join('')}${stackType}[row${r}]`);
       }
@@ -245,22 +275,29 @@ export async function splitScreenGrid(
 
   // Vstack all rows
   const rowOutputs = rowFilters.map((_, r) => `[row${r}]`);
-  const finalStack = rowOutputs.length > 1
-    ? `${rowOutputs.join('')}vstack=inputs=${rowOutputs.length}:shortest=1[out]`
-    : `${rowOutputs.join('')}copy[out]`;
+  const finalStack =
+    rowOutputs.length > 1
+      ? `${rowOutputs.join('')}vstack=inputs=${rowOutputs.length}:shortest=1[out]`
+      : `${rowOutputs.join('')}copy[out]`;
 
   const filterComplex = [...scaleFilters, ...rowFilters, finalStack].join(';');
 
   const args = [
     '-y',
     ...inputs,
-    '-filter_complex', filterComplex,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac',
-    output
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    output,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
@@ -278,7 +315,7 @@ export async function overlayMascot(
   videoPath: string,
   mascotPngPath: string,
   output: string,
-  position: OverlayPosition
+  position: OverlayPosition,
 ): Promise<void> {
   const { x, y, scale = 1.0, opacity = 1.0 } = position;
 
@@ -286,17 +323,29 @@ export async function overlayMascot(
 
   // Get video dimensions for coordinate expressions
   const { stdout: dims } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=s=x:p=0', videoPath
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    videoPath,
   ]);
   const [vW, vH] = dims.trim().split('x').map(Number);
 
   // Get mascot dimensions
   const { stdout: mascotDims } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=s=x:p=0', mascotPngPath
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    mascotPngPath,
   ]);
   const [mW, mH] = mascotDims.trim().split('x').map(Number);
 
@@ -312,20 +361,28 @@ export async function overlayMascot(
   const filterComplex = [
     `[1:v]scale=${scaledW}:${scaledH}[scaled];`,
     `[scaled]format=rgba,colorchannelmixer=aa=${opacity}[mascot];`,
-    `[0:v][mascot]overlay=x=${xExpr}:y=${yExpr}[out]`
+    `[0:v][mascot]overlay=x=${xExpr}:y=${yExpr}[out]`,
   ].join('');
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-i', mascotPngPath,
-    '-filter_complex', filterComplex,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    output
+    '-i',
+    videoPath,
+    '-i',
+    mascotPngPath,
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    output,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
@@ -343,22 +400,33 @@ export async function overlayMascotWithAnimation(
   videoPath: string,
   mascotPngPath: string,
   output: string,
-  animType: AnimationType
+  animType: AnimationType,
 ): Promise<void> {
   Logger.info(`[SplitScreen] Overlaying animated mascot (${animType}): ${mascotPngPath}`);
 
   // Get video duration
   const { stdout: durStr } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-show_entries', 'format=duration',
-    '-of', 'csv=p=0', videoPath
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    videoPath,
   ]);
   const dur = parseFloat(durStr.trim());
 
   // Get mascot dimensions
   const { stdout: mascotDims } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=s=x:p=0', mascotPngPath
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    mascotPngPath,
   ]);
   const [mW, mH] = mascotDims.trim().split('x').map(Number);
 
@@ -377,7 +445,7 @@ export async function overlayMascotWithAnimation(
       animFilter = [
         `[1:v]scale=${scaledW}:${scaledH}[scaled];`,
         `[scaled]format=rgba,colorchannelmixer=aa=0.9[alphaed];`,
-        `[0:v][alphaed]overlay=x=${baseX}:y=${baseY}+20*sin(t*2)[out]`
+        `[0:v][alphaed]overlay=x=${baseX}:y=${baseY}+20*sin(t*2)[out]`,
       ].join('');
       break;
 
@@ -387,7 +455,7 @@ export async function overlayMascotWithAnimation(
       animFilter = [
         `[1:v]scale=${scaledW}:${scaledH}[scaled];`,
         `[scaled]format=rgba,colorchannelmixer=aa=0.9[alphaed];`,
-        `[0:v][alphaed]overlay=x=${baseX}:y='if(lt(t,1), -H+(t*2)*H, H-h-30+(sin(t*4)*5))':enable='between(t,0,${dur})'[out]`
+        `[0:v][alphaed]overlay=x=${baseX}:y='if(lt(t,1), -H+(t*2)*H, H-h-30+(sin(t*4)*5))':enable='between(t,0,${dur})'[out]`,
       ].join('');
       break;
 
@@ -396,28 +464,36 @@ export async function overlayMascotWithAnimation(
       animFilter = [
         `[1:v]scale=${scaledW}:${scaledH}[scaled];`,
         `[scaled]format=rgba,colorchannelmixer=aa='if(gt(mod(t,1),0.5),0,0.9)'[alphaed];`,
-        `[0:v][alphaed]overlay=x=${baseX}:y=${baseY}[out]`
+        `[0:v][alphaed]overlay=x=${baseX}:y=${baseY}[out]`,
       ].join('');
       break;
 
     default:
       animFilter = [
         `[1:v]scale=${scaledW}:${scaledH}[scaled];`,
-        `[0:v][scaled]overlay=x=${baseX}:y=${baseY}[out]`
+        `[0:v][scaled]overlay=x=${baseX}:y=${baseY}[out]`,
       ].join('');
   }
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-i', mascotPngPath,
-    '-filter_complex', animFilter,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    output
+    '-i',
+    videoPath,
+    '-i',
+    mascotPngPath,
+    '-filter_complex',
+    animFilter,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    output,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
@@ -435,15 +511,21 @@ export async function pipOverlay(
   mainVideo: string,
   pipVideo: string,
   output: string,
-  position: PipPosition
+  position: PipPosition,
 ): Promise<void> {
   Logger.info(`[SplitScreen] Creating PIP overlay: ${pipVideo} at ${position}`);
 
   // Get main video dimensions
   const { stdout: dims } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=s=x:p=0', mainVideo
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    mainVideo,
   ]);
   const [vW, vH] = dims.trim().split('x').map(Number);
 
@@ -484,20 +566,28 @@ export async function pipOverlay(
   const filterComplex = [
     `[1:v]scale=${pipW}:${pipH}[pip];`,
     `[pip]format=rgba,colorchannelmixer=aa=0.85[pip_alpha];`,
-    `[0:v][pip_alpha]overlay=x=${x}:y=${y}:enable='between(t,0,10)'[out]`
+    `[0:v][pip_alpha]overlay=x=${x}:y=${y}:enable='between(t,0,10)'[out]`,
   ].join('');
 
   const args = [
     '-y',
-    '-i', mainVideo,
-    '-i', pipVideo,
-    '-filter_complex', filterComplex,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    output
+    '-i',
+    mainVideo,
+    '-i',
+    pipVideo,
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    output,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);

@@ -50,7 +50,7 @@ function parseAspectRatio(ratio: CropAspectRatio | [number, number]): number {
  */
 function getOutputDimensions(
   ratio: CropAspectRatio | [number, number],
-  targetHeight = 1920
+  targetHeight = 1920,
 ): [number, number] {
   const r = parseAspectRatio(ratio);
   return [Math.round(targetHeight * r), targetHeight];
@@ -66,10 +66,7 @@ function getOutputDimensions(
  * @param timestamp - Timestamp in seconds to extract frame for detection
  * @returns Detected face boxes with confidence scores
  */
-export async function detectFaceBox(
-  videoPath: string,
-  timestamp: number
-): Promise<FaceBox[]> {
+export async function detectFaceBox(videoPath: string, timestamp: number): Promise<FaceBox[]> {
   const workerPath = path.join(__dirnameStr, '..', 'workers', 'face-detect-worker.js');
   const hasWorker = await fs.pathExists(workerPath);
 
@@ -85,7 +82,10 @@ export async function detectFaceBox(
         resolve(msg.faceBoxes ?? []);
       });
       worker.on('error', (err) => {
-        if (!settled) { settled = true; reject(err); }
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
       });
       worker.on('exit', (code) => {
         if (!settled) {
@@ -103,10 +103,7 @@ export async function detectFaceBox(
 /**
  * Python/OpenCV fallback for face detection when JS worker is unavailable
  */
-async function detectFaceWithPython(
-  videoPath: string,
-  timestamp: number
-): Promise<FaceBox[]> {
+async function detectFaceWithPython(videoPath: string, timestamp: number): Promise<FaceBox[]> {
   const pythonScript = `
 import cv2
 import sys
@@ -174,7 +171,7 @@ finally:
         } catch {
           resolve([]);
         }
-      }
+      },
     );
   });
 }
@@ -197,7 +194,7 @@ export function computeCropRegion(
   targetRatio: CropAspectRatio | [number, number],
   videoWidth: number,
   videoHeight: number,
-  paddingRatio = 0.3
+  paddingRatio = 0.3,
 ): CropRegion {
   const ratio = parseAspectRatio(targetRatio);
 
@@ -232,10 +229,18 @@ export function computeCropRegion(
   let cropY = Math.round(faceCenterY - cropH / 2);
 
   // Clamp to video bounds (prefer face on one side over black borders)
-  if (cropX < 0) { cropX = 0; }
-  if (cropX + cropW > videoWidth) { cropX = videoWidth - cropW; }
-  if (cropY < 0) { cropY = 0; }
-  if (cropY + cropH > videoHeight) { cropY = videoHeight - cropH; }
+  if (cropX < 0) {
+    cropX = 0;
+  }
+  if (cropX + cropW > videoWidth) {
+    cropX = videoWidth - cropW;
+  }
+  if (cropY < 0) {
+    cropY = 0;
+  }
+  if (cropY + cropH > videoHeight) {
+    cropY = videoHeight - cropH;
+  }
 
   return { x: cropX, y: cropY, width: cropW, height: cropH };
 }
@@ -246,7 +251,7 @@ export function computeCropRegion(
 export function computeCenterCropRegion(
   targetRatio: CropAspectRatio | [number, number],
   videoWidth: number,
-  videoHeight: number
+  videoHeight: number,
 ): CropRegion {
   const ratio = parseAspectRatio(targetRatio);
 
@@ -286,7 +291,7 @@ export async function cropVideo(
   cropRegion: CropRegion,
   outputWidth = 1080,
   outputHeight = 1920,
-  duration?: number
+  duration?: number,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(outputPath));
 
@@ -298,14 +303,21 @@ export async function cropVideo(
     args.push('-t', String(duration));
   }
   args.push(
-    '-i', inputPath,
-    '-vf', scaleFilter,
-    '-c:a', 'copy',
-    '-c:v', 'libx264',
-    '-preset', 'fast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
-    outputPath
+    '-i',
+    inputPath,
+    '-vf',
+    scaleFilter,
+    '-c:a',
+    'copy',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'fast',
+    '-crf',
+    '23',
+    '-pix_fmt',
+    'yuv420p',
+    outputPath,
   );
 
   await runFFmpeg('ffmpeg', args, 180000);
@@ -326,7 +338,7 @@ export class SmartCropper {
   async cropVideo(
     inputPath: string,
     outputPath: string,
-    options: SmartCropOptions
+    options: SmartCropOptions,
   ): Promise<SmartCropResult> {
     const {
       targetFocus,
@@ -368,7 +380,9 @@ export class SmartCropper {
       cropRegion = computeCenterCropRegion(aspectRatio, videoWidth, videoHeight);
     } else {
       // 'motion' — simplified: use center crop (motion tracking would require optical flow)
-      Logger.info('[SmartCropper] Motion focus mode: using center crop (optical flow not available)');
+      Logger.info(
+        '[SmartCropper] Motion focus mode: using center crop (optical flow not available)',
+      );
       cropRegion = computeCenterCropRegion(aspectRatio, videoWidth, videoHeight);
     }
 
@@ -388,7 +402,7 @@ export class SmartCropper {
   private async sampleFaceDetection(
     videoPath: string,
     duration: number,
-    minConfidence: number
+    minConfidence: number,
   ): Promise<FaceBox[]> {
     const results: FaceBox[] = [];
     // Sample at 0%, 25%, 50%, 75% of video duration
@@ -439,9 +453,11 @@ export class SmartCropper {
    * Select the best face box (largest area with sufficient confidence)
    */
   private selectBestFace(boxes: FaceBox[], minConfidence: number): FaceBox {
-    return boxes
-      .filter(b => b.confidence >= minConfidence)
-      .sort((a, b) => (b.width * b.height) - (a.width * a.height))[0] ?? boxes[0];
+    return (
+      boxes
+        .filter((b) => b.confidence >= minConfidence)
+        .sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? boxes[0]
+    );
   }
 
   /**
@@ -450,10 +466,14 @@ export class SmartCropper {
   private async getVideoDimensions(inputPath: string): Promise<[number, number]> {
     try {
       const { stdout } = await runFFmpeg('ffprobe', [
-        '-v', 'error',
-        '-select_streams', 'v:0',
-        '-show_entries', 'stream=width,height',
-        '-of', 'csv=s=x:p=0',
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        '-of',
+        'csv=s=x:p=0',
         inputPath,
       ]);
       const dims = stdout?.trim();
@@ -481,7 +501,7 @@ export class SmartCropper {
       chunkDuration?: number;
       fallbackToCenter?: boolean;
       smoothingWindow?: number;
-    } = {}
+    } = {},
   ): Promise<import('./perFrameCropper.js').PerFrameCropResult> {
     const { cropPerFrame: cropPerFrameFn } = await import('./perFrameCropper.js');
     return cropPerFrameFn(inputPath, outputPath, options);

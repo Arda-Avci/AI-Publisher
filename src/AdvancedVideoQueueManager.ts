@@ -15,7 +15,16 @@ export interface ProjectTask {
   userLanguage: 'tr' | 'en';
   status: 'pending' | 'awaiting_approval' | 'processing' | 'success' | 'failed';
   videoDurationOption: 'same' | 'trim' | 'extend';
-  titlePosition: 'top_left' | 'top_center' | 'top_right' | 'middle_left' | 'center' | 'middle_right' | 'bottom_left' | 'bottom_center' | 'bottom_right';
+  titlePosition:
+    | 'top_left'
+    | 'top_center'
+    | 'top_right'
+    | 'middle_left'
+    | 'center'
+    | 'middle_right'
+    | 'bottom_left'
+    | 'bottom_center'
+    | 'bottom_right';
   userTitle?: string;
   customCoverImage?: string;
   logoBase64?: string;
@@ -23,11 +32,13 @@ export interface ProjectTask {
 
 const ScenarioSchema = z.object({
   userTitle: z.string(),
-  scenes: z.array(z.object({
-    index: z.number(),
-    text: z.string(),
-    visualPrompt: z.string()
-  }))
+  scenes: z.array(
+    z.object({
+      index: z.number(),
+      text: z.string(),
+      visualPrompt: z.string(),
+    }),
+  ),
 });
 
 export class AdvancedVideoQueueManager {
@@ -57,7 +68,9 @@ export class AdvancedVideoQueueManager {
       try {
         return await this.getResmiYouTubeCaption(videoUrl);
       } catch (apiError: any) {
-        Logger.error(`YouTube API failed: ${apiError.message}. Last resort: Gemini 2.5 Flash Audio Transcribe...`);
+        Logger.error(
+          `YouTube API failed: ${apiError.message}. Last resort: Gemini 2.5 Flash Audio Transcribe...`,
+        );
 
         // 3. ADIM: Download audio + Gemini Flash transcription
         return await this.transcribeAudioWithGeminiFlash(videoUrl);
@@ -74,9 +87,11 @@ export class AdvancedVideoQueueManager {
 
     let durationInstruction = 'Preserve the original duration and length of the text exactly.';
     if (task.videoDurationOption === 'trim') {
-      durationInstruction = 'Shorten the text into a more impactful, concise summary for Shorts format. Remove unnecessary parts.';
+      durationInstruction =
+        'Shorten the text into a more impactful, concise summary for Shorts format. Remove unnecessary parts.';
     } else if (task.videoDurationOption === 'extend') {
-      durationInstruction = 'Extend the text with new attention-grabbing hooks, dramatic details, and viral sub-stories.';
+      durationInstruction =
+        'Extend the text with new attention-grabbing hooks, dramatic details, and viral sub-stories.';
     }
 
     const prompt = `
@@ -129,7 +144,7 @@ Output JSON format:
         stage: 'COGVIDEO_RENDERING',
         stagePercent: Math.round((currentChunkIndex / totalChunks) * 100),
         counter: `${currentChunkIndex} / ${totalChunks}`,
-        sceneText: scenes[i].text
+        sceneText: scenes[i].text,
       });
 
       const _PORT = process.env.PORT || 4000;
@@ -139,7 +154,7 @@ Output JSON format:
         chunk_info: `${currentChunkIndex}/${totalChunks}`,
         callback_url: process.env.PUBLIC_URL
           ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-          : `http://localhost:${_PORT}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+          : `http://localhost:${_PORT}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`,
       };
 
       try {
@@ -160,14 +175,20 @@ Output JSON format:
     Logger.info(`Provider: ${provider}`);
     const models = getAIModelChain();
 
-    const { object } = await withFallbackAndRetry((model) => {
-      return generateObject({
-        model,
-        schema: ScenarioSchema,
-        prompt,
-        abortSignal: AbortSignal.timeout(60000)
-      });
-    }, models, 2, 2000, true);
+    const { object } = await withFallbackAndRetry(
+      (model) => {
+        return generateObject({
+          model,
+          schema: ScenarioSchema,
+          prompt,
+          abortSignal: AbortSignal.timeout(60000),
+        });
+      },
+      models,
+      2,
+      2000,
+      true,
+    );
 
     return object;
   }
@@ -189,24 +210,21 @@ Output JSON format:
     const videoId = videoIdMatch[1];
 
     // 1. Get available captions (subtitle tracks)
-    const captionsRes = await axios.get(
-      'https://www.googleapis.com/youtube/v3/captions',
-      {
-        params: {
-          part: 'snippet',
-          videoId,
-          key: apiKey
-        },
-        timeout: 10000
-      }
-    );
+    const captionsRes = await axios.get('https://www.googleapis.com/youtube/v3/captions', {
+      params: {
+        part: 'snippet',
+        videoId,
+        key: apiKey,
+      },
+      timeout: 10000,
+    });
 
     const captions: any[] = captionsRes.data?.items || [];
 
     // Prefer Turkish, then English, then first available
-    const preferred = captions.find((c: any) =>
-      c.snippet?.language === 'tr' || c.snippet?.language === 'en'
-    ) || captions[0];
+    const preferred =
+      captions.find((c: any) => c.snippet?.language === 'tr' || c.snippet?.language === 'en') ||
+      captions[0];
 
     if (!preferred) {
       throw new Error('No captions found for this video.');
@@ -219,13 +237,13 @@ Output JSON format:
       `https://www.googleapis.com/youtube/v3/captions/${captionId}`,
       {
         params: {
-          key: apiKey
+          key: apiKey,
         },
         headers: {
-          'Accept': 'application/json'
+          Accept: 'application/json',
         },
-        timeout: 15000
-      }
+        timeout: 15000,
+      },
     );
 
     // YouTube Data API v3 doesn't support direct caption download via REST.
@@ -237,7 +255,9 @@ Output JSON format:
       return snippet.description || '';
     }
 
-    throw new Error('Caption download requires OAuth2 or the caption is not accessible via API key. Use Gemini fallback.');
+    throw new Error(
+      'Caption download requires OAuth2 or the caption is not accessible via API key. Use Gemini fallback.',
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -266,7 +286,7 @@ Output JSON format:
             } else {
               resolve();
             }
-          }
+          },
         );
         ytdlp.on('error', reject);
       });
@@ -280,7 +300,7 @@ Output JSON format:
             (err) => {
               if (err) reject(err);
               else resolve();
-            }
+            },
           );
           ffmpegCmd.on('error', reject);
         });
@@ -290,12 +310,16 @@ Output JSON format:
       const audioData = fs.readFileSync(tempAudioPath).toString('base64');
 
       const payload = {
-        contents: [{
-          parts: [
-            { text: 'You are a professional transcriptionist. Please transcribe the speech in this audio to plain text paragraphs. No extra commentary.' },
-            { inlineData: { mimeType: 'audio/mp3', data: audioData } }
-          ]
-        }]
+        contents: [
+          {
+            parts: [
+              {
+                text: 'You are a professional transcriptionist. Please transcribe the speech in this audio to plain text paragraphs. No extra commentary.',
+              },
+              { inlineData: { mimeType: 'audio/mp3', data: audioData } },
+            ],
+          },
+        ],
       };
 
       const response = await fetch(
@@ -303,8 +327,8 @@ Output JSON format:
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }
+          body: JSON.stringify(payload),
+        },
       );
 
       if (!response.ok) {
@@ -324,7 +348,11 @@ Output JSON format:
     } finally {
       // Cleanup temp file
       if (fs.existsSync(tempAudioPath)) {
-        try { fs.unlinkSync(tempAudioPath); } catch (e) { /* ignore */ }
+        try {
+          fs.unlinkSync(tempAudioPath);
+        } catch (e) {
+          /* ignore */
+        }
       }
     }
   }
@@ -338,11 +366,9 @@ Output JSON format:
       throw new Error('Colab ngrok URL not configured. Cannot post to Colab.');
     }
 
-    const response = await axios.post(
-      `${this.colabNgrokUrl}/generate-media`,
-      payload,
-      { timeout: 300000 }
-    );
+    const response = await axios.post(`${this.colabNgrokUrl}/generate-media`, payload, {
+      timeout: 300000,
+    });
 
     return response.data;
   }
@@ -360,7 +386,7 @@ Output JSON format:
         (err) => {
           if (err) reject(err);
           else resolve();
-        }
+        },
       );
       cmd.on('error', reject);
     });
@@ -370,7 +396,11 @@ Output JSON format:
     }
 
     const buffer = fs.readFileSync(outputPath);
-    try { fs.unlinkSync(outputPath); } catch (e) { /* ignore */ }
+    try {
+      fs.unlinkSync(outputPath);
+    } catch (e) {
+      /* ignore */
+    }
 
     return `data:image/jpeg;base64,${buffer.toString('base64')}`;
   }

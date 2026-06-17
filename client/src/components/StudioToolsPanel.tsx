@@ -65,37 +65,45 @@ export function StudioToolsPanel({
   ];
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-      padding: '20px',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        padding: '20px',
+      }}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <h3 style={{
-          margin: 0,
-          fontSize: '14px',
-          fontWeight: 700,
-          color: 'var(--text-primary)',
-          fontFamily: 'var(--font-sans)',
-        }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: '14px',
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
           AI Stüdyo Araçları
         </h3>
-        <p style={{
-          margin: 0,
-          fontSize: '11px',
-          color: 'var(--text-muted)',
-          fontFamily: 'var(--font-sans)',
-        }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
           Video sonrası profesyonel düzenleme araçları
         </p>
       </div>
 
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+        }}
+      >
         {tools.map((tool) => {
           const Icon = tool.icon;
           const isActive = tool.enabled;
@@ -135,16 +143,18 @@ export function StudioToolsPanel({
                 }
               }}
             >
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: isActive ? `${tool.color}20` : 'var(--bg-surface-hover)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: isActive ? `${tool.color}20` : 'var(--bg-surface-hover)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
                 {isLoading ? (
                   <Loader size={16} className="spin" style={{ color: tool.color }} />
                 ) : isActive ? (
@@ -155,40 +165,48 @@ export function StudioToolsPanel({
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '2px',
-                }}>
-                  <span style={{
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: isActive ? tool.color : 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)',
-                  }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '2px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: isActive ? tool.color : 'var(--text-primary)',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
                     {tool.label}
                   </span>
                   {isActive && (
-                    <span style={{
-                      fontSize: '9px',
-                      padding: '1px 5px',
-                      borderRadius: '3px',
-                      background: `${tool.color}20`,
-                      color: tool.color,
-                      fontFamily: 'var(--font-mono)',
-                      fontWeight: 600,
-                    }}>
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        background: `${tool.color}20`,
+                        color: tool.color,
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 600,
+                      }}
+                    >
                       AKTIF
                     </span>
                   )}
                 </div>
-                <span style={{
-                  fontSize: '10px',
-                  color: 'var(--text-muted)',
-                  fontFamily: 'var(--font-sans)',
-                  lineHeight: 1.4,
-                }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: 'var(--text-muted)',
+                    fontFamily: 'var(--font-sans)',
+                    lineHeight: 1.4,
+                  }}
+                >
                   {tool.description}
                 </span>
               </div>
@@ -197,27 +215,33 @@ export function StudioToolsPanel({
         })}
       </div>
 
-      <div style={{
-        padding: '10px 12px',
-        borderRadius: '8px',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      }}>
-        <div style={{
-          width: '6px',
-          height: '6px',
-          borderRadius: '50%',
-          background: 'var(--accent)',
-          boxShadow: '0 0 6px var(--accent)',
-        }} />
-        <span style={{
-          fontSize: '10px',
-          color: 'var(--text-muted)',
-          fontFamily: 'var(--font-mono)',
-        }}>
+      <div
+        style={{
+          padding: '10px 12px',
+          borderRadius: '8px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <div
+          style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            background: 'var(--accent)',
+            boxShadow: '0 0 6px var(--accent)',
+          }}
+        />
+        <span
+          style={{
+            fontSize: '10px',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-mono)',
+          }}
+        >
           Colab GPU gerekli — proses sonrası otomatik uygulanır
         </span>
       </div>

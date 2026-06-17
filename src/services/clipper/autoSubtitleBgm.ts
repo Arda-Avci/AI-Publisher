@@ -62,7 +62,7 @@ export interface AutoProcessResult {
 async function generateWordLevelSrtFromCaption(
   segment: ClipSegment,
   outputPath: string,
-  maxCharsPerLine = 35
+  maxCharsPerLine = 35,
 ): Promise<string> {
   const caption = segment.suggestedCaption || '';
   if (!caption.trim()) {
@@ -77,22 +77,24 @@ async function generateWordLevelSrtFromCaption(
   const secPerWord = duration / Math.max(words.length, 1);
 
   // Whisper word formatında segment oluştur
-  const whisperSegments = [{
-    start: 0,
-    end: duration,
-    text: caption,
-    words: words.map((word, i) => ({
-      word,
-      start: i * secPerWord,
-      end: (i + 1) * secPerWord,
-      confidence: 0.95,
-    })),
-  }];
+  const whisperSegments = [
+    {
+      start: 0,
+      end: duration,
+      text: caption,
+      words: words.map((word, i) => ({
+        word,
+        start: i * secPerWord,
+        end: (i + 1) * secPerWord,
+        confidence: 0.95,
+      })),
+    },
+  ];
 
   return generateSrtFromWhisper(
     { text: caption, segments: whisperSegments },
     outputPath,
-    maxCharsPerLine
+    maxCharsPerLine,
   );
 }
 
@@ -102,7 +104,7 @@ async function generateWordLevelSrtFromCaption(
  */
 async function generateSimpleSrtFromCaption(
   segment: ClipSegment,
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   const caption = segment.suggestedCaption || '';
   if (!caption.trim()) {
@@ -134,19 +136,21 @@ async function generateSimpleSrtFromCaption(
  * FFmpeg ile beyaz gürültüsü (düşük seviye) üretir — tamamen sessizlik yerine
  * hafif bir arka plan sesi daha doğal durur.
  */
-async function generateSilentBgm(
-  duration: number,
-  outputPath: string
-): Promise<string> {
+async function generateSilentBgm(duration: number, outputPath: string): Promise<string> {
   await fs.ensureDir(path.dirname(outputPath));
 
   const args = [
     '-y',
-    '-f', 'lavfi',
-    '-i', `anullsrc=r=44100:cl=stereo`,
-    '-t', String(duration),
-    '-c:a', 'libmp3lame',
-    '-b:a', '128k',
+    '-f',
+    'lavfi',
+    '-i',
+    `anullsrc=r=44100:cl=stereo`,
+    '-t',
+    String(duration),
+    '-c:a',
+    'libmp3lame',
+    '-b:a',
+    '128k',
     outputPath,
   ];
 
@@ -176,12 +180,9 @@ export async function autoProcessClip(
   videoPath: string,
   outputPath: string,
   segment: ClipSegment,
-  options: AutoProcessOptions = {}
+  options: AutoProcessOptions = {},
 ): Promise<AutoProcessResult> {
-  const {
-    subtitle: subtitleOpts = {},
-    bgm: bgmOpts = {},
-  } = options;
+  const { subtitle: subtitleOpts = {}, bgm: bgmOpts = {} } = options;
 
   const {
     subtitleStyle = { primaryColor: '#FFFFFF', bold: true },
@@ -251,7 +252,7 @@ export async function autoProcessClip(
     }
 
     // BGM dosyası varsa miksle
-    if (effectiveMusicPath && await fs.pathExists(effectiveMusicPath)) {
+    if (effectiveMusicPath && (await fs.pathExists(effectiveMusicPath))) {
       const musicMixedPath = outputPath.replace(/\.\w+$/, '_mixed.mp4');
 
       if (duckingEnabled) {
@@ -266,7 +267,7 @@ export async function autoProcessClip(
             duckedMusicPath,
             duckingThresholdDb,
             0.3,
-            0.8
+            0.8,
           );
           await mixBackgroundMusic(currentPath, duckedMusicPath, musicMixedPath, musicVolume);
           duckingApplied = true;
@@ -315,7 +316,7 @@ export async function autoProcessClip(
   } finally {
     // Temizlik: intermediate dosyaları sil (son çıkış ve SRT hariç)
     for (const f of tempFiles) {
-      if (f !== outputPath && f !== srtPath && await fs.pathExists(f).catch(() => false)) {
+      if (f !== outputPath && f !== srtPath && (await fs.pathExists(f).catch(() => false))) {
         await fs.remove(f).catch(() => {});
       }
     }

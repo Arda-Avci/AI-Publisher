@@ -19,7 +19,7 @@ function getZenProvider() {
     compatibility: 'compatible',
     fetch: async (url: any, options: any) => {
       Logger.info(`[AI] Zen API Fetching URL (Axios): ${url}`);
-      
+
       let modifiedBody = options?.body;
       if (options?.body) {
         try {
@@ -55,7 +55,7 @@ function getZenProvider() {
         }
 
         // Standardize Authorization header
-        const authKey = Object.keys(headers).find(k => k.toLowerCase() === 'authorization');
+        const authKey = Object.keys(headers).find((k) => k.toLowerCase() === 'authorization');
         if (authKey && authKey !== 'Authorization') {
           headers['Authorization'] = headers[authKey];
           delete headers[authKey];
@@ -65,7 +65,7 @@ function getZenProvider() {
         }
 
         // Standardize Content-Type header
-        const contentTypeKey = Object.keys(headers).find(k => k.toLowerCase() === 'content-type');
+        const contentTypeKey = Object.keys(headers).find((k) => k.toLowerCase() === 'content-type');
         if (contentTypeKey && contentTypeKey !== 'Content-Type') {
           headers['Content-Type'] = headers[contentTypeKey];
           delete headers[contentTypeKey];
@@ -75,7 +75,8 @@ function getZenProvider() {
         }
 
         // Add real browser User-Agent to prevent Cloudflare/gateway blocks
-        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+        headers['User-Agent'] =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
         const urlStr = typeof url === 'string' ? url : (url as any).url || url.toString();
 
@@ -87,7 +88,9 @@ function getZenProvider() {
             const firstMsg = bodyObj.messages?.[0]?.content;
             if (firstMsg === 'ping') {
               requestTimeout = 8000;
-              Logger.info('[AI] Sağlık kontrolü (ping) isteği algılandı. Zaman aşımı 8s olarak ayarlandı.');
+              Logger.info(
+                '[AI] Sağlık kontrolü (ping) isteği algılandı. Zaman aşımı 8s olarak ayarlandı.',
+              );
             }
           } catch (_) {}
         }
@@ -107,10 +110,12 @@ function getZenProvider() {
           headers,
           timeout: requestTimeout,
           signal: options?.signal, // Pass the abort signal to axios to allow proper timeouts and cancellations
-          validateStatus: () => true // do not throw on 5xx status codes
+          validateStatus: () => true, // do not throw on 5xx status codes
         });
 
-        Logger.info(`[AI] Zen API Fetch completed with status: ${response.status} ${response.statusText}`);
+        Logger.info(
+          `[AI] Zen API Fetch completed with status: ${response.status} ${response.statusText}`,
+        );
 
         const responseHeaders = new Headers();
         if (response.headers) {
@@ -126,7 +131,8 @@ function getZenProvider() {
         responseHeaders.delete('retry-after');
 
         const isOk = response.status >= 200 && response.status < 300;
-        let bodyText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        let bodyText =
+          typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
         Logger.info('[AI] Zen API Raw Response Data:', bodyText);
 
         if (!isOk) {
@@ -134,15 +140,20 @@ function getZenProvider() {
           return new Response(bodyText, {
             status: response.status,
             statusText: response.statusText,
-            headers: responseHeaders
+            headers: responseHeaders,
           });
         }
 
         try {
-          const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-          
+          const data =
+            typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+
           if (data && typeof data === 'object') {
-            if (data.created === undefined || data.created === null || isNaN(Number(data.created))) {
+            if (
+              data.created === undefined ||
+              data.created === null ||
+              isNaN(Number(data.created))
+            ) {
               data.created = Math.floor(Date.now() / 1000);
             } else {
               const createdNum = Number(data.created);
@@ -150,7 +161,7 @@ function getZenProvider() {
                 data.created = Math.floor(createdNum / 1000);
               }
             }
-            
+
             if (Array.isArray(data.choices)) {
               for (const choice of data.choices) {
                 if (choice && choice.message && typeof choice.message === 'object') {
@@ -171,7 +182,7 @@ function getZenProvider() {
         return new Response(bodyText, {
           status: response.status,
           statusText: response.statusText,
-          headers: responseHeaders
+          headers: responseHeaders,
         });
       } catch (error: any) {
         Logger.error(`[AI] Zen API Fetch failed: ${error.message}`);
@@ -179,13 +190,15 @@ function getZenProvider() {
           if (options?.body) {
             const bodyObj = JSON.parse(String(options.body));
             if (bodyObj.model) {
-              Logger.warn(`[AI] Zen model ${bodyObj.model} failed during call. (Not disabling to respect user preferences)`);
+              Logger.warn(
+                `[AI] Zen model ${bodyObj.model} failed during call. (Not disabling to respect user preferences)`,
+              );
             }
           }
         } catch (_) {}
         throw error;
       }
-    }
+    },
   } as any);
 
   return zenProviderCache;
@@ -209,12 +222,12 @@ export async function checkZenModelsHealth(): Promise<void> {
 
       try {
         Logger.info(`[AI] Testing health of Zen model: ${modelId}...`);
-        
+
         // Simple fast test call with abort signal
         await generateText({
           model: zen.chat(modelId),
           prompt: 'ping',
-          abortSignal: controller.signal
+          abortSignal: controller.signal,
         });
 
         clearTimeout(timeoutId);
@@ -223,9 +236,11 @@ export async function checkZenModelsHealth(): Promise<void> {
         Logger.info(`[AI] Zen model ${modelId} is healthy and ENABLED.`);
       } catch (err: any) {
         clearTimeout(timeoutId);
-        Logger.warn(`[AI] Zen model ${modelId} failed health check (or slow response > 8s). (Not disabling to respect user preferences). Error: ${err?.message?.slice(0, 100)}`);
+        Logger.warn(
+          `[AI] Zen model ${modelId} failed health check (or slow response > 8s). (Not disabling to respect user preferences). Error: ${err?.message?.slice(0, 100)}`,
+        );
       }
-    })
+    }),
   );
 }
 
@@ -270,5 +285,3 @@ export function getAIModelChain() {
   return models;
 }
 // trigger restart
-
-

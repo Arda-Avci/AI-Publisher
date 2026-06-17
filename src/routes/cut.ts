@@ -5,7 +5,12 @@
 
 import { Router } from 'express';
 import path from 'path';
-import { detectSilenceRanges, findStaticRanges, autoCutVideo, TimeRange } from '../services/autoEditor.js';
+import {
+  detectSilenceRanges,
+  findStaticRanges,
+  autoCutVideo,
+  TimeRange,
+} from '../services/autoEditor.js';
 import { Logger } from '../lib/logger.js';
 
 const router = Router();
@@ -95,7 +100,7 @@ router.get('/silence-ranges', async (req, res) => {
     const ranges: TimeRange[] = await detectSilenceRanges(
       videoPath,
       thresholdDb ? parseFloat(thresholdDb) : -40,
-      minSilenceSec ? parseFloat(minSilenceSec) : 0.5
+      minSilenceSec ? parseFloat(minSilenceSec) : 0.5,
     );
     res.json({ videoPath, ranges, count: ranges.length });
   } catch (err: any) {

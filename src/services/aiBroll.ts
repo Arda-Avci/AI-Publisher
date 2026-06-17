@@ -53,7 +53,7 @@ export interface GenerateBrollResult {
 export async function generateCogVideoXBroll(
   keyword: string,
   duration: number,
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   const state = colab.getState();
 
@@ -67,18 +67,15 @@ export async function generateCogVideoXBroll(
   try {
     Logger.info('[aiBroll] Generating CogVideoX B-Roll', { keyword, duration, outputPath });
 
-    const response = await axios.get(
-      `${colabUrl}/generate-media`,
-      {
-        params: {
-          mode: 'cogvideo_broll',
-          prompt: keyword,
-          duration
-        },
-        headers: { 'ngrok-skip-browser-warning': 'true' },
-        timeout: 600000
-      }
-    );
+    const response = await axios.get(`${colabUrl}/generate-media`, {
+      params: {
+        mode: 'cogvideo_broll',
+        prompt: keyword,
+        duration,
+      },
+      headers: { 'ngrok-skip-browser-warning': 'true' },
+      timeout: 600000,
+    });
 
     const resultPath = response.data?.output_path || response.data?.video_path;
     if (!resultPath) {
@@ -91,7 +88,7 @@ export async function generateCogVideoXBroll(
       const axiosStream = await axios.get(resultPath, {
         responseType: 'stream',
         headers: { 'ngrok-skip-browser-warning': 'true' },
-        timeout: 300000
+        timeout: 300000,
       });
       axiosStream.data.pipe(writer);
       await new Promise<void>((res, rej) => {
@@ -126,7 +123,7 @@ export async function generateCogVideoXBroll(
 export async function generateBroll(
   keywords: string[],
   duration: number,
-  outputPath: string
+  outputPath: string,
 ): Promise<GenerateBrollResult> {
   const state = colab.getState();
 
@@ -139,7 +136,11 @@ export async function generateBroll(
   const keywordStr = keywords.join(', ');
 
   try {
-    Logger.info('[aiBroll] Generating B-Roll via Colab', { keywords: keywordStr, duration, outputPath });
+    Logger.info('[aiBroll] Generating B-Roll via Colab', {
+      keywords: keywordStr,
+      duration,
+      outputPath,
+    });
 
     // Endpoint `/generate-broll` implemented in colab_server.py (line 1679)
     // Payload: { keywords, duration, output_path, model? }
@@ -151,12 +152,12 @@ export async function generateBroll(
         keywords,
         duration,
         output_path: outputPath,
-        model: 'CogVideoX-2b'
+        model: 'CogVideoX-2b',
       },
       {
         timeout: 600000, // 10 min generation
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-      }
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      },
     );
 
     const taskId = response.data?.task_id;
@@ -171,7 +172,7 @@ export async function generateBroll(
 
     while (taskStatus === 'processing' || taskStatus === 'accepted') {
       attempt++;
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Early exit: check if file exists
       if (await fs.pathExists(outputPath)) {
@@ -185,12 +186,15 @@ export async function generateBroll(
       }
 
       try {
-        const statusRes = await axios.get(
-          `${colabUrl}/status/${taskId}`,
-          { headers: { 'ngrok-skip-browser-warning': 'true' }, timeout: 10000 }
-        );
+        const statusRes = await axios.get(`${colabUrl}/status/${taskId}`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' },
+          timeout: 10000,
+        });
         taskStatus = statusRes.data?.status || 'processing';
-        Logger.info(`[aiBroll] Polling #${attempt}`, { taskStatus, message: statusRes.data?.message });
+        Logger.info(`[aiBroll] Polling #${attempt}`, {
+          taskStatus,
+          message: statusRes.data?.message,
+        });
       } catch (pollErr: any) {
         Logger.warn(`[aiBroll] Poll error (attempt ${attempt})`, { error: pollErr.message });
         if (attempt > 60) {
@@ -225,7 +229,7 @@ export async function generateBroll(
 export async function insertBroll(
   mainVideo: string,
   brollClips: BrollClip[],
-  output: string
+  output: string,
 ): Promise<void> {
   if (brollClips.length === 0) {
     Logger.info('[aiBroll] No B-Roll clips provided, copying original');
@@ -236,15 +240,18 @@ export async function insertBroll(
   Logger.info('[aiBroll] Inserting B-Roll clips', {
     mainVideo,
     output,
-    clipCount: brollClips.length
+    clipCount: brollClips.length,
   });
 
   // Get main video duration
   const { stdout: durStr } = await runFFmpeg('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-of', 'csv=p=0',
-    mainVideo
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    mainVideo,
   ]);
   const totalDur = parseFloat(durStr.trim());
 
@@ -321,11 +328,15 @@ export async function insertBroll(
         const segPath = path.join(concatDir, `seg_${segmentFiles.length}.mp4`);
         await runFFmpeg('ffmpeg', [
           '-y',
-          '-i', mainVideo,
-          '-ss', String(currentTime),
-          '-t', String(insertAt - currentTime),
-          '-c', 'copy',
-          segPath
+          '-i',
+          mainVideo,
+          '-ss',
+          String(currentTime),
+          '-t',
+          String(insertAt - currentTime),
+          '-c',
+          'copy',
+          segPath,
         ]);
         segmentFiles.push(segPath);
       }
@@ -338,10 +349,13 @@ export async function insertBroll(
       // Trim B-Roll to exact duration
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-i', brollPath,
-        '-t', String(brollDur),
-        '-c', 'copy',
-        brollOutPath
+        '-i',
+        brollPath,
+        '-t',
+        String(brollDur),
+        '-c',
+        'copy',
+        brollOutPath,
       ]);
       segmentFiles.push(brollOutPath);
 
@@ -353,38 +367,34 @@ export async function insertBroll(
       const segPath = path.join(concatDir, `seg_final.mp4`);
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-i', mainVideo,
-        '-ss', String(currentTime),
-        '-c', 'copy',
-        segPath
+        '-i',
+        mainVideo,
+        '-ss',
+        String(currentTime),
+        '-c',
+        'copy',
+        segPath,
       ]);
       segmentFiles.push(segPath);
     }
 
     // Write concat list
     const concatListPath = path.join(concatDir, 'concat_list.txt');
-    const concatListContent = segmentFiles.map(f => `file '${f.replace(/\\/g, '/')}'`).join('\n');
+    const concatListContent = segmentFiles.map((f) => `file '${f.replace(/\\/g, '/')}'`).join('\n');
     await fs.writeFile(concatListPath, concatListContent);
 
     // Concatenate all segments
     const finalCmd: FFmpegCommand = {
       cmd: 'ffmpeg',
-      args: [
-        '-y',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', concatListPath,
-        '-c', 'copy',
-        output
-      ],
-      timeoutMs: 300000
+      args: ['-y', '-f', 'concat', '-safe', '0', '-i', concatListPath, '-c', 'copy', output],
+      timeoutMs: 300000,
     };
 
     await runFFmpegWithFallback([finalCmd]);
     Logger.info('[aiBroll] B-Roll insertion completed', { output });
   } finally {
     // Cleanup temp directory
-    await fs.remove(concatDir).catch(err => {
+    await fs.remove(concatDir).catch((err) => {
       Logger.warn('[aiBroll] Cleanup failed', { error: err.message });
     });
   }

@@ -52,7 +52,9 @@ export class StubSource implements DiscussionSource {
       });
     }
 
-    Logger.info(`[StubSource] Generated stub discussion for week ${week}: "${topic}" with ${utteranceCount} utterances`);
+    Logger.info(
+      `[StubSource] Generated stub discussion for week ${week}: "${topic}" with ${utteranceCount} utterances`,
+    );
 
     return {
       title: `Hafta ${week} Talk-Show: ${topic}`,

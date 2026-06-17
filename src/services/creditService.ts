@@ -3,18 +3,20 @@ import { Logger } from '../lib/logger.js';
 
 /** Model bazlı kredi maliyetleri: scene_cost (sahne başı) + cover_cost */
 const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
-  'CogVideoX-5b':     { sceneCost: 15, coverCost: 8 },
-  'CogVideoX-2b':     { sceneCost: 10, coverCost: 5 },
-  'Wan2.1':           { sceneCost: 20, coverCost: 10 },
-  'HunyuanVideo':     { sceneCost: 25, coverCost: 12 },
-  'LTX-Video':        { sceneCost: 5,  coverCost: 3 },
+  'CogVideoX-5b': { sceneCost: 15, coverCost: 8 },
+  'CogVideoX-2b': { sceneCost: 10, coverCost: 5 },
+  'Wan2.1': { sceneCost: 20, coverCost: 10 },
+  HunyuanVideo: { sceneCost: 25, coverCost: 12 },
+  'LTX-Video': { sceneCost: 5, coverCost: 3 },
 };
 
 const DEFAULT_COST = { sceneCost: 10, coverCost: 5 };
 
 export function getModelCost(modelType?: string | null): { sceneCost: number; coverCost: number } {
   if (!modelType) return DEFAULT_COST;
-  const key = Object.keys(MODEL_COSTS).find(k => modelType.toLowerCase().includes(k.toLowerCase()));
+  const key = Object.keys(MODEL_COSTS).find((k) =>
+    modelType.toLowerCase().includes(k.toLowerCase()),
+  );
   return key ? MODEL_COSTS[key] : DEFAULT_COST;
 }
 
@@ -24,11 +26,13 @@ export class CreditService {
     return user?.is_admin === 1 || user?.is_admin === true;
   }
 
-  static async getUserCredits(userId: number): Promise<{ credits: number; limit: number; resetDate: string }> {
+  static async getUserCredits(
+    userId: number,
+  ): Promise<{ credits: number; limit: number; resetDate: string }> {
     try {
       const user = await db.get(
         'SELECT credits, monthly_credit_limit, credit_reset_date FROM users WHERE id = ?',
-        [userId]
+        [userId],
       );
 
       if (!user) throw new Error('User not found');
@@ -41,18 +45,25 @@ export class CreditService {
         newResetDate.setMonth(newResetDate.getMonth() + 1);
         const newCredits = user.monthly_credit_limit || 100;
 
-        await db.run(
-          'UPDATE users SET credits = ?, credit_reset_date = ? WHERE id = ?',
-          [newCredits, newResetDate.toISOString(), userId]
-        );
+        await db.run('UPDATE users SET credits = ?, credit_reset_date = ? WHERE id = ?', [
+          newCredits,
+          newResetDate.toISOString(),
+          userId,
+        ]);
         await db.run(
           `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
            VALUES (?, ?, 'grant', 'Aylik otomatik kredi yenilemesi')`,
-          [userId, newCredits]
+          [userId, newCredits],
         );
-        Logger.info(`[CREDIT] Kullanici kredileri aylik limitine yenilendi: userId=${userId}, credits=${newCredits}`);
+        Logger.info(
+          `[CREDIT] Kullanici kredileri aylik limitine yenilendi: userId=${userId}, credits=${newCredits}`,
+        );
 
-        return { credits: newCredits, limit: user.monthly_credit_limit || 100, resetDate: newResetDate.toISOString() };
+        return {
+          credits: newCredits,
+          limit: user.monthly_credit_limit || 100,
+          resetDate: newResetDate.toISOString(),
+        };
       }
 
       return {
@@ -67,13 +78,20 @@ export class CreditService {
   }
 
   /** Balance check only — does NOT deduct. Returns { ok, requiredCredits }. */
-  static async checkSufficientCredits(userId: number, requiredCredits: number): Promise<{ ok: boolean; balance: number }> {
+  static async checkSufficientCredits(
+    userId: number,
+    requiredCredits: number,
+  ): Promise<{ ok: boolean; balance: number }> {
     const { credits } = await this.getUserCredits(userId);
     return { ok: credits >= requiredCredits, balance: credits };
   }
 
   /** Deduct credits AFTER successful production. */
-  static async deductAfterProduction(userId: number, amount: number, description: string): Promise<boolean> {
+  static async deductAfterProduction(
+    userId: number,
+    amount: number,
+    description: string,
+  ): Promise<boolean> {
     try {
       const { credits } = await this.getUserCredits(userId);
       const newCredits = credits - amount;
@@ -81,9 +99,11 @@ export class CreditService {
       await db.run(
         `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
          VALUES (?, ?, 'usage', ?)`,
-        [userId, -amount, description]
+        [userId, -amount, description],
       );
-      Logger.info(`[CREDIT] Kredi basariyla dusuldu: userId=${userId}, harcanan=${amount}, kalan=${newCredits}`);
+      Logger.info(
+        `[CREDIT] Kredi basariyla dusuldu: userId=${userId}, harcanan=${amount}, kalan=${newCredits}`,
+      );
       return true;
     } catch (err) {
       Logger.error('deductAfterProduction error:', err);
@@ -99,9 +119,11 @@ export class CreditService {
       await db.run(
         `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
          VALUES (?, ?, 'refund', ?)`,
-        [userId, amount, description]
+        [userId, amount, description],
       );
-      Logger.info(`[CREDIT] Kredi basariyla iade edildi: userId=${userId}, iade=${amount}, yeni_bakiye=${newCredits}`);
+      Logger.info(
+        `[CREDIT] Kredi basariyla iade edildi: userId=${userId}, iade=${amount}, yeni_bakiye=${newCredits}`,
+      );
     } catch (err) {
       Logger.error('refundCredits error:', err);
     }
@@ -111,7 +133,7 @@ export class CreditService {
     try {
       return await db.all(
         'SELECT * FROM credit_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 5',
-        [userId]
+        [userId],
       );
     } catch (err) {
       Logger.error('getTransactionHistory error:', err);

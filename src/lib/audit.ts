@@ -51,10 +51,7 @@ export interface AuditEntry {
  */
 export async function logAudit(entry: AuditEntry): Promise<void> {
   try {
-    const ip =
-      entry.req?.ip ||
-      (entry.req?.socket as any)?.remoteAddress ||
-      null;
+    const ip = entry.req?.ip || (entry.req?.socket as any)?.remoteAddress || null;
     const ua = entry.req?.headers?.['user-agent'] || null;
 
     await db.run(
@@ -68,8 +65,8 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
         entry.entityId ?? null,
         entry.details ? JSON.stringify(entry.details) : null,
         ip,
-        ua
-      ]
+        ua,
+      ],
     );
   } catch (err: any) {
     // Audit logging must NEVER fail the main operation.

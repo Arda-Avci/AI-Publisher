@@ -18,7 +18,7 @@ export const LAYOUT_RATIOS: Record<SplitLayout, { primaryPct: number; secondaryP
   '70/30': { primaryPct: 70, secondaryPct: 30 },
   '60/40': { primaryPct: 60, secondaryPct: 40 },
   '30/70': { primaryPct: 30, secondaryPct: 70 },
-  '40/60': { primaryPct: 40, secondaryPct: 60 }
+  '40/60': { primaryPct: 40, secondaryPct: 60 },
 };
 
 export async function applySplitScreen(
@@ -26,7 +26,7 @@ export async function applySplitScreen(
   secondaryVideo: string,
   outputPath: string,
   layout: SplitLayout = '50/50',
-  position: 'top' | 'bottom' | 'left' | 'right' = 'top'
+  position: 'top' | 'bottom' | 'left' | 'right' = 'top',
 ): Promise<void> {
   const ratios = LAYOUT_RATIOS[layout];
   if (!ratios) {
@@ -38,11 +38,15 @@ export async function applySplitScreen(
 
   // Get primary video dimensions
   const probeArgs = [
-    '-v', 'error',
-    '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=p=0',
-    primaryVideo
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=p=0',
+    primaryVideo,
   ];
 
   const { execFile } = await import('child_process');
@@ -63,11 +67,11 @@ export async function applySplitScreen(
 
   const isVertical = position === 'top' || position === 'bottom';
   const primarySize = isVertical
-    ? `${width}:${Math.floor(height * primaryPct / 100)}`
-    : `${Math.floor(width * primaryPct / 100)}:${height}`;
+    ? `${width}:${Math.floor((height * primaryPct) / 100)}`
+    : `${Math.floor((width * primaryPct) / 100)}:${height}`;
   const secondarySize = isVertical
-    ? `${width}:${Math.floor(height * secondaryPct / 100)}`
-    : `${Math.floor(width * secondaryPct / 100)}:${height}`;
+    ? `${width}:${Math.floor((height * secondaryPct) / 100)}`
+    : `${Math.floor((width * secondaryPct) / 100)}:${height}`;
 
   const stackType = isVertical ? 'vstack' : 'hstack';
   const filterComplex = isVertical
@@ -79,17 +83,27 @@ export async function applySplitScreen(
 
   const args = [
     '-y',
-    '-i', primaryVideo,
-    '-i', secondaryVideo,
-    '-filter_complex', `${filterComplex};${audioFilter}`,
-    '-map', '[vout]',
-    '-map', '[aout]',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-preset', 'medium',
-    '-crf', '23',
-    '-c:a', 'aac',
-    outputPath
+    '-i',
+    primaryVideo,
+    '-i',
+    secondaryVideo,
+    '-filter_complex',
+    `${filterComplex};${audioFilter}`,
+    '-map',
+    '[vout]',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-preset',
+    'medium',
+    '-crf',
+    '23',
+    '-c:a',
+    'aac',
+    outputPath,
   ];
 
   Logger.info('[SPLIT] Applying split screen', { layout, position, primarySize, secondarySize });
@@ -97,7 +111,7 @@ export async function applySplitScreen(
   await runFFmpegWithFallback([
     { cmd: 'ffmpeg', args: [...args, '-c:v', 'h264_nvenc'] },
     { cmd: 'ffmpeg', args: [...args, '-c:v', 'libx264'] },
-    { cmd: 'ffmpeg', args }
+    { cmd: 'ffmpeg', args },
   ]);
 }
 
@@ -105,7 +119,7 @@ export async function generateSplitScreenPreview(
   primaryVideo: string,
   secondaryVideo: string,
   layout: SplitLayout = '50/50',
-  position: 'top' | 'bottom' | 'left' | 'right' = 'top'
+  position: 'top' | 'bottom' | 'left' | 'right' = 'top',
 ): Promise<string> {
   const previewPath = path.join(process.cwd(), 'uploads', `split_preview_${Date.now()}.mp4`);
   await applySplitScreen(primaryVideo, secondaryVideo, previewPath, layout, position);

@@ -28,7 +28,10 @@ export interface StudioResult {
 
 type ProgressCallback = (percent: number, message: string) => void;
 
-async function tryColab<T>(action: string, fn: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false }> {
+async function tryColab<T>(
+  action: string,
+  fn: () => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false }> {
   try {
     if (colab.isHealthy()) {
       const result = await fn();
@@ -44,7 +47,7 @@ export async function enhanceAudio(
   inputVideo: string,
   outputVideo: string,
   options: StudioSoundOptions = {},
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   const opts = { denoise: true, equalize: false, deecho: true, levelDb: -3, ...options };
@@ -57,7 +60,11 @@ export async function enhanceAudio(
 
     const videoBuffer = await fs.readFile(inputVideo);
     const formData = new FormData();
-    formData.append('video', new Blob([videoBuffer], { type: 'video/mp4' }), path.basename(inputVideo));
+    formData.append(
+      'video',
+      new Blob([videoBuffer], { type: 'video/mp4' }),
+      path.basename(inputVideo),
+    );
     formData.append('options', JSON.stringify(opts));
 
     const response = await axios.post(`${colabUrl}/api/v1/studio/studio-sound`, formData, {
@@ -84,7 +91,7 @@ export async function enhanceVideoAudio(
   inputVideo: string,
   outputVideo: string,
   options: StudioSoundOptions = {},
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   const opts = { denoise: true, equalize: false, deecho: true, levelDb: -3, ...options };
@@ -97,7 +104,11 @@ export async function enhanceVideoAudio(
 
     const videoBuffer = await fs.readFile(inputVideo);
     const formData = new FormData();
-    formData.append('video', new Blob([videoBuffer], { type: 'video/mp4' }), path.basename(inputVideo));
+    formData.append(
+      'video',
+      new Blob([videoBuffer], { type: 'video/mp4' }),
+      path.basename(inputVideo),
+    );
     formData.append('options', JSON.stringify(opts));
 
     const response = await axios.post(`${colabUrl}/api/v1/studio/studio-sound`, formData, {
@@ -124,7 +135,7 @@ export async function smartReframe(
   inputVideo: string,
   outputVideo: string,
   options: SmartReframeOptions = {},
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   const opts = {
@@ -144,7 +155,11 @@ export async function smartReframe(
 
     const videoBuffer = await fs.readFile(inputVideo);
     const formData = new FormData();
-    formData.append('video', new Blob([videoBuffer], { type: 'video/mp4' }), path.basename(inputVideo));
+    formData.append(
+      'video',
+      new Blob([videoBuffer], { type: 'video/mp4' }),
+      path.basename(inputVideo),
+    );
     formData.append('options', JSON.stringify(opts));
 
     const response = await axios.post(`${colabUrl}/api/v1/studio/smart-reframe`, formData, {
@@ -188,7 +203,7 @@ export async function smartReframe(
 export async function removeBackground(
   inputImage: string,
   outputImage: string,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   onProgress?.(10, 'Arka plan kaldırma başlıyor...');
@@ -199,7 +214,11 @@ export async function removeBackground(
 
     const imgBuffer = await fs.readFile(inputImage);
     const formData = new FormData();
-    formData.append('image', new Blob([imgBuffer], { type: 'image/png' }), path.basename(inputImage));
+    formData.append(
+      'image',
+      new Blob([imgBuffer], { type: 'image/png' }),
+      path.basename(inputImage),
+    );
 
     const response = await axios.post(`${colabUrl}/remove-background`, formData, {
       headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
@@ -223,7 +242,7 @@ export async function generateImage(
   prompt: string,
   outputImage: string,
   modelType: string = 'dreamshaper',
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   onProgress?.(10, 'Görsel üretiliyor...');
@@ -232,13 +251,14 @@ export async function generateImage(
     const colabUrl = colab.getState().ngrokUrl;
     if (!colabUrl) throw new Error('Colab not connected');
 
-    const response = await axios.post(`${colabUrl}/generate-image`,
+    const response = await axios.post(
+      `${colabUrl}/generate-image`,
       { prompt, model_type: modelType },
       {
         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
         responseType: 'arraybuffer',
         timeout: 120000,
-      }
+      },
     );
 
     await fs.writeFile(outputImage, Buffer.from(response.data));
@@ -258,7 +278,7 @@ export async function inpaintImage(
   maskImage: string,
   prompt: string,
   outputImage: string,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   onProgress?.(10, 'Inpaint başlıyor...');
@@ -296,7 +316,7 @@ export async function correctGaze(
   inputVideo: string,
   outputVideo: string,
   smooth: boolean = true,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   onProgress?.(10, 'Göz teması düzeltiliyor...');
@@ -308,7 +328,14 @@ export async function correctGaze(
     const response = await axios.post(
       `${colabUrl}/api/v1/eye-contact`,
       { video_path: inputVideo, output_path: outputVideo, smooth },
-      { headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' }, timeout: 300000 }
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+          'bypass-tunnel-reminder': 'true',
+        },
+        timeout: 300000,
+      },
     );
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
@@ -325,13 +352,17 @@ export async function correctGaze(
   const result = await correctEyeContact(inputVideo, outputVideo);
   onProgress?.(100, 'Göz teması düzeltildi');
 
-  return { outputPath: result.processedVideoPath, usedColab: false, durationMs: Date.now() - startTime };
+  return {
+    outputPath: result.processedVideoPath,
+    usedColab: false,
+    durationMs: Date.now() - startTime,
+  };
 }
 
 export async function removeBackgroundNoise(
   inputVideo: string,
   outputVideo: string,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   onProgress?.(10, 'Arka plan gürültüsü siliniyor...');
@@ -350,7 +381,7 @@ export async function removeBackgroundNoise(
 export async function removeReverb(
   inputVideo: string,
   outputVideo: string,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StudioResult> {
   const startTime = Date.now();
   onProgress?.(10, 'Yankı temizleme yapılıyor...');

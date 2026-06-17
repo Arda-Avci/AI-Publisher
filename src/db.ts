@@ -8,7 +8,8 @@ dotenv.config();
 
 // PostgreSQL Pool Config
 const poolConfig: PoolConfig = {
-  connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ai_publisher',
+  connectionString:
+    process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ai_publisher',
 };
 
 const pool = new Pool(poolConfig);
@@ -24,13 +25,13 @@ function convertQuery(sql: string): string {
   for (let i = 0; i < sql.length; i++) {
     const char = sql[i];
     const nextChar = sql[i + 1] || '';
-    
+
     if (inLineComment) {
       result += char;
       if (char === '\n') inLineComment = false;
       continue;
     }
-    
+
     if (inBlockComment) {
       result += char;
       if (char === '*' && nextChar === '/') {
@@ -40,7 +41,7 @@ function convertQuery(sql: string): string {
       }
       continue;
     }
-    
+
     if (!inSingleQuote && !inDoubleQuote) {
       if (char === '-' && nextChar === '-') {
         inLineComment = true;
@@ -100,23 +101,21 @@ export const db = {
     const converted = convertQuery(sql);
     const isInsert = /^\s*(?:WITH\s+.*?)?INSERT\s+INTO\s+/i.test(converted);
     const hasReturning = /\bRETURNING\b/i.test(converted);
-    const finalSql = isInsert && !hasReturning 
-      ? converted + ' RETURNING id' 
-      : converted;
+    const finalSql = isInsert && !hasReturning ? converted + ' RETURNING id' : converted;
 
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
     const res = await activePool.query(finalSql, params);
-    
+
     return {
       lastID: isInsert && res.rows[0] ? res.rows[0].id : undefined,
-      changes: res.rowCount || 0
+      changes: res.rowCount || 0,
     };
   },
 
   async exec(sql: string): Promise<void> {
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
     await activePool.query(sql);
-  }
+  },
 };
 
 export async function initDatabase() {
@@ -234,12 +233,15 @@ export async function initDatabase() {
 
   const defaultUsername = 'arda.avci@gmail.com';
   const encryptedUsername = encryptUsername(defaultUsername);
-  
+
   const userExists = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
   if (!userExists) {
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
     const hashedPassword = await bcrypt.hash(adminPass, 10);
-    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedUsername, hashedPassword]);
+    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [
+      encryptedUsername,
+      hashedPassword,
+    ]);
     Logger.info('Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
   } else {
     Logger.info('PostgreSQL Veritabanı hazır.');
@@ -247,26 +249,52 @@ export async function initDatabase() {
 
   // Schema migrations
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS colab_task_id TEXT;');
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_duration_mode TEXT DEFAULT 'same';");
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_layout INTEGER DEFAULT 1;');
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_duration_mode TEXT DEFAULT 'same';",
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_layout INTEGER DEFAULT 1;',
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS cover_images TEXT;');
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_provider TEXT DEFAULT 'xtts';");
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_voice TEXT DEFAULT 'Claribel Dervla';");
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS model_type TEXT DEFAULT 'CogVideoX-5b';");
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS production_template TEXT DEFAULT 'cinematic';");
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS brand_kit_enabled INTEGER DEFAULT 0;');
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_provider TEXT DEFAULT 'xtts';",
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS tts_voice TEXT DEFAULT 'Claribel Dervla';",
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS model_type TEXT DEFAULT 'CogVideoX-5b';",
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS production_template TEXT DEFAULT 'cinematic';",
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS brand_kit_enabled INTEGER DEFAULT 0;',
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_lang TEXT;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles INTEGER DEFAULT 0;');
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles INTEGER DEFAULT 0;',
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS viral_score INTEGER;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_sfx_placement INTEGER DEFAULT 0;');
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_sfx_placement INTEGER DEFAULT 0;',
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS audio_ducking INTEGER DEFAULT 0;');
 
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 100;');
-  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_credit_limit INTEGER DEFAULT 100;');
-  await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
+  await db.exec(
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_credit_limit INTEGER DEFAULT 100;',
+  );
+  await db.exec(
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_reset_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;',
+  );
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_logo_base64 TEXT;');
-  await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_primary_color TEXT DEFAULT '#00F2FE';");
-  await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_secondary_color TEXT DEFAULT '#9B51E0';");
+  await db.exec(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_primary_color TEXT DEFAULT '#00F2FE';",
+  );
+  await db.exec(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_secondary_color TEXT DEFAULT '#9B51E0';",
+  );
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS brand_font_path TEXT;');
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS personal_voice_base64 TEXT;');
 
@@ -324,20 +352,40 @@ export async function initDatabase() {
   // v6.0 Grup 1 columns
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS niche_profile TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS niche_enabled INTEGER DEFAULT 0;');
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_layout TEXT DEFAULT '50/50';");
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_layout TEXT DEFAULT '50/50';",
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS split_enabled INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS use_musetalk INTEGER DEFAULT 0;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS musetalk_enabled INTEGER DEFAULT 0;');
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_preset TEXT DEFAULT 'none';");
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_enabled INTEGER DEFAULT 0;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_enabled INTEGER DEFAULT 0;');
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS musetalk_enabled INTEGER DEFAULT 0;',
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_preset TEXT DEFAULT 'none';",
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS color_grade_enabled INTEGER DEFAULT 0;',
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_enabled INTEGER DEFAULT 0;',
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS sd_flux_prompt TEXT;');
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles_style TEXT DEFAULT 'bounce';");
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS kinetic_subtitles_style TEXT DEFAULT 'bounce';",
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS transcript_word_timings TEXT;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS storyboard_enabled INTEGER DEFAULT 0;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_enabled INTEGER DEFAULT 0;');
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_cut_enabled INTEGER DEFAULT 0;');
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_cut_preset TEXT DEFAULT 'silence';");
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS storyboard_enabled INTEGER DEFAULT 0;',
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_enabled INTEGER DEFAULT 0;',
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_cut_enabled INTEGER DEFAULT 0;',
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS auto_cut_preset TEXT DEFAULT 'silence';",
+  );
 
   // Edit queue table
   await db.exec(`CREATE TABLE IF NOT EXISTS edit_queue (
@@ -351,8 +399,12 @@ export async function initDatabase() {
     snapshot_path TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_voice TEXT DEFAULT 'Claribel Dervla';");
-  await db.exec("ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_source_lang TEXT DEFAULT 'tr';");
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_voice TEXT DEFAULT 'Claribel Dervla';",
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_source_lang TEXT DEFAULT 'tr';",
+  );
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_status TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS dubbing_output_path TEXT;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS music_volume REAL DEFAULT 0.2;');
@@ -364,25 +416,43 @@ export async function initDatabase() {
   await db.exec('ALTER TABLE clip_jobs ADD COLUMN IF NOT EXISTS max_retries INTEGER DEFAULT 3;');
 
   // Characters table Talk-Show columns migration (second schema)
-  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS slug VARCHAR(100) NOT NULL DEFAULT \'\'');
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS role_archetype VARCHAR(50) DEFAULT 'supporting'");
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS slug VARCHAR(100) NOT NULL DEFAULT ''",
+  );
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS role_archetype VARCHAR(50) DEFAULT 'supporting'",
+  );
   await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS reference_image_base64 TEXT');
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS tts_voice_id VARCHAR(100) DEFAULT ''");
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS voice_provider VARCHAR(20) DEFAULT 'edge'");
-  await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS tts_voice_id VARCHAR(100) DEFAULT ''",
+  );
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS voice_provider VARCHAR(20) DEFAULT 'edge'",
+  );
+  await db.exec(
+    'ALTER TABLE characters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+  );
 
   // Sprint 3.B Talk-Show character extensions
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(20) DEFAULT 'zen'");
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(20) DEFAULT 'zen'",
+  );
   await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_model VARCHAR(100)');
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_style VARCHAR(20) DEFAULT 'realistic'");
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_source VARCHAR(20) DEFAULT 'upload'");
-  await db.exec("ALTER TABLE characters ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#00F2FE'");
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_style VARCHAR(20) DEFAULT 'realistic'",
+  );
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS avatar_source VARCHAR(20) DEFAULT 'upload'",
+  );
+  await db.exec(
+    "ALTER TABLE characters ADD COLUMN IF NOT EXISTS color VARCHAR(7) DEFAULT '#00F2FE'",
+  );
   await db.exec('ALTER TABLE characters ADD COLUMN IF NOT EXISTS relationships TEXT');
 
   // Credit system migrations: admin flag + model-based pricing
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;');
   // Set existing admin user
-  await db.run("UPDATE users SET is_admin = 1 WHERE username = ?", [encryptUsername('admin')]);
+  await db.run('UPDATE users SET is_admin = 1 WHERE username = ?', [encryptUsername('admin')]);
 
   // Help videos table for tutorial/documentation videos
   await db.exec(`

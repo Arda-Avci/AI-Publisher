@@ -84,7 +84,7 @@ async function renderAgentScene(
   outputPath: string,
   w: number,
   h: number,
-  fps: number
+  fps: number,
 ): Promise<void> {
   const fontFile = resolveFont();
   const wrapped = wordWrap(content, 80);
@@ -102,12 +102,18 @@ async function renderAgentScene(
 
   const args = [
     '-y',
-    '-filter_complex', filterComplex,
-    '-map', '[out]',
-    '-c:v', 'libx264',
-    '-preset', 'medium',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[out]',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'medium',
+    '-crf',
+    '23',
+    '-pix_fmt',
+    'yuv420p',
     outputPath,
   ];
 
@@ -131,20 +137,25 @@ async function concatVideos(videoPaths: string[], outputPath: string): Promise<v
   }
   const dir = path.dirname(videoPaths[0]);
   const concatFile = path.join(dir, 'orch_concat.txt');
-  const content = videoPaths.map(v => `file '${v.replace(/'/g, "'\\''")}'`).join('\n');
+  const content = videoPaths.map((v) => `file '${v.replace(/'/g, "'\\''")}'`).join('\n');
   fs.writeFileSync(concatFile, content, 'utf-8');
 
   await new Promise<void>((resolve, reject) => {
-    execFile('ffmpeg', [
-      '-y', '-f', 'concat', '-safe', '0',
-      '-i', concatFile, '-c', 'copy', outputPath,
-    ], { timeout: 120000 }, (err) => {
-      if (err) reject(err); else resolve();
-    });
+    execFile(
+      'ffmpeg',
+      ['-y', '-f', 'concat', '-safe', '0', '-i', concatFile, '-c', 'copy', outputPath],
+      { timeout: 120000 },
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      },
+    );
   });
 }
 
-export async function orchestrateToVideo(input: OrchestratorVideoInput): Promise<OrchestratorVideoResult> {
+export async function orchestrateToVideo(
+  input: OrchestratorVideoInput,
+): Promise<OrchestratorVideoResult> {
   const fps = input.fps ?? 24;
   const res = input.resolution ?? { width: 1920, height: 1080 };
   const w = res.width;
@@ -160,10 +171,12 @@ export async function orchestrateToVideo(input: OrchestratorVideoInput): Promise
     const msg = input.result.transcript[i];
     const color = AGENT_COLORS[msg.role] || '#FFFFFF';
     const words = msg.content.split(/\s+/).length;
-    const duration = Math.max(4, Math.min(15, Math.ceil(words / 150 * 60)));
+    const duration = Math.max(4, Math.min(15, Math.ceil((words / 150) * 60)));
     const scenePath = path.join(workDir, `orch_scene_${i}.mp4`);
 
-    Logger.info(`[OrchToVideo] Scene ${i + 1}/${input.result.transcript.length}: ${msg.speaker} (${duration}s)`);
+    Logger.info(
+      `[OrchToVideo] Scene ${i + 1}/${input.result.transcript.length}: ${msg.speaker} (${duration}s)`,
+    );
 
     await renderAgentScene(msg.speaker, msg.content, color, duration, scenePath, w, h, fps);
     scenePaths.push(scenePath);
@@ -176,20 +189,38 @@ export async function orchestrateToVideo(input: OrchestratorVideoInput): Promise
   if (input.backgroundMusicPath && fs.existsSync(input.backgroundMusicPath)) {
     const finalVideo = input.outputPath;
     await new Promise<void>((resolve, reject) => {
-      execFile('ffmpeg', [
-        '-y', '-i', concatVideo, '-i', input.backgroundMusicPath!,
-        '-filter_complex',
-        `[1:a]afade=t=in:d=2,afade=t=out:st=${totalDuration - 2}:d=2,volume=0.15[bgm];[0:a][bgm]amix=inputs=2:duration=first[a_out]`,
-        '-map', '0:v', '-map', '[a_out]',
-        '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest',
-        finalVideo,
-      ], { timeout: 180000 }, (err) => {
-        if (err) {
-          Logger.warn(`[OrchToVideo] BGM mix failed, using silent: ${err.message}`);
-          fs.copyFileSync(concatVideo, finalVideo);
-        }
-        resolve();
-      });
+      execFile(
+        'ffmpeg',
+        [
+          '-y',
+          '-i',
+          concatVideo,
+          '-i',
+          input.backgroundMusicPath!,
+          '-filter_complex',
+          `[1:a]afade=t=in:d=2,afade=t=out:st=${totalDuration - 2}:d=2,volume=0.15[bgm];[0:a][bgm]amix=inputs=2:duration=first[a_out]`,
+          '-map',
+          '0:v',
+          '-map',
+          '[a_out]',
+          '-c:v',
+          'copy',
+          '-c:a',
+          'aac',
+          '-b:a',
+          '192k',
+          '-shortest',
+          finalVideo,
+        ],
+        { timeout: 180000 },
+        (err) => {
+          if (err) {
+            Logger.warn(`[OrchToVideo] BGM mix failed, using silent: ${err.message}`);
+            fs.copyFileSync(concatVideo, finalVideo);
+          }
+          resolve();
+        },
+      );
     });
   } else {
     if (fs.existsSync(input.outputPath)) fs.unlinkSync(input.outputPath);
@@ -197,11 +228,17 @@ export async function orchestrateToVideo(input: OrchestratorVideoInput): Promise
   }
 
   for (const p of scenePaths) {
-    try { fs.unlinkSync(p); } catch {}
+    try {
+      fs.unlinkSync(p);
+    } catch {}
   }
-  try { fs.unlinkSync(concatVideo); } catch {}
+  try {
+    fs.unlinkSync(concatVideo);
+  } catch {}
 
-  Logger.info(`[OrchToVideo] Done: ${input.outputPath} (${totalDuration.toFixed(1)}s, ${scenePaths.length} scenes)`);
+  Logger.info(
+    `[OrchToVideo] Done: ${input.outputPath} (${totalDuration.toFixed(1)}s, ${scenePaths.length} scenes)`,
+  );
 
   return {
     outputPath: input.outputPath,

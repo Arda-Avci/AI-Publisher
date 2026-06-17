@@ -26,12 +26,18 @@ const SPEAKER_COLORS: Record<string, string> = {
 export async function produceTalkShowVideo(
   discussion: SportotoDiscussion,
   outputPath: string,
-  options: { backgroundVideo?: string } = {}
+  options: { backgroundVideo?: string } = {},
 ): Promise<string> {
-  const workDir = path.join(process.cwd(), 'videolar', `talkshow_${discussion.sportoto_week}_${Date.now()}`);
+  const workDir = path.join(
+    process.cwd(),
+    'videolar',
+    `talkshow_${discussion.sportoto_week}_${Date.now()}`,
+  );
   await fs.ensureDir(workDir);
 
-  Logger.info(`[TalkShowProducer] Producing video for week ${discussion.sportoto_week} (${discussion.utterances.length} scenes)`);
+  Logger.info(
+    `[TalkShowProducer] Producing video for week ${discussion.sportoto_week} (${discussion.utterances.length} scenes)`,
+  );
 
   const scenePaths: string[] = [];
   const COLAB_URL = process.env.COLAB_URL;
@@ -55,8 +61,10 @@ export async function produceTalkShowVideo(
         body: JSON.stringify({
           mode: 'xtts',
           text: u.text,
-          voice: u.speaker === 'Moderator' || u.speaker === 'Futbolcu' || u.speaker === 'TeknikDirektor'
-            ? 'tr-TR-AhmetNeural' : 'tr-TR-EmelNeural',
+          voice:
+            u.speaker === 'Moderator' || u.speaker === 'Futbolcu' || u.speaker === 'TeknikDirektor'
+              ? 'tr-TR-AhmetNeural'
+              : 'tr-TR-EmelNeural',
           language: 'tr',
           task_id: `talkshow_${discussion.sportoto_week}_${i}`,
         }),
@@ -79,18 +87,26 @@ export async function produceTalkShowVideo(
       }
 
       // Fallback: if Colab TTS failed, use FFmpeg silent audio with correct duration
-      if (!await fs.pathExists(audioPath)) {
+      if (!(await fs.pathExists(audioPath))) {
         const wordCount = u.text.split(/\s+/).length;
-        const duration = Math.max(2, Math.ceil(wordCount / 150 * 60));
+        const duration = Math.max(2, Math.ceil((wordCount / 150) * 60));
         await runFFmpeg('ffmpeg', [
-          '-y', '-f', 'lavfi', '-i', `anullsrc=r=44100:cl=mono`,
-          '-t', String(duration), audioPath,
+          '-y',
+          '-f',
+          'lavfi',
+          '-i',
+          `anullsrc=r=44100:cl=mono`,
+          '-t',
+          String(duration),
+          audioPath,
         ]);
       }
 
       // 2. Get audio duration
       let audioDuration = 5;
-      try { audioDuration = await getVideoDuration(audioPath); } catch {}
+      try {
+        audioDuration = await getVideoDuration(audioPath);
+      } catch {}
 
       // 3. Create visual scene with speaker name + text
       const bgColor = speakerColor;
@@ -99,22 +115,40 @@ export async function produceTalkShowVideo(
 
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-f', 'lavfi', '-i', `color=c=#05070B:s=1920x1080:d=${audioDuration}:r=30`,
-        '-i', audioPath,
+        '-f',
+        'lavfi',
+        '-i',
+        `color=c=#05070B:s=1920x1080:d=${audioDuration}:r=30`,
+        '-i',
+        audioPath,
         '-filter_complex',
-        `[0:v]drawtext=text='${u.speaker}':fontcolor=${bgColor}:fontsize=36:x=(w-text_w)/2:y=h*0.15:fontfile='C\\:/Windows/Fonts/arial.ttf':box=1:boxcolor=black@0.4:boxborderw=8,`
-        + `drawtext=text='${escapeDrawtext(u.text.substring(0, 280))}':fontcolor=${textColor}:fontsize=${fontSize}:`
-        + `x=(w-text_w)/2:y=h*0.35:fontfile='C\\:/Windows/Fonts/arial.ttf':box=1:boxcolor=black@0.3:boxborderw=12`
-        + `:text_width=w*0.85:line_spacing=8`
-        + `[out]`,
-        '-map', '[out]', '-map', '1:a',
-        '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
-        '-c:a', 'aac', '-b:a', '128k',
-        '-shortest', scenePath,
+        `[0:v]drawtext=text='${u.speaker}':fontcolor=${bgColor}:fontsize=36:x=(w-text_w)/2:y=h*0.15:fontfile='C\\:/Windows/Fonts/arial.ttf':box=1:boxcolor=black@0.4:boxborderw=8,` +
+          `drawtext=text='${escapeDrawtext(u.text.substring(0, 280))}':fontcolor=${textColor}:fontsize=${fontSize}:` +
+          `x=(w-text_w)/2:y=h*0.35:fontfile='C\\:/Windows/Fonts/arial.ttf':box=1:boxcolor=black@0.3:boxborderw=12` +
+          `:text_width=w*0.85:line_spacing=8` +
+          `[out]`,
+        '-map',
+        '[out]',
+        '-map',
+        '1:a',
+        '-c:v',
+        'libx264',
+        '-preset',
+        'fast',
+        '-crf',
+        '23',
+        '-c:a',
+        'aac',
+        '-b:a',
+        '128k',
+        '-shortest',
+        scenePath,
       ]);
 
       scenePaths.push(scenePath);
-      Logger.info(`[TalkShowProducer] Scene ${i + 1}/${discussion.utterances.length} created: "${u.speaker}"`);
+      Logger.info(
+        `[TalkShowProducer] Scene ${i + 1}/${discussion.utterances.length} created: "${u.speaker}"`,
+      );
     } catch (err) {
       Logger.warn(`[TalkShowProducer] Scene ${i} failed, skipping:`, err);
     }
@@ -126,12 +160,20 @@ export async function produceTalkShowVideo(
   }
 
   const concatList = path.join(workDir, 'concat.txt');
-  const concatContent = scenePaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
+  const concatContent = scenePaths.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n');
   await fs.writeFile(concatList, concatContent, 'utf-8');
 
   await runFFmpeg('ffmpeg', [
-    '-y', '-f', 'concat', '-safe', '0', '-i', concatList,
-    '-c', 'copy', outputPath,
+    '-y',
+    '-f',
+    'concat',
+    '-safe',
+    '0',
+    '-i',
+    concatList,
+    '-c',
+    'copy',
+    outputPath,
   ]);
 
   // Cleanup temp dir
@@ -161,7 +203,7 @@ async function pollColabTask(taskId: string, maxAttempts = 30): Promise<void> {
       const data = await resp.json();
       if (data.status === 'success' || data.stage === 'done') return;
     } catch {}
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
   }
   Logger.warn(`[TalkShowProducer] Colab task ${taskId} timed out`);
 }

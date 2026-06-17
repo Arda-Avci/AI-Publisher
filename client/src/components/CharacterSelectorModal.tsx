@@ -11,7 +11,9 @@ export function extractCharacterNames(text: string): string[] {
 interface CharacterSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (characterMap: Record<string, { name: string; description: string; isNew: boolean }>) => void;
+  onConfirm: (
+    characterMap: Record<string, { name: string; description: string; isNew: boolean }>,
+  ) => void;
   detectedNames: string[];
   existingCharacters: Array<{ id: number; name: string; description: string; slug: string }>;
   csrfToken: string;
@@ -31,34 +33,49 @@ interface AssignState {
 
 const sty: Record<string, React.CSSProperties> = {
   overlay: {
-    position: 'fixed', inset: 0, zIndex: 9999,
+    position: 'fixed',
+    inset: 0,
+    zIndex: 9999,
     background: 'rgba(0,0,0,0.7)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     backdropFilter: 'blur(4px)',
   },
   modal: {
     background: 'linear-gradient(135deg, rgba(7,10,20,0.97), rgba(15,20,40,0.95))',
     border: '1px solid var(--border)',
     borderRadius: '16px',
-    width: '90%', maxWidth: '700px', maxHeight: '85vh',
-    display: 'flex', flexDirection: 'column',
+    width: '90%',
+    maxWidth: '700px',
+    maxHeight: '85vh',
+    display: 'flex',
+    flexDirection: 'column',
     boxShadow: '0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
     overflow: 'hidden',
   },
   header: {
     padding: '20px 24px',
     borderBottom: '1px solid var(--border)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     flexShrink: 0,
   },
   title: {
-    fontSize: '16px', fontWeight: 700, color: 'white',
-    display: 'flex', alignItems: 'center', gap: '10px',
+    fontSize: '16px',
+    fontWeight: 700,
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
   },
   body: {
     padding: '20px 24px',
     overflowY: 'auto',
-    display: 'flex', flexDirection: 'column', gap: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
     flex: 1,
   },
   item: {
@@ -66,19 +83,30 @@ const sty: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border)',
     borderRadius: '10px',
     padding: '16px',
-    display: 'flex', flexDirection: 'column', gap: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
   },
   itemHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   itemName: {
-    fontSize: '14px', fontWeight: 600, color: 'white',
-    display: 'flex', alignItems: 'center', gap: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
     fontFamily: 'monospace',
   },
   badge: {
-    fontSize: '10px', padding: '2px 10px', borderRadius: '10px',
-    fontWeight: 600, whiteSpace: 'nowrap' as const,
+    fontSize: '10px',
+    padding: '2px 10px',
+    borderRadius: '10px',
+    fontWeight: 600,
+    whiteSpace: 'nowrap' as const,
   },
   badgeAssigned: {
     background: 'rgba(34, 197, 94, 0.15)',
@@ -94,23 +122,35 @@ const sty: Record<string, React.CSSProperties> = {
     width: '100%',
     background: '#070a14',
     border: '1px solid var(--border)',
-    borderRadius: '6px', color: 'white',
-    padding: '8px 12px', fontSize: '12px', outline: 'none',
+    borderRadius: '6px',
+    color: 'white',
+    padding: '8px 12px',
+    fontSize: '12px',
+    outline: 'none',
   },
   input: {
-    flex: 1, minWidth: '120px',
+    flex: 1,
+    minWidth: '120px',
     background: '#070a14',
     border: '1px solid var(--border)',
-    borderRadius: '6px', color: 'white',
-    padding: '8px 12px', fontSize: '12px', outline: 'none',
+    borderRadius: '6px',
+    color: 'white',
+    padding: '8px 12px',
+    fontSize: '12px',
+    outline: 'none',
   },
   textarea: {
-    flex: 2, minWidth: '180px',
+    flex: 2,
+    minWidth: '180px',
     background: '#070a14',
     border: '1px solid var(--border)',
-    borderRadius: '6px', color: 'white',
-    padding: '8px 12px', fontSize: '12px', outline: 'none',
-    resize: 'vertical' as const, minHeight: '48px',
+    borderRadius: '6px',
+    color: 'white',
+    padding: '8px 12px',
+    fontSize: '12px',
+    outline: 'none',
+    resize: 'vertical' as const,
+    minHeight: '48px',
     fontFamily: 'inherit',
   },
   btnAi: {
@@ -119,32 +159,45 @@ const sty: Record<string, React.CSSProperties> = {
     borderRadius: '6px',
     color: 'rgb(168, 85, 247)',
     padding: '8px 14px',
-    fontSize: '11px', fontWeight: 600,
+    fontSize: '11px',
+    fontWeight: 600,
     cursor: 'pointer',
-    display: 'flex', alignItems: 'center', gap: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
     whiteSpace: 'nowrap' as const,
     transition: 'all 0.15s ease',
   },
   btnAiDisabled: {
-    opacity: 0.5, cursor: 'not-allowed',
+    opacity: 0.5,
+    cursor: 'not-allowed',
   },
   footer: {
     padding: '16px 24px',
     borderTop: '1px solid var(--border)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    gap: '12px', flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexShrink: 0,
   },
   btnPrimary: {
     background: 'var(--primary)',
-    border: 'none', borderRadius: '8px',
-    color: 'white', padding: '10px 20px',
-    fontSize: '13px', fontWeight: 600,
+    border: 'none',
+    borderRadius: '8px',
+    color: 'white',
+    padding: '10px 20px',
+    fontSize: '13px',
+    fontWeight: 600,
     cursor: 'pointer',
-    display: 'flex', alignItems: 'center', gap: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
     transition: 'all 0.15s ease',
   },
   btnDisabled: {
-    opacity: 0.4, cursor: 'not-allowed',
+    opacity: 0.4,
+    cursor: 'not-allowed',
   },
   btnCancel: {
     background: 'transparent',
@@ -154,16 +207,23 @@ const sty: Record<string, React.CSSProperties> = {
     padding: '10px 20px',
     fontSize: '13px',
     cursor: 'pointer',
-    display: 'flex', alignItems: 'center', gap: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
     transition: 'all 0.15s ease',
   },
   errorText: {
-    fontSize: '11px', color: 'rgba(239, 68, 68, 0.85)',
-    display: 'flex', alignItems: 'center', gap: '4px',
+    fontSize: '11px',
+    color: 'rgba(239, 68, 68, 0.85)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
   },
   empty: {
-    padding: '40px 24px', textAlign: 'center' as const,
-    fontSize: '13px', color: 'var(--text-muted)',
+    padding: '40px 24px',
+    textAlign: 'center' as const,
+    fontSize: '13px',
+    color: 'var(--text-muted)',
   },
 };
 
@@ -191,14 +251,14 @@ export function CharacterSelectorModal({
           error: '',
           aiName: '',
           aiDescription: '',
-        }))
+        })),
       );
     }
   }, [isOpen, detectedNames]);
 
   const update = (sourceName: string, patch: Partial<AssignState>) => {
     setAssignments((prev) =>
-      prev.map((a) => (a.sourceName === sourceName ? { ...a, ...patch } : a))
+      prev.map((a) => (a.sourceName === sourceName ? { ...a, ...patch } : a)),
     );
   };
 
@@ -208,8 +268,11 @@ export function CharacterSelectorModal({
       return;
     }
     update(sourceName, {
-      type: 'existing', existingId: Number(value),
-      error: '', newName: '', newDescription: '',
+      type: 'existing',
+      existingId: Number(value),
+      error: '',
+      newName: '',
+      newDescription: '',
     });
   };
 
@@ -246,7 +309,8 @@ export function CharacterSelectorModal({
       if (!res.ok) throw new Error('AI üretimi başarısız');
       const data = await res.json();
       update(sourceName, {
-        type: 'ai', generating: false,
+        type: 'ai',
+        generating: false,
         aiName: data.name || sourceName,
         aiDescription: data.description || '',
         existingId: null,
@@ -279,14 +343,15 @@ export function CharacterSelectorModal({
         if (!res.ok) throw new Error(`AI failed for ${a.sourceName}`);
         const data = await res.json();
         return { sourceName: a.sourceName, data };
-      })
+      }),
     );
     for (let i = 0; i < results.length; i++) {
       const r = results[i];
       const name = unassigned[i].sourceName;
       if (r.status === 'fulfilled') {
         update(name, {
-          type: 'ai', generating: false,
+          type: 'ai',
+          generating: false,
           aiName: r.value.data.name || name,
           aiDescription: r.value.data.description || '',
           existingId: null,
@@ -307,9 +372,17 @@ export function CharacterSelectorModal({
           map[a.sourceName] = { name: found.name, description: found.description, isNew: false };
         }
       } else if (a.type === 'new') {
-        map[a.sourceName] = { name: a.newName || a.sourceName, description: a.newDescription, isNew: true };
+        map[a.sourceName] = {
+          name: a.newName || a.sourceName,
+          description: a.newDescription,
+          isNew: true,
+        };
       } else if (a.type === 'ai') {
-        map[a.sourceName] = { name: a.aiName || a.sourceName, description: a.aiDescription, isNew: true };
+        map[a.sourceName] = {
+          name: a.aiName || a.sourceName,
+          description: a.aiDescription,
+          isNew: true,
+        };
       }
     }
     return map;
@@ -324,7 +397,9 @@ export function CharacterSelectorModal({
   return (
     <div
       style={sty.overlay}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div style={sty.modal}>
         <div style={sty.header}>
@@ -334,7 +409,13 @@ export function CharacterSelectorModal({
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+            }}
           >
             <X size={18} style={{ color: 'var(--text-muted)' }} />
           </button>
@@ -348,8 +429,18 @@ export function CharacterSelectorModal({
         ) : (
           <div style={sty.body}>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-              Aşağıdaki karakterler prompt'unuzda <code style={{ background: 'rgba(0,242,254,0.08)', padding: '1px 4px', borderRadius: '3px' }}>@</code> ile işaretlendi.
-              Her birini var olan bir karakterle eşleştirin, yeni karakter tanımlayın veya AI'ya oluşturtun.
+              Aşağıdaki karakterler prompt'unuzda{' '}
+              <code
+                style={{
+                  background: 'rgba(0,242,254,0.08)',
+                  padding: '1px 4px',
+                  borderRadius: '3px',
+                }}
+              >
+                @
+              </code>{' '}
+              ile işaretlendi. Her birini var olan bir karakterle eşleştirin, yeni karakter
+              tanımlayın veya AI'ya oluşturtun.
             </p>
             {assignments.map((a) => {
               const assigned = a.type !== null;
@@ -371,10 +462,12 @@ export function CharacterSelectorModal({
                       <Users size={14} style={{ color: 'var(--primary)' }} />
                       <span>@{a.sourceName}</span>
                     </div>
-                    <span style={{
-                      ...sty.badge,
-                      ...(assigned ? sty.badgeAssigned : sty.badgePending),
-                    }}>
+                    <span
+                      style={{
+                        ...sty.badge,
+                        ...(assigned ? sty.badgeAssigned : sty.badgePending),
+                      }}
+                    >
                       {assigned ? `Atandı: ${assignedLabel}` : 'Bekliyor'}
                     </span>
                   </div>
@@ -429,10 +522,15 @@ export function CharacterSelectorModal({
                   )}
 
                   {assigned && (
-                    <div style={{
-                      fontSize: '11px', color: 'rgb(34, 197, 94)',
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                    }}>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: 'rgb(34, 197, 94)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
                       <Check size={12} />
                       {a.type === 'existing'
                         ? `${assignedLabel} karakterine eşleştirildi`
@@ -460,11 +558,7 @@ export function CharacterSelectorModal({
                 disabled={isGenerating}
                 style={{ ...sty.btnAi, ...(isGenerating ? sty.btnAiDisabled : {}) }}
               >
-                {globalGenerating ? (
-                  <Loader size={12} className="pulse" />
-                ) : (
-                  <Sparkles size={12} />
-                )}
+                {globalGenerating ? <Loader size={12} className="pulse" /> : <Sparkles size={12} />}
                 Tüm Karakterleri AI Oluştursun
               </button>
             )}
@@ -479,7 +573,7 @@ export function CharacterSelectorModal({
               disabled={!allAssigned || isGenerating}
               style={{
                 ...sty.btnPrimary,
-                ...((!allAssigned || isGenerating) ? sty.btnDisabled : {}),
+                ...(!allAssigned || isGenerating ? sty.btnDisabled : {}),
               }}
             >
               <Check size={14} />

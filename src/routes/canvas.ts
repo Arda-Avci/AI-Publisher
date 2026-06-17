@@ -110,7 +110,13 @@ router.patch('/:canvasId/nodes/:nodeId', async (req, res) => {
     const { x, y, width, height, data, status, dependencies } = req.body;
 
     const node = await infiniteCanvas.updateNode(req.params.canvasId, req.params.nodeId, {
-      x, y, width, height, data, status, dependencies,
+      x,
+      y,
+      width,
+      height,
+      data,
+      status,
+      dependencies,
     });
 
     if (!node) {
@@ -153,7 +159,12 @@ router.post('/:id/connections', async (req, res) => {
       return res.status(400).json({ error: 'fromNodeId and toNodeId are required' });
     }
 
-    const connection = await infiniteCanvas.addConnection(req.params.id, fromNodeId, toNodeId, label);
+    const connection = await infiniteCanvas.addConnection(
+      req.params.id,
+      fromNodeId,
+      toNodeId,
+      label,
+    );
     if (!connection) {
       return res.status(404).json({ error: 'Canvas or nodes not found' });
     }
@@ -171,7 +182,10 @@ router.post('/:id/connections', async (req, res) => {
  */
 router.delete('/:canvasId/connections/:connectionId', async (req, res) => {
   try {
-    const success = await infiniteCanvas.deleteConnection(req.params.canvasId, req.params.connectionId);
+    const success = await infiniteCanvas.deleteConnection(
+      req.params.canvasId,
+      req.params.connectionId,
+    );
     if (!success) {
       return res.status(404).json({ error: 'Connection not found' });
     }

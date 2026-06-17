@@ -47,7 +47,11 @@ interface StableSegment {
 /**
  * Chunk frames into stable segments where face position doesn't change significantly
  */
-export function chunkStableSegments(frames: CropFrame[], threshold: number = 50, minDuration: number = 0.5): StableSegment[] {
+export function chunkStableSegments(
+  frames: CropFrame[],
+  threshold: number = 50,
+  minDuration: number = 0.5,
+): StableSegment[] {
   if (frames.length === 0) return [];
 
   const segments: StableSegment[] = [];
@@ -123,7 +127,7 @@ function runFaceTrackerWorker(
   videoPath: string,
   startTime: number = 0,
   duration?: number,
-  timeoutMs: number = 120000
+  timeoutMs: number = 120000,
 ): Promise<FaceTrackResult> {
   return new Promise((resolve, reject) => {
     const workerPath = path.join(process.cwd(), 'src', 'workers', 'face-track-worker.py');
@@ -206,7 +210,7 @@ export class FaceTrackerService {
     options: {
       startTime?: number;
       duration?: number;
-    } = {}
+    } = {},
   ): Promise<FaceTrackResult> {
     const { startTime = 0, duration } = options;
 
@@ -219,7 +223,9 @@ export class FaceTrackerService {
         throw new Error(result.error);
       }
 
-      Logger.info(`[FaceTracker] Detected ${result.frames.length} face positions over ${result.duration}s`);
+      Logger.info(
+        `[FaceTracker] Detected ${result.frames.length} face positions over ${result.duration}s`,
+      );
       return result;
     } catch (error) {
       Logger.error(`[FaceTracker] Face tracking failed:`, error);
@@ -237,14 +243,9 @@ export class FaceTrackerService {
       duration?: number;
       stabilityThreshold?: number;
       minSegmentDuration?: number;
-    } = {}
+    } = {},
   ): Promise<StableSegment[]> {
-    const {
-      startTime = 0,
-      duration,
-      stabilityThreshold = 50,
-      minSegmentDuration = 0.5,
-    } = options;
+    const { startTime = 0, duration, stabilityThreshold = 50, minSegmentDuration = 0.5 } = options;
 
     const result = await this.trackFaces(inputPath, { startTime, duration });
 
@@ -263,15 +264,15 @@ export class FaceTrackerService {
     videoWidth: number,
     videoHeight: number,
     targetWidth: number = 1080,
-    targetHeight: number = 1920
+    targetHeight: number = 1920,
   ): string {
     // Calculate crop window centered on face
     const cropW = Math.round(videoHeight * (9 / 16)); // 9:16 aspect ratio
     const cropH = videoHeight;
 
     // Center crop around face position
-    let cropX = Math.max(0, Math.min(videoWidth - cropW, segment.cropX - cropW / 2));
-    let cropY = 0; // Always crop from top for vertical format
+    const cropX = Math.max(0, Math.min(videoWidth - cropW, segment.cropX - cropW / 2));
+    const cropY = 0; // Always crop from top for vertical format
 
     // Build crop filter with scale and pad
     return `crop=${cropW}:${cropH}:${Math.round(cropX)}:${Math.round(cropY)},scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2`;

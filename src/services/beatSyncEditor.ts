@@ -5,16 +5,21 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { runFFmpeg, runFFmpegWithFallback, getVideoDuration, concatVideosWithCrossfade } from './videoService';
+import {
+  runFFmpeg,
+  runFFmpegWithFallback,
+  getVideoDuration,
+  concatVideosWithCrossfade,
+} from './videoService';
 import { Logger } from '../lib/logger';
 import { BeatMarker } from './beatAnalyzer';
 
 export interface BeatSyncOptions {
   videoPath: string;
   audioPath?: string;
-  crossfadeDur?: number;    // default 0.5s
-  minSegmentDur?: number;   // minimum cut segment, default 2.0s
-  alignToBeats?: boolean;   // true = cut on beats
+  crossfadeDur?: number; // default 0.5s
+  minSegmentDur?: number; // minimum cut segment, default 2.0s
+  alignToBeats?: boolean; // true = cut on beats
 }
 
 /**
@@ -31,20 +36,27 @@ async function extractSegment(
   videoPath: string,
   outputPath: string,
   startTime: number,
-  endTime: number
+  endTime: number,
 ): Promise<void> {
   const duration = endTime - startTime;
 
   await runFFmpeg('ffmpeg', [
     '-y',
-    '-ss', startTime.toFixed(3),
-    '-i', videoPath,
-    '-t', duration.toFixed(3),
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    outputPath
+    '-ss',
+    startTime.toFixed(3),
+    '-i',
+    videoPath,
+    '-t',
+    duration.toFixed(3),
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    outputPath,
   ]);
 }
 
@@ -57,21 +69,23 @@ async function extractSegment(
 export async function applyBeatSync(
   options: BeatSyncOptions,
   beatMarkers: BeatMarker[],
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   const {
     videoPath,
     audioPath,
     crossfadeDur = 0.5,
     minSegmentDur = 2.0,
-    alignToBeats = true
+    alignToBeats = true,
   } = options;
 
   Logger.info(`[BeatSync] Starting beat-sync editing: ${videoPath}`);
-  Logger.info(`[BeatSync] Options: crossfade=${crossfadeDur}s, minSegment=${minSegmentDur}s, alignToBeats=${alignToBeats}`);
+  Logger.info(
+    `[BeatSync] Options: crossfade=${crossfadeDur}s, minSegment=${minSegmentDur}s, alignToBeats=${alignToBeats}`,
+  );
 
   // Validate inputs
-  if (!await fs.pathExists(videoPath)) {
+  if (!(await fs.pathExists(videoPath))) {
     throw new Error(`Video file not found: ${videoPath}`);
   }
 
@@ -126,14 +140,19 @@ export async function applyBeatSync(
       await extractSegment(videoPath, segmentPath, startTime, endTime);
       segmentPaths.push(segmentPath);
 
-      Logger.debug(`[BeatSync] Extracted segment ${i}: ${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s`);
+      Logger.debug(
+        `[BeatSync] Extracted segment ${i}: ${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s`,
+      );
     }
 
     // Handle remaining portion after last cut point
     const lastValidIdx = validCutPoints[validCutPoints.length - 1];
     const lastStartTime = beatMarkers[lastValidIdx].timestamp;
     if (videoDuration - lastStartTime >= minSegmentDur) {
-      const segmentPath = path.join(tempDir, `segment_${(validCutPoints.length - 1).toString().padStart(3, '0')}.mp4`);
+      const segmentPath = path.join(
+        tempDir,
+        `segment_${(validCutPoints.length - 1).toString().padStart(3, '0')}.mp4`,
+      );
       await extractSegment(videoPath, segmentPath, lastStartTime, videoDuration);
       segmentPaths.push(segmentPath);
     }
@@ -157,7 +176,7 @@ export async function applyBeatSync(
     }
 
     // Mix in external audio if provided
-    if (audioPath && await fs.pathExists(audioPath)) {
+    if (audioPath && (await fs.pathExists(audioPath))) {
       const withAudioPath = outputPath.replace('.mp4', '_with_audio.mp4');
       await mixAudioWithBeatSync(outputPath, audioPath, withAudioPath);
       await fs.rename(withAudioPath, outputPath);
@@ -177,7 +196,7 @@ export async function applyBeatSync(
 async function applyEvenBeatSync(
   options: BeatSyncOptions,
   beatMarkers: BeatMarker[],
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   const { videoPath, audioPath, crossfadeDur = 0.5 } = options;
 
@@ -226,7 +245,7 @@ async function applyEvenBeatSync(
     }
 
     // Mix audio if provided
-    if (audioPath && await fs.pathExists(audioPath)) {
+    if (audioPath && (await fs.pathExists(audioPath))) {
       const withAudioPath = outputPath.replace('.mp4', '_with_audio.mp4');
       await mixAudioWithBeatSync(outputPath, audioPath, withAudioPath);
       await fs.rename(withAudioPath, outputPath);
@@ -245,25 +264,32 @@ async function applyEvenBeatSync(
 async function mixAudioWithBeatSync(
   videoPath: string,
   musicPath: string,
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   const filter = [
     `[0:a]volume=1.0[original]`,
     `[1:a]volume=0.3[music]`,
-    `[original][music]amix=inputs=2:duration=first:dropout_transition=0[aout]`
+    `[original][music]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
   ].join(';');
 
   await runFFmpeg('ffmpeg', [
     '-y',
-    '-i', videoPath,
-    '-i', musicPath,
-    '-filter_complex', filter,
-    '-map', '0:v',
-    '-map', '[aout]',
-    '-c:v', 'copy',
-    '-c:a', 'aac',
+    '-i',
+    videoPath,
+    '-i',
+    musicPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:v',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'aac',
     '-shortest',
-    outputPath
+    outputPath,
   ]);
 }
 
@@ -274,7 +300,7 @@ async function mixAudioWithBeatSync(
 export async function quickBeatSync(
   videoPath: string,
   outputPath: string,
-  bpm?: number
+  bpm?: number,
 ): Promise<void> {
   const { buildBeatMarkers } = await import('./beatAnalyzer.js');
 
@@ -290,33 +316,33 @@ export async function quickBeatSync(
       videoPath,
       crossfadeDur: 0.5,
       minSegmentDur: 2.0,
-      alignToBeats: true
+      alignToBeats: true,
     },
     beats,
-    outputPath
+    outputPath,
   );
 }
 
 // ── Extended Beat-Sync Editor Functions ───────────────────────────────────────
 
 export interface AudioSegment {
-  start: number;   // seconds
-  end: number;     // seconds
+  start: number; // seconds
+  end: number; // seconds
   energy: number;
 }
 
 export interface BeatCutPoint {
-  timestamp: number;   // seconds
+  timestamp: number; // seconds
   beatNumber: number;
   strength: number;
 }
 
 export interface BeatCutOptions {
-  bpm?: number;                    // Override BPM detection
-  energyThreshold?: number;        // Peak detection threshold (0-1)
-  minSegmentDuration?: number;     // Minimum segment duration in seconds
-  crossfadeDuration?: number;      // Crossfade duration between segments
-  onsetsOnly?: boolean;           // Use onset detection vs energy peaks
+  bpm?: number; // Override BPM detection
+  energyThreshold?: number; // Peak detection threshold (0-1)
+  minSegmentDuration?: number; // Minimum segment duration in seconds
+  crossfadeDuration?: number; // Crossfade duration between segments
+  onsetsOnly?: boolean; // Use onset detection vs energy peaks
 }
 
 /**
@@ -326,7 +352,7 @@ export interface BeatCutOptions {
  * @returns Object with bpm, peaks array, and segments array
  */
 export async function analyzeAudioBPM(
-  audioPath: string
+  audioPath: string,
 ): Promise<{ bpm: number; peaks: number[]; segments: AudioSegment[] }> {
   const { execFile } = require('child_process');
   const util = require('util');
@@ -390,14 +416,20 @@ if __name__ == "__main__":
     const { stdout } = await execFileAsync(
       process.platform === 'win32' ? 'python' : 'python3',
       [scriptPath, audioPath],
-      { timeout: 60000 }
+      { timeout: 60000 },
     );
     return JSON.parse(stdout.trim());
   } catch (err) {
     Logger.warn('[beatSyncEditor] Python librosa failed, using fallback', err);
     // Fallback: return default 120 BPM
     const { stdout: durStr } = await runFFmpeg('ffprobe', [
-      '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', audioPath
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'csv=p=0',
+      audioPath,
     ]);
     const duration = parseFloat(durStr.trim()) || 30;
     const bpm = 120;
@@ -425,12 +457,9 @@ if __name__ == "__main__":
 export async function findBeatCutPoints(
   audioPath: string,
   videoPath: string,
-  options?: BeatCutOptions
+  options?: BeatCutOptions,
 ): Promise<BeatCutPoint[]> {
-  const {
-    bpm: overrideBpm,
-    minSegmentDuration = 2.0
-  } = options || {};
+  const { bpm: overrideBpm, minSegmentDuration = 2.0 } = options || {};
 
   // Get BPM from analysis or override
   const analysis = await analyzeAudioBPM(audioPath);
@@ -456,7 +485,7 @@ export async function findBeatCutPoints(
     cutPoints.push({
       timestamp: Math.round(timestamp * 1000) / 1000,
       beatNumber,
-      strength: beatNumber % 4 === 0 ? 1.0 : 0.7
+      strength: beatNumber % 4 === 0 ? 1.0 : 0.7,
     });
     beatNumber++;
   }
@@ -475,7 +504,7 @@ export async function findBeatCutPoints(
 export async function applyBeatSyncCuts(
   videoPath: string,
   cutPoints: BeatCutPoint[],
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   if (cutPoints.length < 2) {
     await fs.copy(videoPath, outputPath);
@@ -495,13 +524,19 @@ export async function applyBeatSyncCuts(
 
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-ss', startTime.toFixed(3),
-        '-i', videoPath,
-        '-t', (endTime - startTime).toFixed(3),
-        '-c:v', 'libx264',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        segPath
+        '-ss',
+        startTime.toFixed(3),
+        '-i',
+        videoPath,
+        '-t',
+        (endTime - startTime).toFixed(3),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        segPath,
       ]);
       segmentPaths.push(segPath);
     }
@@ -510,15 +545,23 @@ export async function applyBeatSyncCuts(
     const lastStart = cutPoints[cutPoints.length - 1].timestamp;
     const duration = await getVideoDuration(videoPath);
     if (duration - lastStart >= 1.0) {
-      const lastSegPath = path.join(tempDir, `seg_${String(cutPoints.length - 1).padStart(3, '0')}.mp4`);
+      const lastSegPath = path.join(
+        tempDir,
+        `seg_${String(cutPoints.length - 1).padStart(3, '0')}.mp4`,
+      );
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-ss', lastStart.toFixed(3),
-        '-i', videoPath,
-        '-c:v', 'libx264',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        lastSegPath
+        '-ss',
+        lastStart.toFixed(3),
+        '-i',
+        videoPath,
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        lastSegPath,
       ]);
       segmentPaths.push(lastSegPath);
     }
@@ -529,25 +572,31 @@ export async function applyBeatSyncCuts(
     } else {
       const concatFile = path.join(tempDir, 'concat.txt');
       const concatContent = segmentPaths
-        .map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`)
+        .map((p) => `file '${path.resolve(p).replace(/\\/g, '/')}'`)
         .join('\n');
       await fs.writeFile(concatFile, concatContent);
 
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', concatFile,
-        '-c:v', 'libx264',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        outputPath
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        concatFile,
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        outputPath,
       ]);
     }
 
     Logger.info('[beatSyncEditor] applyBeatSyncCuts complete', {
       outputPath,
-      segmentCount: segmentPaths.length
+      segmentCount: segmentPaths.length,
     });
   } finally {
     await fs.remove(tempDir);
@@ -564,26 +613,33 @@ export async function applyBeatSyncCuts(
 export async function addMotionBlurBetweenCuts(
   videoPath: string,
   outputPath: string,
-  blurAmount = 0.5
+  blurAmount = 0.5,
 ): Promise<void> {
   // Use FFmpeg minterpolate for motion blur effect at cut points
   // Also apply a slight boxblur at transitions
   const filter = [
     `[0:v]split=2[copy][blur]`,
     `[blur]boxblur=3:3[blurred]`,
-    `[copy][blurred]overlay=0:0:enable='between(t,0,0.1)'[out]`
+    `[copy][blurred]overlay=0:0:enable='between(t,0,0.1)'[out]`,
   ].join(';');
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-filter_complex', filter,
-    '-map', '[out]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    outputPath
+    '-i',
+    videoPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '[out]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    outputPath,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);

@@ -13,13 +13,23 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
 import { Logger } from '../../lib/logger.js';
 import {
-  AgentMessage, AgentPromptContext, AgentRole, MatchContext,
-  OrchestratorInput, OrchestratorResult, Sentiment,
+  AgentMessage,
+  AgentPromptContext,
+  AgentRole,
+  MatchContext,
+  OrchestratorInput,
+  OrchestratorResult,
+  Sentiment,
 } from './types.js';
 import {
-  fetchInjuries, fetchMatchFeed as stubFetchMatchFeed,
-  fetchOdds, fetchWeather,
-  InjuryReport, MatchFeed, OddsSnapshot, WeatherSnapshot,
+  fetchInjuries,
+  fetchMatchFeed as stubFetchMatchFeed,
+  fetchOdds,
+  fetchWeather,
+  InjuryReport,
+  MatchFeed,
+  OddsSnapshot,
+  WeatherSnapshot,
 } from './dataSources.js';
 import {
   fetchMatchFeed as apiFetchMatchFeed,
@@ -31,15 +41,15 @@ const ROUNDS_DEFAULT = 3;
 
 const AGENT_META: Record<AgentRole, { name: string; provider: string }> = {
   meta_orchestrator: { name: 'Sunucu', provider: 'zen' },
-  match_analyst:     { name: 'Maç Yorumcusu', provider: 'gemini' },
-  former_player:     { name: 'Eski Futbolcu', provider: 'claude' },
-  bookmaker:         { name: 'Kumarbaz', provider: 'deepseek' },
-  data_scout:        { name: 'İstihbarat Subayı', provider: 'zen' },
+  match_analyst: { name: 'Maç Yorumcusu', provider: 'gemini' },
+  former_player: { name: 'Eski Futbolcu', provider: 'claude' },
+  bookmaker: { name: 'Kumarbaz', provider: 'deepseek' },
+  data_scout: { name: 'İstihbarat Subayı', provider: 'zen' },
 };
 
 function getAgentName(role: AgentRole, characters?: OrchestratorInput['characters']): string {
   if (characters) {
-    const match = characters.find(c => c.role === role);
+    const match = characters.find((c) => c.role === role);
     if (match) return match.name;
   }
   return AGENT_META[role]?.name || role;
@@ -89,7 +99,11 @@ function averageConfidence(messages: AgentMessage[]): number {
 
 // --- Fallback template responses (no AI required) ---
 
-function fallbackMessage(role: AgentRole, ctx: AgentPromptContext, deps: MatchBundle): AgentMessage {
+function fallbackMessage(
+  role: AgentRole,
+  ctx: AgentPromptContext,
+  deps: MatchBundle,
+): AgentMessage {
   const speaker = AGENT_META[role].name;
   const base: Pick<AgentMessage, 'role' | 'speaker' | 'timestamp'> = {
     role,
@@ -127,9 +141,9 @@ function fallbackMessage(role: AgentRole, ctx: AgentPromptContext, deps: MatchBu
       };
     }
     case 'bookmaker': {
-      const home = deps.odds[0]?.home ?? 2.10;
-      const draw = deps.odds[0]?.draw ?? 3.40;
-      const away = deps.odds[0]?.away ?? 3.20;
+      const home = deps.odds[0]?.home ?? 2.1;
+      const draw = deps.odds[0]?.draw ?? 3.4;
+      const away = deps.odds[0]?.away ?? 3.2;
       const fav = home < away ? 'home' : 'away';
       const valueEdge = Math.abs(1 / home - 1 / away) * 0.05;
       return {
@@ -137,11 +151,15 @@ function fallbackMessage(role: AgentRole, ctx: AgentPromptContext, deps: MatchBu
         content: `Piyasa oranları ev sahibi ${home.toFixed(2)} / beraberlik ${draw.toFixed(2)} / deplasman ${away.toFixed(2)} veriyor. ${fav === 'home' ? 'Ev sahibi kısalıyor' : 'Deplasman short süreli hareketli'}; %${(valueEdge * 100).toFixed(1)} Kelly kenarı var.`,
         confidence: 0.7,
         sentiment: fav === 'home' ? 'bullish' : 'bearish',
-        evidence: deps.odds.map((o) => `${o.bookmaker}: ${o.home}-${o.draw}-${o.away} (${o.movement})`),
+        evidence: deps.odds.map(
+          (o) => `${o.bookmaker}: ${o.home}-${o.draw}-${o.away} (${o.movement})`,
+        ),
       };
     }
     case 'data_scout': {
-      const injuries = deps.injuries.map((i) => `${i.team.toUpperCase()} ${i.player} (${i.status})`).join(', ');
+      const injuries = deps.injuries
+        .map((i) => `${i.team.toUpperCase()} ${i.player} (${i.status})`)
+        .join(', ');
       return {
         ...base,
         content: `Saha: ${deps.weather.tempC}°C ${deps.weather.condition}, rüzgar ${deps.weather.windKph} km/s. Sakatlıklar: ${injuries}.`,
@@ -172,7 +190,10 @@ interface MatchBundle {
   odds: OddsSnapshot[];
 }
 
-async function buildBundle(input: OrchestratorInput, deps: Required<OrchestratorDeps>): Promise<MatchBundle> {
+async function buildBundle(
+  input: OrchestratorInput,
+  deps: Required<OrchestratorDeps>,
+): Promise<MatchBundle> {
   const [feed, weather, injuries, odds] = await Promise.all([
     deps.fetchMatchFeed(input.match),
     deps.fetchWeather(input.match.venue),
@@ -201,7 +222,7 @@ function consensusFromTranscript(transcript: AgentMessage[]): OrchestratorResult
   for (const v of votes) counts[v] = (counts[v] ?? 0) + 1;
   const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   const pick = top[0] as 'home' | 'away' | 'draw' | 'no_consensus';
-  const confidence = clamp01(top[1] / votes.length * averageConfidence(transcript));
+  const confidence = clamp01((top[1] / votes.length) * averageConfidence(transcript));
   return {
     pick,
     confidence,
@@ -209,7 +230,12 @@ function consensusFromTranscript(transcript: AgentMessage[]): OrchestratorResult
   };
 }
 
-async function aiGenerate(role: AgentRole, system: string, prompt: string, deps: Required<OrchestratorDeps>): Promise<string> {
+async function aiGenerate(
+  role: AgentRole,
+  system: string,
+  prompt: string,
+  deps: Required<OrchestratorDeps>,
+): Promise<string> {
   if (!deps.useAI) throw new Error('AI disabled');
   const provider = AGENT_META[role]?.provider || 'zen';
 
@@ -218,14 +244,19 @@ async function aiGenerate(role: AgentRole, system: string, prompt: string, deps:
     model = google('gemini-2.5-flash');
   } else if (provider === 'claude') {
     if (process.env.ANTHROPIC_API_KEY) {
-      const baseURL = (process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic').replace(/\/+$/, '') + '/v1';
+      const baseURL =
+        (process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic').replace(/\/+$/, '') +
+        '/v1';
       model = createAnthropic({ baseURL, apiKey: process.env.ANTHROPIC_API_KEY })('MiniMax-M3');
     } else {
       model = getAIModelChain()[0];
     }
   } else if (provider === 'deepseek') {
     if (process.env.DEEPSEEK_API_KEY) {
-      model = createOpenAI({ baseURL: 'https://api.deepseek.com/v1', apiKey: process.env.DEEPSEEK_API_KEY } as any)('deepseek-chat');
+      model = createOpenAI({
+        baseURL: 'https://api.deepseek.com/v1',
+        apiKey: process.env.DEEPSEEK_API_KEY,
+      } as any)('deepseek-chat');
     } else {
       model = getAIModelChain()[0];
     }
@@ -265,10 +296,10 @@ async function runAgent(
   role: AgentRole,
   ctx: AgentPromptContext,
   deps: Required<OrchestratorDeps>,
-  bundle: MatchBundle
+  bundle: MatchBundle,
 ): Promise<AgentMessage> {
   const speaker = ctx.characters
-    ? (ctx.characters.find(c => c.role === role)?.name ?? AGENT_META[role]?.name ?? role)
+    ? (ctx.characters.find((c) => c.role === role)?.name ?? AGENT_META[role]?.name ?? role)
     : (AGENT_META[role]?.name ?? role);
   const baseFallback = { ...fallbackMessage(role, ctx, bundle), speaker };
   const prompt = [
@@ -279,7 +310,9 @@ async function runAgent(
     `Sakatlıklar: ${bundle.injuries.map((i) => `${i.team} ${i.player} (${i.status})`).join('; ')}`,
     `Oranlar: ${bundle.odds.map((o) => `${o.bookmaker} ${o.home}/${o.draw}/${o.away}`).join('; ')}`,
     `Önceki konuşmalar: ${ctx.priorMessages.map((m) => `${m.speaker}: ${m.content}`).join(' | ')}`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   try {
     const text = await aiGenerate(role, systemPromptFor(role), prompt, deps);
@@ -295,7 +328,7 @@ async function runAgent(
 
 export async function orchestrateTalkShow(
   input: OrchestratorInput,
-  depsOverrides?: OrchestratorDeps
+  depsOverrides?: OrchestratorDeps,
 ): Promise<OrchestratorResult> {
   const deps: Required<OrchestratorDeps> = { ...defaultDeps, ...(depsOverrides ?? {}) };
 
@@ -306,7 +339,11 @@ export async function orchestrateTalkShow(
       deps.fetchMatchFeed = apiFetchMatchFeed;
       // Fetch fixture ID if not provided but teams are
       if (!input.match.fixtureId) {
-        const fixture = await findFixture(input.match.homeTeam, input.match.awayTeam, input.match.season);
+        const fixture = await findFixture(
+          input.match.homeTeam,
+          input.match.awayTeam,
+          input.match.season,
+        );
         if (fixture) {
           input.match.fixtureId = fixture.fixture?.id;
           input.match.venue = fixture.fixture?.venue?.name || input.match.venue;
@@ -325,17 +362,16 @@ export async function orchestrateTalkShow(
   const rounds = input.rounds ?? ROUNDS_DEFAULT;
 
   // Build character consistency block (Comic-Studio-Ai pattern)
-  const charBlock = (input.characters?.length ?? 0) > 0
-    ? [
-        '',
-        'KARAKTER TANIMLARI (tüm sahnelerde aynı kalmalı):',
-        ...(input.characters ?? []).map(c =>
-          `- ${c.name} (${c.role}): ${c.description}`
-        ),
-        'TUTARLILIK GEREKSİNİMİ: Her ajan kendi karakterini aynı kişilik, aynı ses tonu ve aynı fiziksel özelliklerle canlandırmalıdır.',
-        '',
-      ].join('\n')
-    : '';
+  const charBlock =
+    (input.characters?.length ?? 0) > 0
+      ? [
+          '',
+          'KARAKTER TANIMLARI (tüm sahnelerde aynı kalmalı):',
+          ...(input.characters ?? []).map((c) => `- ${c.name} (${c.role}): ${c.description}`),
+          'TUTARLILIK GEREKSİNİMİ: Her ajan kendi karakterini aynı kişilik, aynı ses tonu ve aynı fiziksel özelliklerle canlandırmalıdır.',
+          '',
+        ].join('\n')
+      : '';
 
   const bundle = await buildBundle(input, deps);
   const transcript: AgentMessage[] = [];
@@ -347,7 +383,12 @@ export async function orchestrateTalkShow(
   };
 
   // Round 0: meta-orchestrator sets the stage
-  const intro = await runAgent('meta_orchestrator', { ...baseCtx, priorMessages: [] }, deps, bundle);
+  const intro = await runAgent(
+    'meta_orchestrator',
+    { ...baseCtx, priorMessages: [] },
+    deps,
+    bundle,
+  );
   transcript.push(intro);
 
   // Rounds of specialist debate: analyst → player → bookie → data_scout
@@ -360,7 +401,12 @@ export async function orchestrateTalkShow(
   }
 
   // Closing summary from meta-orchestrator
-  const closing = await runAgent('meta_orchestrator', { ...baseCtx, priorMessages: transcript }, deps, bundle);
+  const closing = await runAgent(
+    'meta_orchestrator',
+    { ...baseCtx, priorMessages: transcript },
+    deps,
+    bundle,
+  );
   transcript.push(closing);
 
   const consensus = consensusFromTranscript(transcript);

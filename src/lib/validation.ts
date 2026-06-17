@@ -14,24 +14,42 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
     playlist_id,
     tts_provider,
     tts_voice,
-    differentiation_duration_mode
+    differentiation_duration_mode,
   } = body;
 
   // master_prompt: required, string, max 5000 chars
   if (!master_prompt || typeof master_prompt !== 'string') {
-    errors.push({ field: 'master_prompt', message: 'Master prompt zorunludur ve metin olmalıdır.' });
+    errors.push({
+      field: 'master_prompt',
+      message: 'Master prompt zorunludur ve metin olmalıdır.',
+    });
   } else if (master_prompt.trim().length > 5000) {
-    errors.push({ field: 'master_prompt', message: 'Master prompt en fazla 5000 karakter olabilir.' });
+    errors.push({
+      field: 'master_prompt',
+      message: 'Master prompt en fazla 5000 karakter olabilir.',
+    });
   }
 
   // production_notes: optional, string, max 2000 chars
-  if (production_notes && (typeof production_notes !== 'string' || production_notes.length > 2000)) {
-    errors.push({ field: 'production_notes', message: 'Üretim notları en fazla 2000 karakter olabilir.' });
+  if (
+    production_notes &&
+    (typeof production_notes !== 'string' || production_notes.length > 2000)
+  ) {
+    errors.push({
+      field: 'production_notes',
+      message: 'Üretim notları en fazla 2000 karakter olabilir.',
+    });
   }
 
   // character_features: optional, string, max 2000 chars
-  if (character_features && (typeof character_features !== 'string' || character_features.length > 2000)) {
-    errors.push({ field: 'character_features', message: 'Karakter özellikleri en fazla 2000 karakter olabilir.' });
+  if (
+    character_features &&
+    (typeof character_features !== 'string' || character_features.length > 2000)
+  ) {
+    errors.push({
+      field: 'character_features',
+      message: 'Karakter özellikleri en fazla 2000 karakter olabilir.',
+    });
   }
 
   // platforms: optional, array of string, valid platform options
@@ -40,14 +58,20 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
     const targetPlatforms = Array.isArray(platforms) ? platforms : [platforms];
     for (const platform of targetPlatforms) {
       if (typeof platform !== 'string' || !validPlatforms.includes(platform)) {
-        errors.push({ field: 'platforms', message: `Geçersiz sosyal medya platformu: ${platform}` });
+        errors.push({
+          field: 'platforms',
+          message: `Geçersiz sosyal medya platformu: ${platform}`,
+        });
       }
     }
   }
 
   // playlist_id: optional, string, max 200 chars
   if (playlist_id && (typeof playlist_id !== 'string' || playlist_id.length > 200)) {
-    errors.push({ field: 'playlist_id', message: 'Çalma listesi hedef ID en fazla 200 karakter olabilir.' });
+    errors.push({
+      field: 'playlist_id',
+      message: 'Çalma listesi hedef ID en fazla 200 karakter olabilir.',
+    });
   }
 
   // tts_provider: optional, string, enum: xtts, openai, edge
@@ -66,32 +90,46 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
   // differentiation_duration_mode: optional, enum: same, shorter, longer
   if (differentiation_duration_mode) {
     const validDuration = ['same', 'shorter', 'longer'];
-    if (typeof differentiation_duration_mode !== 'string' || !validDuration.includes(differentiation_duration_mode)) {
-      errors.push({ field: 'differentiation_duration_mode', message: 'Geçersiz farklılaştırma süre modu.' });
+    if (
+      typeof differentiation_duration_mode !== 'string' ||
+      !validDuration.includes(differentiation_duration_mode)
+    ) {
+      errors.push({
+        field: 'differentiation_duration_mode',
+        message: 'Geçersiz farklılaştırma süre modu.',
+      });
     }
   }
 
   // production_template: optional, string, enum: cinematic, dynamic, simple
   if (body.production_template) {
     const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar'];
-    if (typeof body.production_template !== 'string' || !validTemplates.includes(body.production_template)) {
+    if (
+      typeof body.production_template !== 'string' ||
+      !validTemplates.includes(body.production_template)
+    ) {
       errors.push({ field: 'production_template', message: 'Geçersiz üretim şablonu.' });
     }
   }
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
 export function validateSaveMeta(body: any): { valid: boolean; errors: ValidationError[] } {
   const errors: ValidationError[] = [];
   const fields = [
-    'yt_title', 'yt_desc', 'yt_tags',
-    'tt_desc', 'tt_tags',
-    'x_desc', 'x_tags',
-    'meta_desc', 'meta_tags'
+    'yt_title',
+    'yt_desc',
+    'yt_tags',
+    'tt_desc',
+    'tt_tags',
+    'x_desc',
+    'x_tags',
+    'meta_desc',
+    'meta_tags',
   ];
 
   for (const field of fields) {
@@ -107,6 +145,6 @@ export function validateSaveMeta(body: any): { valid: boolean; errors: Validatio
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }

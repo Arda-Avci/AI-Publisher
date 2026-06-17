@@ -8,7 +8,7 @@ import type { WordAnimationType } from './SubtitleWord.js';
 export interface CaptionWord {
   word: string;
   start: number; // seconds
-  end: number;   // seconds
+  end: number; // seconds
 }
 
 interface DynamicCaptionsProps {
@@ -78,9 +78,7 @@ export const DynamicCaptions: React.FC<DynamicCaptionsProps> = ({
   const activeWordIndex = useMemo(() => {
     if (!autoPlay || words.length === 0) return -1;
 
-    const idx = words.findIndex(
-      w => currentTime >= w.start && currentTime < w.end
-    );
+    const idx = words.findIndex((w) => currentTime >= w.start && currentTime < w.end);
     return idx;
   }, [words, currentTime, autoPlay]);
 
@@ -210,7 +208,8 @@ export const DynamicCaptions: React.FC<DynamicCaptionsProps> = ({
             style={{
               display: 'flex',
               flexWrap: 'wrap',
-              justifyContent: align === 'center' ? 'center' : align === 'left' ? 'flex-start' : 'flex-end',
+              justifyContent:
+                align === 'center' ? 'center' : align === 'left' ? 'flex-start' : 'flex-end',
               maxWidth: '90%',
               gap: '0 2px',
             }}

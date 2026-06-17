@@ -27,7 +27,10 @@ pyProcess.stderr.on('data', (data) => {
 
 pyProcess.on('close', (code) => {
   if (code !== 0) {
-    parentPort!.postMessage({ error: `Python worker exited with code ${code}. Error: ${errorData}`, faces: [] });
+    parentPort!.postMessage({
+      error: `Python worker exited with code ${code}. Error: ${errorData}`,
+      faces: [],
+    });
     return;
   }
 
@@ -35,6 +38,9 @@ pyProcess.on('close', (code) => {
     const result = JSON.parse(outputData.trim());
     parentPort!.postMessage(result);
   } catch (err: any) {
-    parentPort!.postMessage({ error: `Failed to parse Python output: ${err.message}. Raw: ${outputData}`, faces: [] });
+    parentPort!.postMessage({
+      error: `Failed to parse Python output: ${err.message}. Raw: ${outputData}`,
+      faces: [],
+    });
   }
 });

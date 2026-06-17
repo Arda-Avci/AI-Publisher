@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import {
-  LayoutDashboard, Users, HelpCircle, LogOut,
-  ChevronLeft, ChevronRight, Activity
+  LayoutDashboard,
+  Users,
+  HelpCircle,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Activity,
 } from 'lucide-react';
 
 type AdminPage = 'dashboard' | 'users' | 'help-videos' | 'system';
@@ -14,7 +19,11 @@ const navItems: { id: AdminPage; label: string; icon: typeof LayoutDashboard }[]
 ];
 
 export default function AdminLayout({
-  children, currentPage, onNavigate, onLogout, username,
+  children,
+  currentPage,
+  onNavigate,
+  onLogout,
+  username,
 }: {
   children: React.ReactNode;
   currentPage: AdminPage;
@@ -26,12 +35,19 @@ export default function AdminLayout({
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100">
-      <aside className={`flex flex-col border-r border-gray-800 bg-gray-900/50 backdrop-blur-sm transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}>
+      <aside
+        className={`flex flex-col border-r border-gray-800 bg-gray-900/50 backdrop-blur-sm transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}
+      >
         <div className="flex items-center justify-between h-14 px-3 border-b border-gray-800">
           {!collapsed && (
-            <span className="text-sm font-semibold tracking-wider text-amber-400 uppercase truncate">Admin</span>
+            <span className="text-sm font-semibold tracking-wider text-amber-400 uppercase truncate">
+              Admin
+            </span>
           )}
-          <button onClick={() => setCollapsed(!collapsed)} className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition-colors">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition-colors"
+          >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
@@ -42,9 +58,10 @@ export default function AdminLayout({
               key={id}
               onClick={() => onNavigate(id)}
               className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-                ${currentPage === id
-                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border border-transparent'
+                ${
+                  currentPage === id
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border border-transparent'
                 }`}
             >
               <Icon size={18} className="shrink-0" />
@@ -69,9 +86,7 @@ export default function AdminLayout({
       </aside>
 
       <main className="flex-1 overflow-auto">
-        <div className="p-6 max-w-7xl mx-auto">
-          {children}
-        </div>
+        <div className="p-6 max-w-7xl mx-auto">{children}</div>
       </main>
     </div>
   );

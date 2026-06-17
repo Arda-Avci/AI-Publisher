@@ -24,14 +24,10 @@ export async function sendClipToQueue(data: ClipQueueData): Promise<void> {
 
   // RabbitMQ priority desteği: kuyruğun max-priority ile tanımlı olması gerekir
   // Message header'a priority ekleyerek kuyruk tarafında sıralama sağlarız
-  channel.sendToQueue(
-    CLIP_JOBS_QUEUE,
-    Buffer.from(JSON.stringify(data)),
-    {
-      persistent: true,
-      priority,
-    }
-  );
+  channel.sendToQueue(CLIP_JOBS_QUEUE, Buffer.from(JSON.stringify(data)), {
+    persistent: true,
+    priority,
+  });
 
   Logger.info(`[ClipQueue] Job #${data.clipJobId} kuyruğa eklendi (priority=${priority})`);
 }
@@ -40,10 +36,10 @@ export async function sendClipToQueue(data: ClipQueueData): Promise<void> {
  * Başarısız clip işini yeniden kuyruğa ekler (retry).
  */
 export async function retryClipJob(clipJobId: number, userId: number): Promise<boolean> {
-  const row: any = await db.get(
-    'SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2',
-    [clipJobId, userId]
-  );
+  const row: any = await db.get('SELECT * FROM clip_jobs WHERE id = $1 AND user_id = $2', [
+    clipJobId,
+    userId,
+  ]);
   if (!row) return false;
   if (row.status !== 'failed') return false;
 
@@ -55,10 +51,11 @@ export async function retryClipJob(clipJobId: number, userId: number): Promise<b
     return false;
   }
 
-  await db.run(
-    'UPDATE clip_jobs SET status = $1, retry_count = $2 WHERE id = $3',
-    ['pending', retryCount, clipJobId]
-  );
+  await db.run('UPDATE clip_jobs SET status = $1, retry_count = $2 WHERE id = $3', [
+    'pending',
+    retryCount,
+    clipJobId,
+  ]);
 
   await sendClipToQueue({
     clipJobId,
@@ -71,7 +68,9 @@ export async function retryClipJob(clipJobId: number, userId: number): Promise<b
     priority: row.priority ?? 5,
   });
 
-  Logger.info(`[ClipQueue] Job #${clipJobId} yeniden kuyruğa eklendi (retry ${retryCount}/${maxRetries})`);
+  Logger.info(
+    `[ClipQueue] Job #${clipJobId} yeniden kuyruğa eklendi (retry ${retryCount}/${maxRetries})`,
+  );
   return true;
 }
 
@@ -87,7 +86,9 @@ export async function startClipQueueWorker() {
         arguments: { 'x-max-priority': 10 },
       });
 
-      Logger.info(`[ClipQueue] Worker: ${CLIP_JOBS_QUEUE} dinleniyor (Prefetch=2, priority enabled)`);
+      Logger.info(
+        `[ClipQueue] Worker: ${CLIP_JOBS_QUEUE} dinleniyor (Prefetch=2, priority enabled)`,
+      );
 
       channel.consume(CLIP_JOBS_QUEUE, async (msg: any) => {
         if (!msg) return;
@@ -101,7 +102,8 @@ export async function startClipQueueWorker() {
           return;
         }
 
-        const { clipJobId, userId, videoPath, title, minDuration, maxDuration, targetCount } = payload;
+        const { clipJobId, userId, videoPath, title, minDuration, maxDuration, targetCount } =
+          payload;
 
         try {
           await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['processing', clipJobId]);
@@ -140,7 +142,7 @@ export async function startClipQueueWorker() {
 
           await db.run(
             'UPDATE clip_jobs SET segments = $1, overall_score = $2, top_reason = $3 WHERE id = $4',
-            [segmentsJson, analysis.overallScore, analysis.topReason, clipJobId]
+            [segmentsJson, analysis.overallScore, analysis.topReason, clipJobId],
           );
 
           await broadcastProgress(clipJobId, {
@@ -155,7 +157,7 @@ export async function startClipQueueWorker() {
           // 3. Tamamlandı (kırpma export'ta yapılır)
           await db.run(
             'UPDATE clip_jobs SET status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2',
-            ['completed', clipJobId]
+            ['completed', clipJobId],
           );
 
           await broadcastProgress(clipJobId, {
@@ -167,14 +169,19 @@ export async function startClipQueueWorker() {
             segmentCount: analysis.segments.length,
           });
 
-          Logger.info(`[ClipQueue] Job ${clipJobId} completed: ${analysis.segments.length} segments, score ${analysis.overallScore}`);
+          Logger.info(
+            `[ClipQueue] Job ${clipJobId} completed: ${analysis.segments.length} segments, score ${analysis.overallScore}`,
+          );
           channel.ack(msg);
         } catch (err: any) {
           Logger.error(`[ClipQueue] Job ${clipJobId} failed:`, err);
 
           try {
             // Retry kontrolü
-            const jobRow: any = await db.get('SELECT retry_count, max_retries FROM clip_jobs WHERE id = $1', [clipJobId]);
+            const jobRow: any = await db.get(
+              'SELECT retry_count, max_retries FROM clip_jobs WHERE id = $1',
+              [clipJobId],
+            );
             const retryCount = jobRow?.retry_count || 0;
             const maxRetries = jobRow?.max_retries || 3;
 
@@ -183,10 +190,11 @@ export async function startClipQueueWorker() {
               const backoffMs = Math.pow(2, retryCount) * 5000;
               const nextRetry = retryCount + 1;
 
-              await db.run(
-                'UPDATE clip_jobs SET status = $1, retry_count = $2 WHERE id = $3',
-                ['pending', nextRetry, clipJobId]
-              );
+              await db.run('UPDATE clip_jobs SET status = $1, retry_count = $2 WHERE id = $3', [
+                'pending',
+                nextRetry,
+                clipJobId,
+              ]);
 
               await broadcastProgress(clipJobId, {
                 event: 'clip-retry',
@@ -210,10 +218,18 @@ export async function startClipQueueWorker() {
                     targetCount,
                     priority: payload.priority ?? 5,
                   });
-                  Logger.info(`[ClipQueue] Job #${clipJobId} retry ${nextRetry}/${maxRetries} ile yeniden kuyruğa eklendi`);
+                  Logger.info(
+                    `[ClipQueue] Job #${clipJobId} retry ${nextRetry}/${maxRetries} ile yeniden kuyruğa eklendi`,
+                  );
                 } catch (retryErr) {
-                  Logger.error(`[ClipQueue] Job #${clipJobId} retry kuyruğa ekleme hatası:`, retryErr);
-                  await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['failed', clipJobId]);
+                  Logger.error(
+                    `[ClipQueue] Job #${clipJobId} retry kuyruğa ekleme hatası:`,
+                    retryErr,
+                  );
+                  await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', [
+                    'failed',
+                    clipJobId,
+                  ]);
                 }
               }, backoffMs);
             } else {
@@ -230,7 +246,9 @@ export async function startClipQueueWorker() {
             }
           } catch (updateErr) {
             Logger.error(`[ClipQueue] Job #${clipJobId} retry update hatası:`, updateErr);
-            await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['failed', clipJobId]).catch(() => {});
+            await db
+              .run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['failed', clipJobId])
+              .catch(() => {});
           }
 
           channel.ack(msg);

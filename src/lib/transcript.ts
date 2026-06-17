@@ -55,6 +55,6 @@ export async function fetchYouTubeTranscript(videoId: string): Promise<Transcrip
     videoId: cleanId,
     raw: items,
     plainText,
-    fetchedAt: Date.now()
+    fetchedAt: Date.now(),
   };
 }

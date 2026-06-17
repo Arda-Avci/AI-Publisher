@@ -32,15 +32,15 @@ function analyzeStructure(text: string): { paragraphs: string[]; chapters: strin
   // Split by double newlines or chapter markers
   const paragraphs = text
     .split(/\n\n+/)
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 
   // Detect chapters (lines starting with numbers or "Chapter")
-  const chapterMarkers = text.split(/\n/).filter(line =>
-    /^(Chapter|Bölüm|Part|Section)\s*\d+/i.test(line.trim())
-  );
+  const chapterMarkers = text
+    .split(/\n/)
+    .filter((line) => /^(Chapter|Bölüm|Part|Section)\s*\d+/i.test(line.trim()));
 
-  const chapters = chapterMarkers.map(c => c.trim());
+  const chapters = chapterMarkers.map((c) => c.trim());
 
   return { paragraphs, chapters };
 }
@@ -82,7 +82,7 @@ export async function processNarration(
     generateAudio?: boolean;
     generateSubtitles?: boolean;
     language?: string;
-  } = {}
+  } = {},
 ): Promise<NarrationResult> {
   Logger.info(`Processing narration for text (${text.length} chars)`);
 
@@ -126,7 +126,7 @@ export async function processNarration(
   }
 
   // Estimate total duration (average 2 seconds per paragraph)
-  const totalDuration = blocks.filter(b => b.type === 'paragraph').length * 2;
+  const totalDuration = blocks.filter((b) => b.type === 'paragraph').length * 2;
 
   Logger.info(`Narration processed: ${blocks.length} blocks, ~${totalDuration}s duration`);
 
@@ -137,7 +137,7 @@ export async function processNarration(
  * Generate visual assets for a narration block
  */
 export async function generateBlockAssets(
-  block: NarrationBlock
+  block: NarrationBlock,
 ): Promise<{ imageUrl?: string; audioUrl?: string; subtitleUrl?: string }> {
   Logger.info(`Generating assets for block ${block.id}`);
 
@@ -148,17 +148,23 @@ export async function generateBlockAssets(
     const state = colab.getState();
     if (state.status === 'running' && state.ngrokUrl) {
       try {
-        const resp = await axios.post(`${state.ngrokUrl}/generate-image`, {
-          prompt: block.visualPrompt,
-          output_path: path.join(process.cwd(), 'videolar', `image-${block.id}.png`)
-        }, { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } });
+        const resp = await axios.post(
+          `${state.ngrokUrl}/generate-image`,
+          {
+            prompt: block.visualPrompt,
+            output_path: path.join(process.cwd(), 'videolar', `image-${block.id}.png`),
+          },
+          { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } },
+        );
         result.imageUrl = resp.data?.output_path || `generated://image-${block.id}.png`;
       } catch (err: any) {
         Logger.warn('[pictureNarration] Image generation via Colab failed', { error: err.message });
         result.imageUrl = `generated://image-${block.id}.png`;
       }
     } else {
-      Logger.warn('[pictureNarration] Colab unavailable for image generation', { status: state.status });
+      Logger.warn('[pictureNarration] Colab unavailable for image generation', {
+        status: state.status,
+      });
       result.imageUrl = `generated://image-${block.id}.png`;
     }
   }
@@ -167,10 +173,14 @@ export async function generateBlockAssets(
     const state = colab.getState();
     if (state.status === 'running' && state.ngrokUrl) {
       try {
-        const resp = await axios.post(`${state.ngrokUrl}/tts`, {
-          text: block.text,
-          output_path: path.join(process.cwd(), 'videolar', `audio-${block.id}.mp3`)
-        }, { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } });
+        const resp = await axios.post(
+          `${state.ngrokUrl}/tts`,
+          {
+            text: block.text,
+            output_path: path.join(process.cwd(), 'videolar', `audio-${block.id}.mp3`),
+          },
+          { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } },
+        );
         result.audioUrl = resp.data?.output_path || `generated://audio-${block.id}.mp3`;
       } catch (err: any) {
         Logger.warn('[pictureNarration] TTS via Colab failed', { error: err.message });
@@ -220,7 +230,7 @@ export async function generateBlockAssets(
  * Combine narration blocks into final video content
  */
 export async function composeNarrationVideo(
-  blocks: NarrationBlock[]
+  blocks: NarrationBlock[],
 ): Promise<{ videoUrl: string; subtitleFile?: string }> {
   Logger.info(`Composing narration video from ${blocks.length} blocks`);
 

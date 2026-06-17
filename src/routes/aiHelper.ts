@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
-import { 
-  enhanceVideoPrompt, 
-  generateTutorialPrompts, 
-  generateLandingPageAssets, 
-  generateCustomThemes 
+import {
+  enhanceVideoPrompt,
+  generateTutorialPrompts,
+  generateLandingPageAssets,
+  generateCustomThemes,
 } from '../services/aiService.js';
 
 const router = Router();
@@ -21,10 +21,10 @@ router.post('/enhance-prompt', requireAuth, async (req: Request, res: Response) 
       return res.status(400).json({ success: false, error: 'Prompt alanı zorunludur.' });
     }
 
-    const enhanced = await enhanceVideoPrompt(prompt, { 
-      cameraMotion, 
-      templateStyle, 
-      characterFeatures 
+    const enhanced = await enhanceVideoPrompt(prompt, {
+      cameraMotion,
+      templateStyle,
+      characterFeatures,
     });
 
     res.json({ success: true, enhancedPrompt: enhanced });
@@ -42,14 +42,18 @@ router.post('/tutorial-prompts', requireAuth, async (req: Request, res: Response
   try {
     const { featureName } = req.body;
     if (!featureName || typeof featureName !== 'string') {
-      return res.status(400).json({ success: false, error: 'Özellik adı (featureName) zorunludur.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'Özellik adı (featureName) zorunludur.' });
     }
 
     const result = await generateTutorialPrompts(featureName);
     res.json({ success: true, data: result });
   } catch (error: any) {
     Logger.error('Eğitim promptu üretme hatası:', error);
-    res.status(500).json({ success: false, error: error?.message || 'Eğitim promptları üretilemedi.' });
+    res
+      .status(500)
+      .json({ success: false, error: error?.message || 'Eğitim promptları üretilemedi.' });
   }
 });
 
@@ -68,7 +72,9 @@ router.post('/landing-assets', requireAuth, async (req: Request, res: Response) 
     res.json({ success: true, data: result });
   } catch (error: any) {
     Logger.error('Landing assets promptu üretme hatası:', error);
-    res.status(500).json({ success: false, error: error?.message || 'Varlık promptları üretilemedi.' });
+    res
+      .status(500)
+      .json({ success: false, error: error?.message || 'Varlık promptları üretilemedi.' });
   }
 });
 
@@ -80,14 +86,18 @@ router.post('/custom-theme', requireAuth, async (req: Request, res: Response) =>
   try {
     const { styleDescription } = req.body;
     if (!styleDescription || typeof styleDescription !== 'string') {
-      return res.status(400).json({ success: false, error: 'Stil açıklaması (styleDescription) zorunludur.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'Stil açıklaması (styleDescription) zorunludur.' });
     }
 
     const result = await generateCustomThemes(styleDescription);
     res.json({ success: true, data: result });
   } catch (error: any) {
     Logger.error('Tema rengi üretme hatası:', error);
-    res.status(500).json({ success: false, error: error?.message || 'Tema renk paleti üretilemedi.' });
+    res
+      .status(500)
+      .json({ success: false, error: error?.message || 'Tema renk paleti üretilemedi.' });
   }
 });
 

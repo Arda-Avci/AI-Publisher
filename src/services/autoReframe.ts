@@ -47,7 +47,7 @@ export interface AutoReframeOptions {
  */
 async function detectFacesInFrame(
   framePath: string,
-  minConfidence = 0.5
+  minConfidence = 0.5,
 ): Promise<Array<{ x: number; y: number; w: number; h: number }>> {
   return new Promise((resolve, reject) => {
     const workerPath = path.join(__dirnameStr, '..', 'workers', 'face-track-worker.js');
@@ -60,7 +60,7 @@ async function detectFacesInFrame(
     }
 
     const worker = new Worker(workerPath, {
-      workerData: { framePath, minConfidence }
+      workerData: { framePath, minConfidence },
     });
 
     let settled = false;
@@ -111,7 +111,7 @@ async function extractCenterCrop(
   framePath: string,
   outPath: string,
   targetW: number,
-  targetH: number
+  targetH: number,
 ): Promise<void> {
   const { runFFmpegWithFallback } = await import('./videoService.js');
 
@@ -121,12 +121,15 @@ async function extractCenterCrop(
     cmd: 'ffmpeg',
     args: [
       '-y',
-      '-i', framePath,
-      '-vf', `crop=min(${targetW},iw):min(${targetH},ih):(iw-min(${targetW},iw))/2:(ih-min(${targetH},ih))/2`,
-      '-frames:v', '1',
-      outPath
+      '-i',
+      framePath,
+      '-vf',
+      `crop=min(${targetW},iw):min(${targetH},ih):(iw-min(${targetW},iw))/2:(ih-min(${targetH},ih))/2`,
+      '-frames:v',
+      '1',
+      outPath,
     ],
-    timeoutMs: 30000
+    timeoutMs: 30000,
   };
 
   await runFFmpegWithFallback([cmd]);
@@ -150,20 +153,20 @@ export async function autoReframeHorizontalToVertical(
   videoPath: string,
   outputPath: string,
   trackingMode: TrackingMode = 'face',
-  options: AutoReframeOptions = {}
+  options: AutoReframeOptions = {},
 ): Promise<void> {
   const opts: AutoReframeOptions = {
     trackingMode,
     targetHeight: 1920,
     targetWidth: 1080,
     faceConfidence: 0.5,
-    ...options
+    ...options,
   };
 
   Logger.info('[autoReframe] Starting auto-reframe', {
     videoPath,
     outputPath,
-    trackingMode: opts.trackingMode
+    trackingMode: opts.trackingMode,
   });
 
   const targetW = opts.targetWidth!;
@@ -172,11 +175,15 @@ export async function autoReframeHorizontalToVertical(
   // Get source video dimensions
   const { runFFmpeg } = await import('./videoService.js');
   const { stdout: dims } = await runFFmpeg('ffprobe', [
-    '-v', 'error',
-    '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height',
-    '-of', 'csv=s=x:p=0',
-    videoPath
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    videoPath,
   ]);
 
   const [srcW, srcH] = dims.trim().split('x').map(Number);
@@ -196,9 +203,14 @@ export async function autoReframeHorizontalToVertical(
     const tempFrame = path.join(frameDir, `autoreframe_temp_${Date.now()}.png`);
 
     await new Promise<void>((res, rej) => {
-      execFile('ffmpeg', ['-y', '-i', videoPath, '-ss', '00:00:01', '-frames:v', '1', tempFrame], (err: any) => {
-        if (err) rej(err); else res();
-      });
+      execFile(
+        'ffmpeg',
+        ['-y', '-i', videoPath, '-ss', '00:00:01', '-frames:v', '1', tempFrame],
+        (err: any) => {
+          if (err) rej(err);
+          else res();
+        },
+      );
     });
 
     try {
@@ -223,7 +235,12 @@ export async function autoReframeHorizontalToVertical(
         cropY = 0;
 
         Logger.info('[autoReframe] Face detected, crop region calculated', {
-          faceCenterX, faceCenterY, cropX, cropY, cropW, cropH
+          faceCenterX,
+          faceCenterY,
+          cropX,
+          cropY,
+          cropW,
+          cropH,
         });
       } else {
         Logger.info('[autoReframe] No face detected, using center crop');
@@ -246,19 +263,26 @@ export async function autoReframeHorizontalToVertical(
     `[0:v]split[orig][bg]`,
     `[bg]scale=${targetW}:${targetH},boxblur=40[blurred]`,
     `[orig]crop=${cropW}:${cropH}:${cropX}:${cropY},scale=${targetW}:${targetH}[scaled]`,
-    `[blurred][scaled]overlay=(W-w)/2:(H-h)/2[outv]`
+    `[blurred][scaled]overlay=(W-w)/2:(H-h)/2[outv]`,
   ].join(';');
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-filter_complex', filter,
-    '-map', '[outv]',
-    '-map', '0:a?',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
-    outputPath
+    '-i',
+    videoPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '[outv]',
+    '-map',
+    '0:a?',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
+    outputPath,
   ];
 
   const { runFFmpegWithFallback } = await import('./videoService.js');
@@ -292,18 +316,22 @@ interface FaceTrackResult {
  * @param outputPath - Absolute path for output 9:16 video
  * @returns Path to the reframed video
  */
-export async function trackFaceAndReframe(
-  videoPath: string,
-  outputPath: string
-): Promise<string> {
+export async function trackFaceAndReframe(videoPath: string, outputPath: string): Promise<string> {
   Logger.info('[autoReframe] trackFaceAndReframe starting', { videoPath, outputPath });
 
   const { runFFmpeg } = await import('./videoService.js');
 
   // 1. Get video duration and dimensions
   const { stdout: dims } = await runFFmpeg('ffprobe', [
-    '-v', 'error', '-select_streams', 'v:0',
-    '-show_entries', 'stream=width,height', '-of', 'csv=s=x:p=0', videoPath
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=width,height',
+    '-of',
+    'csv=s=x:p=0',
+    videoPath,
   ]);
   const [srcW, srcH] = dims.trim().split('x').map(Number);
   const cropAspect = 9 / 16;
@@ -318,8 +346,14 @@ export async function trackFaceAndReframe(
   try {
     // Extract frames at 1fps for face detection
     await new Promise<void>((res, rej) => {
-      exec('ffmpeg', ['-y', '-i', videoPath, '-vf', `fps=1`, `${frameDir}/frame_%04d.png`],
-        (err: any) => { if (err) rej(err); else res(); });
+      exec(
+        'ffmpeg',
+        ['-y', '-i', videoPath, '-vf', `fps=1`, `${frameDir}/frame_%04d.png`],
+        (err: any) => {
+          if (err) rej(err);
+          else res();
+        },
+      );
     });
 
     const frames = await fs.readdir(frameDir);
@@ -342,23 +376,43 @@ export async function trackFaceAndReframe(
         `[0:v]split[orig][bg]`,
         `[bg]scale=1080:1920,boxblur=40[blurred]`,
         `[orig]crop=${cropW}:${cropH}:${cx}:0,scale=1080:1920[scaled]`,
-        `[blurred][scaled]overlay=(W-w)/2:(H-h)/2[outv]`
+        `[blurred][scaled]overlay=(W-w)/2:(H-h)/2[outv]`,
       ].join(';');
 
       const { runFFmpegWithFallback } = await import('./videoService.js');
-      await runFFmpegWithFallback([{
-        cmd: 'ffmpeg', args: [
-          '-y', '-i', videoPath, '-filter_complex', filter,
-          '-map', '[outv]', '-map', '0:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'copy', outputPath
-        ], timeoutMs: 300000
-      }]);
+      await runFFmpegWithFallback([
+        {
+          cmd: 'ffmpeg',
+          args: [
+            '-y',
+            '-i',
+            videoPath,
+            '-filter_complex',
+            filter,
+            '-map',
+            '[outv]',
+            '-map',
+            '0:a?',
+            '-c:v',
+            'libx264',
+            '-pix_fmt',
+            'yuv420p',
+            '-c:a',
+            'copy',
+            outputPath,
+          ],
+          timeoutMs: 300000,
+        },
+      ]);
       return outputPath;
     }
 
     // 3. Build weighted average face position for stable crop center
-    const avgX = faceTrack.reduce((s, f) => s + f.x * f.w * f.h, 0) /
+    const avgX =
+      faceTrack.reduce((s, f) => s + f.x * f.w * f.h, 0) /
       faceTrack.reduce((s, f) => s + f.w * f.h, 0);
-    const avgY = faceTrack.reduce((s, f) => s + f.y * f.w * f.h, 0) /
+    const avgY =
+      faceTrack.reduce((s, f) => s + f.y * f.w * f.h, 0) /
       faceTrack.reduce((s, f) => s + f.w * f.h, 0);
     const facePxX = avgX * srcW;
     const facePxY = avgY * srcH;
@@ -366,23 +420,48 @@ export async function trackFaceAndReframe(
     const cropX = Math.max(0, Math.min(srcW - cropW, Math.round(facePxX - cropW / 2)));
     const cropY = 0;
 
-    Logger.info('[autoReframe] Calculated crop region', { cropX, cropY, cropW, cropH, facePxX, facePxY });
+    Logger.info('[autoReframe] Calculated crop region', {
+      cropX,
+      cropY,
+      cropW,
+      cropH,
+      facePxX,
+      facePxY,
+    });
 
     // 4. Apply FFmpeg crop with blurred background overlay
     const filter = [
       `[0:v]split[orig][bg]`,
       `[bg]scale=1080:1920,boxblur=40[blurred]`,
       `[orig]crop=${cropW}:${cropH}:${cropX}:${cropY},scale=1080:1920[scaled]`,
-      `[blurred][scaled]overlay=(W-w)/2:(H-h)/2[outv]`
+      `[blurred][scaled]overlay=(W-w)/2:(H-h)/2[outv]`,
     ].join(';');
 
     const { runFFmpegWithFallback } = await import('./videoService.js');
-    await runFFmpegWithFallback([{
-      cmd: 'ffmpeg', args: [
-        '-y', '-i', videoPath, '-filter_complex', filter,
-        '-map', '[outv]', '-map', '0:a?', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'copy', outputPath
-      ], timeoutMs: 300000
-    }]);
+    await runFFmpegWithFallback([
+      {
+        cmd: 'ffmpeg',
+        args: [
+          '-y',
+          '-i',
+          videoPath,
+          '-filter_complex',
+          filter,
+          '-map',
+          '[outv]',
+          '-map',
+          '0:a?',
+          '-c:v',
+          'libx264',
+          '-pix_fmt',
+          'yuv420p',
+          '-c:a',
+          'copy',
+          outputPath,
+        ],
+        timeoutMs: 300000,
+      },
+    ]);
 
     Logger.info('[autoReframe] trackFaceAndReframe completed', { outputPath });
     return outputPath;

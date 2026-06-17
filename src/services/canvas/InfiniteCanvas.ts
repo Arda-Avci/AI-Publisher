@@ -39,7 +39,9 @@ export class InfiniteCanvas {
   /**
    * Get canvas with smart cache (returns snapshot if available)
    */
-  async getCanvasWithCache(canvasId: string): Promise<{ canvas: Canvas | null; fromCache: boolean }> {
+  async getCanvasWithCache(
+    canvasId: string,
+  ): Promise<{ canvas: Canvas | null; fromCache: boolean }> {
     // Try cache first
     const cached = smartCache.get(canvasId);
     if (cached) {
@@ -63,7 +65,9 @@ export class InfiniteCanvas {
       canvasId,
       canvas.nodes,
       canvas.connections,
-      0, 0, 1
+      0,
+      0,
+      1,
     );
     smartCache.put(canvasId, snapshot);
 
@@ -78,7 +82,7 @@ export class InfiniteCanvas {
     type: CanvasNodeType,
     x: number,
     y: number,
-    data: Record<string, unknown> = {}
+    data: Record<string, unknown> = {},
   ): Promise<CanvasNode | null> {
     const canvas = this.canvases.get(canvasId);
     if (!canvas) return null;
@@ -112,12 +116,14 @@ export class InfiniteCanvas {
   async updateNode(
     canvasId: string,
     nodeId: string,
-    updates: Partial<Pick<CanvasNode, 'x' | 'y' | 'width' | 'height' | 'data' | 'status' | 'dependencies'>>
+    updates: Partial<
+      Pick<CanvasNode, 'x' | 'y' | 'width' | 'height' | 'data' | 'status' | 'dependencies'>
+    >,
   ): Promise<CanvasNode | null> {
     const canvas = this.canvases.get(canvasId);
     if (!canvas) return null;
 
-    const nodeIndex = canvas.nodes.findIndex(n => n.id === nodeId);
+    const nodeIndex = canvas.nodes.findIndex((n) => n.id === nodeId);
     if (nodeIndex === -1) return null;
 
     const node = canvas.nodes[nodeIndex];
@@ -138,16 +144,16 @@ export class InfiniteCanvas {
     if (!canvas) return false;
 
     // Remove node
-    canvas.nodes = canvas.nodes.filter(n => n.id !== nodeId);
+    canvas.nodes = canvas.nodes.filter((n) => n.id !== nodeId);
 
     // Remove connections involving this node
     canvas.connections = canvas.connections.filter(
-      c => c.fromNodeId !== nodeId && c.toNodeId !== nodeId
+      (c) => c.fromNodeId !== nodeId && c.toNodeId !== nodeId,
     );
 
     // Remove from other nodes' dependencies
-    canvas.nodes.forEach(node => {
-      node.dependencies = node.dependencies.filter(depId => depId !== nodeId);
+    canvas.nodes.forEach((node) => {
+      node.dependencies = node.dependencies.filter((depId) => depId !== nodeId);
     });
 
     canvas.updatedAt = new Date();
@@ -161,18 +167,23 @@ export class InfiniteCanvas {
   /**
    * Add connection between nodes
    */
-  async addConnection(canvasId: string, fromNodeId: string, toNodeId: string, label?: string): Promise<CanvasConnection | null> {
+  async addConnection(
+    canvasId: string,
+    fromNodeId: string,
+    toNodeId: string,
+    label?: string,
+  ): Promise<CanvasConnection | null> {
     const canvas = this.canvases.get(canvasId);
     if (!canvas) return null;
 
     // Verify nodes exist
-    const fromExists = canvas.nodes.some(n => n.id === fromNodeId);
-    const toExists = canvas.nodes.some(n => n.id === toNodeId);
+    const fromExists = canvas.nodes.some((n) => n.id === fromNodeId);
+    const toExists = canvas.nodes.some((n) => n.id === toNodeId);
     if (!fromExists || !toExists) return null;
 
     // Check for duplicate
     const exists = canvas.connections.some(
-      c => c.fromNodeId === fromNodeId && c.toNodeId === toNodeId
+      (c) => c.fromNodeId === fromNodeId && c.toNodeId === toNodeId,
     );
     if (exists) return null;
 
@@ -186,7 +197,7 @@ export class InfiniteCanvas {
     canvas.connections.push(connection);
 
     // Update target node dependencies
-    const targetNode = canvas.nodes.find(n => n.id === toNodeId);
+    const targetNode = canvas.nodes.find((n) => n.id === toNodeId);
     if (targetNode && !targetNode.dependencies.includes(fromNodeId)) {
       targetNode.dependencies.push(fromNodeId);
     }
@@ -206,16 +217,16 @@ export class InfiniteCanvas {
     const canvas = this.canvases.get(canvasId);
     if (!canvas) return false;
 
-    const conn = canvas.connections.find(c => c.id === connectionId);
+    const conn = canvas.connections.find((c) => c.id === connectionId);
     if (!conn) return false;
 
     // Remove from target node dependencies
-    const targetNode = canvas.nodes.find(n => n.id === conn.toNodeId);
+    const targetNode = canvas.nodes.find((n) => n.id === conn.toNodeId);
     if (targetNode) {
-      targetNode.dependencies = targetNode.dependencies.filter(id => id !== conn.fromNodeId);
+      targetNode.dependencies = targetNode.dependencies.filter((id) => id !== conn.fromNodeId);
     }
 
-    canvas.connections = canvas.connections.filter(c => c.id !== connectionId);
+    canvas.connections = canvas.connections.filter((c) => c.id !== connectionId);
     canvas.updatedAt = new Date();
 
     // Invalidate cache
@@ -231,10 +242,10 @@ export class InfiniteCanvas {
     const canvas = this.canvases.get(canvasId);
     if (!canvas) return [];
 
-    return canvas.nodes.filter(node => {
+    return canvas.nodes.filter((node) => {
       if (node.status !== 'draft') return false;
-      return node.dependencies.every(depId => {
-        const depNode = canvas.nodes.find(n => n.id === depId);
+      return node.dependencies.every((depId) => {
+        const depNode = canvas.nodes.find((n) => n.id === depId);
         return depNode?.status === 'completed';
       });
     });

@@ -59,12 +59,9 @@ function drawtextFilter(
   y: number,
   fontSize: number,
   color: string,
-  box: boolean
+  box: boolean,
 ): string {
-  const escaped = text
-    .replace(/'/g, "'\\\\\\''")
-    .replace(/:/g, '\\:')
-    .replace(/\\/g, '\\\\');
+  const escaped = text.replace(/'/g, "'\\\\\\''").replace(/:/g, '\\:').replace(/\\/g, '\\\\');
   const fontFile = resolveFontPath();
   let filter = `drawtext=text='${escaped}':x=${x}:y=${y}:fontsize=${fontSize}:fontcolor=${color}:fontfile='${fontFile}'`;
   if (box) {
@@ -81,11 +78,11 @@ function buildSceneFilter(
   fps: number,
   w: number,
   h: number,
-  sceneDurationFrames: number
+  sceneDurationFrames: number,
 ): { filter: string; inputs: number; audioMix: string } {
   const avatarScale = AVATAR_SIZE;
   const avatarX = (w - avatarScale) / 2;
-  const avatarY = (h - avatarScale - AVATAR_Y_OFFSET);
+  const avatarY = h - avatarScale - AVATAR_Y_OFFSET;
 
   const zoomStart = 1.0;
   const zoomEnd = 1.08;
@@ -102,10 +99,24 @@ function buildSceneFilter(
 
   lines.push(`[bv][av]overlay=x=${avatarX}:y=${avatarY}[v1]`);
 
-  const nameFilter = drawtextFilter(scene.characterName, avatarX + 16, nameY, NAME_FONTSIZE, scene.color, true);
+  const nameFilter = drawtextFilter(
+    scene.characterName,
+    avatarX + 16,
+    nameY,
+    NAME_FONTSIZE,
+    scene.color,
+    true,
+  );
   lines.push(`[v1]${nameFilter}[v2]`);
 
-  const textFilter = drawtextFilter(scene.speechText, (w - TEXT_MAX_WIDTH) / 2, textY, TEXT_FONTSIZE, 'white', true);
+  const textFilter = drawtextFilter(
+    scene.speechText,
+    (w - TEXT_MAX_WIDTH) / 2,
+    textY,
+    TEXT_FONTSIZE,
+    'white',
+    true,
+  );
   lines.push(`[v2]${textFilter}[v_out]`);
 
   let audioMix = '';
@@ -145,7 +156,7 @@ async function renderScene(
   index: number,
   fps: number,
   w: number,
-  h: number
+  h: number,
 ): Promise<{ videoPath: string; audioPath: string | null }> {
   const outputVideo = path.join(workDir, `scene_${index}.mp4`);
   const durationFrames = Math.round(scene.duration * fps);
@@ -171,15 +182,22 @@ async function renderScene(
 
   const args = [
     '-y',
-    '-i', bgPath,
-    '-i', scene.avatarPath,
+    '-i',
+    bgPath,
+    '-i',
+    scene.avatarPath,
     ...inputs,
     ...filterArgs,
-    '-t', String(scene.duration),
-    '-c:v', 'libx264',
-    '-preset', 'medium',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
+    '-t',
+    String(scene.duration),
+    '-c:v',
+    'libx264',
+    '-preset',
+    'medium',
+    '-crf',
+    '23',
+    '-pix_fmt',
+    'yuv420p',
     outputVideo,
   ];
 
@@ -192,15 +210,12 @@ async function renderScene(
 }
 
 function buildConcatFile(sceneVideos: string[], filePath: string): string {
-  const content = sceneVideos.map(v => `file '${v.replace(/'/g, "'\\''")}'`).join('\n');
+  const content = sceneVideos.map((v) => `file '${v.replace(/'/g, "'\\''")}'`).join('\n');
   fs.writeFileSync(filePath, content, 'utf-8');
   return filePath;
 }
 
-async function concatScenes(
-  sceneVideos: string[],
-  outputPath: string
-): Promise<void> {
+async function concatScenes(sceneVideos: string[], outputPath: string): Promise<void> {
   if (sceneVideos.length === 0) {
     throw new Error('Birleştirilecek sahne yok');
   }
@@ -213,14 +228,7 @@ async function concatScenes(
   const concatFile = path.join(path.dirname(sceneVideos[0]), 'concat.txt');
   buildConcatFile(sceneVideos, concatFile);
 
-  const args = [
-    '-y',
-    '-f', 'concat',
-    '-safe', '0',
-    '-i', concatFile,
-    '-c', 'copy',
-    outputPath,
-  ];
+  const args = ['-y', '-f', 'concat', '-safe', '0', '-i', concatFile, '-c', 'copy', outputPath];
 
   await runFFmpeg(args, 'Sahneleri birleştirme');
 }
@@ -230,7 +238,7 @@ async function mixAudio(
   ttsFiles: Array<{ path: string; startTime: number }>,
   musicPath: string | undefined,
   totalDuration: number,
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   const inputs = ['-i', videoPath];
   const filterParts: string[] = [];
@@ -254,10 +262,12 @@ async function mixAudio(
     const musicLabel = 'music';
     const musicEnd = totalDuration;
     filterParts.push(
-      `[${audioInputIndex}:a]afade=t=in:d=${MUSIC_FADE_DURATION},afade=t=out:st=${musicEnd - MUSIC_FADE_DURATION}:d=${MUSIC_FADE_DURATION},volume=0.15[${musicLabel}]`
+      `[${audioInputIndex}:a]afade=t=in:d=${MUSIC_FADE_DURATION},afade=t=out:st=${musicEnd - MUSIC_FADE_DURATION}:d=${MUSIC_FADE_DURATION},volume=0.15[${musicLabel}]`,
     );
     if (ttsAmixInputs) {
-      filterParts.push(`${ttsAmixInputs}[${musicLabel}]amix=inputs=${audioInputIndex - 1 + 1}:duration=first:weights=1 1 1[a_out]`);
+      filterParts.push(
+        `${ttsAmixInputs}[${musicLabel}]amix=inputs=${audioInputIndex - 1 + 1}:duration=first:weights=1 1 1[a_out]`,
+      );
     } else {
       filterParts.push(`[${musicLabel}]anull[a_out]`);
     }
@@ -270,12 +280,18 @@ async function mixAudio(
     const args = [
       '-y',
       ...inputs,
-      '-filter_complex', filterGraph,
-      '-map', '0:v',
-      '-map', '[a_out]',
-      '-c:v', 'copy',
-      '-c:a', 'aac',
-      '-b:a', '192k',
+      '-filter_complex',
+      filterGraph,
+      '-map',
+      '0:v',
+      '-map',
+      '[a_out]',
+      '-c:v',
+      'copy',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
       '-shortest',
       outputPath,
     ];
@@ -292,19 +308,28 @@ export async function compose(input: ComposeInput): Promise<ComposeResult> {
   const w = res.width;
   const h = res.height;
 
-  Logger.info(`[SceneComposer] Başlıyor: ${input.scenes.length} sahne, ${res.width}x${res.height}@${fps}fps`);
+  Logger.info(
+    `[SceneComposer] Başlıyor: ${input.scenes.length} sahne, ${res.width}x${res.height}@${fps}fps`,
+  );
 
   const workDir = path.dirname(input.outputPath);
   if (!fs.existsSync(workDir)) {
     fs.mkdirSync(workDir, { recursive: true });
   }
 
-  const sceneResults: Array<{ videoPath: string; audioPath: string | null; startTime: number; duration: number }> = [];
+  const sceneResults: Array<{
+    videoPath: string;
+    audioPath: string | null;
+    startTime: number;
+    duration: number;
+  }> = [];
   let currentTime = 0;
 
   for (let i = 0; i < input.scenes.length; i++) {
     const scene = input.scenes[i];
-    Logger.info(`[SceneComposer] Sahne ${i + 1}/${input.scenes.length}: ${scene.type} "${scene.characterName}" (${scene.duration}s)`);
+    Logger.info(
+      `[SceneComposer] Sahne ${i + 1}/${input.scenes.length}: ${scene.type} "${scene.characterName}" (${scene.duration}s)`,
+    );
 
     const result = await renderScene(scene, input.backgroundPath, workDir, i, fps, w, h);
     sceneResults.push({
@@ -317,17 +342,23 @@ export async function compose(input: ComposeInput): Promise<ComposeResult> {
   }
 
   const totalDuration = currentTime;
-  const sceneVideos = sceneResults.map(r => r.videoPath);
+  const sceneVideos = sceneResults.map((r) => r.videoPath);
   const concatVideo = path.join(workDir, 'concat_temp.mp4');
 
   await concatScenes(sceneVideos, concatVideo);
 
   const ttsFiles = sceneResults
-    .filter(r => r.audioPath)
-    .map(r => ({ path: r.audioPath!, startTime: r.startTime }));
+    .filter((r) => r.audioPath)
+    .map((r) => ({ path: r.audioPath!, startTime: r.startTime }));
 
   if (ttsFiles.length > 0 || input.backgroundMusicPath) {
-    await mixAudio(concatVideo, ttsFiles, input.backgroundMusicPath, totalDuration, input.outputPath);
+    await mixAudio(
+      concatVideo,
+      ttsFiles,
+      input.backgroundMusicPath,
+      totalDuration,
+      input.outputPath,
+    );
 
     if (fs.existsSync(concatVideo)) fs.unlinkSync(concatVideo);
   } else {
@@ -335,7 +366,9 @@ export async function compose(input: ComposeInput): Promise<ComposeResult> {
     fs.renameSync(concatVideo, input.outputPath);
   }
 
-  Logger.info(`[SceneComposer] Tamamlandı: ${input.outputPath} (${totalDuration.toFixed(1)}s, ${input.scenes.length} sahne)`);
+  Logger.info(
+    `[SceneComposer] Tamamlandı: ${input.outputPath} (${totalDuration.toFixed(1)}s, ${input.scenes.length} sahne)`,
+  );
 
   return {
     outputPath: input.outputPath,

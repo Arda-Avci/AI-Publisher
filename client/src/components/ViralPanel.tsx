@@ -62,7 +62,14 @@ export function ViralPanel({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
               Hook Kalitesi
             </span>
             <span
@@ -96,9 +103,11 @@ export function ViralPanel({
                 height: '100%',
                 width: `${(hookScore / 10) * 100}%`,
                 background:
-                  hookScore >= 7 ? 'linear-gradient(90deg, #00F2FE, #9B51E0)' :
-                  hookScore >= 4 ? 'linear-gradient(90deg, #FFD700, #FF9500)' :
-                  'linear-gradient(90deg, #FF4444, #FF9500)',
+                  hookScore >= 7
+                    ? 'linear-gradient(90deg, #00F2FE, #9B51E0)'
+                    : hookScore >= 4
+                      ? 'linear-gradient(90deg, #FFD700, #FF9500)'
+                      : 'linear-gradient(90deg, #FF4444, #FF9500)',
                 borderRadius: '4px',
                 transition: 'width 0.3s ease',
               }}
@@ -122,7 +131,14 @@ export function ViralPanel({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <TrendingUp size={11} style={{ color: '#9B51E0' }} />
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
               Viral Başlıklar
             </span>
           </div>
@@ -159,7 +175,14 @@ export function ViralPanel({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Hash size={11} style={{ color: '#FFD700' }} />
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
               Hashtagler
             </span>
           </div>
@@ -172,9 +195,11 @@ export function ViralPanel({
                   padding: '2px 6px',
                   borderRadius: '4px',
                   background:
-                    h.category === 'trend' ? 'rgba(255,215,0,0.15)' :
-                    h.category === 'niche' ? 'rgba(0,242,254,0.1)' :
-                    'rgba(255,255,255,0.05)',
+                    h.category === 'trend'
+                      ? 'rgba(255,215,0,0.15)'
+                      : h.category === 'niche'
+                        ? 'rgba(0,242,254,0.1)'
+                        : 'rgba(255,255,255,0.05)',
                   color: h.category === 'trend' ? '#FFD700' : 'var(--text-muted)',
                   fontFamily: 'var(--font-mono)',
                 }}
@@ -201,7 +226,14 @@ export function ViralPanel({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Film size={11} style={{ color: 'var(--accent)' }} />
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
               B-Roll Onizleme
             </span>
           </div>
@@ -290,7 +322,13 @@ function ToggleRow({
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '12px', color: checked ? 'white' : 'var(--text-muted)', fontWeight: 600 }}>
+        <div
+          style={{
+            fontSize: '12px',
+            color: checked ? 'white' : 'var(--text-muted)',
+            fontWeight: 600,
+          }}
+        >
           {label}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>
@@ -322,12 +360,7 @@ function ToggleRow({
           }}
         />
       </div>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        style={{ display: 'none' }}
-      />
+      <input type="checkbox" checked={checked} onChange={onChange} style={{ display: 'none' }} />
     </label>
   );
 }

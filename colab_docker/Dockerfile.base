@@ -1,0 +1,26 @@
+FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    espeak-ng \
+    espeak \
+    git \
+    wget \
+    curl \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install common Python packages
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    flask \
+    requests \
+    scipy \
+    numpy<2.0.0 \
+    accelerate \
+    transformers>=4.46 \
+    pillow

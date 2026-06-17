@@ -6,10 +6,10 @@
 export interface ClipSegment {
   id: string;
   startTime: number; // seconds
-  endTime: number;   // seconds
-  duration: number;   // seconds
-  score: number;      // viral potential score 0-100
-  reason: string;     // why this segment was selected
+  endTime: number; // seconds
+  duration: number; // seconds
+  score: number; // viral potential score 0-100
+  reason: string; // why this segment was selected
   highlights: string[];
   suggestedCaption?: string;
   suggestedHashtags?: string[];
@@ -28,8 +28,8 @@ export interface ClipJob {
 }
 
 export interface ClipperConfig {
-  minSegmentDuration: number;  // minimum clip duration in seconds
-  maxSegmentDuration: number;  // maximum clip duration in seconds
+  minSegmentDuration: number; // minimum clip duration in seconds
+  maxSegmentDuration: number; // maximum clip duration in seconds
   targetAspectRatio: '9:16' | '16:9' | '1:1';
   faceTracking: boolean;
   autoSubtitles: boolean;

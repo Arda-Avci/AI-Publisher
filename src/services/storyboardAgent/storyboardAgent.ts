@@ -18,28 +18,32 @@ const ParserSchema = z.object({
   logline: z.string(),
   genre: z.string(),
   totalScenes: z.number().min(1).max(20),
-  frames: z.array(z.object({
-    sceneNumber: z.number(),
-    narrativePurpose: z.string(),
-    visualDescription: z.string(),
-    cameraDirective: z.string(),
-    charactersInScene: z.array(z.string()),
-    setting: z.string(),
-    tone: z.string(),
-    durationSeconds: z.number(),
-  })),
+  frames: z.array(
+    z.object({
+      sceneNumber: z.number(),
+      narrativePurpose: z.string(),
+      visualDescription: z.string(),
+      cameraDirective: z.string(),
+      charactersInScene: z.array(z.string()),
+      setting: z.string(),
+      tone: z.string(),
+      durationSeconds: z.number(),
+    }),
+  ),
 });
 
 const SceneConverterSchema = z.object({
-  scenes: z.array(z.object({
-    sceneNumber: z.number(),
-    videoPrompt: z.string(),
-    speechText: z.string(),
-    sfxPrompt: z.string(),
-    cameraMotion: z.string(),
-    speaker: z.string(),
-    charactersInScene: z.array(z.string()),
-  })),
+  scenes: z.array(
+    z.object({
+      sceneNumber: z.number(),
+      videoPrompt: z.string(),
+      speechText: z.string(),
+      sfxPrompt: z.string(),
+      cameraMotion: z.string(),
+      speaker: z.string(),
+      charactersInScene: z.array(z.string()),
+    }),
+  ),
 });
 
 type ProgressCallback = (stage: string, percent: number) => void;
@@ -48,16 +52,18 @@ async function parseScript(options: StoryboardOptions): Promise<StoryboardScript
   const models = getAIModelChain();
   const sceneCount = options.sceneCount || 6;
   const lang = options.targetLanguage || 'tr';
-  const langInstruction = lang === 'tr'
-    ? 'Tüm metinleri Türkçe üret. Sahneler 6 saniyelik.'
-    : 'All text in English. Scenes are 6 seconds each.';
+  const langInstruction =
+    lang === 'tr'
+      ? 'Tüm metinleri Türkçe üret. Sahneler 6 saniyelik.'
+      : 'All text in English. Scenes are 6 seconds each.';
 
-  const result = await withFallbackAndRetry((model) => {
-    return generateObject({
-      model,
-      schema: ParserSchema,
-      abortSignal: AbortSignal.timeout(60000),
-      prompt: `Sen bir storyboard sanatçısısın. Verilen ana konuyu görsel sahnelere ayır.
+  const result = await withFallbackAndRetry(
+    (model) => {
+      return generateObject({
+        model,
+        schema: ParserSchema,
+        abortSignal: AbortSignal.timeout(60000),
+        prompt: `Sen bir storyboard sanatçısısın. Verilen ana konuyu görsel sahnelere ayır.
 
 Ana Konu: ${options.masterPrompt}
 ${options.productionNotes ? `Üretim Notları: ${options.productionNotes}` : ''}
@@ -79,12 +85,17 @@ ${langInstruction}
   - setting: Mekan/ortam
   - tone: Sahnenin duygusal tonu
   - durationSeconds: Süre (6)`,
-    });
-  }, models, 2, 3000, true);
+      });
+    },
+    models,
+    2,
+    3000,
+    true,
+  );
 
   const script = result.object;
   await storyboardVectorStore.clear();
-  const records: VectorRecord[] = script.frames.map(f => ({
+  const records: VectorRecord[] = script.frames.map((f) => ({
     id: `frame_${f.sceneNumber}`,
     content: `${f.visualDescription} ${f.setting} ${f.charactersInScene.join(' ')}`,
     metadata: { sceneNumber: f.sceneNumber, setting: f.setting },
@@ -96,25 +107,25 @@ ${langInstruction}
 
 async function convertToScenes(
   script: StoryboardScript,
-  options: StoryboardOptions
+  options: StoryboardOptions,
 ): Promise<StoryboardResult['scenes']> {
   const models = getAIModelChain();
   const similarFrames = await Promise.all(
     script.frames.map(async (frame) => {
-      const similar = await storyboardVectorStore.search(
-        frame.visualDescription, 2,
-        { setting: frame.setting }
-      );
-      return similar.map(r => r.content).join('; ');
-    })
+      const similar = await storyboardVectorStore.search(frame.visualDescription, 2, {
+        setting: frame.setting,
+      });
+      return similar.map((r) => r.content).join('; ');
+    }),
   );
 
-  const result = await withFallbackAndRetry((model) => {
-    return generateObject({
-      model,
-      schema: SceneConverterSchema,
-      abortSignal: AbortSignal.timeout(90000),
-      prompt: `Sen bir video prompt mühendisisin. Storyboard framelerini video üretim modelleri için promptlara dönüştür.
+  const result = await withFallbackAndRetry(
+    (model) => {
+      return generateObject({
+        model,
+        schema: SceneConverterSchema,
+        abortSignal: AbortSignal.timeout(90000),
+        prompt: `Sen bir video prompt mühendisisin. Storyboard framelerini video üretim modelleri için promptlara dönüştür.
 
 Storyboard:
 ${JSON.stringify(script.frames, null, 2)}
@@ -131,15 +142,20 @@ Her sahne için:
 - charactersInScene: Sahnede görünen karakterler
 
 ${options.characterFeatures ? `Karakter özelliklerini videoPrompt'a entegre et: ${options.characterFeatures}` : ''}`,
-    });
-  }, models, 2, 4000, true);
+      });
+    },
+    models,
+    2,
+    4000,
+    true,
+  );
 
   return result.object.scenes;
 }
 
 export async function runStoryboardAgent(
   options: StoryboardOptions,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StoryboardResult> {
   onProgress?.('storyboard_parsing', 10);
   Logger.info('[Storyboard] Parsing script...', { prompt: options.masterPrompt.slice(0, 80) });
@@ -188,15 +204,18 @@ export async function runStoryboardAgent(
 
 export async function integrateWithJob(
   job: any,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<StoryboardResult> {
-  const result = await runStoryboardAgent({
-    masterPrompt: job.master_prompt || '',
-    productionNotes: job.production_notes,
-    characterFeatures: job.character_features,
-    targetLanguage: 'tr',
-    sceneCount: job.total_scenes || 6,
-  }, onProgress);
+  const result = await runStoryboardAgent(
+    {
+      masterPrompt: job.master_prompt || '',
+      productionNotes: job.production_notes,
+      characterFeatures: job.character_features,
+      targetLanguage: 'tr',
+      sceneCount: job.total_scenes || 6,
+    },
+    onProgress,
+  );
 
   return result;
 }

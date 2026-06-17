@@ -59,7 +59,7 @@ router.get('/:feature', async (req, res) => {
 
     const videos = await db.all(
       'SELECT * FROM help_videos WHERE feature_key = $1 AND is_active = 1 ORDER BY sort_order ASC',
-      [feature]
+      [feature],
     );
 
     const localizedVideos = videos.map((v: any) => ({
@@ -86,16 +86,38 @@ router.get('/:feature', async (req, res) => {
  */
 router.post('/admin', async (req, res) => {
   try {
-    const { featureKey, titleTr, titleEn, descriptionTr, descriptionEn, videoUrl, thumbnailUrl, durationSeconds, sortOrder } = req.body;
+    const {
+      featureKey,
+      titleTr,
+      titleEn,
+      descriptionTr,
+      descriptionEn,
+      videoUrl,
+      thumbnailUrl,
+      durationSeconds,
+      sortOrder,
+    } = req.body;
 
     if (!featureKey || !titleTr || !titleEn) {
-      return res.status(400).json({ success: false, error: 'featureKey, titleTr, and titleEn are required' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'featureKey, titleTr, and titleEn are required' });
     }
 
     const result = await db.run(
       `INSERT INTO help_videos (feature_key, title_tr, title_en, description_tr, description_en, video_url, thumbnail_url, duration_seconds, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [featureKey, titleTr, titleEn, descriptionTr, descriptionEn, videoUrl, thumbnailUrl, durationSeconds || 0, sortOrder || 0]
+      [
+        featureKey,
+        titleTr,
+        titleEn,
+        descriptionTr,
+        descriptionEn,
+        videoUrl,
+        thumbnailUrl,
+        durationSeconds || 0,
+        sortOrder || 0,
+      ],
     );
 
     res.json({ success: true, id: result.lastID });
@@ -112,7 +134,17 @@ router.post('/admin', async (req, res) => {
 router.put('/admin/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { titleTr, titleEn, descriptionTr, descriptionEn, videoUrl, thumbnailUrl, durationSeconds, sortOrder, isActive } = req.body;
+    const {
+      titleTr,
+      titleEn,
+      descriptionTr,
+      descriptionEn,
+      videoUrl,
+      thumbnailUrl,
+      durationSeconds,
+      sortOrder,
+      isActive,
+    } = req.body;
 
     const updates: string[] = [];
     const params: any[] = [];

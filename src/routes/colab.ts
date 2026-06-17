@@ -14,81 +14,89 @@ const upload = multer({ dest: 'uploads/' }); // Geçici kayıt klasörü
  */
 export function registerColabRoutes(app: Application): void {
   // ─── Webhook Callback Endpoint (Colab'den Otonom POST) ───────────────────────
-  app.post('/api/v1/video/callback', upload.fields([
-    { name: 'video', maxCount: 1 },
-    { name: 'speech', maxCount: 1 },
-    { name: 'subtitle', maxCount: 1 },
-    { name: 'sfx', maxCount: 1 },
-    { name: 'cover_0', maxCount: 1 },
-    { name: 'cover_1', maxCount: 1 },
-    { name: 'cover_2', maxCount: 1 }
-  ]), async (req: Request, res: Response) => {
-    const { task_id, job_id, scene_number, status, type, message } = req.body;
-    const { token } = req.query;
-    const expectedToken = process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026';
+  app.post(
+    '/api/v1/video/callback',
+    upload.fields([
+      { name: 'video', maxCount: 1 },
+      { name: 'speech', maxCount: 1 },
+      { name: 'subtitle', maxCount: 1 },
+      { name: 'sfx', maxCount: 1 },
+      { name: 'cover_0', maxCount: 1 },
+      { name: 'cover_1', maxCount: 1 },
+      { name: 'cover_2', maxCount: 1 },
+    ]),
+    async (req: Request, res: Response) => {
+      const { task_id, job_id, scene_number, status, type, message } = req.body;
+      const { token } = req.query;
+      const expectedToken = process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026';
 
-    if (token !== expectedToken) {
-      Logger.warn('Yetkisiz callback isteği reddedildi!');
-      return res.status(403).json({ success: false, error: 'Unauthorized callback token' });
-    }
+      if (token !== expectedToken) {
+        Logger.warn('Yetkisiz callback isteği reddedildi!');
+        return res.status(403).json({ success: false, error: 'Unauthorized callback token' });
+      }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    if (status === 'error') {
-      Logger.error(`Colab'den hata raporu geldi: [Type: ${type || 'video'}] ${message}`);
-      return res.status(200).json({ received: true });
-    }
+      if (status === 'error') {
+        Logger.error(`Colab'den hata raporu geldi: [Type: ${type || 'video'}] ${message}`);
+        return res.status(200).json({ received: true });
+      }
 
-    try {
-      const fs = await import('fs-extra');
-      const path = await import('path');
+      try {
+        const fs = await import('fs-extra');
+        const path = await import('path');
 
-      if (type === 'covers' || (!type && files['cover_0'])) {
-        Logger.info(`Kapak tasarımları callback ile geldi! Job: ${job_id}`);
-        for (let i = 0; i < 3; i++) {
-          const fileField = `cover_${i}`;
-          const file = files[fileField]?.[0];
-          if (file) {
-            const dest = path.join(process.cwd(), 'uploads', `cover_${job_id}_${i}.jpg`);
-            await fs.move(file.path, dest, { overwrite: true });
-            Logger.info(`Kapak ${i} kaydedildi: ${dest}`);
+        if (type === 'covers' || (!type && files['cover_0'])) {
+          Logger.info(`Kapak tasarımları callback ile geldi! Job: ${job_id}`);
+          for (let i = 0; i < 3; i++) {
+            const fileField = `cover_${i}`;
+            const file = files[fileField]?.[0];
+            if (file) {
+              const dest = path.join(process.cwd(), 'uploads', `cover_${job_id}_${i}.jpg`);
+              await fs.move(file.path, dest, { overwrite: true });
+              Logger.info(`Kapak ${i} kaydedildi: ${dest}`);
+            }
+          }
+        } else {
+          const videoFile = files['video']?.[0];
+          const speechFile = files['speech']?.[0];
+          const subtitleFile = files['subtitle']?.[0];
+          const sfxFile = files['sfx']?.[0];
+
+          Logger.info(`Sahne medyaları callback ile geldi! Job: ${job_id}, Scene: ${scene_number}`);
+
+          if (videoFile) {
+            const destV = path.join(process.cwd(), 'videolar', `tv_${job_id}_${scene_number}.mp4`);
+            await fs.move(videoFile.path, destV, { overwrite: true });
+            Logger.info(`Video kaydedildi: ${destV}`);
+          }
+          if (speechFile) {
+            const destS = path.join(process.cwd(), 'videolar', `ts_${job_id}_${scene_number}.wav`);
+            await fs.move(speechFile.path, destS, { overwrite: true });
+            Logger.info(`Konuşma kaydedildi: ${destS}`);
+          }
+          if (sfxFile) {
+            const destE = path.join(process.cwd(), 'videolar', `te_${job_id}_${scene_number}.wav`);
+            await fs.move(sfxFile.path, destE, { overwrite: true });
+            Logger.info(`SFX kaydedildi: ${destE}`);
+          }
+          if (subtitleFile) {
+            const destSRT = path.join(
+              process.cwd(),
+              'videolar',
+              `srt_${job_id}_${scene_number}.srt`,
+            );
+            await fs.move(subtitleFile.path, destSRT, { overwrite: true });
+            Logger.info(`Altyazı kaydedildi: ${destSRT}`);
           }
         }
-      } else {
-        const videoFile = files['video']?.[0];
-        const speechFile = files['speech']?.[0];
-        const subtitleFile = files['subtitle']?.[0];
-        const sfxFile = files['sfx']?.[0];
-
-        Logger.info(`Sahne medyaları callback ile geldi! Job: ${job_id}, Scene: ${scene_number}`);
-
-        if (videoFile) {
-          const destV = path.join(process.cwd(), 'videolar', `tv_${job_id}_${scene_number}.mp4`);
-          await fs.move(videoFile.path, destV, { overwrite: true });
-          Logger.info(`Video kaydedildi: ${destV}`);
-        }
-        if (speechFile) {
-          const destS = path.join(process.cwd(), 'videolar', `ts_${job_id}_${scene_number}.wav`);
-          await fs.move(speechFile.path, destS, { overwrite: true });
-          Logger.info(`Konuşma kaydedildi: ${destS}`);
-        }
-        if (sfxFile) {
-          const destE = path.join(process.cwd(), 'videolar', `te_${job_id}_${scene_number}.wav`);
-          await fs.move(sfxFile.path, destE, { overwrite: true });
-          Logger.info(`SFX kaydedildi: ${destE}`);
-        }
-        if (subtitleFile) {
-          const destSRT = path.join(process.cwd(), 'videolar', `srt_${job_id}_${scene_number}.srt`);
-          await fs.move(subtitleFile.path, destSRT, { overwrite: true });
-          Logger.info(`Altyazı kaydedildi: ${destSRT}`);
-        }
+      } catch (err) {
+        Logger.error('Callback dosyalarını kaydederken hata', err);
       }
-    } catch (err) {
-      Logger.error('Callback dosyalarını kaydederken hata', err);
-    }
 
-    res.status(200).json({ received: true });
-  });
+      res.status(200).json({ received: true });
+    },
+  );
 
   // ─── S3: Colab Manager endpoints ──────────────────────────────────────────────
   app.get('/colab-status', requireAuth, (req, res) => {
@@ -103,7 +111,7 @@ export function registerColabRoutes(app: Application): void {
     try {
       const response = await axios.get(`${url}/health`, {
         timeout: 5000,
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: { 'ngrok-skip-browser-warning': 'true' },
       });
       res.json(response.data);
     } catch (err: any) {
@@ -125,7 +133,13 @@ export function registerColabRoutes(app: Application): void {
     const formatState = (state: any) => {
       const isRunning = state.status === 'running';
       const diag = state.diagnostics || {};
-      const gpuModel = diag.gpu_model || (state.gpuMemoryGB ? (state.gpuMemoryGB > 20 ? 'NVIDIA L4' : 'NVIDIA Tesla T4') : 'Bağlı Değil');
+      const gpuModel =
+        diag.gpu_model ||
+        (state.gpuMemoryGB
+          ? state.gpuMemoryGB > 20
+            ? 'NVIDIA L4'
+            : 'NVIDIA Tesla T4'
+          : 'Bağlı Değil');
       return {
         running: isRunning,
         status: state.status,
@@ -135,7 +149,7 @@ export function registerColabRoutes(app: Application): void {
         vram_total: state.gpuMemoryGB || 0,
         isRunning: isRunning,
         lastHealthCheck: state.lastHealthCheck,
-        diagnostics: state.diagnostics || null
+        diagnostics: state.diagnostics || null,
       };
     };
 
@@ -174,7 +188,7 @@ export function registerColabRoutes(app: Application): void {
       logAudit({
         userId: req.session.userId,
         action: 'colab.start',
-        req
+        req,
       });
       res.json({ success: true, ngrokUrl: result.ngrokUrl });
     } catch (err: any) {
@@ -192,7 +206,7 @@ export function registerColabRoutes(app: Application): void {
       logAudit({
         userId: req.session.userId,
         action: 'colab.connect',
-        req
+        req,
       });
       res.json({ success: true, ngrokUrl: result.ngrokUrl });
     } catch (err: any) {
@@ -206,7 +220,7 @@ export function registerColabRoutes(app: Application): void {
       logAudit({
         userId: req.session.userId,
         action: 'colab.stop',
-        req
+        req,
       });
       res.json({ success: true });
     } catch (err: any) {

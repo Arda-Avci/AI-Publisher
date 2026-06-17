@@ -30,13 +30,24 @@ export interface DashboardParams {
 }
 
 export function buildDashboardHTML(params: DashboardParams): string {
-  const { currentLang, currentTheme, t, user, queueJobs, completedJobs, themeStyles, isDark, csrfToken, cspNonce } = params;
+  const {
+    currentLang,
+    currentTheme,
+    t,
+    user,
+    queueJobs,
+    completedJobs,
+    themeStyles,
+    isDark,
+    csrfToken,
+    cspNonce,
+  } = params;
 
   const HELP_PAGES_DATA = [
     {
-      id: "general",
-      titleTr: "Genel Bakış",
-      titleEn: "Overview",
+      id: 'general',
+      titleTr: 'Genel Bakış',
+      titleEn: 'Overview',
       contentTr: `<h3>Platformumuza Hoş Geldiniz!</h3>
         <p>AI Publisher, Google Colab GPU gücü ve gelişmiş Node.js otomasyon kütüphanelerini (Playwright, FFmpeg) bir araya getirerek dakikalar içinde SEO uyumlu, viral sosyal medya videoları üretmenizi sağlar.</p>
         <p><strong>Temel Özellikler:</strong></p>
@@ -54,12 +65,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <li>AI Lip-Sync with voice cloning</li>
           <li>Advanced vertical video (Shorts) transformation and callout overlays</li>
           <li>Fully automated posting on YouTube, TikTok, X, and Meta using Playwright</li>
-        </ul>`
+        </ul>`,
     },
     {
-      id: "production",
-      titleTr: "Video Üretim Süreci",
-      titleEn: "Video Production",
+      id: 'production',
+      titleTr: 'Video Üretim Süreci',
+      titleEn: 'Video Production',
       contentTr: `<h3>Adım Adım Video Üretimi</h3>
         <ol>
           <li><strong>Hikaye / Master Prompt:</strong> Videonun temel konusunu yazın. Yapay zekâ bu metni 6'şar saniyelik parçalara bölecektir.</li>
@@ -74,12 +85,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <li><strong>Character Description:</strong> Enter physical attributes for character consistency (e.g., 'blue-eyed, brunette cyberpunk agent').</li>
           <li><strong>Reference Image:</strong> Select an image to be used as the starting frame of Scene 1.</li>
           <li><strong>Wav2Lip Lip-Sync:</strong> Enable lip-sync to synchronize face movements with synthesized audio.</li>
-        </ol>`
+        </ol>`,
     },
     {
-      id: "publishing",
-      titleTr: "Sosyal Medya Yayını",
-      titleEn: "Social Media Publishing",
+      id: 'publishing',
+      titleTr: 'Sosyal Medya Yayını',
+      titleEn: 'Social Media Publishing',
       contentTr: `<h3>Otomatik Paylaşım Kurulumu</h3>
         <p>Playwright botlarımızın platformlara başarıyla yükleme yapabilmesi için proje kök dizininde tarayıcı oturum çerezleri bulunmalıdır:</p>
         <ul>
@@ -97,53 +108,84 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <li><code>auth_x.json</code></li>
           <li><code>auth_meta.json</code></li>
         </ul>
-        <p>Once video production is complete, you can review the generated titles and descriptions, and hit "Publish" to start the automated flow in the background.</p>`
-    }
+        <p>Once video production is complete, you can review the generated titles and descriptions, and hit "Publish" to start the automated flow in the background.</p>`,
+    },
   ];
 
-  const queueCardsHTML = queueJobs.map(job => {
-    const isProcessing = job.status === 'processing';
-    const isFailed = job.status === 'failed';
-    const isPending = job.status === 'pending';
-    const isAwaitingApproval = job.status === 'awaiting_approval';
-    const isProcessingPhase1 = job.status === 'processing_phase1';
+  const queueCardsHTML = queueJobs
+    .map((job) => {
+      const isProcessing = job.status === 'processing';
+      const isFailed = job.status === 'failed';
+      const isPending = job.status === 'pending';
+      const isAwaitingApproval = job.status === 'awaiting_approval';
+      const isProcessingPhase1 = job.status === 'processing_phase1';
 
-    var approvalBadge = isAwaitingApproval
-      ? '<span class="approval-pending-badge" onclick="resumeDifferentiation(' + job.id + ')">⏳ ' + (t.awaitingapprova72) + '</span>'
-      : '';
-    var phase1Badge = isProcessingPhase1
-      ? '<span class="phase1-pending-badge" onclick="resumeDifferentiation(' + job.id + ')">⏳ ' + (t.translationpend73) + '</span>'
-      : '';
-    var failedBadge = isFailed
-      ? '<span class="phase1-pending-badge" style="background:hsla(0 84% 60% / 0.15);color:hsl(0 84% 60%);" onclick="resumeDifferentiation(' + job.id + ')">❌ ' + (t.failed74) + '</span>'
-      : '';
+      var approvalBadge = isAwaitingApproval
+        ? '<span class="approval-pending-badge" onclick="resumeDifferentiation(' +
+          job.id +
+          ')">⏳ ' +
+          t.awaitingapprova72 +
+          '</span>'
+        : '';
+      var phase1Badge = isProcessingPhase1
+        ? '<span class="phase1-pending-badge" onclick="resumeDifferentiation(' +
+          job.id +
+          ')">⏳ ' +
+          t.translationpend73 +
+          '</span>'
+        : '';
+      var failedBadge = isFailed
+        ? '<span class="phase1-pending-badge" style="background:hsla(0 84% 60% / 0.15);color:hsl(0 84% 60%);" onclick="resumeDifferentiation(' +
+          job.id +
+          ')">❌ ' +
+          t.failed74 +
+          '</span>'
+        : '';
 
-    var startBtn = isPending
-      ? '<button onclick="window.loadJobIntoForm(' + job.id + ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ ' + (t.btnEdit) + '</button><button onclick="startJob(' + job.id + ')" class="start-btn">▶ ' + (t.btnQueueAdd) + '</button>'
-      : '';
+      var startBtn = isPending
+        ? '<button onclick="window.loadJobIntoForm(' +
+          job.id +
+          ')" class="start-btn" style="background: hsla(210, 70%, 50%, 0.15); color: hsl(210, 70%, 60%); border-color: hsla(210, 70%, 50%, 0.4); margin-right: 5px;">✏️ ' +
+          t.btnEdit +
+          '</button><button onclick="startJob(' +
+          job.id +
+          ')" class="start-btn">▶ ' +
+          t.btnQueueAdd +
+          '</button>'
+        : '';
 
-    var cancelBtn = (isProcessing || isPending || isProcessingPhase1 || isAwaitingApproval)
-      ? '<button onclick="cancelJob(' + job.id + ')" class="delete-btn" style="background: hsla(0, 70%, 50%, 0.15); color: hsl(0, 70%, 60%); border-color: hsla(0, 70%, 50%, 0.4); margin-right: 5px;">✕ ' + (t.cancel76 || 'İptal Et') + '</button>'
-      : '';
+      var cancelBtn =
+        isProcessing || isPending || isProcessingPhase1 || isAwaitingApproval
+          ? '<button onclick="cancelJob(' +
+            job.id +
+            ')" class="delete-btn" style="background: hsla(0, 70%, 50%, 0.15); color: hsl(0, 70%, 60%); border-color: hsla(0, 70%, 50%, 0.4); margin-right: 5px;">✕ ' +
+            (t.cancel76 || 'İptal Et') +
+            '</button>'
+          : '';
 
-    let targetPlatforms = [];
-    try { targetPlatforms = JSON.parse(job.target_platforms || '[]'); } catch(e) {}
-    
-    const jobDataJson = escapeHtml(JSON.stringify({
-      masterPrompt: job.master_prompt || '',
-      productionNotes: job.production_notes || '',
-      characterFeatures: job.character_features || '',
-      transcriptText: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
-      playlistId: job.playlist_id || '',
-      materialPath: job.material_path || '',
-      hasShorts: job.has_shorts === 1,
-      hasSubtitles: job.has_subtitles === 1,
-      platforms: targetPlatforms,
-      differentiationDurationMode: job.differentiation_duration_mode || 'same',
-      differentiationLayout: job.differentiation_layout === 1
-    }));
+      let targetPlatforms = [];
+      try {
+        targetPlatforms = JSON.parse(job.target_platforms || '[]');
+      } catch (e) {}
 
-    return `
+      const jobDataJson = escapeHtml(
+        JSON.stringify({
+          masterPrompt: job.master_prompt || '',
+          productionNotes: job.production_notes || '',
+          characterFeatures: job.character_features || '',
+          transcriptText:
+            job.transcript_translated || job.transcript_cleaned || job.transcript || '',
+          playlistId: job.playlist_id || '',
+          materialPath: job.material_path || '',
+          hasShorts: job.has_shorts === 1,
+          hasSubtitles: job.has_subtitles === 1,
+          platforms: targetPlatforms,
+          differentiationDurationMode: job.differentiation_duration_mode || 'same',
+          differentiationLayout: job.differentiation_layout === 1,
+        }),
+      );
+
+      return `
       <div class="job-card" id="job-card-${job.id}">
         <div class="job-header">
           <h3>${t.project} #${job.id}</h3>
@@ -154,12 +196,16 @@ export function buildDashboardHTML(params: DashboardParams): string {
         ${failedBadge ? '<div style="margin-bottom:0.5rem;">' + failedBadge + '</div>' : ''}
         <p class="prompt"><strong>Prompt:</strong> ${escapeHtml(job.master_prompt || '')}</p>
 
-        ${isProcessing ? `
+        ${
+          isProcessing
+            ? `
           <div class="progress-bar-container">
             <div class="progress-bar-fill" id="progress-fill-${job.id}" style="width: ${job.progress_percent}%"></div>
           </div>
           <p class="status-msg" id="status-msg-${job.id}">' + (t.labelEstimatedTime) + ': ${job.estimated_minutes ? job.estimated_minutes.toFixed(1) : '?'} ' + (t.labelMinutesUnit) + '</p>
-        ` : ''}
+        `
+            : ''
+        }
 
         <div class="action-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
           ${startBtn}
@@ -168,52 +214,64 @@ export function buildDashboardHTML(params: DashboardParams): string {
         </div>
       </div>
     `;
-  }).join('');
+    })
+    .join('');
 
-  const completedCardsHTML = completedJobs.map(job => {
-    let platforms = [];
-    try {
-      platforms = JSON.parse(job.target_platforms || '[]');
-    } catch(e) {}
-
-    const ytCancelBtn = job.yt_status === 'publishing'
-      ? `<button onclick="cancelPublish('${job.id}', 'youtube')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
-      : '';
-    const ttCancelBtn = job.tt_status === 'publishing'
-      ? `<button onclick="cancelPublish('${job.id}', 'tiktok')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
-      : '';
-    const xCancelBtn = job.x_status === 'publishing'
-      ? `<button onclick="cancelPublish('${job.id}', 'x')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
-      : '';
-    const metaCancelBtn = job.meta_status === 'publishing'
-      ? `<button onclick="cancelPublish('${job.id}', 'meta')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
-      : '';
-
-    const jobDataJson = escapeHtml(JSON.stringify({
-      masterPrompt: job.master_prompt || '',
-      productionNotes: job.production_notes || '',
-      characterFeatures: job.character_features || '',
-      transcriptText: job.transcript_translated || job.transcript_cleaned || job.transcript || '',
-      playlistId: job.playlist_id || '',
-      materialPath: job.material_path || '',
-      hasShorts: job.has_shorts === 1,
-      hasSubtitles: job.has_subtitles === 1,
-      platforms: platforms,
-      differentiationDurationMode: job.differentiation_duration_mode || 'same',
-      differentiationLayout: job.differentiation_layout === 1
-    }));
-
-    let coverSelectorHTML = '';
-    if (job.cover_images) {
+  const completedCardsHTML = completedJobs
+    .map((job) => {
+      let platforms = [];
       try {
-        const coverList = JSON.parse(job.cover_images);
-        if (Array.isArray(coverList) && coverList.length > 0) {
-          const selectedCoverName = job.cover_image_path ? job.cover_image_path.split(/[\\/]/).pop() : '';
-          const coverOptions = coverList.map((cPath, idx) => {
-            const cName = cPath.split('/').pop();
-            const isSelected = cName === selectedCoverName;
-            const activeClass = isSelected ? 'active' : '';
-            return `
+        platforms = JSON.parse(job.target_platforms || '[]');
+      } catch (e) {}
+
+      const ytCancelBtn =
+        job.yt_status === 'publishing'
+          ? `<button onclick="cancelPublish('${job.id}', 'youtube')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+          : '';
+      const ttCancelBtn =
+        job.tt_status === 'publishing'
+          ? `<button onclick="cancelPublish('${job.id}', 'tiktok')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+          : '';
+      const xCancelBtn =
+        job.x_status === 'publishing'
+          ? `<button onclick="cancelPublish('${job.id}', 'x')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+          : '';
+      const metaCancelBtn =
+        job.meta_status === 'publishing'
+          ? `<button onclick="cancelPublish('${job.id}', 'meta')" class="cancel-btn pub-cancel-btn" style="margin-left:5px;">✕ ${t.cancel76 || 'İptal Et'}</button>`
+          : '';
+
+      const jobDataJson = escapeHtml(
+        JSON.stringify({
+          masterPrompt: job.master_prompt || '',
+          productionNotes: job.production_notes || '',
+          characterFeatures: job.character_features || '',
+          transcriptText:
+            job.transcript_translated || job.transcript_cleaned || job.transcript || '',
+          playlistId: job.playlist_id || '',
+          materialPath: job.material_path || '',
+          hasShorts: job.has_shorts === 1,
+          hasSubtitles: job.has_subtitles === 1,
+          platforms: platforms,
+          differentiationDurationMode: job.differentiation_duration_mode || 'same',
+          differentiationLayout: job.differentiation_layout === 1,
+        }),
+      );
+
+      let coverSelectorHTML = '';
+      if (job.cover_images) {
+        try {
+          const coverList = JSON.parse(job.cover_images);
+          if (Array.isArray(coverList) && coverList.length > 0) {
+            const selectedCoverName = job.cover_image_path
+              ? job.cover_image_path.split(/[\\/]/).pop()
+              : '';
+            const coverOptions = coverList
+              .map((cPath, idx) => {
+                const cName = cPath.split('/').pop();
+                const isSelected = cName === selectedCoverName;
+                const activeClass = isSelected ? 'active' : '';
+                return `
               <div class="cover-option-card ${activeClass}" onclick="selectCover('${job.id}', ${idx}, this)" style="
                 position: relative;
                 cursor: pointer;
@@ -239,9 +297,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
                 </div>
               </div>
             `;
-          }).join('');
+              })
+              .join('');
 
-          coverSelectorHTML = `
+            coverSelectorHTML = `
             <div class="cover-selector-section" style="margin-bottom: 1.5rem; margin-top: 1rem;">
               <h5 style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">🖼️ ' + (t.labelCoverPhotoSelect) + '</h5>
               <div class="cover-options-grid" style="
@@ -253,13 +312,13 @@ export function buildDashboardHTML(params: DashboardParams): string {
               </div>
             </div>
           `;
+          }
+        } catch (e) {
+          Logger.warn('Cover images JSON parse hatası', e);
         }
-      } catch (e) {
-        Logger.warn('Cover images JSON parse hatası', e);
       }
-    }
 
-    return `
+      return `
       <div class="job-card completed-job-card" id="job-card-${job.id}">
         <div class="job-header">
           <h3>' + (t.labelProject) + ' #${job.id}</h3>
@@ -273,11 +332,15 @@ export function buildDashboardHTML(params: DashboardParams): string {
           </video>
         </div>
 
-        ${job.viral_score !== null && job.viral_score !== undefined ? `
+        ${
+          job.viral_score !== null && job.viral_score !== undefined
+            ? `
           <div style="background: rgba(0, 242, 254, 0.1); border: 1px solid #00F2FE; padding: 10px; border-radius: 8px; margin-top: 15px; font-weight: bold; color: #00F2FE; display: flex; align-items: center; gap: 8px;">
             🔥 AI Viralite Skoru: ${job.viral_score} / 100
           </div>
-        ` : ''}
+        `
+            : ''
+        }
 
         <button onclick="analyzeViralScore('${job.id}')" class="pub-btn" id="viral-btn-${job.id}" style="background: linear-gradient(135deg, #FF007F, #7F00FF); margin-top:10px; width: 100%;">📈 AI Viralite Analizi Yap</button>
         <div id="viral_score_result_${job.id}" style="margin-top: 10px; display:none; background:hsla(var(--border), 0.15); border: 1px solid hsla(var(--border), 0.3); padding:12px; border-radius:8px; font-size:0.85rem;"></div>
@@ -335,7 +398,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
         </div>
       </div>
     `;
-  }).join('');
+    })
+    .join('');
 
   const dashboardHTML = `
   <!DOCTYPE html>
@@ -409,9 +473,12 @@ export function buildDashboardHTML(params: DashboardParams): string {
  
           <div class="opp-chips-label" style="margin-top: 1.25rem;">${t.suggestions84}</div>
           <div class="opp-suggestions" id="opp-suggestions-container">
-            ${['yapay zeka','yapay zeka 2026','türkçe ai','video üretim','shorts','ai tools'].map(s =>
-              `<button type="button" class="opp-suggestion" onclick="addInterest('${s}')">+ ${s}</button>`
-            ).join('')}
+            ${['yapay zeka', 'yapay zeka 2026', 'türkçe ai', 'video üretim', 'shorts', 'ai tools']
+              .map(
+                (s) =>
+                  `<button type="button" class="opp-suggestion" onclick="addInterest('${s}')">+ ${s}</button>`,
+              )
+              .join('')}
           </div>
  
           <div class="opp-step1-actions">
@@ -922,11 +989,13 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <input type="search" id="helpSearch" placeholder="${t.helpSearchPlaceholder}" oninput="filterHelp()">
         </div>
         <div class="help-topics" id="helpTopics">
-          ${HELP_PAGES_DATA.map(p => `
+          ${HELP_PAGES_DATA.map(
+            (p) => `
             <button class="help-topic-btn" data-id="${p.id}" onclick="showHelpTopic('${p.id}')">
               <span></span> ${currentLang === 'tr' ? p.titleTr : p.titleEn}
             </button>
-          `).join('')}
+          `,
+          ).join('')}
         </div>
         <div class="help-content" id="helpContent"></div>
         <div style="margin-top:1rem; padding-top:0.875rem; border-top:1px solid hsla(var(--border),0.3); display:flex; justify-content:space-between; align-items:center;">

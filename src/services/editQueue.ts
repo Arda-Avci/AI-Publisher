@@ -2,10 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
-import {
-  parseEditCommand,
-  applyEditOperations,
-} from './chatToEdit.js';
+import { parseEditCommand, applyEditOperations } from './chatToEdit.js';
 
 export interface EditQueueItem {
   id: number;
@@ -23,47 +20,46 @@ export async function enqueueEdit(
   userId: number,
   jobId: number,
   command: string,
-  targetScene?: number
+  targetScene?: number,
 ): Promise<number> {
   const result = await db.run(
     `INSERT INTO edit_queue (job_id, user_id, command, status)
      VALUES (?, ?, ?, 'pending')`,
-    [jobId, userId, command]
+    [jobId, userId, command],
   );
   const editId = result.lastID as number;
 
   try {
     const job: any = await db.get(
       'SELECT total_scenes, scene_prompts, master_prompt FROM video_jobs WHERE id = ?',
-      [jobId]
+      [jobId],
     );
     const parsed = await parseEditCommand(
       command,
       job?.total_scenes || 1,
-      job?.scene_prompts || job?.master_prompt
+      job?.scene_prompts || job?.master_prompt,
     );
-    await db.run(
-      `UPDATE edit_queue SET operations = ?, target_scene = ? WHERE id = ?`,
-      [JSON.stringify(parsed.operations), targetScene || null, editId]
-    );
+    await db.run(`UPDATE edit_queue SET operations = ?, target_scene = ? WHERE id = ?`, [
+      JSON.stringify(parsed.operations),
+      targetScene || null,
+      editId,
+    ]);
   } catch (err) {
     Logger.warn('[EditQueue] Parse failed, storing raw command:', err);
-    await db.run(
-      `UPDATE edit_queue SET operations = ? WHERE id = ?`,
-      [JSON.stringify([{ type: 'enhance', params: {} }]), editId]
-    );
+    await db.run(`UPDATE edit_queue SET operations = ? WHERE id = ?`, [
+      JSON.stringify([{ type: 'enhance', params: {} }]),
+      editId,
+    ]);
   }
 
   return editId;
 }
 
-async function takeSnapshot(
-  jobId: number,
-  editId: number,
-  scenePaths: string[]
-): Promise<string> {
+async function takeSnapshot(jobId: number, editId: number, scenePaths: string[]): Promise<string> {
   const snapshotDir = path.join(
-    process.cwd(), 'videolar', `edit_snapshot_${jobId}_${editId}_${Date.now()}`
+    process.cwd(),
+    'videolar',
+    `edit_snapshot_${jobId}_${editId}_${Date.now()}`,
   );
   await fs.ensureDir(snapshotDir);
 
@@ -79,67 +75,64 @@ export async function applyEditQueueItem(
   jobId: number,
   editId: number,
   scenes: Array<{ sceneNumber: number; videoPath: string; audioPath?: string }>,
-  outputDir: string
+  outputDir: string,
 ): Promise<boolean> {
   const edit: EditQueueItem | undefined = await db.get(
     'SELECT * FROM edit_queue WHERE id = ? AND job_id = ?',
-    [editId, jobId]
+    [editId, jobId],
   );
   if (!edit || edit.status !== 'pending') {
     Logger.warn('[EditQueue] Edit not found or not pending', { editId, jobId });
     return false;
   }
 
-  const snapshotPath = await takeSnapshot(jobId, editId, scenes.map(s => s.videoPath));
+  const snapshotPath = await takeSnapshot(
+    jobId,
+    editId,
+    scenes.map((s) => s.videoPath),
+  );
 
   const operations = JSON.parse(edit.operations || '[]');
 
-  const sceneInfos = scenes.map(s => ({
+  const sceneInfos = scenes.map((s) => ({
     sceneNumber: s.sceneNumber,
     videoPath: s.videoPath,
     audioPath: s.audioPath,
   }));
 
-  Logger.info('[EditQueue] Applying edit operations', { editId, operationCount: operations.length });
+  Logger.info('[EditQueue] Applying edit operations', {
+    editId,
+    operationCount: operations.length,
+  });
 
   try {
-    const processedPaths = await applyEditOperations(
-      operations,
-      sceneInfos,
-      outputDir
-    );
+    const processedPaths = await applyEditOperations(operations, sceneInfos, outputDir);
 
     for (const scene of scenes) {
-      const matchedPath = processedPaths.find(p => p.includes(`scene_${scene.sceneNumber}`));
-      if (matchedPath && await fs.pathExists(matchedPath)) {
+      const matchedPath = processedPaths.find((p) => p.includes(`scene_${scene.sceneNumber}`));
+      if (matchedPath && (await fs.pathExists(matchedPath))) {
         await fs.copy(matchedPath, scene.videoPath, { overwrite: true });
       }
     }
 
-    await db.run(
-      `UPDATE edit_queue SET status = 'applied', snapshot_path = ? WHERE id = ?`,
-      [snapshotPath, editId]
-    );
+    await db.run(`UPDATE edit_queue SET status = 'applied', snapshot_path = ? WHERE id = ?`, [
+      snapshotPath,
+      editId,
+    ]);
 
     Logger.info('[EditQueue] Edit applied successfully', { editId });
     return true;
   } catch (err) {
     Logger.error('[EditQueue] Apply failed:', err);
-    await db.run(
-      `UPDATE edit_queue SET status = 'failed' WHERE id = ?`,
-      [editId]
-    );
+    await db.run(`UPDATE edit_queue SET status = 'failed' WHERE id = ?`, [editId]);
     return false;
   }
 }
 
-export async function undoEdit(
-  editId: number,
-  jobId: number
-): Promise<boolean> {
+export async function undoEdit(editId: number, jobId: number): Promise<boolean> {
   const edit: EditQueueItem | undefined = await db.get(
     'SELECT * FROM edit_queue WHERE id = ? AND job_id = ?',
-    [editId, jobId]
+    [editId, jobId],
   );
   if (!edit || edit.status !== 'applied' || !edit.snapshot_path) {
     Logger.warn('[EditQueue] Cannot undo: no snapshot', { editId });
@@ -147,7 +140,7 @@ export async function undoEdit(
   }
 
   const snapshotDir = edit.snapshot_path;
-  if (!await fs.pathExists(snapshotDir)) {
+  if (!(await fs.pathExists(snapshotDir))) {
     Logger.warn('[EditQueue] Snapshot directory missing', { snapshotDir });
     return false;
   }
@@ -157,8 +150,9 @@ export async function undoEdit(
     for (const file of files) {
       const srcPath = path.join(snapshotDir, file);
       const destPath = path.join(
-        process.cwd(), 'videolar',
-        `ms_${jobId}_${file.replace('scene_', '').replace('.mp4', '')}.mp4`
+        process.cwd(),
+        'videolar',
+        `ms_${jobId}_${file.replace('scene_', '').replace('.mp4', '')}.mp4`,
       );
       const destDir = path.dirname(destPath);
       if (await fs.pathExists(srcPath)) {
@@ -166,10 +160,7 @@ export async function undoEdit(
       }
     }
 
-    await db.run(
-      `UPDATE edit_queue SET status = 'reverted' WHERE id = ?`,
-      [editId]
-    );
+    await db.run(`UPDATE edit_queue SET status = 'reverted' WHERE id = ?`, [editId]);
 
     Logger.info('[EditQueue] Edit reverted successfully', { editId });
     return true;
@@ -179,31 +170,30 @@ export async function undoEdit(
   }
 }
 
-export async function getEditHistory(
-  jobId: number
-): Promise<EditQueueItem[]> {
-  return db.all(
-    'SELECT * FROM edit_queue WHERE job_id = ? ORDER BY created_at DESC',
-    [jobId]
-  );
+export async function getEditHistory(jobId: number): Promise<EditQueueItem[]> {
+  return db.all('SELECT * FROM edit_queue WHERE job_id = ? ORDER BY created_at DESC', [jobId]);
 }
 
 export async function applyPendingEditsToScene(
   jobId: number,
   sceneNumber: number,
-  sceneVideoPath: string
+  sceneVideoPath: string,
 ): Promise<void> {
   const pendingEdits: EditQueueItem[] = await db.all(
     `SELECT * FROM edit_queue
      WHERE job_id = ? AND status = 'pending'
        AND (target_scene IS NULL OR target_scene = ?)
      ORDER BY id ASC`,
-    [jobId, sceneNumber]
+    [jobId, sceneNumber],
   );
 
   if (pendingEdits.length === 0) return;
 
-  const editDir = path.join(process.cwd(), 'videolar', `edit_work_${jobId}_${sceneNumber}_${Date.now()}`);
+  const editDir = path.join(
+    process.cwd(),
+    'videolar',
+    `edit_work_${jobId}_${sceneNumber}_${Date.now()}`,
+  );
   await fs.ensureDir(editDir);
 
   for (const edit of pendingEdits) {
@@ -220,17 +210,14 @@ export async function applyPendingEditsToScene(
         }
       }
 
-      await db.run(
-        `UPDATE edit_queue SET status = 'applied', snapshot_path = ? WHERE id = ?`,
-        [snapshotDir, edit.id]
-      );
+      await db.run(`UPDATE edit_queue SET status = 'applied', snapshot_path = ? WHERE id = ?`, [
+        snapshotDir,
+        edit.id,
+      ]);
       Logger.info('[EditQueue] Scene pending edit applied', { editId: edit.id, sceneNumber });
     } catch (err) {
       Logger.warn('[EditQueue] Scene pending edit failed, skipping:', { editId: edit.id, err });
-      await db.run(
-        `UPDATE edit_queue SET status = 'failed' WHERE id = ?`,
-        [edit.id]
-      );
+      await db.run(`UPDATE edit_queue SET status = 'failed' WHERE id = ?`, [edit.id]);
     }
   }
 

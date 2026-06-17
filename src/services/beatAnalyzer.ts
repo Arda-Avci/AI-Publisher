@@ -7,10 +7,10 @@ import { runFFmpeg } from './videoService';
 import { Logger } from '../lib/logger';
 
 export interface BeatMarker {
-  timestamp: number;   // seconds
-  strength: number;    // 0.0-1.0 peak strength
-  beatNumber: number;  // sequential beat index
-  bar: number;         // musical bar (4 beats = 1 bar)
+  timestamp: number; // seconds
+  strength: number; // 0.0-1.0 peak strength
+  beatNumber: number; // sequential beat index
+  bar: number; // musical bar (4 beats = 1 bar)
 }
 
 export interface BeatAnalysisResult {
@@ -24,10 +24,13 @@ export interface BeatAnalysisResult {
  */
 async function getAudioDuration(audioPath: string): Promise<number> {
   const { stdout } = await runFFmpeg('ffprobe', [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-of', 'csv=p=0',
-    audioPath
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'csv=p=0',
+    audioPath,
   ]);
   const d = parseFloat(stdout.trim());
   return isNaN(d) ? 0 : d;
@@ -59,9 +62,13 @@ export async function detectBPM(audioPath: string): Promise<number> {
 
     const { stdout: astatsOutput } = await runFFmpeg('ffmpeg', [
       '-y',
-      '-i', audioPath,
-      '-af', 'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
-      '-f', 'null', '-'
+      '-i',
+      audioPath,
+      '-af',
+      'astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-',
+      '-f',
+      'null',
+      '-',
     ]).catch(() => ({ stdout: '', stderr: '' }));
 
     // Parse the peak levels to detect rhythmic patterns
@@ -86,7 +93,8 @@ export async function detectBPM(audioPath: string): Promise<number> {
     const intervals: number[] = [];
     for (let i = 1; i < peaks.length; i++) {
       const interval = peaks[i] - peaks[i - 1];
-      if (interval > 0.3 && interval < 2.0) { // Valid beat interval (0.3s to 2s = 30-200 BPM)
+      if (interval > 0.3 && interval < 2.0) {
+        // Valid beat interval (0.3s to 2s = 30-200 BPM)
         intervals.push(interval);
       }
     }
@@ -107,7 +115,6 @@ export async function detectBPM(audioPath: string): Promise<number> {
 
     Logger.info(`[BeatAnalyzer] Detected BPM: ${bpm}`);
     return bpm;
-
   } catch (error) {
     Logger.error('[BeatAnalyzer] BPM detection error:', error);
     return 120; // Safe default
@@ -134,7 +141,8 @@ function parsePeakLevels(output: string): number[] {
       }
 
       const peakValue = parseFloat(match[2]);
-      if (peakValue > -50) { // Noise gate: ignore very quiet sections
+      if (peakValue > -50) {
+        // Noise gate: ignore very quiet sections
         peaks.push(currentTime);
       }
     }
@@ -151,10 +159,13 @@ async function estimateBPMFromAudio(audioPath: string): Promise<number> {
   try {
     // Try to get audio bitrate and guess from that
     const { stdout } = await runFFmpeg('ffprobe', [
-      '-v', 'error',
-      '-show_entries', 'format=bit_rate',
-      '-of', 'csv=p=0',
-      audioPath
+      '-v',
+      'error',
+      '-show_entries',
+      'format=bit_rate',
+      '-of',
+      'csv=p=0',
+      audioPath,
     ]);
 
     const bitrate = parseInt(stdout.trim() || '0');
@@ -187,7 +198,7 @@ export async function findBeatPeaks(audioPath: string, bpm: number): Promise<Bea
   const beats: BeatMarker[] = [];
 
   let beatNumber = 0;
-  let bar = 1;
+  const bar = 1;
 
   // Start from a small offset to avoid edge issues
   for (let timestamp = 0.0; timestamp < duration; timestamp += beatInterval) {
@@ -199,7 +210,7 @@ export async function findBeatPeaks(audioPath: string, bpm: number): Promise<Bea
       timestamp: Math.round(timestamp * 1000) / 1000, // Round to ms
       strength: Math.min(1.0, strength),
       beatNumber,
-      bar: Math.floor(beatNumber / 4) + 1
+      bar: Math.floor(beatNumber / 4) + 1,
     });
 
     beatNumber++;
@@ -221,7 +232,7 @@ export async function buildBeatMarkers(audioPath: string): Promise<BeatAnalysisR
   return {
     bpm,
     beats,
-    duration
+    duration,
   };
 }
 
@@ -266,7 +277,7 @@ export async function syncCutsToBeats(
     crossfadeDur?: number;
     minSegmentDur?: number;
     alignToBeats?: boolean;
-  }
+  },
 ): Promise<BeatAnalysisResult> {
   const { buildBeatMarkers } = await import('./beatAnalyzer.js');
   const { applyBeatSync } = await import('./beatSyncEditor.js');
@@ -279,7 +290,7 @@ export async function syncCutsToBeats(
   Logger.info('[beatAnalyzer] syncCutsToBeats', {
     videoPath,
     bpm: beatData.bpm,
-    beatCount: beatData.beats.length
+    beatCount: beatData.beats.length,
   });
 
   // Apply beat-synced cuts
@@ -289,10 +300,10 @@ export async function syncCutsToBeats(
       audioPath: audioToAnalyze,
       crossfadeDur: options?.crossfadeDur ?? 0.5,
       minSegmentDur: options?.minSegmentDur ?? 2.0,
-      alignToBeats: options?.alignToBeats ?? true
+      alignToBeats: options?.alignToBeats ?? true,
     },
     beatData.beats,
-    outputPath
+    outputPath,
   );
 
   return beatData;

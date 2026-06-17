@@ -1,0 +1,15 @@
+FROM ai-publisher-base:latest
+
+# Install LTX-Video specific dependencies
+RUN pip install --no-cache-dir \
+    diffusers>=0.35,<0.36 \
+    imageio \
+    imageio-ffmpeg \
+    decord \
+    open_clip_torch
+
+COPY app.py /app/app.py
+WORKDIR /app
+EXPOSE 5009
+
+CMD ["python", "app.py"]

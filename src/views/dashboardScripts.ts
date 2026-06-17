@@ -1260,7 +1260,7 @@ export function getDashboardScripts(params: {
         };
       };
 
-      const activeJobs = ${JSON.stringify(queueJobs.filter(j => j.status === 'pending' || j.status === 'processing' || j.status === 'processing_phase1').map(j => j.id))};
+      const activeJobs = ${JSON.stringify(queueJobs.filter((j) => j.status === 'pending' || j.status === 'processing' || j.status === 'processing_phase1').map((j) => j.id))};
       activeJobs.forEach(jobId => {
         window.trackJobProgress(jobId);
       });

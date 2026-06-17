@@ -12,7 +12,7 @@ interface KokoroTtsOptions {
 
 export async function synthesizeKokoro(
   options: KokoroTtsOptions,
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   const { text, voice = 'af_bella', speed = 1.0, lang } = options;
 

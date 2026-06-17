@@ -18,7 +18,7 @@ export class RedisMutex {
         return true;
       }
       // Bekle ve tekrar dene
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
     throw new Error(`[RedisMutex] Could not acquire lock for ${this.key} within ${timeoutMs}ms`);
   }

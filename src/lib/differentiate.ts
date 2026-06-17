@@ -31,7 +31,7 @@ import {
   type GeneratedScene,
   type SupportedLang,
   translateTitleAndDesc,
-  rewriteTranscript
+  rewriteTranscript,
 } from './translation.js';
 import { broadcastProgress } from './redis.js';
 
@@ -80,7 +80,7 @@ function applyDurationMode(scenes: GeneratedScene[], mode: DurationMode): Genera
         sceneNumber: scenes.length + i + 1,
         videoPrompt: last.videoPrompt,
         speechText: last.speechText,
-        sfxPrompt: last.sfxPrompt
+        sfxPrompt: last.sfxPrompt,
       });
     }
     return [...scenes, ...extras];
@@ -138,7 +138,7 @@ export async function createDifferentiationJob(
   sourceMeta: SourceVideoMeta,
   targetLang: string,
   durationMode: DurationMode,
-  userId: number
+  userId: number,
 ): Promise<CreateJobResult> {
   if (!videoId || typeof videoId !== 'string') {
     throw new Error('videoId is required');
@@ -156,8 +156,13 @@ export async function createDifferentiationJob(
   const lang = targetLang as SupportedLang;
   const sourceMetaJson = JSON.stringify(sourceMeta || {});
 
-  const masterPrompt = (sourceMeta?.title || ('Differentiation of ' + videoId)) +
-    ' (source: ' + videoId + ', target: ' + lang + ')';
+  const masterPrompt =
+    (sourceMeta?.title || 'Differentiation of ' + videoId) +
+    ' (source: ' +
+    videoId +
+    ', target: ' +
+    lang +
+    ')';
 
   const insertResult = await db.run(
     `INSERT INTO video_jobs (
@@ -187,8 +192,8 @@ export async function createDifferentiationJob(
       durationMode,
       '',
       '',
-      ''
-    ]
+      '',
+    ],
   );
 
   const jobId = Number(insertResult.lastID);
@@ -198,7 +203,7 @@ export async function createDifferentiationJob(
     sourceVideoId: videoId,
     sourceVideoMeta: sourceMeta,
     targetLang: lang,
-    durationMode
+    durationMode,
   };
 }
 
@@ -209,22 +214,20 @@ export async function createDifferentiationJob(
  *
  * Final state: status='awaiting_approval' on success, status='failed' on error.
  */
-export async function runPhase1Background(
-  jobId: number,
-  userId: number
-): Promise<void> {
+export async function runPhase1Background(jobId: number, userId: number): Promise<void> {
   try {
     // Step 1: indicate transcript fetch starting
     await db.run(
       "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 10 WHERE id = ?",
-      [jobId]
+      [jobId],
     );
-    await broadcastProgress(jobId, { stageKey: 'phase1Transcript', percent: 10, stage: 'Transkript çekiliyor...' });
+    await broadcastProgress(jobId, {
+      stageKey: 'phase1Transcript',
+      percent: 10,
+      stage: 'Transkript çekiliyor...',
+    });
 
-    const job: any = await db.get(
-      'SELECT * FROM video_jobs WHERE id = ?',
-      [jobId]
-    );
+    const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
     if (!job) {
       throw new Error('Job bulunamadı');
     }
@@ -243,20 +246,31 @@ export async function runPhase1Background(
     // Step 3: fetch transcript
     await db.run(
       "UPDATE video_jobs SET current_stage = 'Transkript çekiliyor...', progress_percent = 40 WHERE id = ?",
-      [jobId]
+      [jobId],
     );
-    await broadcastProgress(jobId, { stageKey: 'phase1Transcript', percent: 40, stage: 'Transkript çekiliyor...' });
+    await broadcastProgress(jobId, {
+      stageKey: 'phase1Transcript',
+      percent: 40,
+      stage: 'Transkript çekiliyor...',
+    });
     let originalText = '';
     try {
       const transcript = await fetchYouTubeTranscript(videoId);
       originalText = transcript.plainText;
     } catch (err: any) {
-      Logger.warn(`YouTube transcript failed for ${videoId}. Falling back to AI script generation...`, err.message);
+      Logger.warn(
+        `YouTube transcript failed for ${videoId}. Falling back to AI script generation...`,
+        err.message,
+      );
       await db.run(
         "UPDATE video_jobs SET current_stage = 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...', progress_percent = 50 WHERE id = ?",
-        [jobId]
+        [jobId],
       );
-      await broadcastProgress(jobId, { stageKey: 'phase1AI', percent: 50, stage: 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...' });
+      await broadcastProgress(jobId, {
+        stageKey: 'phase1AI',
+        percent: 50,
+        stage: 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...',
+      });
       const meta = job.source_video_meta ? JSON.parse(job.source_video_meta) : {};
       const { generateScriptFromMetadata } = await import('../services/aiService.js');
       originalText = await generateScriptFromMetadata(meta.title || '', meta.description || '');
@@ -265,30 +279,42 @@ export async function runPhase1Background(
     // Step 4: clean text
     await db.run(
       "UPDATE video_jobs SET current_stage = 'Metin temizleniyor...', progress_percent = 60, transcript = ? WHERE id = ?",
-      [originalText, jobId]
+      [originalText, jobId],
     );
-    await broadcastProgress(jobId, { stageKey: 'phase1Clean', percent: 60, stage: 'Metin temizleniyor...' });
+    await broadcastProgress(jobId, {
+      stageKey: 'phase1Clean',
+      percent: 60,
+      stage: 'Metin temizleniyor...',
+    });
     const cleanedText = await cleanText(originalText);
 
     // Step 5: translate
     await db.run(
       "UPDATE video_jobs SET current_stage = 'Çeviri yapılıyor...', progress_percent = 75, transcript_cleaned = ? WHERE id = ?",
-      [cleanedText, jobId]
+      [cleanedText, jobId],
     );
-    await broadcastProgress(jobId, { stageKey: 'phase1Translate', percent: 75, stage: 'Çeviri yapılıyor...' });
+    await broadcastProgress(jobId, {
+      stageKey: 'phase1Translate',
+      percent: 75,
+      stage: 'Çeviri yapılıyor...',
+    });
     const translatedText = await translateText(cleanedText || originalText, targetLang);
 
     // Step 6: generate scene prompts directly
     await db.run(
       "UPDATE video_jobs SET current_stage = 'Promptlar üretiliyor...', progress_percent = 90 WHERE id = ?",
-      [jobId]
+      [jobId],
     );
-    await broadcastProgress(jobId, { stageKey: 'phase1Prompts', percent: 90, stage: 'Promptlar üretiliyor...' });
-    
+    await broadcastProgress(jobId, {
+      stageKey: 'phase1Prompts',
+      percent: 90,
+      stage: 'Promptlar üretiliyor...',
+    });
+
     const durationMode: DurationMode = isValidDurationMode(job.differentiation_duration_mode)
       ? job.differentiation_duration_mode
       : 'same';
-      
+
     const baseScenes = await generateScenePrompts(translatedText, targetLang);
     const finalScenes = applyDurationMode(baseScenes, durationMode);
     const scenesJson = JSON.stringify(finalScenes);
@@ -296,7 +322,7 @@ export async function runPhase1Background(
     // Step 7: finalize — status='pending' (ready for manual start in the UI)
     const firstScenePrompt = finalScenes[0]?.videoPrompt || job.master_prompt;
     const productionNotesPreview = translatedText; // Use full text so user can edit it
-    
+
     await db.run(
       `UPDATE video_jobs SET
         status = 'pending',
@@ -308,13 +334,18 @@ export async function runPhase1Background(
         master_prompt = ?,
         material_path = ?
        WHERE id = ?`,
-      [translatedText, productionNotesPreview, scenesJson, firstScenePrompt, imagePath, jobId]
+      [translatedText, productionNotesPreview, scenesJson, firstScenePrompt, imagePath, jobId],
     );
-    await broadcastProgress(jobId, { stageKey: 'phase1Done', percent: 100, stage: 'Onaylandı — Manuel başlatma bekleniyor', status: 'pending' });
+    await broadcastProgress(jobId, {
+      stageKey: 'phase1Done',
+      percent: 100,
+      stage: 'Onaylandı — Manuel başlatma bekleniyor',
+      status: 'pending',
+    });
 
     Logger.info('Differentiation tamamlandı: job #' + jobId);
   } catch (err: any) {
-    const errorMsg = (err && err.message) ? err.message : String(err);
+    const errorMsg = err && err.message ? err.message : String(err);
     Logger.error('Phase 1 background job #' + jobId + ' başarısız', err);
     try {
       await db.run(
@@ -323,9 +354,14 @@ export async function runPhase1Background(
           current_stage = ?,
           progress_percent = 0
         WHERE id = ?`,
-        ['Hata: ' + errorMsg, jobId]
+        ['Hata: ' + errorMsg, jobId],
       );
-      await broadcastProgress(jobId, { stageKey: 'stageError', percent: 0, stage: 'Hata: ' + errorMsg, status: 'failed' });
+      await broadcastProgress(jobId, {
+        stageKey: 'stageError',
+        percent: 0,
+        stage: 'Hata: ' + errorMsg,
+        status: 'failed',
+      });
     } catch (innerErr: any) {
       Logger.error('Failed to mark job #' + jobId + ' as failed', innerErr);
     }
@@ -343,18 +379,24 @@ export async function differentiateVideoPhase1(
   sourceMeta: SourceVideoMeta,
   targetLang: string,
   durationMode: DurationMode,
-  userId: number
+  userId: number,
 ): Promise<Phase1Result> {
-  const created = await createDifferentiationJob(videoId, sourceMeta, targetLang, durationMode, userId);
+  const created = await createDifferentiationJob(
+    videoId,
+    sourceMeta,
+    targetLang,
+    durationMode,
+    userId,
+  );
 
   // Run the background work, awaiting it (synchronous behavior for legacy callers).
   await runPhase1Background(created.jobId, userId);
 
   // Re-fetch the row to get the final state
-  const job: any = await db.get(
-    'SELECT * FROM video_jobs WHERE id = ? AND user_id = ?',
-    [created.jobId, userId]
-  );
+  const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [
+    created.jobId,
+    userId,
+  ]);
   if (!job) {
     throw new Error('Job bulunamadı');
   }
@@ -370,7 +412,7 @@ export async function differentiateVideoPhase1(
     cleanedText: job.transcript_cleaned || '',
     translatedText: job.transcript_translated || '',
     targetLang: created.targetLang,
-    durationMode: created.durationMode
+    durationMode: created.durationMode,
   };
 }
 
@@ -390,7 +432,7 @@ export interface Phase2Result {
 export async function differentiateVideoPhase2(
   jobId: number,
   userId: number,
-  editedTranslation: string
+  editedTranslation: string,
 ): Promise<Phase2Result> {
   if (!jobId) throw new Error('jobId is required');
   if (!userId) throw new Error('userId is required');
@@ -399,10 +441,7 @@ export async function differentiateVideoPhase2(
   }
 
   // 1. Verify ownership + status
-  const job: any = await db.get(
-    'SELECT * FROM video_jobs WHERE id = ?',
-    [jobId]
-  );
+  const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
   if (!job) throw new Error('Job bulunamadı');
   if (job.status !== 'awaiting_approval') {
     throw new Error("Job '" + job.status + "' durumunda, onay beklemiyor");
@@ -439,13 +478,7 @@ export async function differentiateVideoPhase2(
       master_prompt = ?,
       production_notes = ?
      WHERE id = ?`,
-    [
-      scenesJson,
-      editedTranslation,
-      firstScenePrompt,
-      productionNotes,
-      jobId
-    ]
+    [scenesJson, editedTranslation, firstScenePrompt, productionNotes, jobId],
   );
 
   // Parse platforms from the stored JSON (fallback to all 4)
@@ -453,7 +486,9 @@ export async function differentiateVideoPhase2(
   try {
     const parsed = JSON.parse(job.target_platforms || '[]');
     if (Array.isArray(parsed) && parsed.length > 0) platforms = parsed;
-  } catch { /* use default */ }
+  } catch {
+    /* use default */
+  }
 
   return {
     jobId,
@@ -462,7 +497,7 @@ export async function differentiateVideoPhase2(
     masterPrompt: firstScenePrompt,
     productionNotes,
     materialPath: job.material_path || '',
-    platforms
+    platforms,
   };
 }
 
@@ -475,7 +510,7 @@ export async function differentiateVideo(
   sourceMeta: SourceVideoMeta,
   targetLang: string,
   durationMode: DurationMode,
-  userId: number
+  userId: number,
 ): Promise<DifferentiateResult> {
   if (!videoId || typeof videoId !== 'string') {
     throw new Error('videoId is required');
@@ -500,8 +535,13 @@ export async function differentiateVideo(
   const finalScenes = applyDurationMode(baseScenes, durationMode);
   const scenesJson = JSON.stringify(finalScenes);
 
-  const masterPrompt = (sourceMeta?.title || ('Differentiation of ' + videoId)) +
-    ' (source: ' + videoId + ', target: ' + lang + ')';
+  const masterPrompt =
+    (sourceMeta?.title || 'Differentiation of ' + videoId) +
+    ' (source: ' +
+    videoId +
+    ', target: ' +
+    lang +
+    ')';
 
   const insertResult = await db.run(
     `INSERT INTO video_jobs (
@@ -525,8 +565,8 @@ export async function differentiateVideo(
       cleaned,
       translated,
       scenesJson,
-      JSON.stringify(['youtube', 'tiktok', 'x', 'meta'])
-    ]
+      JSON.stringify(['youtube', 'tiktok', 'x', 'meta']),
+    ],
   );
 
   const jobId = Number(insertResult.lastID);
@@ -535,18 +575,15 @@ export async function differentiateVideo(
     success: true,
     jobId,
     transcriptChars: transcript.plainText.length,
-    scenes: finalScenes.length
+    scenes: finalScenes.length,
   };
 }
 
-export async function runDifferentiationPipeline(
-  jobId: number,
-  userId: number
-): Promise<void> {
-  const job: any = await db.get(
-    'SELECT * FROM video_jobs WHERE id = ? AND user_id = ?',
-    [jobId, userId]
-  );
+export async function runDifferentiationPipeline(jobId: number, userId: number): Promise<void> {
+  const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [
+    jobId,
+    userId,
+  ]);
   if (!job) throw new Error('Job bulunamadı');
 
   const videoId = job.source_video_id;
@@ -566,25 +603,36 @@ export async function runDifferentiationPipeline(
   // Step 2: Translate original title and description
   await db.run(
     "UPDATE video_jobs SET current_stage = 'Başlık ve Açıklama Çevriliyor...', progress_percent = 5 WHERE id = ?",
-    [jobId]
+    [jobId],
   );
-  await broadcastProgress(jobId, { stageKey: 'phase1Translate', percent: 5, stage: 'Başlık ve Açıklama Çevriliyor...' });
-  
+  await broadcastProgress(jobId, {
+    stageKey: 'phase1Translate',
+    percent: 5,
+    stage: 'Başlık ve Açıklama Çevriliyor...',
+  });
+
   const translatedMeta = await translateTitleAndDesc(origTitle, origDesc, targetLang);
-  
+
   // Step 3: Fetch original transcript
   await db.run(
     "UPDATE video_jobs SET current_stage = 'Transkript Çekiliyor...', progress_percent = 8 WHERE id = ?",
-    [jobId]
+    [jobId],
   );
-  await broadcastProgress(jobId, { stageKey: 'phase1Transcript', percent: 8, stage: 'Transkript Çekiliyor...' });
-  
+  await broadcastProgress(jobId, {
+    stageKey: 'phase1Transcript',
+    percent: 8,
+    stage: 'Transkript Çekiliyor...',
+  });
+
   let originalText = '';
   try {
     const transcript = await fetchYouTubeTranscript(videoId);
     originalText = transcript.plainText;
   } catch (err: any) {
-    Logger.warn(`YouTube transcript failed for ${videoId}. Generating script from metadata...`, err.message);
+    Logger.warn(
+      `YouTube transcript failed for ${videoId}. Generating script from metadata...`,
+      err.message,
+    );
     const { generateScriptFromMetadata } = await import('../services/aiService.js');
     originalText = await generateScriptFromMetadata(origTitle, origDesc);
   }
@@ -592,37 +640,55 @@ export async function runDifferentiationPipeline(
   // Step 4: Translate transcript
   await db.run(
     "UPDATE video_jobs SET current_stage = 'Transkript Çevriliyor...', progress_percent = 12 WHERE id = ?",
-    [jobId]
+    [jobId],
   );
-  await broadcastProgress(jobId, { stageKey: 'phase1Translate', percent: 12, stage: 'Transkript Çevriliyor...' });
-  
+  await broadcastProgress(jobId, {
+    stageKey: 'phase1Translate',
+    percent: 12,
+    stage: 'Transkript Çevriliyor...',
+  });
+
   const translatedTranscript = await translateText(originalText, targetLang);
 
   // Step 5: Rewrite / Differentiate translated transcript -> new video text
   await db.run(
     "UPDATE video_jobs SET current_stage = 'Metin Özgünleştiriliyor...', progress_percent = 15 WHERE id = ?",
-    [jobId]
+    [jobId],
   );
-  await broadcastProgress(jobId, { stageKey: 'phase1Clean', percent: 15, stage: 'Metin Özgünleştiriliyor...' });
-  
+  await broadcastProgress(jobId, {
+    stageKey: 'phase1Clean',
+    percent: 15,
+    stage: 'Metin Özgünleştiriliyor...',
+  });
+
   const rewrittenTranscript = await rewriteTranscript(translatedTranscript, targetLang);
 
   // Step 6: Generate scene prompts from rewritten transcript
   await db.run(
     "UPDATE video_jobs SET current_stage = 'Sahneler Planlanıyor...', progress_percent = 18 WHERE id = ?",
-    [jobId]
+    [jobId],
   );
-  await broadcastProgress(jobId, { stageKey: 'phase1Prompts', percent: 18, stage: 'Sahneler Planlanıyor...' });
-  
+  await broadcastProgress(jobId, {
+    stageKey: 'phase1Prompts',
+    percent: 18,
+    stage: 'Sahneler Planlanıyor...',
+  });
+
   const baseScenes = await generateScenePrompts(rewrittenTranscript, targetLang);
   const finalScenes = applyDurationMode(baseScenes, durationMode);
   const scenesJson = JSON.stringify(finalScenes);
-  
+
   const firstScenePrompt = finalScenes[0]?.videoPrompt || translatedMeta.title;
 
   // Step 7: Update DB with all results and marketing SEO copy
   const { generateMarketingCopy } = await import('../services/aiService.js');
-  let marketing: any = { ytTitle: translatedMeta.title, ytDesc: translatedMeta.desc, ytTags: '', ttDesc: '', ttTags: '' };
+  let marketing: any = {
+    ytTitle: translatedMeta.title,
+    ytDesc: translatedMeta.desc,
+    ytTags: '',
+    ttDesc: '',
+    ttTags: '',
+  };
   try {
     const marketingRes = await generateMarketingCopy(rewrittenTranscript);
     marketing = marketingRes.marketing;
@@ -665,11 +731,16 @@ export async function runDifferentiationPipeline(
       marketing.metaDesc || '',
       marketing.metaTags || '',
       meta.thumbnail || '',
-      jobId
-    ]
+      jobId,
+    ],
   );
 
-  await broadcastProgress(jobId, { stageKey: 'phase1Done', percent: 100, stage: 'Onay Bekliyor', status: 'awaiting_approval' });
+  await broadcastProgress(jobId, {
+    stageKey: 'phase1Done',
+    percent: 100,
+    stage: 'Onay Bekliyor',
+    status: 'awaiting_approval',
+  });
 
   Logger.info('Differentiation pipeline completed for job #' + jobId);
 }

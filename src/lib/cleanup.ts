@@ -5,13 +5,16 @@ import { Logger } from './logger.js';
 /**
  * Sweeps the specified directories for files older than maxAgeMs and deletes them.
  */
-export async function cleanupOldFiles(directories: string[], maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<void> {
+export async function cleanupOldFiles(
+  directories: string[],
+  maxAgeMs: number = 24 * 60 * 60 * 1000,
+): Promise<void> {
   const now = Date.now();
   let deletedCount = 0;
 
   for (const dir of directories) {
     const dirPath = path.resolve(process.cwd(), dir);
-    if (!await fs.pathExists(dirPath)) continue;
+    if (!(await fs.pathExists(dirPath))) continue;
 
     try {
       const files = await fs.readdir(dirPath);
@@ -22,7 +25,7 @@ export async function cleanupOldFiles(directories: string[], maxAgeMs: number = 
         const filePath = path.join(dirPath, file);
         try {
           const stats = await fs.stat(filePath);
-          if (stats.isFile() && (now - stats.mtimeMs) > maxAgeMs) {
+          if (stats.isFile() && now - stats.mtimeMs > maxAgeMs) {
             await fs.remove(filePath);
             deletedCount++;
           }
@@ -46,18 +49,18 @@ export async function cleanupOldFiles(directories: string[], maxAgeMs: number = 
 export function startGarbageCollector(
   directories: string[] = ['videolar', 'uploads'],
   intervalMs: number = 12 * 60 * 60 * 1000, // Every 12 hours
-  maxAgeMs: number = 24 * 60 * 60 * 1000 // 24 hours
+  maxAgeMs: number = 24 * 60 * 60 * 1000, // 24 hours
 ): void {
   Logger.info(`Garbage Collector başlatıldı. Hedef dizinler: ${directories.join(', ')}`);
-  
+
   // İlk temizliği hemen yap
-  cleanupOldFiles(directories, maxAgeMs).catch(err => {
+  cleanupOldFiles(directories, maxAgeMs).catch((err) => {
     Logger.error('Garbage Collector ilk temizlik hatası', err);
   });
 
   // Belirli aralıklarla tekrarla
   setInterval(() => {
-    cleanupOldFiles(directories, maxAgeMs).catch(err => {
+    cleanupOldFiles(directories, maxAgeMs).catch((err) => {
       Logger.error('Garbage Collector temizlik hatası', err);
     });
   }, intervalMs);

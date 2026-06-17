@@ -33,7 +33,7 @@ async function connectWithRetry() {
   if (isConnecting) return;
   isConnecting = true;
   Logger.info('RabbitMQ bağlantısı kuruluyor...');
-  
+
   while (true) {
     try {
       globalRef._rabbitmq_connection = await amqplib.connect(RABBITMQ_URL);
@@ -59,7 +59,7 @@ async function connectWithRetry() {
       });
 
       isConnecting = false;
-      
+
       // Reconnect callback'lerini çalıştır
       for (const cb of reconnectCallbacks) {
         try {
@@ -73,14 +73,14 @@ async function connectWithRetry() {
       Logger.error('RabbitMQ bağlanırken hata oluştu, 5s sonra tekrar denenecek', error);
       globalRef._rabbitmq_channel = null;
       globalRef._rabbitmq_connection = null;
-      await new Promise(r => setTimeout(r, 5000));
+      await new Promise((r) => setTimeout(r, 5000));
     }
   }
 }
 
 export async function initRabbitMQ() {
   // Bloke olmadan arka planda başlatıyoruz
-  connectWithRetry().catch(err => {
+  connectWithRetry().catch((err) => {
     Logger.error('RabbitMQ connectWithRetry kritik hata', err);
   });
 }
@@ -98,6 +98,6 @@ export function getRabbitChannel(): any {
 export async function sendToQueue(queueName: string, data: object) {
   const ch = getRabbitChannel();
   ch.sendToQueue(queueName, Buffer.from(JSON.stringify(data)), {
-    persistent: true // Mesaj diskte tutulur
+    persistent: true, // Mesaj diskte tutulur
   });
 }

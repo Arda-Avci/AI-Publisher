@@ -94,12 +94,30 @@ export async function fetchInjuries(match: MatchContext): Promise<InjuryReport[]
 }
 
 export async function fetchOdds(match: MatchContext): Promise<OddsSnapshot[]> {
-  const homeBase = match.odds?.home ?? 2.10;
-  const drawBase = match.odds?.draw ?? 3.40;
-  const awayBase = match.odds?.away ?? 3.20;
+  const homeBase = match.odds?.home ?? 2.1;
+  const drawBase = match.odds?.draw ?? 3.4;
+  const awayBase = match.odds?.away ?? 3.2;
   return [
-    { bookmaker: 'Betsson', home: homeBase, draw: drawBase, away: awayBase, movement: 'home_shortening' },
-    { bookmaker: 'Nesine', home: homeBase + 0.05, draw: drawBase, away: awayBase - 0.05, movement: 'stable' },
-    { bookmaker: 'Misli', home: homeBase - 0.10, draw: drawBase + 0.10, away: awayBase, movement: 'home_drifting' },
+    {
+      bookmaker: 'Betsson',
+      home: homeBase,
+      draw: drawBase,
+      away: awayBase,
+      movement: 'home_shortening',
+    },
+    {
+      bookmaker: 'Nesine',
+      home: homeBase + 0.05,
+      draw: drawBase,
+      away: awayBase - 0.05,
+      movement: 'stable',
+    },
+    {
+      bookmaker: 'Misli',
+      home: homeBase - 0.1,
+      draw: drawBase + 0.1,
+      away: awayBase,
+      movement: 'home_drifting',
+    },
   ];
 }

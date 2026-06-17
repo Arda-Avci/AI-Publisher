@@ -135,3 +135,12 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - [x] **Port Standardizasyonu:** `3016` portu fallback değerleri `4000` olarak güncellendi ve tüm asenkron callback ağ geçitleri tekil porta bağlandı.
 - [x] **RabbitMQ Canlı Bağlantı:** Windows üzerinde RabbitMQ ve Erlang asılı süreçleri temizlenerek 5672/15672 portlarında mock'suz, canlı entegrasyon sağlandı.
 - [x] **Colab Maliyet Tasarrufu:** İşlem yapılmadığı zamanlarda Colab tünelinin ve VM'inin kapalı tutulması kuralı entegre edildi.
+- [x] **Google Colab Konteynerizasyon ve Otonom Yönetim:** 
+  - Tüm yapay zeka modelleri (CogVideoX, Wan 2.1, LTX-Video, HunyuanVideo, XTTS-v2, Kokoro TTS, AudioLDM2, Wav2Lip, MuseTalk, Whisper, Stable Diffusion) bağımsız Docker konteynerlerine taşındı.
+  - `colab_server.py` ve `colab_setup.py` güncellenerek tüm video modelleri (`wan`, `ltx`, `hunyuan`) ve `kokorotts` için bağımsız portlar (5008, 5009, 5010, 5011) tanımlandı, otonom yönlendirme ve VRAM yönetimi (OOM koruması) entegre edildi.
+  - Stable Diffusion (`stablediffusion`) konteynerine görsel promptlar üzerinden otonom arka plan temizleme yapılabilmesi için `rembg` entegrasyonu sağlandı.
+  - Lazy loading ve agresif boşta kalma yönetimi eklendi: Konteynerler için 50 saniye, Colab VM'i için 1 dakika (60 saniye) inaktivite sonrası otomatik kapanma sağlandı.
+  - Google Drive üzerinden `.tar.gz` olarak imaj yükleme (`docker load`) modülü `colab_setup.py` altına entegre edildi.
+- [x] **Derleme ve Test İyileştirmeleri:**
+  - `src/__fixtures__/index.ts` ve `src/test_core.spec.ts` dosyalarındaki TS derleme hataları giderilerek `npm run check:types` sıfır hatayla çalışır hale getirildi.
+  - Vitest test suitleri başarıyla çalıştırıldı ve yeşillendirildi.

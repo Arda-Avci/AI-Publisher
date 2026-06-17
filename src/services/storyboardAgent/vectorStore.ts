@@ -22,31 +22,25 @@ export class InMemoryVectorStore {
     }
   }
 
-  async search(
-    query: string,
-    topK = 5,
-    filterMeta?: Record<string, any>
-  ): Promise<VectorRecord[]> {
+  async search(query: string, topK = 5, filterMeta?: Record<string, any>): Promise<VectorRecord[]> {
     const queryEmb = this.simpleHashEmbedding(query);
     const scored = this.records
-      .filter(r => {
+      .filter((r) => {
         if (!filterMeta) return true;
-        return Object.entries(filterMeta).every(
-          ([k, v]) => r.metadata[k] === v
-        );
+        return Object.entries(filterMeta).every(([k, v]) => r.metadata[k] === v);
       })
-      .map(r => ({
+      .map((r) => ({
         record: r,
         score: this.cosineSimilarity(queryEmb, r.embedding || []),
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
 
-    return scored.map(s => s.record);
+    return scored.map((s) => s.record);
   }
 
   async remove(id: string): Promise<void> {
-    this.records = this.records.filter(r => r.id !== id);
+    this.records = this.records.filter((r) => r.id !== id);
   }
 
   async clear(): Promise<void> {
@@ -79,14 +73,16 @@ export class InMemoryVectorStore {
     let hash = 0;
     for (let i = 0; i < word.length; i++) {
       const char = word.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash |= 0;
     }
     return hash;
   }
 
   private cosineSimilarity(a: number[], b: number[]): number {
-    let dot = 0, normA = 0, normB = 0;
+    let dot = 0,
+      normA = 0,
+      normB = 0;
     for (let i = 0; i < a.length; i++) {
       dot += a[i] * b[i];
       normA += a[i] * a[i];

@@ -66,7 +66,7 @@ export interface InpaintResult {
 export async function inpaintObjects(
   videoPath: string,
   maskRegions: MaskRegion[],
-  outputPath: string
+  outputPath: string,
 ): Promise<InpaintResult> {
   const state = colab.getState();
 
@@ -75,7 +75,7 @@ export async function inpaintObjects(
     return {
       outputVideoPath: videoPath,
       usedFallback: true,
-      error: 'Colab not available'
+      error: 'Colab not available',
     };
   }
 
@@ -85,7 +85,7 @@ export async function inpaintObjects(
     return {
       outputVideoPath: outputPath,
       usedFallback: true,
-      error: 'No mask regions provided'
+      error: 'No mask regions provided',
     };
   }
 
@@ -95,7 +95,7 @@ export async function inpaintObjects(
     Logger.info('[inpaint] Sending inpaint request to Colab', {
       videoPath,
       outputPath,
-      regionCount: maskRegions.length
+      regionCount: maskRegions.length,
     });
 
     // Note: Colab has `/inpaint-image` for image inpainting only (colab_server.py:1244).
@@ -109,22 +109,22 @@ export async function inpaintObjects(
         video_path: videoPath,
         mask_regions: maskRegions,
         output_path: outputPath,
-        strength: 0.8
+        strength: 0.8,
       },
       {
         timeout: 600000, // 10 min
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-      }
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      },
     );
 
     if (response.data?.status === 'success' && response.data?.output_path) {
       if (await fs.pathExists(response.data.output_path)) {
         Logger.info('[inpaint] Inpainting succeeded', {
-          outputPath: response.data.output_path
+          outputPath: response.data.output_path,
         });
         return {
           outputVideoPath: response.data.output_path,
-          usedFallback: false
+          usedFallback: false,
         };
       }
     }
@@ -132,7 +132,7 @@ export async function inpaintObjects(
     throw new Error(`Unexpected Colab response: ${JSON.stringify(response.data)}`);
   } catch (err: any) {
     Logger.warn('[inpaint] Colab call failed, copying original to output', {
-      error: err.message
+      error: err.message,
     });
 
     // Fallback: copy original video to output
@@ -141,7 +141,7 @@ export async function inpaintObjects(
     return {
       outputVideoPath: outputPath,
       usedFallback: true,
-      error: err.message
+      error: err.message,
     };
   }
 }
@@ -157,7 +157,7 @@ export async function inpaintObjects(
 export async function removeObjects(
   videoPath: string,
   maskRegions: MaskRegion[],
-  outputPath: string
+  outputPath: string,
 ): Promise<string> {
   const result = await inpaintObjects(videoPath, maskRegions, outputPath);
   return result.outputVideoPath;

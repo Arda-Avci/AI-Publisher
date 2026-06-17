@@ -47,9 +47,7 @@ export interface PerFrameCropResult {
  * Cubic ease-in-out: yumuşak başlangıç ve bitiş
  */
 function cubicEaseInOut(t: number): number {
-  return t < 0.5
-    ? 4 * t * t * t
-    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 // ── Interpolation ─────────────────────────────────────────────────────────────
@@ -61,7 +59,7 @@ function cubicEaseInOut(t: number): number {
 function interpolateFrames(
   a: CropFrame,
   b: CropFrame,
-  t: number
+  t: number,
 ): { cropX: number; cropY: number; cropW: number; cropH: number } {
   const eased = cubicEaseInOut(t);
   return {
@@ -78,11 +76,16 @@ function interpolateFrames(
 function getKeyframeAtTime(
   frames: CropFrame[],
   time: number,
-  smoothingWindow: number
+  smoothingWindow: number,
 ): { cropX: number; cropY: number; cropW: number; cropH: number } | null {
   if (frames.length === 0) return null;
   if (frames.length === 1) {
-    return { cropX: frames[0].cropX, cropY: frames[0].cropY, cropW: frames[0].cropW, cropH: frames[0].cropH };
+    return {
+      cropX: frames[0].cropX,
+      cropY: frames[0].cropY,
+      cropW: frames[0].cropW,
+      cropH: frames[0].cropH,
+    };
   }
 
   // Zamanın tam ortasındaki iki frame'i bul
@@ -96,7 +99,12 @@ function getKeyframeAtTime(
 
   if (leftIdx === rightIdx) {
     // Tam bir keyframe'e denk geliyor
-    return { cropX: frames[leftIdx].cropX, cropY: frames[leftIdx].cropY, cropW: frames[leftIdx].cropW, cropH: frames[leftIdx].cropH };
+    return {
+      cropX: frames[leftIdx].cropX,
+      cropY: frames[leftIdx].cropY,
+      cropW: frames[leftIdx].cropW,
+      cropH: frames[leftIdx].cropH,
+    };
   }
 
   const left = frames[leftIdx];
@@ -112,10 +120,10 @@ function getKeyframeAtTime(
  */
 function smoothCropPositions(
   frames: CropFrame[],
-  windowSize: number
+  windowSize: number,
 ): Array<{ timestamp: number; cropX: number; cropY: number }> {
   if (frames.length <= 1 || windowSize <= 1) {
-    return frames.map(f => ({ timestamp: f.timestamp, cropX: f.cropX, cropY: f.cropY }));
+    return frames.map((f) => ({ timestamp: f.timestamp, cropX: f.cropX, cropY: f.cropY }));
   }
 
   const result: Array<{ timestamp: number; cropX: number; cropY: number }> = [];
@@ -149,7 +157,7 @@ async function cropChunk(
   cropW: number,
   cropH: number,
   outputWidth: number,
-  outputHeight: number
+  outputHeight: number,
 ): Promise<void> {
   // cropW ve cropH video sınırlarını aşmasın
   cropW = Math.max(100, cropW);
@@ -158,15 +166,24 @@ async function cropChunk(
   const filter = `crop=${cropW}:${cropH}:${cropX}:${cropY},scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2`;
 
   const args = [
-    '-ss', String(startTime),
-    '-i', inputPath,
-    '-t', String(duration),
-    '-vf', filter,
-    '-c:v', 'libx264',
-    '-preset', 'fast',
-    '-crf', '23',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'copy',
+    '-ss',
+    String(startTime),
+    '-i',
+    inputPath,
+    '-t',
+    String(duration),
+    '-vf',
+    filter,
+    '-c:v',
+    'libx264',
+    '-preset',
+    'fast',
+    '-crf',
+    '23',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'copy',
     '-y',
     outputPath,
   ];
@@ -181,17 +198,10 @@ async function concatChunks(chunkPaths: string[], outputPath: string): Promise<v
   const concatDir = path.dirname(outputPath);
   const concatListPath = path.join(concatDir, `concat_${uuidv4()}.txt`);
 
-  const content = chunkPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
+  const content = chunkPaths.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n');
   await fs.writeFile(concatListPath, content, 'utf-8');
 
-  const args = [
-    '-f', 'concat',
-    '-safe', '0',
-    '-i', concatListPath,
-    '-c', 'copy',
-    '-y',
-    outputPath,
-  ];
+  const args = ['-f', 'concat', '-safe', '0', '-i', concatListPath, '-c', 'copy', '-y', outputPath];
 
   try {
     await runInWorker('ffmpeg', args, 180000);
@@ -215,7 +225,7 @@ async function concatChunks(chunkPaths: string[], outputPath: string): Promise<v
 export async function cropPerFrame(
   inputPath: string,
   outputPath: string,
-  options: PerFrameCropOptions = {}
+  options: PerFrameCropOptions = {},
 ): Promise<PerFrameCropResult> {
   const {
     aspectRatio = '9:16',
@@ -229,7 +239,9 @@ export async function cropPerFrame(
   await fs.ensureDir(path.dirname(outputPath));
 
   const duration = await getVideoDuration(inputPath);
-  Logger.info(`[PerFrameCropper] Başlatılıyor: ${duration.toFixed(1)}s video, ${chunkDuration}s chunk'lar`);
+  Logger.info(
+    `[PerFrameCropper] Başlatılıyor: ${duration.toFixed(1)}s video, ${chunkDuration}s chunk'lar`,
+  );
 
   // 1. Face tracking verisini al
   let faceResult: FaceTrackResult;
@@ -246,28 +258,46 @@ export async function cropPerFrame(
 
   if (rawFrames.length > 0) {
     // Confidence'u düşük frame'leri filtrele
-    const confidentFrames = rawFrames.filter(f => f.confidence > 0.2);
+    const confidentFrames = rawFrames.filter((f) => f.confidence > 0.2);
     keyframes = confidentFrames.length > 0 ? confidentFrames : rawFrames;
-    Logger.info('[PerFrameCropper] ' + keyframes.length + ' keyframe kullaniliyor (' + rawFrames.length + ' ham veri)');
+    Logger.info(
+      '[PerFrameCropper] ' +
+        keyframes.length +
+        ' keyframe kullaniliyor (' +
+        rawFrames.length +
+        ' ham veri)',
+    );
   } else {
     keyframes = [];
-    Logger.warn('[PerFrameCropper] Yuz tespit edilemedi, tum chunk\'lar merkez kirpma olacak');
+    Logger.warn("[PerFrameCropper] Yuz tespit edilemedi, tum chunk'lar merkez kirpma olacak");
   }
 
   // 3. Video boyutlarını al
-  let videoWidth = 1920, videoHeight = 1080;
+  let videoWidth = 1920,
+    videoHeight = 1080;
   try {
-    const { stdout } = await runInWorker('ffprobe', [
-      '-v', 'error',
-      '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height',
-      '-of', 'csv=s=x:p=0',
-      inputPath,
-    ], 30000);
+    const { stdout } = await runInWorker(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        '-of',
+        'csv=s=x:p=0',
+        inputPath,
+      ],
+      30000,
+    );
     const dims = stdout?.trim();
     if (dims) {
       const [w, h] = dims.split('x').map(Number);
-      if (w && h) { videoWidth = w; videoHeight = h; }
+      if (w && h) {
+        videoWidth = w;
+        videoHeight = h;
+      }
     }
   } catch {
     // Varsayılan değerleri kullan
@@ -283,11 +313,16 @@ export async function cropPerFrame(
   let centerFallbackChunks = 0;
 
   // Aspect ratio'dan crop boyutlarını hesapla
-  const aspectNum = aspectRatio === '9:16' ? 9 / 16
-    : aspectRatio === '16:9' ? 16 / 9
-    : aspectRatio === '1:1' ? 1
-    : aspectRatio === '4:5' ? 4 / 5
-    : 9 / 16;
+  const aspectNum =
+    aspectRatio === '9:16'
+      ? 9 / 16
+      : aspectRatio === '16:9'
+        ? 16 / 9
+        : aspectRatio === '1:1'
+          ? 1
+          : aspectRatio === '4:5'
+            ? 4 / 5
+            : 9 / 16;
 
   let cropW: number, cropH: number;
   if (aspectNum <= 1) {
@@ -314,7 +349,10 @@ export async function cropPerFrame(
       if (kf) {
         // Merkezi yüz konumuna göre crop pozisyonunu ayarla
         const faceCenterX = kf.cropX + kf.cropW / 2;
-        currentCropX = Math.max(0, Math.min(videoWidth - cropW, Math.round(faceCenterX - cropW / 2)));
+        currentCropX = Math.max(
+          0,
+          Math.min(videoWidth - cropW, Math.round(faceCenterX - cropW / 2)),
+        );
         currentCropY = Math.max(0, Math.min(videoHeight - cropH, Math.round(kf.cropY - cropH / 4)));
         faceTrackedChunks++;
       } else {
@@ -335,9 +373,16 @@ export async function cropPerFrame(
 
     try {
       await cropChunk(
-        inputPath, chunkPath, chunkStart, actualChunkDuration,
-        currentCropX, currentCropY, cropW, cropH,
-        outputWidth, outputHeight
+        inputPath,
+        chunkPath,
+        chunkStart,
+        actualChunkDuration,
+        currentCropX,
+        currentCropY,
+        cropW,
+        cropH,
+        outputWidth,
+        outputHeight,
       );
       chunkPaths.push(chunkPath);
     } catch (err) {
@@ -348,7 +393,9 @@ export async function cropPerFrame(
   // 5. Chunk'ları birleştir
   if (chunkPaths.length > 0) {
     await concatChunks(chunkPaths, outputPath);
-    Logger.info(`[PerFrameCropper] Tamamlandı: ${chunkPaths.length} chunk birleştirildi → ${outputPath}`);
+    Logger.info(
+      `[PerFrameCropper] Tamamlandı: ${chunkPaths.length} chunk birleştirildi → ${outputPath}`,
+    );
   } else {
     // Tüm chunk'lar başarısız — fallback: basit center crop
     Logger.warn('[PerFrameCropper] Hiçbir chunk oluşturulamadı, basit center crop uygulanıyor');

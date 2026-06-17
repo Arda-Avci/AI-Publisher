@@ -25,14 +25,14 @@ process.env.TRUST_PROXY = process.env.TRUST_PROXY || '1';
  * cap them aggressively.
  */
 export const heavyLimiter = rateLimit({
-  windowMs: 60 * 1000,         // 1 minute
-  max: 5,                      // 5 requests per minute
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // 5 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    error: 'Cok fazla istek. Lutfen 1 dakika sonra tekrar deneyin.'
-  }
+    error: 'Cok fazla istek. Lutfen 1 dakika sonra tekrar deneyin.',
+  },
 });
 
 /**
@@ -46,8 +46,8 @@ export const mediumLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    error: 'Istek limiti asildi. Lutfen biraz bekleyip tekrar deneyin.'
-  }
+    error: 'Istek limiti asildi. Lutfen biraz bekleyip tekrar deneyin.',
+  },
 });
 
 /**
@@ -62,8 +62,8 @@ export const sseLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    error: 'Cok fazla canli baglanti. Lutfen mevcut baglantilari kapatin.'
-  }
+    error: 'Cok fazla canli baglanti. Lutfen mevcut baglantilari kapatin.',
+  },
 });
 
 /**
@@ -72,13 +72,13 @@ export const sseLimiter = rateLimit({
  * in once and not worry about the cap.
  */
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,    // 15 minutes
-  max: 10,                     // 10 failed attempts
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 failed attempts
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    error: 'Cok fazla giris denemesi. 15 dakika sonra tekrar deneyin.'
-  }
+    error: 'Cok fazla giris denemesi. 15 dakika sonra tekrar deneyin.',
+  },
 });

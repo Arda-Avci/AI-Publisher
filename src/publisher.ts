@@ -6,13 +6,12 @@ import { VideoJob } from './types/job.js';
 
 export const activePublishBrowsers = new Map<string, any>();
 
-
 /**
  * Rastgele milisaniye aralığında gecikme sağlar.
  */
 async function randomDelay(min: number = 300, max: number = 1000): Promise<void> {
   const delayTime = Math.floor(Math.random() * (max - min + 1)) + min;
-  await new Promise(resolve => setTimeout(resolve, delayTime));
+  await new Promise((resolve) => setTimeout(resolve, delayTime));
 }
 
 /**
@@ -50,7 +49,11 @@ async function humanClick(page: Page, selector: string | ElementHandle): Promise
 /**
  * İnsan yazma davranışı: Alana insan tıklamasıyla odaklanır ve karakterleri rastgele gecikmelerle yazar.
  */
-async function humanType(page: Page, selector: string | ElementHandle, text: string): Promise<void> {
+async function humanType(
+  page: Page,
+  selector: string | ElementHandle,
+  text: string,
+): Promise<void> {
   let element: ElementHandle | null = null;
   if (typeof selector === 'string') {
     element = await page.waitForSelector(selector, { state: 'visible', timeout: 20000 });
@@ -78,7 +81,6 @@ async function humanType(page: Page, selector: string | ElementHandle, text: str
   await randomDelay(200, 500);
 }
 
-
 export async function checkSession(platform: string): Promise<boolean> {
   const authFile = `auth_${platform}.json`;
   return await fs.pathExists(authFile);
@@ -93,11 +95,11 @@ export async function uploadToYouTube(
   jobId?: number,
   options: {
     proxyUrl?: string;
-  } = {}
+  } = {},
 ): Promise<boolean> {
   Logger.info(`[YouTube] Starting upload: ${videoPath}`);
   const authFile = 'auth_youtube.json';
-  if (!await fs.pathExists(authFile)) {
+  if (!(await fs.pathExists(authFile))) {
     Logger.error(`[YouTube] Auth file not found: ${authFile}`);
     return false;
   }
@@ -106,8 +108,11 @@ export async function uploadToYouTube(
   if (jobId) {
     try {
       const { db } = await import('./db.js');
-      const job: VideoJob | undefined = await db.get('SELECT cover_image_path FROM video_jobs WHERE id = ?', [jobId]);
-      if (job && job.cover_image_path && await fs.pathExists(job.cover_image_path)) {
+      const job: VideoJob | undefined = await db.get(
+        'SELECT cover_image_path FROM video_jobs WHERE id = ?',
+        [jobId],
+      );
+      if (job && job.cover_image_path && (await fs.pathExists(job.cover_image_path))) {
         coverImagePath = job.cover_image_path;
         Logger.info(`[YouTube] Custom thumbnail found: ${coverImagePath}`);
       }
@@ -129,11 +134,13 @@ export async function uploadToYouTube(
     contextOptions.proxy = { server: options.proxyUrl };
   }
 
-  const context = await browser.newContext(contextOptions as Parameters<typeof browser.newContext>[0]);
+  const context = await browser.newContext(
+    contextOptions as Parameters<typeof browser.newContext>[0],
+  );
   const page = await context.newPage();
   try {
     await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle' });
-    
+
     // Yükleme butonunu bekle
     await page.waitForSelector('#upload-icon, #create-icon', { state: 'visible', timeout: 30000 });
     const uploadBtn = await page.$('#upload-icon');
@@ -142,7 +149,10 @@ export async function uploadToYouTube(
     } else {
       await humanClick(page, '#create-icon');
       const videoUploadSelector = 'tp-yt-paper-item:has-text("Video yükle")';
-      await page.waitForSelector('#upload-button, ' + videoUploadSelector, { state: 'visible', timeout: 10000 });
+      await page.waitForSelector('#upload-button, ' + videoUploadSelector, {
+        state: 'visible',
+        timeout: 10000,
+      });
       await humanClick(page, videoUploadSelector);
     }
 
@@ -153,9 +163,14 @@ export async function uploadToYouTube(
     await fileChooser.setFiles(path.resolve(videoPath));
 
     // Başlık ve Açıklama Alanlarını Doldur
-    await page.waitForSelector('xhtml\\:textarea, #textbox, #title-textarea', { state: 'visible', timeout: 30000 });
+    await page.waitForSelector('xhtml\\:textarea, #textbox, #title-textarea', {
+      state: 'visible',
+      timeout: 30000,
+    });
     // Textbox'ın düzenlenebilir ve görünür olmasını garanti et
-    await page.waitForSelector('div#textbox[contenteditable="true"]', { state: 'visible', timeout: 10000 }).catch(() => null);
+    await page
+      .waitForSelector('div#textbox[contenteditable="true"]', { state: 'visible', timeout: 10000 })
+      .catch(() => null);
 
     const titleBoxes = await page.$$('div#textbox[contenteditable="true"]');
     if (titleBoxes.length > 0) {
@@ -170,12 +185,16 @@ export async function uploadToYouTube(
     if (coverImagePath) {
       try {
         Logger.info('Kapak resmi yükleniyor...');
-        const thumbInput = await page.$('ytcp-thumbnails-compact input[type="file"], input#file-loader');
+        const thumbInput = await page.$(
+          'ytcp-thumbnails-compact input[type="file"], input#file-loader',
+        );
         if (thumbInput) {
           await thumbInput.setInputFiles(path.resolve(coverImagePath));
           Logger.info('Kapak resmi input ile yüklendi.');
         } else {
-          const selectThumbBtn = await page.$('#select-thumbnail-button, [aria-label*="küçük resim", i], [aria-label*="thumbnail", i]');
+          const selectThumbBtn = await page.$(
+            '#select-thumbnail-button, [aria-label*="küçük resim", i], [aria-label*="thumbnail", i]',
+          );
           if (selectThumbBtn) {
             const thumbChooserPromise = page.waitForEvent('filechooser');
             await humanClick(page, selectThumbBtn);
@@ -197,10 +216,12 @@ export async function uploadToYouTube(
       try {
         Logger.info(`Oynatma listesi seçimi başlatılıyor: ${playlistIdOrName}`);
         // Open the playlist section. Selector may change with YouTube Studio UI updates.
-        const playlistSelect = await page.waitForSelector(
-          '.row-value-container.style-scope.ytcp-video-metadata-editor-playlists',
-          { state: 'visible', timeout: 10_000 }
-        ).catch(() => null);
+        const playlistSelect = await page
+          .waitForSelector(
+            '.row-value-container.style-scope.ytcp-video-metadata-editor-playlists',
+            { state: 'visible', timeout: 10_000 },
+          )
+          .catch(() => null);
         if (!playlistSelect) {
           Logger.warn('Playlist alanı bulunamadı — UI değişmiş olabilir, atlanıyor.');
         } else {
@@ -213,12 +234,15 @@ export async function uploadToYouTube(
             'input[placeholder="Search playlists"]',
             'input[placeholder*="ara"]',
             'input[placeholder*="search" i]',
-            'input[type="text"]'
+            'input[type="text"]',
           ];
           let searchInput: any = null;
           for (const sel of searchSelectors) {
             const found = await page.$(sel);
-            if (found) { searchInput = found; break; }
+            if (found) {
+              searchInput = found;
+              break;
+            }
           }
           if (searchInput) {
             await humanType(page, searchInput, playlistIdOrName);
@@ -228,11 +252,16 @@ export async function uploadToYouTube(
           // Try to find an existing playlist matching the name (case-insensitive)
           const existingCheckbox = await page.evaluateHandle((name: string) => {
             const lcName = name.toLowerCase();
-            const labels = Array.from(document.querySelectorAll('label, span, div')) as HTMLElement[];
+            const labels = Array.from(
+              document.querySelectorAll('label, span, div'),
+            ) as HTMLElement[];
             for (const el of labels) {
               const text = (el.textContent || '').trim().toLowerCase();
               if (text === lcName || text.includes(lcName)) {
-                const cb = el.closest('tp-yt-paper-checkbox') || el.closest('[role="checkbox"]') || el.querySelector('tp-yt-paper-checkbox');
+                const cb =
+                  el.closest('tp-yt-paper-checkbox') ||
+                  el.closest('[role="checkbox"]') ||
+                  el.querySelector('tp-yt-paper-checkbox');
                 if (cb) return cb as HTMLElement;
               }
             }
@@ -250,11 +279,15 @@ export async function uploadToYouTube(
               'button:has-text("Yeni oynatma listesi")',
               'button:has-text("New playlist")',
               'tp-yt-paper-item:has-text("Yeni oynatma listesi")',
-              'tp-yt-paper-item:has-text("New playlist")'
+              'tp-yt-paper-item:has-text("New playlist")',
             ];
             for (const sel of newBtnSelectors) {
               const btn = await page.$(sel);
-              if (btn) { await humanClick(page, btn); await randomDelay(500, 1200); break; }
+              if (btn) {
+                await humanClick(page, btn);
+                await randomDelay(500, 1200);
+                break;
+              }
             }
 
             // Title input — try several variants
@@ -262,27 +295,37 @@ export async function uploadToYouTube(
               'textarea[placeholder="Başlık ekleyin"]',
               'textarea[placeholder="Add title"]',
               'input[placeholder*="title" i]',
-              'input[placeholder*="başlık" i]'
+              'input[placeholder*="başlık" i]',
             ];
             let titleInput: any = null;
             for (const sel of titleInputSelectors) {
               const found = await page.$(sel);
-              if (found) { titleInput = found; break; }
+              if (found) {
+                titleInput = found;
+                break;
+              }
             }
             if (titleInput) {
               await humanType(page, titleInput, playlistIdOrName);
-              const saveBtn = await page.$('ytcp-button:has-text("Oluştur"), ytcp-button:has-text("Create")');
+              const saveBtn = await page.$(
+                'ytcp-button:has-text("Oluştur"), ytcp-button:has-text("Create")',
+              );
               if (saveBtn) {
                 await humanClick(page, saveBtn);
                 await randomDelay(1500, 2500);
                 // Yeni oluşturulan listeyi tekrar seç
                 const newCheckbox = await page.evaluateHandle((name: string) => {
                   const lcName = name.toLowerCase();
-                  const labels = Array.from(document.querySelectorAll('label, span, div')) as HTMLElement[];
+                  const labels = Array.from(
+                    document.querySelectorAll('label, span, div'),
+                  ) as HTMLElement[];
                   for (const el of labels) {
                     const text = (el.textContent || '').trim().toLowerCase();
                     if (text === lcName || text.includes(lcName)) {
-                      const cb = el.closest('tp-yt-paper-checkbox') || el.closest('[role="checkbox"]') || el.querySelector('tp-yt-paper-checkbox');
+                      const cb =
+                        el.closest('tp-yt-paper-checkbox') ||
+                        el.closest('[role="checkbox"]') ||
+                        el.querySelector('tp-yt-paper-checkbox');
                       if (cb) return cb as HTMLElement;
                     }
                   }
@@ -304,7 +347,9 @@ export async function uploadToYouTube(
     }
 
     // Çocuklara özel mi? Hayır seçelim
-    const noMadeForKids = await page.$('tp-yt-paper-radio-button[name="VIDEO_MADE_FOR_KIDS_PLAYLIST_NO"]');
+    const noMadeForKids = await page.$(
+      'tp-yt-paper-radio-button[name="VIDEO_MADE_FOR_KIDS_PLAYLIST_NO"]',
+    );
     if (noMadeForKids) {
       await humanClick(page, noMadeForKids);
     }
@@ -317,7 +362,10 @@ export async function uploadToYouTube(
     }
 
     // Görünürlük ayarı: PUBLIC
-    await page.waitForSelector('tp-yt-paper-radio-button[name="PUBLIC"]', { state: 'visible', timeout: 10000 });
+    await page.waitForSelector('tp-yt-paper-radio-button[name="PUBLIC"]', {
+      state: 'visible',
+      timeout: 10000,
+    });
     await humanClick(page, 'tp-yt-paper-radio-button[name="PUBLIC"]');
 
     // Yayınla butonu
@@ -338,11 +386,15 @@ export async function uploadToYouTube(
   }
 }
 
-
-export async function uploadToTikTok(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
+export async function uploadToTikTok(
+  videoPath: string,
+  desc: string,
+  tags: string,
+  jobId?: number,
+): Promise<boolean> {
   Logger.info(`TikTok yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_tiktok.json';
-  if (!await fs.pathExists(authFile)) {
+  if (!(await fs.pathExists(authFile))) {
     Logger.error(`TikTok yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
@@ -355,31 +407,47 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
   try {
-    await page.goto('https://www.tiktok.com/creator-center/upload?lang=tr-TR', { waitUntil: 'networkidle' });
-    
+    await page.goto('https://www.tiktok.com/creator-center/upload?lang=tr-TR', {
+      waitUntil: 'networkidle',
+    });
+
     // Iframe veya direkt dosya seçiciyi bekle
     const uploadInput = await page.$('input[type="file"]');
     if (!uploadInput) {
-      const iframeElement = await page.waitForSelector('iframe[src*="upload"]', { state: 'visible', timeout: 30000 });
+      const iframeElement = await page.waitForSelector('iframe[src*="upload"]', {
+        state: 'visible',
+        timeout: 30000,
+      });
       const frame = await iframeElement.contentFrame();
       if (frame) {
         const fileChooserPromise = page.waitForEvent('filechooser');
-        const uploadBtn = await frame.waitForSelector('.upload-btn-input, input[type="file"]', { state: 'attached' });
+        const uploadBtn = await frame.waitForSelector('.upload-btn-input, input[type="file"]', {
+          state: 'attached',
+        });
         await humanClick(page, uploadBtn);
         const fileChooser = await fileChooserPromise;
         await fileChooser.setFiles(path.resolve(videoPath));
 
-        const editor = await frame.waitForSelector('.public-DraftEditor-content', { state: 'visible', timeout: 40000 });
+        const editor = await frame.waitForSelector('.public-DraftEditor-content', {
+          state: 'visible',
+          timeout: 40000,
+        });
         await humanType(page, editor, `${desc} ${tags}`);
 
-        const postBtn = await frame.waitForSelector('button:has-text("Yayınla"), button:has-text("Post")', { state: 'visible' });
+        const postBtn = await frame.waitForSelector(
+          'button:has-text("Yayınla"), button:has-text("Post")',
+          { state: 'visible' },
+        );
         await humanClick(page, postBtn);
       } else {
         throw new Error("TikTok upload iframe frame'ine erişilemedi.");
       }
     } else {
       await uploadInput.setInputFiles(path.resolve(videoPath));
-      await page.waitForSelector('.public-DraftEditor-content', { state: 'visible', timeout: 40000 });
+      await page.waitForSelector('.public-DraftEditor-content', {
+        state: 'visible',
+        timeout: 40000,
+      });
       await humanType(page, '.public-DraftEditor-content', `${desc} ${tags}`);
       const postBtnSelector = 'button:has-text("Yayınla"), button:has-text("Post")';
       await page.waitForSelector(postBtnSelector, { state: 'visible' });
@@ -387,7 +455,12 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
     }
 
     // Gönderilme onayını bildiren modal veya yönlendirmeyi en fazla 15 saniye bekleyelim
-    await page.waitForSelector('text="Paylaşıldı", text="Shared", text="Video yüklendi", text="Video uploaded", text="Manage your posts"', { timeout: 15000 }).catch(() => null);
+    await page
+      .waitForSelector(
+        'text="Paylaşıldı", text="Shared", text="Video yüklendi", text="Video uploaded", text="Manage your posts"',
+        { timeout: 15000 },
+      )
+      .catch(() => null);
     Logger.info('TikTok videosu başarıyla yüklendi.');
     return true;
   } catch (error) {
@@ -401,10 +474,15 @@ export async function uploadToTikTok(videoPath: string, desc: string, tags: stri
   }
 }
 
-export async function uploadToX(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
+export async function uploadToX(
+  videoPath: string,
+  desc: string,
+  tags: string,
+  jobId?: number,
+): Promise<boolean> {
   Logger.info(`X (Twitter) yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_x.json';
-  if (!await fs.pathExists(authFile)) {
+  if (!(await fs.pathExists(authFile))) {
     Logger.error(`X yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
@@ -434,7 +512,9 @@ export async function uploadToX(videoPath: string, desc: string, tags: string, j
     await humanClick(page, '[data-testid="tweetButton"]');
 
     // Tweet butonunun kaybolmasını (tweet'in gönderildiğini) en fazla 15 saniye bekleyelim
-    await page.waitForSelector('[data-testid="tweetButton"]', { state: 'detached', timeout: 15000 }).catch(() => null);
+    await page
+      .waitForSelector('[data-testid="tweetButton"]', { state: 'detached', timeout: 15000 })
+      .catch(() => null);
     Logger.info('X videosu başarıyla yüklendi.');
     return true;
   } catch (error) {
@@ -448,10 +528,15 @@ export async function uploadToX(videoPath: string, desc: string, tags: string, j
   }
 }
 
-export async function uploadToMeta(videoPath: string, desc: string, tags: string, jobId?: number): Promise<boolean> {
+export async function uploadToMeta(
+  videoPath: string,
+  desc: string,
+  tags: string,
+  jobId?: number,
+): Promise<boolean> {
   Logger.info(`Meta Reels (Facebook/Instagram Creator Studio) yükleme başlatılıyor: ${videoPath}`);
   const authFile = 'auth_meta.json';
-  if (!await fs.pathExists(authFile)) {
+  if (!(await fs.pathExists(authFile))) {
     Logger.error(`Meta yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
   }
@@ -465,8 +550,10 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
   const page = await context.newPage();
   try {
     // Creator studio reels yükleme paneli linki
-    await page.goto('https://business.facebook.com/latest/reels_composer', { waitUntil: 'networkidle' });
-    
+    await page.goto('https://business.facebook.com/latest/reels_composer', {
+      waitUntil: 'networkidle',
+    });
+
     const fileChooserPromise = page.waitForEvent('filechooser');
     // Dosya yükleme butonunu veya dropzone'u bul
     await page.waitForSelector('input[type="file"]', { state: 'attached', timeout: 30000 });
@@ -495,7 +582,8 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
       await randomDelay(1500, 2500);
     }
 
-    const shareBtnSelector = 'button:has-text("Paylaş"), button:has-text("Publish"), button:has-text("Paylaşın")';
+    const shareBtnSelector =
+      'button:has-text("Paylaş"), button:has-text("Publish"), button:has-text("Paylaşın")';
     await page.waitForSelector(shareBtnSelector, { state: 'visible', timeout: 15000 });
     await humanClick(page, shareBtnSelector);
 
@@ -512,4 +600,3 @@ export async function uploadToMeta(videoPath: string, desc: string, tags: string
     await browser.close();
   }
 }
-

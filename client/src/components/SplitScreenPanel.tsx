@@ -31,10 +31,14 @@ interface SplitScreenPanelProps {
 }
 
 export function SplitScreenPanel({
-  splitEnabled, onSetSplitEnabled,
-  splitLayout, onSetSplitLayout,
-  splitPosition, onSetSplitPosition,
-  useMuseTalk, onSetUseMuseTalk,
+  splitEnabled,
+  onSetSplitEnabled,
+  splitLayout,
+  onSetSplitLayout,
+  splitPosition,
+  onSetSplitPosition,
+  useMuseTalk,
+  onSetUseMuseTalk,
   jobId,
   compact = false,
 }: SplitScreenPanelProps) {
@@ -65,13 +69,17 @@ export function SplitScreenPanel({
     if (!jobId) return;
     try {
       const colabUrl = (window as any).__COLAB_URL__ || '';
-      await axios.post(`${colabUrl}/api/v1/split/apply`, {
-        job_id: jobId,
-        layout: activeLayout,
-        position: splitPosition,
-      }, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
-      });
+      await axios.post(
+        `${colabUrl}/api/v1/split/apply`,
+        {
+          job_id: jobId,
+          layout: activeLayout,
+          position: splitPosition,
+        },
+        {
+          headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+        },
+      );
       setApplied(true);
     } catch {
       setApplied(false);
@@ -84,10 +92,14 @@ export function SplitScreenPanel({
   };
 
   return (
-    <div style={{
-      padding: compact ? 8 : 12, borderRadius: 10,
-      border: '1px solid var(--border)', background: 'var(--bg-surface)',
-    }}>
+    <div
+      style={{
+        padding: compact ? 8 : 12,
+        borderRadius: 10,
+        border: '1px solid var(--border)',
+        background: 'var(--bg-surface)',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <Columns size={14} style={{ color: 'var(--accent)' }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -96,12 +108,20 @@ export function SplitScreenPanel({
       </div>
 
       {/* Enable toggle */}
-      <label style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        fontSize: 11, cursor: 'pointer', color: 'var(--text-muted)', marginBottom: 10,
-      }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 11,
+          cursor: 'pointer',
+          color: 'var(--text-muted)',
+          marginBottom: 10,
+        }}
+      >
         <input
-          type="checkbox" checked={splitEnabled}
+          type="checkbox"
+          checked={splitEnabled}
           onChange={(e) => onSetSplitEnabled(e.target.checked)}
           style={{ accentColor: 'var(--accent)' }}
         />
@@ -112,42 +132,77 @@ export function SplitScreenPanel({
         <>
           {/* Layout picker */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--text-muted)',
+                marginBottom: 6,
+                textTransform: 'uppercase',
+              }}
+            >
               Yerleşim
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${LAYOUTS.length}, 1fr)`, gap: 6 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${LAYOUTS.length}, 1fr)`,
+                gap: 6,
+              }}
+            >
               {LAYOUTS.map((l) => (
                 <button
                   key={l.id}
                   onClick={() => handleLayout(l.id)}
                   style={{
-                    padding: '6px 4px', borderRadius: 6,
+                    padding: '6px 4px',
+                    borderRadius: 6,
                     border: `2px solid ${activeLayout === l.id ? 'var(--accent)' : 'var(--border)'}`,
                     background: activeLayout === l.id ? 'var(--accent-light)' : 'transparent',
-                    cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', gap: 4, transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    transition: 'all 0.2s',
                   }}
                 >
                   {/* Layout preview bars */}
-                  <div style={{
-                    width: '100%', height: 16, display: 'flex', gap: 2,
-                    flexDirection: splitPosition === 'left' || splitPosition === 'right' ? 'row' : 'column',
-                  }}>
-                    <div style={{
-                      flex: l.primaryPct,
-                      background: activeLayout === l.id ? 'var(--accent)' : 'var(--text-muted)',
-                      borderRadius: 2, opacity: activeLayout === l.id ? 0.8 : 0.3,
-                    }} />
-                    <div style={{
-                      flex: 100 - l.primaryPct,
-                      background: activeLayout === l.id ? 'var(--accent)' : 'var(--text-muted)',
-                      borderRadius: 2, opacity: activeLayout === l.id ? 0.5 : 0.15,
-                    }} />
+                  <div
+                    style={{
+                      width: '100%',
+                      height: 16,
+                      display: 'flex',
+                      gap: 2,
+                      flexDirection:
+                        splitPosition === 'left' || splitPosition === 'right' ? 'row' : 'column',
+                    }}
+                  >
+                    <div
+                      style={{
+                        flex: l.primaryPct,
+                        background: activeLayout === l.id ? 'var(--accent)' : 'var(--text-muted)',
+                        borderRadius: 2,
+                        opacity: activeLayout === l.id ? 0.8 : 0.3,
+                      }}
+                    />
+                    <div
+                      style={{
+                        flex: 100 - l.primaryPct,
+                        background: activeLayout === l.id ? 'var(--accent)' : 'var(--text-muted)',
+                        borderRadius: 2,
+                        opacity: activeLayout === l.id ? 0.5 : 0.15,
+                      }}
+                    />
                   </div>
-                  <span style={{
-                    fontSize: 9, fontWeight: 600,
-                    color: activeLayout === l.id ? 'var(--accent)' : 'var(--text-muted)',
-                  }}>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: activeLayout === l.id ? 'var(--accent)' : 'var(--text-muted)',
+                    }}
+                  >
                     {l.label}
                   </span>
                 </button>
@@ -157,7 +212,15 @@ export function SplitScreenPanel({
 
           {/* Position picker */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--text-muted)',
+                marginBottom: 6,
+                textTransform: 'uppercase',
+              }}
+            >
               Pozisyon
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
@@ -166,10 +229,13 @@ export function SplitScreenPanel({
                   key={p.id}
                   onClick={() => onSetSplitPosition(p.id)}
                   style={{
-                    padding: '5px 4px', borderRadius: 6,
+                    padding: '5px 4px',
+                    borderRadius: 6,
                     border: `1px solid ${splitPosition === p.id ? 'var(--accent)' : 'var(--border)'}`,
                     background: splitPosition === p.id ? 'var(--accent-light)' : 'transparent',
-                    cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: 10,
+                    fontWeight: 600,
                     color: splitPosition === p.id ? 'var(--accent)' : 'var(--text-muted)',
                     transition: 'all 0.2s',
                   }}
@@ -181,17 +247,28 @@ export function SplitScreenPanel({
           </div>
 
           {/* MuseTalk avatar toggle */}
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 11, cursor: 'pointer', color: 'var(--text-muted)',
-            padding: '6px 8px', borderRadius: 6,
-            border: `1px solid ${useMuseTalk ? 'var(--accent)' : 'var(--border)'}`,
-            background: useMuseTalk ? 'var(--accent-light)' : 'transparent',
-            transition: 'all 0.2s',
-          }}>
-            <User size={12} style={{ color: useMuseTalk ? 'var(--accent)' : 'var(--text-muted)' }} />
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 11,
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              padding: '6px 8px',
+              borderRadius: 6,
+              border: `1px solid ${useMuseTalk ? 'var(--accent)' : 'var(--border)'}`,
+              background: useMuseTalk ? 'var(--accent-light)' : 'transparent',
+              transition: 'all 0.2s',
+            }}
+          >
+            <User
+              size={12}
+              style={{ color: useMuseTalk ? 'var(--accent)' : 'var(--text-muted)' }}
+            />
             <input
-              type="checkbox" checked={useMuseTalk}
+              type="checkbox"
+              checked={useMuseTalk}
               onChange={(e) => onSetUseMuseTalk(e.target.checked)}
               style={{ display: 'none' }}
             />
@@ -215,11 +292,18 @@ export function SplitScreenPanel({
               <button
                 onClick={handlePreview}
                 style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  padding: '6px 8px', borderRadius: 6,
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '6px 8px',
+                  borderRadius: 6,
                   border: '1px solid var(--border)',
                   background: 'transparent',
-                  cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 600,
                   color: 'var(--text-muted)',
                   transition: 'all 0.2s',
                 }}
@@ -230,11 +314,18 @@ export function SplitScreenPanel({
               <button
                 onClick={handleApply}
                 style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  padding: '6px 8px', borderRadius: 6,
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '6px 8px',
+                  borderRadius: 6,
                   border: `1px solid ${applied ? 'var(--accent)' : 'var(--border)'}`,
                   background: applied ? 'var(--accent-light)' : 'transparent',
-                  cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 600,
                   color: applied ? 'var(--accent)' : 'var(--text-muted)',
                   transition: 'all 0.2s',
                 }}

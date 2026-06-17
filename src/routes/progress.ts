@@ -39,7 +39,7 @@ export function registerProgressRoutes(app: Application): void {
       // next queue broadcast).
       const job: any = await db.get(
         'SELECT user_id, status, current_stage FROM video_jobs WHERE id = ?',
-        [jobId]
+        [jobId],
       );
 
       if (!job) {
@@ -70,10 +70,12 @@ export function registerProgressRoutes(app: Application): void {
       // doesn't render an empty stage for clients that connect
       // mid-job (or after a completed job).
       try {
-        res.write(`data: ${JSON.stringify({
-          stage: job.current_stage || 'Beklemede',
-          status: job.status
-        })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({
+            stage: job.current_stage || 'Beklemede',
+            status: job.status,
+          })}\n\n`,
+        );
       } catch {
         // ignore
       }
@@ -124,7 +126,11 @@ export function registerProgressRoutes(app: Application): void {
           // already sent
         }
       } else {
-        try { res.end(); } catch { /* ignore */ }
+        try {
+          res.end();
+        } catch {
+          /* ignore */
+        }
       }
     }
   });

@@ -54,7 +54,7 @@ export async function createStoryBible(
     themes?: string;
     tone?: string;
     targetAudience?: string;
-  }
+  },
 ): Promise<StoryBible> {
   const result = await db.run(
     `INSERT INTO story_bibles (user_id, title, genre, description, world_setting, themes, tone, target_audience)
@@ -69,7 +69,7 @@ export async function createStoryBible(
       options?.themes || null,
       options?.tone || null,
       options?.targetAudience || null,
-    ]
+    ],
   );
 
   const bible = await getStoryBible(result.lastID!);
@@ -103,7 +103,10 @@ export async function getStoryBible(id: number): Promise<StoryBible | null> {
  * Get all story bibles for a user
  */
 export async function getUserStoryBibles(userId: number): Promise<StoryBible[]> {
-  const rows = await db.all('SELECT * FROM story_bibles WHERE user_id = $1 ORDER BY updated_at DESC', [userId]);
+  const rows = await db.all(
+    'SELECT * FROM story_bibles WHERE user_id = $1 ORDER BY updated_at DESC',
+    [userId],
+  );
   return rows.map((row) => ({
     id: row.id,
     userId: row.user_id,
@@ -132,7 +135,7 @@ export async function updateStoryBible(
     themes: string;
     tone: string;
     targetAudience: string;
-  }>
+  }>,
 ): Promise<StoryBible | null> {
   const updatesList: string[] = [];
   const params: any[] = [];
@@ -170,7 +173,10 @@ export async function updateStoryBible(
   if (updatesList.length === 0) return getStoryBible(id);
 
   params.push(id);
-  await db.run(`UPDATE story_bibles SET ${updatesList.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${i}`, params);
+  await db.run(
+    `UPDATE story_bibles SET ${updatesList.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${i}`,
+    params,
+  );
 
   return getStoryBible(id);
 }
@@ -187,7 +193,7 @@ export async function deleteStoryBible(id: number): Promise<void> {
  */
 export async function addCharacter(
   storyBibleId: number,
-  character: Omit<StoryCharacter, 'id' | 'storyBibleId'>
+  character: Omit<StoryCharacter, 'id' | 'storyBibleId'>,
 ): Promise<StoryCharacter> {
   const result = await db.run(
     `INSERT INTO story_characters (story_bible_id, name, role, description, backstory, personality, goals, conflicts, avatar_url)
@@ -203,7 +209,7 @@ export async function addCharacter(
       character.goals || null,
       character.conflicts || null,
       character.avatarUrl || null,
-    ]
+    ],
   );
 
   const char = await getCharacter(result.lastID!);
@@ -236,7 +242,10 @@ export async function getCharacter(id: number): Promise<StoryCharacter | null> {
  * Get all characters for a story bible
  */
 export async function getStoryCharacters(storyBibleId: number): Promise<StoryCharacter[]> {
-  const rows = await db.all('SELECT * FROM story_characters WHERE story_bible_id = $1 ORDER BY id', [storyBibleId]);
+  const rows = await db.all(
+    'SELECT * FROM story_characters WHERE story_bible_id = $1 ORDER BY id',
+    [storyBibleId],
+  );
   return rows.map((row) => ({
     id: row.id,
     storyBibleId: row.story_bible_id,
@@ -256,20 +265,44 @@ export async function getStoryCharacters(storyBibleId: number): Promise<StoryCha
  */
 export async function updateCharacter(
   id: number,
-  updates: Partial<Omit<StoryCharacter, 'id' | 'storyBibleId'>>
+  updates: Partial<Omit<StoryCharacter, 'id' | 'storyBibleId'>>,
 ): Promise<StoryCharacter | null> {
   const updatesList: string[] = [];
   const params: any[] = [];
   let i = 1;
 
-  if (updates.name !== undefined) { updatesList.push(`name = $${i++}`); params.push(updates.name); }
-  if (updates.role !== undefined) { updatesList.push(`role = $${i++}`); params.push(updates.role); }
-  if (updates.description !== undefined) { updatesList.push(`description = $${i++}`); params.push(updates.description); }
-  if (updates.backstory !== undefined) { updatesList.push(`backstory = $${i++}`); params.push(updates.backstory); }
-  if (updates.personality !== undefined) { updatesList.push(`personality = $${i++}`); params.push(updates.personality); }
-  if (updates.goals !== undefined) { updatesList.push(`goals = $${i++}`); params.push(updates.goals); }
-  if (updates.conflicts !== undefined) { updatesList.push(`conflicts = $${i++}`); params.push(updates.conflicts); }
-  if (updates.avatarUrl !== undefined) { updatesList.push(`avatar_url = $${i++}`); params.push(updates.avatarUrl); }
+  if (updates.name !== undefined) {
+    updatesList.push(`name = $${i++}`);
+    params.push(updates.name);
+  }
+  if (updates.role !== undefined) {
+    updatesList.push(`role = $${i++}`);
+    params.push(updates.role);
+  }
+  if (updates.description !== undefined) {
+    updatesList.push(`description = $${i++}`);
+    params.push(updates.description);
+  }
+  if (updates.backstory !== undefined) {
+    updatesList.push(`backstory = $${i++}`);
+    params.push(updates.backstory);
+  }
+  if (updates.personality !== undefined) {
+    updatesList.push(`personality = $${i++}`);
+    params.push(updates.personality);
+  }
+  if (updates.goals !== undefined) {
+    updatesList.push(`goals = $${i++}`);
+    params.push(updates.goals);
+  }
+  if (updates.conflicts !== undefined) {
+    updatesList.push(`conflicts = $${i++}`);
+    params.push(updates.conflicts);
+  }
+  if (updates.avatarUrl !== undefined) {
+    updatesList.push(`avatar_url = $${i++}`);
+    params.push(updates.avatarUrl);
+  }
 
   if (updatesList.length === 0) return getCharacter(id);
 
@@ -291,13 +324,13 @@ export async function deleteCharacter(id: number): Promise<void> {
  */
 export async function addPlotPoint(
   storyBibleId: number,
-  plotPoint: Omit<PlotPoint, 'id' | 'storyBibleId'>
+  plotPoint: Omit<PlotPoint, 'id' | 'storyBibleId'>,
 ): Promise<PlotPoint> {
   const result = await db.run(
     `INSERT INTO story_plot_points (story_bible_id, title, description, order_index, act)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id`,
-    [storyBibleId, plotPoint.title, plotPoint.description, plotPoint.orderIndex, plotPoint.act]
+    [storyBibleId, plotPoint.title, plotPoint.description, plotPoint.orderIndex, plotPoint.act],
   );
 
   const plot = await getPlotPoint(result.lastID!);
@@ -328,7 +361,7 @@ export async function getPlotPoint(id: number): Promise<PlotPoint | null> {
 export async function getStoryPlotPoints(storyBibleId: number): Promise<PlotPoint[]> {
   const rows = await db.all(
     'SELECT * FROM story_plot_points WHERE story_bible_id = $1 ORDER BY order_index',
-    [storyBibleId]
+    [storyBibleId],
   );
   return rows.map((row) => ({
     id: row.id,
@@ -345,16 +378,28 @@ export async function getStoryPlotPoints(storyBibleId: number): Promise<PlotPoin
  */
 export async function updatePlotPoint(
   id: number,
-  updates: Partial<Omit<PlotPoint, 'id' | 'storyBibleId'>>
+  updates: Partial<Omit<PlotPoint, 'id' | 'storyBibleId'>>,
 ): Promise<PlotPoint | null> {
   const updatesList: string[] = [];
   const params: any[] = [];
   let i = 1;
 
-  if (updates.title !== undefined) { updatesList.push(`title = $${i++}`); params.push(updates.title); }
-  if (updates.description !== undefined) { updatesList.push(`description = $${i++}`); params.push(updates.description); }
-  if (updates.orderIndex !== undefined) { updatesList.push(`order_index = $${i++}`); params.push(updates.orderIndex); }
-  if (updates.act !== undefined) { updatesList.push(`act = $${i++}`); params.push(updates.act); }
+  if (updates.title !== undefined) {
+    updatesList.push(`title = $${i++}`);
+    params.push(updates.title);
+  }
+  if (updates.description !== undefined) {
+    updatesList.push(`description = $${i++}`);
+    params.push(updates.description);
+  }
+  if (updates.orderIndex !== undefined) {
+    updatesList.push(`order_index = $${i++}`);
+    params.push(updates.orderIndex);
+  }
+  if (updates.act !== undefined) {
+    updatesList.push(`act = $${i++}`);
+    params.push(updates.act);
+  }
 
   if (updatesList.length === 0) return getPlotPoint(id);
 
@@ -381,7 +426,7 @@ export async function generateFromStoryBible(
     sceneCount?: number;
     includeCharacters?: boolean;
     includePlotPoints?: boolean;
-  }
+  },
 ): Promise<{
   masterPrompt: string;
   productionNotes: string;
@@ -391,12 +436,10 @@ export async function generateFromStoryBible(
   const storyBible = await getStoryBible(storyBibleId);
   if (!storyBible) throw new Error('Story bible not found');
 
-  const characters = options?.includeCharacters !== false
-    ? await getStoryCharacters(storyBibleId)
-    : [];
-  const plotPoints = options?.includePlotPoints !== false
-    ? await getStoryPlotPoints(storyBibleId)
-    : [];
+  const characters =
+    options?.includeCharacters !== false ? await getStoryCharacters(storyBibleId) : [];
+  const plotPoints =
+    options?.includePlotPoints !== false ? await getStoryPlotPoints(storyBibleId) : [];
 
   // Build master prompt from story bible
   let masterPrompt = `${storyBible.title}: ${storyBible.description}`;
@@ -412,9 +455,9 @@ export async function generateFromStoryBible(
   // Build character features
   let characterFeatures = '';
   if (characters.length > 0) {
-    characterFeatures = characters.map(c =>
-      `@${c.name} (${c.role}): ${c.description}`
-    ).join('\n');
+    characterFeatures = characters
+      .map((c) => `@${c.name} (${c.role}): ${c.description}`)
+      .join('\n');
   }
 
   // Build production notes
@@ -429,7 +472,8 @@ export async function generateFromStoryBible(
   // Build scene prompts from plot points
   const sceneCount = options?.sceneCount || 5;
   const scenePrompts = plotPoints.slice(0, sceneCount).map((pp, idx) => {
-    const actLabel = pp.act === 'setup' ? 'Giriş' : pp.act === 'confrontation' ? 'Çatışma' : 'Çözüm';
+    const actLabel =
+      pp.act === 'setup' ? 'Giriş' : pp.act === 'confrontation' ? 'Çatışma' : 'Çözüm';
     return `[${actLabel}] ${pp.title}: ${pp.description}`;
   });
 

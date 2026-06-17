@@ -23,7 +23,7 @@ router.get('/status', async (_req: Request, res: Response) => {
   try {
     const health = await axios.get(`${state.ngrokUrl}/health`, {
       timeout: 8000,
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+      headers: { 'ngrok-skip-browser-warning': 'true' },
     });
     const h = health.data || {};
     return res.json({
@@ -33,20 +33,20 @@ router.get('/status', async (_req: Request, res: Response) => {
         isL4: (h.gpu_model || '').toUpperCase().includes('L4'),
         memoryGB: state.gpuMemoryGB ?? h.memory?.gpu_total_gb ?? null,
         usedGB: state.gpuUsedGB ?? h.memory?.gpu_used_gb ?? null,
-        utilizationPct: state.gpuUtilizationPct ?? h.gpu_utilization?.gpu_pct ?? null
+        utilizationPct: state.gpuUtilizationPct ?? h.gpu_utilization?.gpu_pct ?? null,
       },
       uptimeSeconds: state.uptimeSeconds ?? h.runtime?.uptime_seconds ?? null,
       runtimeSeconds: state.runtimeSeconds ?? h.runtime?.uptime_seconds ?? null,
       lastHealthCheck: state.lastHealthCheck,
       startedAt: state.startedAt,
-      diagnostics: state.diagnostics ?? h.diagnostics ?? null
+      diagnostics: state.diagnostics ?? h.diagnostics ?? null,
     });
   } catch {
     return res.json({
       running: false,
       lastStatus: state,
       lastKnown: null,
-      error: 'Colab sunucusuna erişilemiyor'
+      error: 'Colab sunucusuna erişilemiyor',
     });
   }
 });
@@ -60,7 +60,7 @@ router.post('/test-models', async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${url}/test-models`, req.body || {}, {
       timeout: 60_000,
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+      headers: { 'ngrok-skip-browser-warning': 'true' },
     });
     return res.json(response.data);
   } catch (err: any) {
@@ -80,17 +80,17 @@ router.get('/gpu-info', async (_req: Request, res: Response) => {
       model: null,
       memoryGB: state.gpuMemoryGB,
       usedGB: state.gpuUsedGB,
-      utilizationPct: state.gpuUtilizationPct
+      utilizationPct: state.gpuUtilizationPct,
     },
     uptimeSeconds: state.uptimeSeconds,
-    runtimeSeconds: state.runtimeSeconds
+    runtimeSeconds: state.runtimeSeconds,
   });
 
   if (!url) return res.json(fallback());
   try {
     const response = await axios.get(`${url}/gpu-info`, {
       timeout: 10_000,
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+      headers: { 'ngrok-skip-browser-warning': 'true' },
     });
     return res.json({ cached: false, ...response.data });
   } catch {
@@ -105,14 +105,16 @@ router.get('/user-credits', async (req: Request, res: Response) => {
     return res.status(401).json({ success: false, error: 'NOT_AUTHENTICATED' });
   }
   try {
-    const row = await db.get('SELECT credits, monthly_credit_limit FROM users WHERE id = ?', [userId]);
+    const row = await db.get('SELECT credits, monthly_credit_limit FROM users WHERE id = ?', [
+      userId,
+    ]);
     if (!row) {
       return res.status(404).json({ success: false, error: 'Kullanıcı bulunamadı' });
     }
     return res.json({
       success: true,
       credits: row.credits,
-      limit: row.monthly_credit_limit
+      limit: row.monthly_credit_limit,
     });
   } catch (err: any) {
     Logger.error('GET /api/v1/colab/user-credits error:', err);

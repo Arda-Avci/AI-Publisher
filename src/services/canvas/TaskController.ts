@@ -45,11 +45,7 @@ export class TaskController {
   /**
    * Add a task to the queue
    */
-  async addTask(
-    canvasId: string,
-    type: TaskType,
-    nodeId: string
-  ): Promise<Task> {
+  async addTask(canvasId: string, type: TaskType, nodeId: string): Promise<Task> {
     const queue = this.getQueue(canvasId);
 
     const task: Task = {
@@ -73,7 +69,10 @@ export class TaskController {
   /**
    * Add multiple tasks (batch)
    */
-  async addTasks(canvasId: string, tasks: Array<{ type: TaskType; nodeId: string }>): Promise<Task[]> {
+  async addTasks(
+    canvasId: string,
+    tasks: Array<{ type: TaskType; nodeId: string }>,
+  ): Promise<Task[]> {
     const queue = this.getQueue(canvasId);
     const createdTasks: Task[] = [];
 
@@ -109,7 +108,7 @@ export class TaskController {
 
     // Check queues
     for (const queue of this.queues.values()) {
-      const task = queue.tasks.find(t => t.id === taskId);
+      const task = queue.tasks.find((t) => t.id === taskId);
       if (task) return task;
     }
 
@@ -132,7 +131,7 @@ export class TaskController {
 
     // Check queues
     for (const queue of this.queues.values()) {
-      const index = queue.tasks.findIndex(t => t.id === taskId);
+      const index = queue.tasks.findIndex((t) => t.id === taskId);
       if (index !== -1) {
         const task = queue.tasks[index];
         task.status = 'cancelled';
@@ -152,7 +151,7 @@ export class TaskController {
     if (!queue || queue.isProcessing) return;
 
     // Find next task to process
-    const nextTask = queue.tasks.find(t => t.status === 'queued');
+    const nextTask = queue.tasks.find((t) => t.status === 'queued');
     if (!nextTask) return;
 
     // Check concurrent limit
@@ -191,7 +190,7 @@ export class TaskController {
       const result = await Promise.race([
         handler(task),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Task timeout')), TASK_TIMEOUT_MS)
+          setTimeout(() => reject(new Error('Task timeout')), TASK_TIMEOUT_MS),
         ),
       ]);
 
@@ -213,17 +212,22 @@ export class TaskController {
   /**
    * Get queue status for a canvas
    */
-  getQueueStatus(canvasId: string): { pending: number; running: number; completed: number; failed: number } {
+  getQueueStatus(canvasId: string): {
+    pending: number;
+    running: number;
+    completed: number;
+    failed: number;
+  } {
     const queue = this.queues.get(canvasId);
     if (!queue) {
       return { pending: 0, running: 0, completed: 0, failed: 0 };
     }
 
     return {
-      pending: queue.tasks.filter(t => t.status === 'queued').length,
-      running: queue.tasks.filter(t => t.status === 'running').length,
-      completed: queue.tasks.filter(t => t.status === 'completed').length,
-      failed: queue.tasks.filter(t => t.status === 'failed').length,
+      pending: queue.tasks.filter((t) => t.status === 'queued').length,
+      running: queue.tasks.filter((t) => t.status === 'running').length,
+      completed: queue.tasks.filter((t) => t.status === 'completed').length,
+      failed: queue.tasks.filter((t) => t.status === 'failed').length,
     };
   }
 
@@ -237,7 +241,7 @@ export class TaskController {
       const canvas = await infiniteCanvas.getCanvas(canvasId);
       if (!canvas) throw new Error('Canvas not found');
 
-      const node = canvas.nodes.find(n => n.id === nodeId);
+      const node = canvas.nodes.find((n) => n.id === nodeId);
       if (!node) throw new Error('Node not found');
 
       // Update status to generating
@@ -247,7 +251,7 @@ export class TaskController {
       for (let progress = 0; progress <= 100; progress += 10) {
         if (task.status === 'cancelled') break;
         task.progress = progress;
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       if (task.status === 'cancelled') {
@@ -288,7 +292,7 @@ export class TaskController {
       if (!canvas) throw new Error('Canvas not found');
 
       // Compose all completed nodes into final video
-      const completedNodes = canvas.nodes.filter(n => n.status === 'completed');
+      const completedNodes = canvas.nodes.filter((n) => n.status === 'completed');
       return { composedNodes: completedNodes.length };
     });
   }

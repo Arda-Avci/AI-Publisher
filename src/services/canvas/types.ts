@@ -4,7 +4,15 @@
  */
 
 // Node types for the infinite canvas
-export type CanvasNodeType = 'text' | 'image' | 'video' | 'character' | 'storyboard' | 'keyframe' | 'audio' | 'subtitle';
+export type CanvasNodeType =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'character'
+  | 'storyboard'
+  | 'keyframe'
+  | 'audio'
+  | 'subtitle';
 
 export type NodeStatus = 'draft' | 'pending' | 'generating' | 'completed' | 'failed';
 

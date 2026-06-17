@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { FIXTURES } from './__fixtures__/index.js';
 import {
   parseSrtToWords,
   generateWordTimings,
@@ -9,10 +10,6 @@ import {
 } from './lib/subtitleRenderer.js';
 
 describe('subtitleRenderer', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
-
-  // ── parseSrtToWords ─────────────────────────────────────────────────────────
-
   it('parseSrt returns segments array', () => {
     const srt = `1
 00:00:00,000 --> 00:00:02,000
@@ -43,12 +40,10 @@ Bir iki uc
 `;
     const words = parseSrtToWords(srt);
     expect(words.length).toBe(3);
-    words.forEach(w => {
+    words.forEach((w) => {
       expect(w.end).toBeGreaterThan(w.start);
     });
   });
-
-  // ── generateWordTimings ─────────────────────────────────────────────────────
 
   it('generateWordTimings returns array', () => {
     const timings = generateWordTimings('bu bir test cumlesi', 4.0, 150);
@@ -62,14 +57,12 @@ Bir iki uc
     expect(timings.length).toBe(0);
   });
 
-  // ── parseJsonSubtitles ──────────────────────────────────────────────────────
-
   it('parseJsonSubtitles parses valid JSON', () => {
     const json = JSON.stringify({
       words: [
         { word: 'test', start: 0.0, end: 0.5 },
-        { word: 'words', start: 0.5, end: 1.0 }
-      ]
+        { word: 'words', start: 0.5, end: 1.0 },
+      ],
     });
     const words = parseJsonSubtitles(json);
     expect(words.length).toBe(2);
@@ -81,8 +74,6 @@ Bir iki uc
     expect(Array.isArray(words)).toBe(true);
     expect(words.length).toBe(0);
   });
-
-  // ── mergeWordTimings ────────────────────────────────────────────────────────
 
   it('mergeWordTimings combines arrays', () => {
     const arr1 = [{ word: 'bir', start: 0, end: 0.5 }];
@@ -98,8 +89,6 @@ Bir iki uc
     expect(merged[0].word).toBe('bir');
   });
 
-  // ── extractTextFromSrt ──────────────────────────────────────────────────────
-
   it('extractTextFromSrt returns plain text', () => {
     const srt = `1
 00:00:00,000 --> 00:00:02,000
@@ -114,21 +103,16 @@ Nasilsin
     expect(text).toContain('Nasilsin');
   });
 
-  // ── alignSubtitlesToAudio ───────────────────────────────────────────────────
-
   it('alignSubtitlesToAudio returns words array', () => {
     const srt = `1
 00:00:00,000 --> 00:00:02,000
 Test content
 `;
-    const result = alignSubtitlesToAudio(srt, 'audio.mp3');
+    const result = alignSubtitlesToAudio(srt, FIXTURES.audio);
     expect(Array.isArray(result)).toBe(true);
   });
 
-  // ── ASS export ─────────────────────────────────────────────────────────────
-
   it('ASS export produces valid ASS content via parseSrtToWords', () => {
-    // Test that parseSrtToWords correctly handles SRT format for downstream ASS export
     const srt = `1
 00:00:00,000 --> 00:00:01,500
 Birinci satir

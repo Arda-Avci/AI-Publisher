@@ -11,7 +11,7 @@ import bcrypt from 'bcrypt';
 import {
   createDifferentiationJob,
   runPhase1Background,
-  differentiateVideoPhase2
+  differentiateVideoPhase2,
 } from './lib/differentiate.js';
 import { initRabbitMQ, getRabbitChannel } from './lib/rabbitmq.js';
 
@@ -24,11 +24,13 @@ describe('Video Differentiation System Integration Tests', () => {
     app = express();
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    app.use(session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false
-    }));
+    app.use(
+      session({
+        secret: 'test-secret',
+        resave: false,
+        saveUninitialized: false,
+      }),
+    );
 
     // Setup Lang/Theme fake middleware
     app.use((req: any, res, next) => {
@@ -46,18 +48,18 @@ describe('Video Differentiation System Integration Tests', () => {
 
     // Init RabbitMQ and database
     await initRabbitMQ();
-    
+
     // Wait for RabbitMQ channel readiness
     let retries = 0;
     while (retries < 50) {
       try {
         if (getRabbitChannel()) break;
       } catch (e) {
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 100));
         retries++;
       }
     }
-    
+
     await initDatabase();
 
     // Ensure we have a test user 'admin' in db with correct password
@@ -65,16 +67,17 @@ describe('Video Differentiation System Integration Tests', () => {
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const existing = await db.get('SELECT * FROM users WHERE username = ?', [encryptedAdmin]);
     if (!existing) {
-      await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [encryptedAdmin, hashedPassword]);
+      await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [
+        encryptedAdmin,
+        hashedPassword,
+      ]);
     } else {
       await db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existing.id]);
     }
   });
 
   it('should authenticate user and return session cookie', async () => {
-    const res = await request(app)
-      .post('/login')
-      .send({ username: 'admin', password: 'admin123' });
+    const res = await request(app).post('/login').send({ username: 'admin', password: 'admin123' });
 
     expect(res.status).toBe(200);
     const cookies = res.headers['set-cookie'];
@@ -95,10 +98,10 @@ describe('Video Differentiation System Integration Tests', () => {
             videoId: 'dQw4w9WgXcQ',
             title: 'Sample Video',
             channelTitle: 'Sample Channel',
-            thumbnail: 'https://example.com/thumb.jpg'
+            thumbnail: 'https://example.com/thumb.jpg',
           },
           targetLang: 'tr',
-          durationMode: 'same'
+          durationMode: 'same',
         });
 
       expect(res.status).toBe(200);
@@ -120,7 +123,9 @@ describe('Video Differentiation System Integration Tests', () => {
 
     it('should complete Phase 1 background task successfully', async () => {
       // Manually trigger runPhase1Background
-      const adminUser = await db.get('SELECT id FROM users WHERE username = ?', [encryptUsername('admin')]);
+      const adminUser = await db.get('SELECT id FROM users WHERE username = ?', [
+        encryptUsername('admin'),
+      ]);
       await runPhase1Background(jobId, adminUser.id);
 
       // Verify DB state
@@ -136,7 +141,7 @@ describe('Video Differentiation System Integration Tests', () => {
         .post(`/approve-translation/${jobId}`)
         .set('Cookie', authCookie)
         .send({
-          editedTranslation: 'Yapay zeka hakkinda guzel bir ornek video transkripti.'
+          editedTranslation: 'Yapay zeka hakkinda guzel bir ornek video transkripti.',
         });
 
       expect(res.status).toBe(200);
@@ -145,7 +150,9 @@ describe('Video Differentiation System Integration Tests', () => {
 
       const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
       expect(job.status).toBe('pending');
-      expect(job.transcript_translated).toBe('Yapay zeka hakkinda guzel bir ornek video transkripti.');
+      expect(job.transcript_translated).toBe(
+        'Yapay zeka hakkinda guzel bir ornek video transkripti.',
+      );
     }, 90000);
 
     it('should create new job with differentiation options via /create-job', async () => {
@@ -160,7 +167,7 @@ describe('Video Differentiation System Integration Tests', () => {
           has_shorts: '1',
           has_subtitles: '1',
           differentiation_layout: '1',
-          differentiation_duration_mode: 'shorter'
+          differentiation_duration_mode: 'shorter',
         });
 
       expect(res.status).toBe(302); // Redirect to '/'

@@ -23,7 +23,9 @@ export class SportotoSource implements DiscussionSource {
     const url = `${this.config.baseUrl}/predictions/discussion/weekly/${weekNumber}/publish`;
 
     if (!this.config.apiKey) {
-      Logger.warn('[SportotoSource] SPORTOTO_API_KEY .env\'de tanımlı değil. API key auth çalışmaz.');
+      Logger.warn(
+        "[SportotoSource] SPORTOTO_API_KEY .env'de tanımlı değil. API key auth çalışmaz.",
+      );
     }
 
     Logger.info(`[SportotoSource] Fetching discussion for week ${weekNumber} from ${url}`);
@@ -48,7 +50,9 @@ export class SportotoSource implements DiscussionSource {
 
       const data: SportotoDiscussion = await response.json();
 
-      Logger.info(`[SportotoSource] Fetched discussion: "${data.title}" with ${data.total_utterances} utterances`);
+      Logger.info(
+        `[SportotoSource] Fetched discussion: "${data.title}" with ${data.total_utterances} utterances`,
+      );
 
       return data;
     } catch (error: any) {
@@ -60,7 +64,7 @@ export class SportotoSource implements DiscussionSource {
 
 export async function fetchWeeklyDiscussion(
   weekNumber: number,
-  config?: SportotoConfig
+  config?: SportotoConfig,
 ): Promise<SportotoDiscussion> {
   const source = new SportotoSource(config);
   return source.fetchWeeklyDiscussion(weekNumber);
@@ -74,9 +78,7 @@ const SPEAKER_VOICE_MAP: Record<string, { ttsVoice: string; name: string; color:
   TeknikDirektor: { ttsVoice: 'tr-TR-AhmetNeural', name: 'Teknik Direktör', color: '#60A5FA' },
 };
 
-export function discussionToScenes(
-  discussion: SportotoDiscussion
-): Array<{
+export function discussionToScenes(discussion: SportotoDiscussion): Array<{
   sceneNumber: number;
   speaker: string;
   originalSpeaker: string;
@@ -90,7 +92,7 @@ export function discussionToScenes(
   return discussion.utterances.map((u, idx) => {
     const voiceConfig = SPEAKER_VOICE_MAP[u.speaker] || SPEAKER_VOICE_MAP.Moderator;
     const wordCount = u.text.split(/\s+/).length;
-    const duration = Math.max(3, Math.ceil(wordCount / WPM * 60));
+    const duration = Math.max(3, Math.ceil((wordCount / WPM) * 60));
 
     return {
       sceneNumber: idx + 1,

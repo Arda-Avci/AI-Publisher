@@ -75,7 +75,6 @@ declare module 'express-session' {
   }
 }
 
-
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -87,7 +86,10 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
 // Global process-level hata yakalama
 // Yakalanmayan Promise rejection'ları sessizce Node.js'i crash edebilir
 process.on('unhandledRejection', (reason) => {
-  Logger.error('Unhandled Promise Rejection', reason instanceof Error ? reason : new Error(String(reason)));
+  Logger.error(
+    'Unhandled Promise Rejection',
+    reason instanceof Error ? reason : new Error(String(reason)),
+  );
 });
 
 process.on('uncaughtException', (err) => {
@@ -110,14 +112,14 @@ app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
     `default-src 'self'; ` +
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
-    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ` +
-    `font-src 'self' https://fonts.gstatic.com; ` +
-    `img-src 'self' data: https: blob:; ` +
-    `media-src 'self' https: blob: http:; ` +
-    `connect-src 'self' wss: ws: https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
-    `frame-src 'self'; ` +
-    `frame-ancestors 'self'`
+      `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
+      `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ` +
+      `font-src 'self' https://fonts.gstatic.com; ` +
+      `img-src 'self' data: https: blob:; ` +
+      `media-src 'self' https: blob: http:; ` +
+      `connect-src 'self' wss: ws: https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
+      `frame-src 'self'; ` +
+      `frame-ancestors 'self'`,
   );
   next();
 });
@@ -125,17 +127,19 @@ app.use((req, res, next) => {
 // Middleware'ler
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'gizemli_bir_sir_123_development',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 24 * 60 * 60 * 1000, // 1 gün
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
-  }
-}));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'gizemli_bir_sir_123_development',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 1 gün
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    },
+  }),
+);
 app.use(csrfMiddleware);
 app.use(i18nMiddleware);
 app.use(themeMiddleware);
@@ -223,7 +227,10 @@ async function startServer() {
     const { startNgrokTunnel } = await import('./lib/ngrok-tunnel.js');
     await startNgrokTunnel(Number(PORT));
   } catch (err: any) {
-    Logger.warn('Node.js ngrok tüneli başlatılamadı:', (err as Error)?.stack || (err as Error)?.message || err);
+    Logger.warn(
+      'Node.js ngrok tüneli başlatılamadı:',
+      (err as Error)?.stack || (err as Error)?.message || err,
+    );
   }
 
   app.listen(Number(PORT), '127.0.0.1', () => {
@@ -235,15 +242,13 @@ async function startServer() {
 
     // Pipecat bridge sunucusu — multi-agent voice/video pipeline
     import('./services/pipecatBridge.js').then(({ pipecatBridge }) => {
-      pipecatBridge.start().catch((err: any) =>
-        Logger.warn('[Pipecat] Auto-start failed:', err)
-      );
+      pipecatBridge.start().catch((err: any) => Logger.warn('[Pipecat] Auto-start failed:', err));
     });
 
     // MCP (Model Context Protocol) sunucusu — AI ajanları için API
     import('./services/mcpServer.js').then(({ startMCPServer }) => {
       startMCPServer(Number(process.env.MCP_PORT) || 3099).catch((err: any) =>
-        Logger.warn('[MCP] Server failed to start:', err)
+        Logger.warn('[MCP] Server failed to start:', err),
       );
     });
   });

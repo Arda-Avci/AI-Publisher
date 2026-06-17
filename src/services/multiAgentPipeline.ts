@@ -14,23 +14,27 @@ export const DirectorPlanSchema = z.object({
   genre: z.string(),
   tone: z.string(),
   targetDurationSeconds: z.number(),
-  sceneStructure: z.array(z.object({
-    sceneNumber: z.number(),
-    purpose: z.enum(['hook', 'setup', 'conflict', 'climax', 'resolution', 'cta']),
-    settingDescription: z.string(),
-    charactersInScene: z.array(z.string()),
-    emotionalArc: z.string(),
-  })),
+  sceneStructure: z.array(
+    z.object({
+      sceneNumber: z.number(),
+      purpose: z.enum(['hook', 'setup', 'conflict', 'climax', 'resolution', 'cta']),
+      settingDescription: z.string(),
+      charactersInScene: z.array(z.string()),
+      emotionalArc: z.string(),
+    }),
+  ),
 });
 
 export const ProducerWorkflowSchema = z.object({
-  workflow: z.array(z.object({
-    sceneNumber: z.number(),
-    priority: z.number().min(1).max(10),
-    estimatedGpuSeconds: z.number(),
-    parallelizableWithPrevious: z.boolean(),
-    requiredModels: z.array(z.enum(['video', 'tts', 'sfx', 'lipsync', 'cover'])),
-  })),
+  workflow: z.array(
+    z.object({
+      sceneNumber: z.number(),
+      priority: z.number().min(1).max(10),
+      estimatedGpuSeconds: z.number(),
+      parallelizableWithPrevious: z.boolean(),
+      requiredModels: z.array(z.enum(['video', 'tts', 'sfx', 'lipsync', 'cover'])),
+    }),
+  ),
   totalEstimatedGpuTime: z.number(),
   optimalBatchSize: z.number(),
 });
@@ -39,11 +43,13 @@ export const QualityReportSchema = z.object({
   sceneNumber: z.number(),
   passed: z.boolean(),
   consistencyScore: z.number().min(0).max(100),
-  issues: z.array(z.object({
-    severity: z.enum(['critical', 'major', 'minor']),
-    description: z.string(),
-    suggestedFix: z.string(),
-  })),
+  issues: z.array(
+    z.object({
+      severity: z.enum(['critical', 'major', 'minor']),
+      description: z.string(),
+      suggestedFix: z.string(),
+    }),
+  ),
   overallFeedback: z.string(),
 });
 
@@ -76,18 +82,19 @@ async function directorNode(state: PipelineState): Promise<PipelineState> {
 
   await db.run(
     `UPDATE video_jobs SET current_stage = 'Director: Hikaye analiz ediliyor...', progress_percent = 5 WHERE id = ?`,
-    [state.jobId]
+    [state.jobId],
   );
 
   const models = getAIModelChain();
-  const result = await withFallbackAndRetry((model) => {
-    const system = model.modelId?.includes('MiniMax')
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen bir AI video yönetmenisin (Director Agent). Verilen konuyu analiz edip sahne yapısını planlıyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const system = model.modelId?.includes('MiniMax')
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen bir AI video yönetmenisin (Director Agent). Verilen konuyu analiz edip sahne yapısını planlıyorsun.';
 
-    const prompt = model.modelId?.includes('MiniMax')
-      ? `Plan the scene structure in JSON:\nPrompt: "${state.masterPrompt}"\nNotes: "${state.productionNotes}"\nCharacters: "${state.characterFeatures}"`
-      : `Sen profesyonel bir video yönetmenisin. Verilen konuyu analiz ederek duygusal ve yapısal bir sahne planı oluştur.
+      const prompt = model.modelId?.includes('MiniMax')
+        ? `Plan the scene structure in JSON:\nPrompt: "${state.masterPrompt}"\nNotes: "${state.productionNotes}"\nCharacters: "${state.characterFeatures}"`
+        : `Sen profesyonel bir video yönetmenisin. Verilen konuyu analiz ederek duygusal ve yapısal bir sahne planı oluştur.
 
 Konu: ${state.masterPrompt}
 Üretim Notları: ${state.productionNotes}
@@ -100,14 +107,19 @@ Görevlerin:
 4. Her sahnenin duygusal arkını ve karakterlerini tanımla
 5. Hedef süreyi hesapla (sahne sayısı × 6 saniye)`;
 
-    return generateObject({
-      model,
-      schema: DirectorPlanSchema,
-      system,
-      abortSignal: AbortSignal.timeout(45000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: DirectorPlanSchema,
+        system,
+        abortSignal: AbortSignal.timeout(45000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return { ...state, directorPlan: result.object };
 }
@@ -117,29 +129,36 @@ async function screenwriterNode(state: PipelineState): Promise<PipelineState> {
 
   await db.run(
     `UPDATE video_jobs SET current_stage = 'Screenwriter: Sahneler yazılıyor...', progress_percent = 15 WHERE id = ?`,
-    [state.jobId]
+    [state.jobId],
   );
 
   const plan = state.directorPlan!;
-  const revisionCtx = state.revisionLogs.length > 0
-    ? `\n\nÖNCEKİ REVİZYON NOTLARI (iterasyon ${state.iteration}):\n${
-        state.revisionLogs.map(r =>
-          r.reports.map(q =>
-            `Sahne ${q.sceneNumber}: ${q.issues.map(i => `[${i.severity}] ${i.description} → ${i.suggestedFix}`).join('; ')}`
-          ).join('\n')
-        ).join('\n')
-      }\n\nLütfen bu sorunları düzeltilmiş scene promptları ve konuşma metinleri üret.`
-    : '';
+  const revisionCtx =
+    state.revisionLogs.length > 0
+      ? `\n\nÖNCEKİ REVİZYON NOTLARI (iterasyon ${state.iteration}):\n${state.revisionLogs
+          .map((r) =>
+            r.reports
+              .map(
+                (q) =>
+                  `Sahne ${q.sceneNumber}: ${q.issues.map((i) => `[${i.severity}] ${i.description} → ${i.suggestedFix}`).join('; ')}`,
+              )
+              .join('\n'),
+          )
+          .join(
+            '\n',
+          )}\n\nLütfen bu sorunları düzeltilmiş scene promptları ve konuşma metinleri üret.`
+      : '';
 
   const models = getAIModelChain();
-  const result = await withFallbackAndRetry((model) => {
-    const system = model.modelId?.includes('MiniMax')
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen bir AI senaristsin (Screenwriter Agent). Yönetmenin planına göre sahneleri yazıyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const system = model.modelId?.includes('MiniMax')
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen bir AI senaristsin (Screenwriter Agent). Yönetmenin planına göre sahneleri yazıyorsun.';
 
-    const prompt = model.modelId?.includes('MiniMax')
-      ? `Write scenes in JSON for this plan:\nTitle: "${plan.title}"\nLogline: "${plan.logline}"\nStructure: ${JSON.stringify(plan.sceneStructure)}\nMaster Prompt: "${state.masterPrompt}"\nNotes: "${state.productionNotes}"${revisionCtx}`
-      : `Sen bir AI senaristsin. Yönetmenin hazırladığı sahne planına göre detaylı senaryo yaz.
+      const prompt = model.modelId?.includes('MiniMax')
+        ? `Write scenes in JSON for this plan:\nTitle: "${plan.title}"\nLogline: "${plan.logline}"\nStructure: ${JSON.stringify(plan.sceneStructure)}\nMaster Prompt: "${state.masterPrompt}"\nNotes: "${state.productionNotes}"${revisionCtx}`
+        : `Sen bir AI senaristsin. Yönetmenin hazırladığı sahne planına göre detaylı senaryo yaz.
 
 Başlık: ${plan.title}
 Logline: ${plan.logline}
@@ -147,9 +166,12 @@ Tür: ${plan.genre}
 Ton: ${plan.tone}
 
 Sahne Yapısı:
-${plan.sceneStructure.map(s =>
-  `Sahne ${s.sceneNumber} (${s.purpose}): ${s.settingDescription} - ${s.charactersInScene.join(', ')}`
-).join('\n')}
+${plan.sceneStructure
+  .map(
+    (s) =>
+      `Sahne ${s.sceneNumber} (${s.purpose}): ${s.settingDescription} - ${s.charactersInScene.join(', ')}`,
+  )
+  .join('\n')}
 
 Ana Konu: ${state.masterPrompt}
 Üretim Notları: ${state.productionNotes}
@@ -163,14 +185,19 @@ Her sahne için:
 - speaker: Konuşan karakter etiketi
 - charactersInScene: Sahnede görünen tüm karakterler${revisionCtx}`;
 
-    return generateObject({
-      model,
-      schema: StudioSchema,
-      system,
-      abortSignal: AbortSignal.timeout(60000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: StudioSchema,
+        system,
+        abortSignal: AbortSignal.timeout(60000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return { ...state, scenes: result.object.scenes };
 }
@@ -180,24 +207,25 @@ async function producerNode(state: PipelineState): Promise<PipelineState> {
 
   await db.run(
     `UPDATE video_jobs SET current_stage = 'Producer: İş akışı optimize ediliyor...', progress_percent = 25 WHERE id = ?`,
-    [state.jobId]
+    [state.jobId],
   );
 
   const plan = state.directorPlan!;
   const scenes = state.scenes!;
-  const sceneSummary = scenes.map(s =>
-    `Sahne ${s.sceneNumber}: "${s.speechText?.slice(0, 60)}"`
-  ).join('\n');
+  const sceneSummary = scenes
+    .map((s) => `Sahne ${s.sceneNumber}: "${s.speechText?.slice(0, 60)}"`)
+    .join('\n');
 
   const models = getAIModelChain();
-  const result = await withFallbackAndRetry((model) => {
-    const system = model.modelId?.includes('MiniMax')
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen bir AI video prodüktörüsün (Producer Agent). GPU kaynaklarını optimize eden iş akışı planlıyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const system = model.modelId?.includes('MiniMax')
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen bir AI video prodüktörüsün (Producer Agent). GPU kaynaklarını optimize eden iş akışı planlıyorsun.';
 
-    const prompt = model.modelId?.includes('MiniMax')
-      ? `Optimize the production workflow:\n${sceneSummary}\nGenre: ${plan.genre}\nDuration: ${plan.targetDurationSeconds}s`
-      : `Sen video prodüktörüsün. GPU zamanını optimize eden bir iş akışı planla.
+      const prompt = model.modelId?.includes('MiniMax')
+        ? `Optimize the production workflow:\n${sceneSummary}\nGenre: ${plan.genre}\nDuration: ${plan.targetDurationSeconds}s`
+        : `Sen video prodüktörüsün. GPU zamanını optimize eden bir iş akışı planla.
 
 Sahneler:
 ${sceneSummary}
@@ -210,14 +238,19 @@ Her sahne için:
 - parallelizableWithPrevious: Bir önceki sahneyle paralel işlenebilir mi?
 - requiredModels: Hangi modeller gerekli (video, tts, sfx, lipsync, cover)`;
 
-    return generateObject({
-      model,
-      schema: ProducerWorkflowSchema,
-      system,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: ProducerWorkflowSchema,
+        system,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return { ...state, workflow: result.object };
 }
@@ -229,14 +262,14 @@ async function qualityNode(state: PipelineState): Promise<PipelineState> {
   const reports: QualityReport[] = [];
 
   const results = await Promise.allSettled(
-    scenes.map(scene =>
+    scenes.map((scene) =>
       qualityInspectScene(
         scene.sceneNumber,
         scene.videoPrompt || '',
         scene.speechText || '',
-        state.jobId
-      )
-    )
+        state.jobId,
+      ),
+    ),
   );
 
   for (const r of results) {
@@ -251,16 +284,17 @@ async function qualityInspectScene(
   sceneNumber: number,
   videoPrompt: string,
   speechText: string,
-  jobId: number
+  jobId: number,
 ): Promise<QualityReport> {
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    const system = model.modelId?.includes('MiniMax')
-      ? 'Respond only with requested JSON. No explanations.'
-      : 'Sen bir AI kalite kontrol uzmanısın (MLLM Inspector). Üretilen videoları tutarlılık ve kalite açısından değerlendiriyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const system = model.modelId?.includes('MiniMax')
+        ? 'Respond only with requested JSON. No explanations.'
+        : 'Sen bir AI kalite kontrol uzmanısın (MLLM Inspector). Üretilen videoları tutarlılık ve kalite açısından değerlendiriyorsun.';
 
-    const prompt = `Sahne ${sceneNumber}:
+      const prompt = `Sahne ${sceneNumber}:
 Görsel Prompt: "${videoPrompt}"
 Konuşma Metni: "${speechText}"
 
@@ -272,14 +306,19 @@ Değerlendirme Kriterleri:
 
 Her issue için severity (critical/major/minor) ve suggestedFix belirt.`;
 
-    return generateObject({
-      model,
-      schema: QualityReportSchema,
-      system,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: QualityReportSchema,
+        system,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -287,19 +326,20 @@ Her issue için severity (critical/major/minor) ve suggestedFix belirt.`;
 export async function directorPlan(
   masterPrompt: string,
   productionNotes: string,
-  characterFeatures: string
+  characterFeatures: string,
 ): Promise<DirectorPlan> {
   const models = getAIModelChain();
 
-  const result = await withFallbackAndRetry((model) => {
-    const isMinimax = model.modelId?.includes('MiniMax');
-    const system = isMinimax
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen bir AI video yönetmenisin (Director Agent). Verilen konuyu analiz edip sahne yapısını planlıyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const isMinimax = model.modelId?.includes('MiniMax');
+      const system = isMinimax
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen bir AI video yönetmenisin (Director Agent). Verilen konuyu analiz edip sahne yapısını planlıyorsun.';
 
-    const prompt = isMinimax
-      ? `Plan the scene structure in JSON:\nPrompt: "${masterPrompt}"\nNotes: "${productionNotes}"\nCharacters: "${characterFeatures}"`
-      : `Sen profesyonel bir video yönetmenisin. Verilen konuyu analiz ederek duygusal ve yapısal bir sahne planı oluştur.
+      const prompt = isMinimax
+        ? `Plan the scene structure in JSON:\nPrompt: "${masterPrompt}"\nNotes: "${productionNotes}"\nCharacters: "${characterFeatures}"`
+        : `Sen profesyonel bir video yönetmenisin. Verilen konuyu analiz ederek duygusal ve yapısal bir sahne planı oluştur.
 
 Konu: ${masterPrompt}
 Üretim Notları: ${productionNotes}
@@ -312,36 +352,42 @@ Görevlerin:
 4. Her sahnenin duygusal arkını ve karakterlerini tanımla
 5. Hedef süreyi hesapla (sahne sayısı × 6 saniye)`;
 
-    return generateObject({
-      model,
-      schema: DirectorPlanSchema,
-      system,
-      abortSignal: AbortSignal.timeout(45000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: DirectorPlanSchema,
+        system,
+        abortSignal: AbortSignal.timeout(45000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
 
 export async function producerOptimize(
   scenes: z.infer<typeof StudioSchema>['scenes'],
-  directorPlan: DirectorPlan
+  directorPlan: DirectorPlan,
 ): Promise<ProducerWorkflow> {
   const models = getAIModelChain();
-  const sceneSummary = scenes.map(s =>
-    `Sahne ${s.sceneNumber}: "${s.speechText?.slice(0, 60)}"`
-  ).join('\n');
+  const sceneSummary = scenes
+    .map((s) => `Sahne ${s.sceneNumber}: "${s.speechText?.slice(0, 60)}"`)
+    .join('\n');
 
-  const result = await withFallbackAndRetry((model) => {
-    const isMinimax = model.modelId?.includes('MiniMax');
-    const system = isMinimax
-      ? 'Respond only with the requested JSON. No explanations.'
-      : 'Sen bir AI video prodüktörüsün (Producer Agent). GPU kaynaklarını optimize eden iş akışı planlıyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const isMinimax = model.modelId?.includes('MiniMax');
+      const system = isMinimax
+        ? 'Respond only with the requested JSON. No explanations.'
+        : 'Sen bir AI video prodüktörüsün (Producer Agent). GPU kaynaklarını optimize eden iş akışı planlıyorsun.';
 
-    const prompt = isMinimax
-      ? `Optimize the production workflow:\n${sceneSummary}\nGenre: ${directorPlan.genre}\nDuration: ${directorPlan.targetDurationSeconds}s`
-      : `Sen video prodüktörüsün. GPU zamanını optimize eden bir iş akışı planla.
+      const prompt = isMinimax
+        ? `Optimize the production workflow:\n${sceneSummary}\nGenre: ${directorPlan.genre}\nDuration: ${directorPlan.targetDurationSeconds}s`
+        : `Sen video prodüktörüsün. GPU zamanını optimize eden bir iş akışı planla.
 
 Sahneler:
 ${sceneSummary}
@@ -354,14 +400,19 @@ Her sahne için:
 - parallelizableWithPrevious: Bir önceki sahneyle paralel işlenebilir mi?
 - requiredModels: Hangi modeller gerekli (video, tts, sfx, lipsync, cover)`;
 
-    return generateObject({
-      model,
-      schema: ProducerWorkflowSchema,
-      system,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: ProducerWorkflowSchema,
+        system,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -370,7 +421,7 @@ export async function qualityInspect(
   sceneNumber: number,
   videoPrompt: string,
   speechText: string,
-  frameBase64?: string
+  frameBase64?: string,
 ): Promise<QualityReport> {
   const models = getAIModelChain();
 
@@ -378,12 +429,13 @@ export async function qualityInspect(
     ? `[Görsel frame mevcut - base64 uzunluğu: ${frameBase64.length}]`
     : '[Görsel frame mevcut değil]';
 
-  const result = await withFallbackAndRetry((model) => {
-    const system = model.modelId?.includes('MiniMax')
-      ? 'Respond only with requested JSON. No explanations.'
-      : 'Sen bir AI kalite kontrol uzmanısın (MLLM Inspector). Üretilen videoları tutarlılık ve kalite açısından değerlendiriyorsun.';
+  const result = await withFallbackAndRetry(
+    (model) => {
+      const system = model.modelId?.includes('MiniMax')
+        ? 'Respond only with requested JSON. No explanations.'
+        : 'Sen bir AI kalite kontrol uzmanısın (MLLM Inspector). Üretilen videoları tutarlılık ve kalite açısından değerlendiriyorsun.';
 
-    const prompt = `Sahne ${sceneNumber}:
+      const prompt = `Sahne ${sceneNumber}:
 Görsel Prompt: "${videoPrompt}"
 Konuşma Metni: "${speechText}"
 ${visualContext}
@@ -396,14 +448,19 @@ Değerlendirme Kriterleri:
 
 Her issue için severity (critical/major/minor) ve suggestedFix belirt.`;
 
-    return generateObject({
-      model,
-      schema: QualityReportSchema,
-      system,
-      abortSignal: AbortSignal.timeout(30000),
-      prompt,
-    });
-  }, models, 2, 2000, true);
+      return generateObject({
+        model,
+        schema: QualityReportSchema,
+        system,
+        abortSignal: AbortSignal.timeout(30000),
+        prompt,
+      });
+    },
+    models,
+    2,
+    2000,
+    true,
+  );
 
   return result.object;
 }
@@ -412,7 +469,7 @@ export async function runMultiAgentPipeline(
   jobId: number,
   masterPrompt: string,
   productionNotes: string,
-  characterFeatures: string
+  characterFeatures: string,
 ): Promise<{
   directorPlan: DirectorPlan;
   workflow: ProducerWorkflow;
@@ -427,39 +484,43 @@ export async function runMultiAgentPipeline(
     .addNode({ name: 'screenwriter', execute: screenwriterNode })
     .addNode({ name: 'producer', execute: producerNode })
     .addNode({ name: 'quality', execute: qualityNode })
-    .addNode({ name: 'revisor', execute: async (state) => {
-      Logger.info(`[ViMax] Revisor: recording iteration ${state.iteration} failures`);
+    .addNode({
+      name: 'revisor',
+      execute: async (state) => {
+        Logger.info(`[ViMax] Revisor: recording iteration ${state.iteration} failures`);
 
-      const failedScenes = state.qualityReports
-        .filter(r => !r.passed || r.consistencyScore < 60)
-        .map(r => r.sceneNumber);
+        const failedScenes = state.qualityReports
+          .filter((r) => !r.passed || r.consistencyScore < 60)
+          .map((r) => r.sceneNumber);
 
-      const log: RevisionLog = {
-        iteration: state.iteration,
-        failedScenes,
-        reports: state.qualityReports,
-      };
+        const log: RevisionLog = {
+          iteration: state.iteration,
+          failedScenes,
+          reports: state.qualityReports,
+        };
 
-      return {
-        ...state,
-        iteration: state.iteration + 1,
-        revisionLogs: [...state.revisionLogs, log],
-        qualityReports: [],
-      };
-    }});
+        return {
+          ...state,
+          iteration: state.iteration + 1,
+          revisionLogs: [...state.revisionLogs, log],
+          qualityReports: [],
+        };
+      },
+    });
 
   graph
     .addEdge({ from: 'director', to: 'screenwriter' })
     .addEdge({ from: 'screenwriter', to: 'producer' })
     .addEdge({ from: 'producer', to: 'quality' })
     .addEdge({ from: 'revisor', to: 'screenwriter' })
-    .addEdge({ from: 'quality', to: (state) => {
-      const failed = state.qualityReports.filter(
-        r => !r.passed || r.consistencyScore < 60
-      );
-      if (failed.length === 0 || state.iteration >= 3) return '__end__';
-      return 'revisor';
-    }});
+    .addEdge({
+      from: 'quality',
+      to: (state) => {
+        const failed = state.qualityReports.filter((r) => !r.passed || r.consistencyScore < 60);
+        if (failed.length === 0 || state.iteration >= 3) return '__end__';
+        return 'revisor';
+      },
+    });
 
   const initialState: PipelineState = {
     jobId,
@@ -484,8 +545,8 @@ export async function runMultiAgentPipeline(
 
   Logger.info(
     `[ViMax] Pipeline complete: ${finalState.scenes.length} scenes, ` +
-    `${finalState.workflow.totalEstimatedGpuTime}s GPU, ` +
-    `${finalState.revisionLogs.length} revision(s), path: ${result.path.join(' → ')}`
+      `${finalState.workflow.totalEstimatedGpuTime}s GPU, ` +
+      `${finalState.revisionLogs.length} revision(s), path: ${result.path.join(' → ')}`,
   );
 
   return {

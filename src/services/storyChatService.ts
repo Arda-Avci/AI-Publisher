@@ -61,13 +61,13 @@ Her sahne için:
 export async function createChatSession(
   userId: number,
   storyBibleId?: number,
-  context?: Record<string, any>
+  context?: Record<string, any>,
 ): Promise<ChatSession> {
   const result = await db.run(
     `INSERT INTO story_chat_sessions (user_id, story_bible_id, context)
      VALUES ($1, $2, $3)
      RETURNING id`,
-    [userId, storyBibleId || null, JSON.stringify(context || {})]
+    [userId, storyBibleId || null, JSON.stringify(context || {})],
   );
 
   const session = await getChatSession(result.lastID!);
@@ -84,7 +84,7 @@ export async function getChatSession(id: number): Promise<ChatSession | null> {
 
   const messages = await db.all(
     'SELECT * FROM story_chat_messages WHERE session_id = $1 ORDER BY created_at ASC',
-    [id]
+    [id],
   );
 
   return {
@@ -108,25 +108,27 @@ export async function getChatSession(id: number): Promise<ChatSession | null> {
 export async function getUserChatSessions(userId: number): Promise<ChatSession[]> {
   const sessions = await db.all(
     'SELECT * FROM story_chat_sessions WHERE user_id = $1 ORDER BY updated_at DESC',
-    [userId]
+    [userId],
   );
 
-  return Promise.all(sessions.map(async (s: any) => {
-    const lastMessage = await db.get(
-      'SELECT content FROM story_chat_messages WHERE session_id = $1 ORDER BY created_at DESC LIMIT 1',
-      [s.id]
-    );
-    return {
-      id: s.id,
-      userId: s.user_id,
-      storyBibleId: s.story_bible_id,
-      context: s.context,
-      messages: [], // Don't load all messages for list view
-      lastMessage: lastMessage?.content || '',
-      createdAt: s.created_at,
-      updatedAt: s.updated_at,
-    };
-  }));
+  return Promise.all(
+    sessions.map(async (s: any) => {
+      const lastMessage = await db.get(
+        'SELECT content FROM story_chat_messages WHERE session_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [s.id],
+      );
+      return {
+        id: s.id,
+        userId: s.user_id,
+        storyBibleId: s.story_bible_id,
+        context: s.context,
+        messages: [], // Don't load all messages for list view
+        lastMessage: lastMessage?.content || '',
+        createdAt: s.created_at,
+        updatedAt: s.updated_at,
+      };
+    }),
+  );
 }
 
 /**
@@ -136,19 +138,18 @@ export async function addMessage(
   sessionId: number,
   role: 'user' | 'assistant' | 'system',
   content: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, any>,
 ): Promise<void> {
   await db.run(
     `INSERT INTO story_chat_messages (session_id, role, content, metadata)
      VALUES ($1, $2, $3, $4)`,
-    [sessionId, role, content, JSON.stringify(metadata || {})]
+    [sessionId, role, content, JSON.stringify(metadata || {})],
   );
 
   // Update session timestamp
-  await db.run(
-    'UPDATE story_chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-    [sessionId]
-  );
+  await db.run('UPDATE story_chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [
+    sessionId,
+  ]);
 }
 
 /**
@@ -160,7 +161,7 @@ export async function sendChatMessage(
   options?: {
     agent?: 'director' | 'screenwriter';
     template?: 'cinematic' | 'dynamic' | 'simple' | 'pixar';
-  }
+  },
 ): Promise<{
   reply: string;
   suggestedPrompts?: string[];
@@ -190,10 +191,10 @@ ${bible.tone ? `Ton: ${bible.tone}` : ''}
 ${bible.targetAudience ? `Hedef Kitle: ${bible.targetAudience}` : ''}
 
 KARAKTERLER:
-${characters.map(c => `- ${c.name} (${c.role}): ${c.description}`).join('\n')}
+${characters.map((c) => `- ${c.name} (${c.role}): ${c.description}`).join('\n')}
 
 ÖNEMLİ NOKTALAR:
-${plotPoints.map(p => `- [${p.act}] ${p.title}: ${p.description}`).join('\n')}
+${plotPoints.map((p) => `- [${p.act}] ${p.title}: ${p.description}`).join('\n')}
 `;
     }
   }
@@ -201,13 +202,12 @@ ${plotPoints.map(p => `- [${p.act}] ${p.title}: ${p.description}`).join('\n')}
   // Build conversation history for context
   const recentMessages = session.messages.slice(-10);
   const historyContext = recentMessages
-    .map(m => `${m.role === 'user' ? 'Kullanıcı' : 'Asistan'}: ${m.content}`)
+    .map((m) => `${m.role === 'user' ? 'Kullanıcı' : 'Asistan'}: ${m.content}`)
     .join('\n');
 
   // Select system prompt based on agent
-  const systemPrompt = options?.agent === 'screenwriter'
-    ? SCREENWRITER_SYSTEM_PROMPT
-    : DIRECTOR_SYSTEM_PROMPT;
+  const systemPrompt =
+    options?.agent === 'screenwriter' ? SCREENWRITER_SYSTEM_PROMPT : DIRECTOR_SYSTEM_PROMPT;
 
   // Build full prompt
   const fullPrompt = `${systemPrompt}
@@ -230,15 +230,17 @@ Yanıtını Türkçe olarak ver. Yanıtında:
     const models = getAIModelChain();
 
     const result = await withFallbackAndRetry<{ text: string }>(
-      (model: any) => model.generate({
-        prompt: fullPrompt,
-        system: 'Sen profesyonel bir Türkçe konuşan film senaristi ve hikaye geliştirme asistanısın.',
-        temperature: 0.7,
-      }),
+      (model: any) =>
+        model.generate({
+          prompt: fullPrompt,
+          system:
+            'Sen profesyonel bir Türkçe konuşan film senaristi ve hikaye geliştirme asistanısın.',
+          temperature: 0.7,
+        }),
       models,
       2,
       30000,
-      true
+      true,
     );
 
     const reply = result.text.trim();
@@ -273,8 +275,8 @@ function extractSuggestedPrompts(text: string): string[] {
     // Match lines that look like video prompts
     if (
       line.startsWith('Prompt:') ||
-      line.startsWith('• ') && line.length > 50 ||
-      /\[.*?\]/.test(line) && line.length > 30
+      (line.startsWith('• ') && line.length > 50) ||
+      (/\[.*?\]/.test(line) && line.length > 30)
     ) {
       const cleaned = line.replace(/^[•* Prompt:-]+/, '').trim();
       if (cleaned.length > 20) {
@@ -299,7 +301,7 @@ export async function deleteChatSession(id: number): Promise<void> {
  */
 export async function generateSceneBreakdown(
   sessionId: number,
-  sceneCount: number = 5
+  sceneCount: number = 5,
 ): Promise<{
   scenes: Array<{
     number: number;
@@ -314,7 +316,7 @@ export async function generateSceneBreakdown(
   if (!session) throw new Error('Session not found');
 
   // Build context from chat
-  const context = session.messages.map(m => `${m.role}: ${m.content}`).join('\n');
+  const context = session.messages.map((m) => `${m.role}: ${m.content}`).join('\n');
 
   const prompt = `
 Aşağıdaki sohbet bağlamından hareketle ${sceneCount} sahnelik bir video prodüksiyon planı oluştur.
@@ -346,15 +348,16 @@ JSON formatında döndür:
     const models = getAIModelChain();
 
     const result = await withFallbackAndRetry<{ text: string }>(
-      (model: any) => model.generate({
-        prompt,
-        system: 'Sen profesyonel bir video senaristisin. JSON formatında yanıt ver.',
-        temperature: 0.5,
-      }),
+      (model: any) =>
+        model.generate({
+          prompt,
+          system: 'Sen profesyonel bir video senaristisin. JSON formatında yanıt ver.',
+          temperature: 0.5,
+        }),
       models,
       2,
       45000,
-      true
+      true,
     );
 
     // Parse JSON from response

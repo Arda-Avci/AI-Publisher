@@ -14,8 +14,8 @@ import { Logger } from '../lib/logger.js';
 import { WhisperWord } from '../types/clipper.js';
 
 export interface TimeRange {
-  start: number;  // seconds (inclusive)
-  end: number;    // seconds (exclusive)
+  start: number; // seconds (inclusive)
+  end: number; // seconds (exclusive)
 }
 
 export interface VideoSegment {
@@ -43,7 +43,7 @@ export interface TranscriptEditResult {
 export function parseTranscriptEdits(
   transcript: string,
   deletions: number[],
-  wordTimestamps: WhisperWord[]
+  wordTimestamps: WhisperWord[],
 ): TimeRange[] {
   if (!deletions || deletions.length === 0) return [];
 
@@ -88,9 +88,9 @@ export function parseTranscriptEdits(
  */
 export function findWordTimestamps(
   transcript: string,
-  wordTimestamps: WhisperWord[]
+  wordTimestamps: WhisperWord[],
 ): Map<number, WhisperWord> {
-  const words = transcript.split(/\s+/).filter(w => w.length > 0);
+  const words = transcript.split(/\s+/).filter((w) => w.length > 0);
   const wordMap = new Map<number, WhisperWord>();
 
   // Try to match words to timestamps by text content
@@ -125,7 +125,7 @@ export function findWordTimestamps(
 export async function cutVideoByTranscript(
   videoPath: string,
   keepRanges: TimeRange[],
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   if (keepRanges.length === 0) {
     await fs.copy(videoPath, outputPath);
@@ -135,23 +135,33 @@ export async function cutVideoByTranscript(
   // Build FFmpeg select expression: between(t,start,end) OR between(t,start,end)...
   // We select segments to KEEP
   const selectExpr = keepRanges
-    .map(r => `between(t,${r.start.toFixed(3)},${r.end.toFixed(3)})`)
+    .map((r) => `between(t,${r.start.toFixed(3)},${r.end.toFixed(3)})`)
     .join('+');
 
   const args = [
     '-y',
-    '-i', videoPath,
-    '-vf', `select=${selectExpr},setpts=PTS-STARTPTS`,
-    '-af', `aselect=${selectExpr},asetpts=PTS-STARTPTS`,
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    outputPath
+    '-i',
+    videoPath,
+    '-vf',
+    `select=${selectExpr},setpts=PTS-STARTPTS`,
+    '-af',
+    `aselect=${selectExpr},asetpts=PTS-STARTPTS`,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    outputPath,
   ];
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
-  Logger.info('[transcriptEditor] cutVideoByTranscript complete', { outputPath, keepRanges: keepRanges.length });
+  Logger.info('[transcriptEditor] cutVideoByTranscript complete', {
+    outputPath,
+    keepRanges: keepRanges.length,
+  });
 }
 
 /**
@@ -164,7 +174,7 @@ export async function cutVideoByTranscript(
 export async function assembleVideoSegments(
   segments: VideoSegment[],
   videoPath: string,
-  outputPath: string
+  outputPath: string,
 ): Promise<void> {
   if (segments.length === 0) {
     throw new Error('No segments provided for assembly');
@@ -175,13 +185,19 @@ export async function assembleVideoSegments(
     const seg = segments[0];
     await runFFmpeg('ffmpeg', [
       '-y',
-      '-ss', seg.start.toFixed(3),
-      '-i', videoPath,
-      '-t', (seg.end - seg.start).toFixed(3),
-      '-c:v', 'libx264',
-      '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac',
-      outputPath
+      '-ss',
+      seg.start.toFixed(3),
+      '-i',
+      videoPath,
+      '-t',
+      (seg.end - seg.start).toFixed(3),
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      outputPath,
     ]);
     return;
   }
@@ -198,13 +214,19 @@ export async function assembleVideoSegments(
       const segPath = path.join(tempDir, `seg_${String(i).padStart(3, '0')}.mp4`);
       await runFFmpeg('ffmpeg', [
         '-y',
-        '-ss', seg.start.toFixed(3),
-        '-i', videoPath,
-        '-t', (seg.end - seg.start).toFixed(3),
-        '-c:v', 'libx264',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        segPath
+        '-ss',
+        seg.start.toFixed(3),
+        '-i',
+        videoPath,
+        '-t',
+        (seg.end - seg.start).toFixed(3),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        '-c:a',
+        'aac',
+        segPath,
       ]);
       segmentPaths.push(segPath);
     }
@@ -212,24 +234,30 @@ export async function assembleVideoSegments(
     // Create concat file
     const concatFile = path.join(tempDir, 'concat.txt');
     const concatContent = segmentPaths
-      .map(p => `file '${path.resolve(p).replace(/\\/g, '/')}'`)
+      .map((p) => `file '${path.resolve(p).replace(/\\/g, '/')}'`)
       .join('\n');
     await fs.writeFile(concatFile, concatContent);
 
     await runFFmpeg('ffmpeg', [
       '-y',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-c:v', 'libx264',
-      '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac',
-      outputPath
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      concatFile,
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      outputPath,
     ]);
 
     Logger.info('[transcriptEditor] assembleVideoSegments complete', {
       outputPath,
-      segmentCount: segments.length
+      segmentCount: segments.length,
     });
   } finally {
     await fs.remove(tempDir);
@@ -252,7 +280,7 @@ export async function editVideoByTranscript(
   videoPath: string,
   wordTimestamps: WhisperWord[],
   deletions: number[],
-  outputPath: string
+  outputPath: string,
 ): Promise<TranscriptEditResult> {
   const durationBefore = await getVideoDuration(videoPath);
 
@@ -285,7 +313,7 @@ export async function editVideoByTranscript(
       removedRanges: removeRanges,
       keptRanges: [],
       durationBefore,
-      durationAfter: durationBefore
+      durationAfter: durationBefore,
     };
   }
 
@@ -298,6 +326,6 @@ export async function editVideoByTranscript(
     removedRanges: removeRanges,
     keptRanges: allRanges,
     durationBefore,
-    durationAfter
+    durationAfter,
   };
 }

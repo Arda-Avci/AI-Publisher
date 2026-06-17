@@ -19,7 +19,7 @@ export function registerAuthRoutes(app: Application): void {
     const { username, password } = req.body;
     const encryptedUsername = encryptUsername(username);
     const user = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       req.session.userId = user.id;
       if (user.preferred_language) req.session.lang = user.preferred_language;
       if (user.selected_theme) req.session.theme = user.selected_theme;
@@ -35,7 +35,12 @@ export function registerAuthRoutes(app: Application): void {
       });
     } else {
       logAudit({ userId: null, action: 'auth.login.failed', details: { username }, req });
-      res.status(401).json({ success: false, error: req.t?.invalidLogin || 'Geçersiz kullanıcı adı veya şifre' });
+      res
+        .status(401)
+        .json({
+          success: false,
+          error: req.t?.invalidLogin || 'Geçersiz kullanıcı adı veya şifre',
+        });
     }
   });
 

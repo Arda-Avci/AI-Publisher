@@ -31,21 +31,26 @@ export interface TranscriptionResult {
  */
 export async function transcribeVideoAudioWithTimestamps(
   videoPath: string,
-  language = 'tr'
+  language = 'tr',
 ): Promise<TranscriptionResult> {
-  const audioPath = videoPath.replace(/\.[^/.]+$/, "") + `_transcribe_${Date.now()}.mp3`;
+  const audioPath = videoPath.replace(/\.[^/.]+$/, '') + `_transcribe_${Date.now()}.mp3`;
 
   try {
     // 1. MP3 olarak sesi çıkar (16kHz, mono, 32k)
     await execFileAsync('ffmpeg', [
       '-y',
-      '-i', videoPath,
+      '-i',
+      videoPath,
       '-vn',
-      '-acodec', 'libmp3lame',
-      '-ar', '16000',
-      '-ac', '1',
-      '-b:a', '32k',
-      audioPath
+      '-acodec',
+      'libmp3lame',
+      '-ar',
+      '16000',
+      '-ac',
+      '1',
+      '-b:a',
+      '32k',
+      audioPath,
     ]);
 
     // 2. Colab sunucusunu çağır (eklenti tanımlıysa)
@@ -65,14 +70,16 @@ export async function transcribeVideoAudioWithTimestamps(
           body: formData,
           headers: {
             'ngrok-skip-browser-warning': 'any-value',
-            'bypass-tunnel-reminder': 'true'
-          }
+            'bypass-tunnel-reminder': 'true',
+          },
         });
 
         if (response.ok) {
-          const resData = await response.json() as any;
+          const resData = (await response.json()) as any;
           if (resData && resData.status === 'success') {
-            Logger.info(`Colab deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`);
+            Logger.info(
+              `Colab deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`,
+            );
             const segments = (resData.segments || []).map((s: any) => ({
               start: s.start,
               end: s.end,
@@ -82,14 +89,16 @@ export async function transcribeVideoAudioWithTimestamps(
             return {
               text: resData.text,
               segments,
-              language: resData.language || language
+              language: resData.language || language,
             };
           }
         } else {
           Logger.warn(`Colab deşifre API yanıtı başarısız: ${response.status}`);
         }
       } catch (colabErr: any) {
-        Logger.warn(`Colab deşifre çağrısı başarısız oldu, Gemini fallback'e geçiliyor: ${colabErr.message}`);
+        Logger.warn(
+          `Colab deşifre çağrısı başarısız oldu, Gemini fallback'e geçiliyor: ${colabErr.message}`,
+        );
       }
     }
 
@@ -97,53 +106,59 @@ export async function transcribeVideoAudioWithTimestamps(
     Logger.info(`Gemini 2.5 Flash fallback deşifresi başlatılıyor...`);
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
-      throw new Error('GOOGLE_GENERATIVE_AI_API_KEY bulunamadı, fallback deşifre gerçekleştirilemez.');
+      throw new Error(
+        'GOOGLE_GENERATIVE_AI_API_KEY bulunamadı, fallback deşifre gerçekleştirilemez.',
+      );
     }
 
     const audioData = fs.readFileSync(audioPath).toString('base64');
     const payload = {
-      contents: [{
-        parts: [
-          { text: 'Ses dosyasındaki konuşmaları deşifre et ve kelime/cümle bazlı zaman damgalarıyla (başlangıç/bitiş saniyeleri) birlikte JSON şemasına uygun biçimde dön.' },
-          { inlineData: { mimeType: 'audio/mp3', data: audioData } }
-        ]
-      }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            text: { type: "STRING" },
-            segments: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  start: { type: "NUMBER" },
-                  end: { type: "NUMBER" },
-                  text: { type: "STRING" },
-                  words: {
-                    type: "ARRAY",
-                    items: {
-                      type: "OBJECT",
-                      properties: {
-                        word: { type: "STRING" },
-                        start: { type: "NUMBER" },
-                        end: { type: "NUMBER" },
-                        confidence: { type: "NUMBER" }
-                      },
-                      required: ["word", "start", "end"]
-                    }
-                  }
-                },
-                required: ["start", "end", "text"]
-              }
+      contents: [
+        {
+          parts: [
+            {
+              text: 'Ses dosyasındaki konuşmaları deşifre et ve kelime/cümle bazlı zaman damgalarıyla (başlangıç/bitiş saniyeleri) birlikte JSON şemasına uygun biçimde dön.',
             },
-            language: { type: "STRING" }
+            { inlineData: { mimeType: 'audio/mp3', data: audioData } },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            text: { type: 'STRING' },
+            segments: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  start: { type: 'NUMBER' },
+                  end: { type: 'NUMBER' },
+                  text: { type: 'STRING' },
+                  words: {
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: {
+                        word: { type: 'STRING' },
+                        start: { type: 'NUMBER' },
+                        end: { type: 'NUMBER' },
+                        confidence: { type: 'NUMBER' },
+                      },
+                      required: ['word', 'start', 'end'],
+                    },
+                  },
+                },
+                required: ['start', 'end', 'text'],
+              },
+            },
+            language: { type: 'STRING' },
           },
-          required: ["text", "segments"]
-        }
-      }
+          required: ['text', 'segments'],
+        },
+      },
     };
 
     const response = await fetch(
@@ -151,8 +166,8 @@ export async function transcribeVideoAudioWithTimestamps(
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }
+        body: JSON.stringify(payload),
+      },
     );
 
     if (!response.ok) {
@@ -160,19 +175,22 @@ export async function transcribeVideoAudioWithTimestamps(
       throw new Error(`Gemini API Fallback deşifre hatası: ${response.status} - ${errText}`);
     }
 
-    const resJson = await response.json() as any;
+    const resJson = (await response.json()) as any;
     const jsonStr = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!jsonStr) {
       throw new Error('Gemini fallback deşifre sonucundan boş veri döndü.');
     }
 
     const parsedResult = JSON.parse(jsonStr.trim()) as TranscriptionResult;
-    Logger.info(`Gemini fallback deşifresi tamamlandı. Metin uzunluğu: ${parsedResult.text?.length}, Segment: ${parsedResult.segments?.length}`);
+    Logger.info(
+      `Gemini fallback deşifresi tamamlandı. Metin uzunluğu: ${parsedResult.text?.length}, Segment: ${parsedResult.segments?.length}`,
+    );
     return parsedResult;
-
   } finally {
     if (fs.existsSync(audioPath)) {
-      try { fs.unlinkSync(audioPath); } catch (e) {}
+      try {
+        fs.unlinkSync(audioPath);
+      } catch (e) {}
     }
   }
 }

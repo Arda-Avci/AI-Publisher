@@ -6,7 +6,7 @@ import { Logger } from '../lib/logger.js';
 export function registerLocalesRoutes(app: Application): void {
   // Dil paketlerini dinamik olarak döner
   app.get('/api/v1/locales', async (req, res) => {
-    let lang = req.query.lang as string || 'tr';
+    let lang = (req.query.lang as string) || 'tr';
     if (lang !== 'tr' && lang !== 'en') {
       lang = 'tr';
     }

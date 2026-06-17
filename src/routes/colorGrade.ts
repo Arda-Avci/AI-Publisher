@@ -6,16 +6,22 @@
 import { Router } from 'express';
 import path from 'path';
 import fs from 'fs-extra';
-import { applyColorGrade, parseColorCommand, generateLUTFromCommand, colorBalance, ColorGrade } from '../services/colorGrader.js';
+import {
+  applyColorGrade,
+  parseColorCommand,
+  generateLUTFromCommand,
+  colorBalance,
+  ColorGrade,
+} from '../services/colorGrader.js';
 import { Logger } from '../lib/logger.js';
 
 const router = Router();
 
 interface GradeRequestBody {
   videoPath: string;
-  command?: string;    // "sıcak sinematik tonlar" gibi doğal dil komutu
-  grade?: ColorGrade;  // veya doğrudan ColorGrade objesi
-  shadows?: string;    // "rs/gs/bs" formatında
+  command?: string; // "sıcak sinematik tonlar" gibi doğal dil komutu
+  grade?: ColorGrade; // veya doğrudan ColorGrade objesi
+  shadows?: string; // "rs/gs/bs" formatında
   midtones?: string;
   highlights?: string;
   outputPath?: string;

@@ -15,8 +15,8 @@ export type CropAspectRatio = '9:16' | '16:9' | '1:1' | '4:5';
 
 /** Single face bounding box from detection */
 export interface FaceBox {
-  x: number;      // top-left x
-  y: number;      // top-left y
+  x: number; // top-left x
+  y: number; // top-left y
   width: number;
   height: number;
   confidence: number;
@@ -24,8 +24,8 @@ export interface FaceBox {
 
 /** Crop region in pixel coordinates */
 export interface CropRegion {
-  x: number;      // top-left crop x
-  y: number;      // top-left crop y
+  x: number; // top-left crop x
+  y: number; // top-left crop y
   width: number;
   height: number;
 }
@@ -70,16 +70,16 @@ export interface SmartCropResult {
 /** Word-level transcript segment from Whisper */
 export interface WhisperWord {
   word: string;
-  start: number;   // seconds
-  end: number;     // seconds
+  start: number; // seconds
+  end: number; // seconds
   confidence: number;
 }
 
 /** SRT subtitle entry */
 export interface SrtEntry {
   index: number;
-  startTime: number;  // seconds
-  endTime: number;    // seconds
+  startTime: number; // seconds
+  endTime: number; // seconds
   text: string;
 }
 

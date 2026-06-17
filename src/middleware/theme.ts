@@ -31,7 +31,9 @@ export async function themeMiddleware(req: Request, res: Response, next: NextFun
   // 3. Resolve from DB if logged in
   else if (req.session && (req.session as any).userId) {
     try {
-      const user = await db.get('SELECT selected_theme FROM users WHERE id = ?', [(req.session as any).userId]);
+      const user = await db.get('SELECT selected_theme FROM users WHERE id = ?', [
+        (req.session as any).userId,
+      ]);
       if (user && user.selected_theme) {
         themeId = user.selected_theme;
         (req.session as any).theme = themeId;
@@ -55,7 +57,10 @@ export async function themeMiddleware(req: Request, res: Response, next: NextFun
   // Save changes to DB if user is logged in and parameters were passed
   if (req.session && (req.session as any).userId && req.query.theme) {
     try {
-      await db.run('UPDATE users SET selected_theme = ? WHERE id = ?', [themeId, (req.session as any).userId]);
+      await db.run('UPDATE users SET selected_theme = ? WHERE id = ?', [
+        themeId,
+        (req.session as any).userId,
+      ]);
       await new Promise<void>((r) => req.session!.save(() => r()));
     } catch (err) {
       // Ignored
@@ -63,10 +68,13 @@ export async function themeMiddleware(req: Request, res: Response, next: NextFun
   }
 
   // Find the selected theme
-  const selectedTheme = PREMIUM_THEMES.find(t => t.id === themeId) || PREMIUM_THEMES.find(t => t.id === 'default') || PREMIUM_THEMES[0];
-  
+  const selectedTheme =
+    PREMIUM_THEMES.find((t) => t.id === themeId) ||
+    PREMIUM_THEMES.find((t) => t.id === 'default') ||
+    PREMIUM_THEMES[0];
+
   // Build dynamic styles injecting to :root or .theme-x
-  const colors = (isDark ? selectedTheme.dark : (selectedTheme.light || selectedTheme.dark));
+  const colors = isDark ? selectedTheme.dark : selectedTheme.light || selectedTheme.dark;
 
   const themeCssVariables = `
     :root {

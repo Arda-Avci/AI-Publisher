@@ -28,12 +28,18 @@ type ViralSegmentResult = z.infer<typeof ViralSegmentSchema>;
 // ── ViralAnalyzer v2 ──────────────────────────────────────────────────────────
 
 export class ViralAnalyzer {
-  private lastUsage: { model: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } } | null = null;
+  private lastUsage: {
+    model: string;
+    usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  } | null = null;
 
   /**
    * Son AI çağrısının token kullanım bilgisini döndürür.
    */
-  getLastTokenUsage(): { model: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } } | null {
+  getLastTokenUsage(): {
+    model: string;
+    usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  } | null {
     return this.lastUsage;
   }
 
@@ -44,21 +50,30 @@ export class ViralAnalyzer {
       maxDuration?: number;
       targetCount?: number;
       title?: string;
-    } = {}
+    } = {},
   ): Promise<ViralAnalysisResult> {
     const { minDuration = 30, maxDuration = 90, targetCount = 5, title = '' } = options;
 
-    Logger.info(`[ViralAnalyzer-v2] ${transcription.segments.length} segment analiz ediliyor (Gemini structured)`);
+    Logger.info(
+      `[ViralAnalyzer-v2] ${transcription.segments.length} segment analiz ediliyor (Gemini structured)`,
+    );
 
-    const scoredSegments = await this.llmScoreSegments(transcription, minDuration, maxDuration, targetCount, title);
+    const scoredSegments = await this.llmScoreSegments(
+      transcription,
+      minDuration,
+      maxDuration,
+      targetCount,
+      title,
+    );
 
     scoredSegments.sort((a, b) => b.score - a.score);
     const topSegments = scoredSegments.slice(0, targetCount);
     const nonOverlapping = this.removeOverlaps(topSegments);
 
-    const overallScore = nonOverlapping.length > 0
-      ? Math.round(nonOverlapping.reduce((sum, s) => sum + s.score, 0) / nonOverlapping.length)
-      : 0;
+    const overallScore =
+      nonOverlapping.length > 0
+        ? Math.round(nonOverlapping.reduce((sum, s) => sum + s.score, 0) / nonOverlapping.length)
+        : 0;
 
     tokenTracker.logSummary();
 
@@ -75,10 +90,10 @@ export class ViralAnalyzer {
     minDuration: number,
     maxDuration: number,
     targetCount: number,
-    title: string
+    title: string,
   ): Promise<ClipSegment[]> {
     const eligibleSegments = transcription.segments
-      .filter(s => {
+      .filter((s) => {
         const dur = s.end - s.start;
         return dur >= minDuration && dur <= maxDuration;
       })
@@ -106,7 +121,7 @@ Video başlığı: "${title}"
 - Paylaşılabilirlik potansiyeli
 
 Segmentler (indeks | başlangıç-bitis | metin):
-${eligibleSegments.map(s => `[${s.index}] ${s.start}s-${s.end}s | "${s.text}"`).join('\n')}
+${eligibleSegments.map((s) => `[${s.index}] ${s.start}s-${s.end}s | "${s.text}"`).join('\n')}
 
 Her segmenti 0-100 arasında puanla. Değerlendirme kriterleri:
 - Hook Kalitesi: İlk 3 saniyede dikkat çekiyor mu? Güçlü Türkçe hook kelimeleri: "şimdi", "bak", "süprize bak", "inanılmaz" (%30)
@@ -134,7 +149,8 @@ Kurallar:
             model,
             schema: ViralAnalysisSchema,
             prompt,
-            system: 'Sen Türk YouTube Shorts ve TikTok viral içerik analistisin. SADECE geçerli JSON döndür.',
+            system:
+              'Sen Türk YouTube Shorts ve TikTok viral içerik analistisin. SADECE geçerli JSON döndür.',
             abortSignal: AbortSignal.timeout(45000),
           });
 
@@ -155,13 +171,13 @@ Kurallar:
         models,
         2,
         2000,
-        true // skipZenModels — Zen modelleri structured output desteklemez
+        true, // skipZenModels — Zen modelleri structured output desteklemez
       );
 
       const analysis = result.object;
 
       // Uygun segmentleri ClipSegment[] formatına dönüştür
-      return analysis.segments.map(seg => {
+      return analysis.segments.map((seg) => {
         const eligible = eligibleSegments[seg.index];
         return {
           id: `seg-${seg.index}-${Date.now()}`,
@@ -176,7 +192,10 @@ Kurallar:
         };
       });
     } catch (error) {
-      Logger.error('[ViralAnalyzer-v2] Gemini structured output başarısız, keyword fallback kullanılıyor:', error);
+      Logger.error(
+        '[ViralAnalyzer-v2] Gemini structured output başarısız, keyword fallback kullanılıyor:',
+        error,
+      );
     }
 
     return this.keywordScoreFallback(transcription.segments, minDuration, maxDuration);
@@ -185,20 +204,47 @@ Kurallar:
   private keywordScoreFallback(
     segments: TranscriptionResult['segments'],
     minDuration: number,
-    maxDuration: number
+    maxDuration: number,
   ): ClipSegment[] {
     const VIRAL_KEYWORDS: Record<string, number> = {
       // Türkçe güçlü hook kelimeleri (+15)
-      'şok': 15, 'bomba': 15, 'efsane': 15, 'acayip': 12, 'sürpriz': 12,
-      'inanılmaz': 15, 'felaket': 12, 'kral': 10, 'harika': 10, 'muhteşem': 12,
-      'sarsıcı': 12, 'dehşet': 12, 'çılgınlık': 10, 'skandal': 15, 'bombabomba': 15,
+      şok: 15,
+      bomba: 15,
+      efsane: 15,
+      acayip: 12,
+      sürpriz: 12,
+      inanılmaz: 15,
+      felaket: 12,
+      kral: 10,
+      harika: 10,
+      muhteşem: 12,
+      sarsıcı: 12,
+      dehşet: 12,
+      çılgınlık: 10,
+      skandal: 15,
+      bombabomba: 15,
       // Türkçe soru/hook ifadeleri (+10)
-      'bak şimdi': 10, 'dinle bak': 10, 'bu ne böyle': 10, 'olanlar oldu': 12,
-      'gerçekten mi': 10, 'sizce': 8, 'ne olacak': 10, 'bakalım': 8,
-      'şimdi': 8, 'dikkat': 10, 'son dakika': 15, 'flaş': 12,
+      'bak şimdi': 10,
+      'dinle bak': 10,
+      'bu ne böyle': 10,
+      'olanlar oldu': 12,
+      'gerçekten mi': 10,
+      sizce: 8,
+      'ne olacak': 10,
+      bakalım: 8,
+      şimdi: 8,
+      dikkat: 10,
+      'son dakika': 15,
+      flaş: 12,
       // İngilizce viral kelimeler (+8)
-      'amazing': 8, 'incredible': 8, 'unbelievable': 8, 'shocking': 10,
-      'breaking': 10, 'exclusive': 8, 'viral': 8, 'omg': 8,
+      amazing: 8,
+      incredible: 8,
+      unbelievable: 8,
+      shocking: 10,
+      breaking: 10,
+      exclusive: 8,
+      viral: 8,
+      omg: 8,
     };
 
     const clipSegments: ClipSegment[] = [];
@@ -248,9 +294,9 @@ Kurallar:
     const result: ClipSegment[] = [];
     for (const segment of segments) {
       const overlaps = result.some(
-        existing =>
+        (existing) =>
           (segment.startTime >= existing.startTime && segment.startTime < existing.endTime) ||
-          (segment.endTime > existing.startTime && segment.endTime <= existing.endTime)
+          (segment.endTime > existing.startTime && segment.endTime <= existing.endTime),
       );
       if (!overlaps) result.push(segment);
     }

@@ -8,7 +8,7 @@ import { Logger } from '../lib/logger.js';
  * Express recognizes this as an error handler because it has 4 parameters
  * (err, req, res, next) — even if `next` is unused.
  */
- 
+
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction): void {
   Logger.error('Unhandled error', err);
   if (res.headersSent) {

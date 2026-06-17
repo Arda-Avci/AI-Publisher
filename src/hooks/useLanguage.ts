@@ -18,7 +18,7 @@ export function useLanguage() {
     fetch('/api/v1/set-language', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lang: newLang })
+      body: JSON.stringify({ lang: newLang }),
     }).catch(console.error);
   };
 

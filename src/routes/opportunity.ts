@@ -29,11 +29,11 @@ const FALLBACK_INSTANCES: { type: 'invidious' | 'piped'; base: string }[] = [
   { type: 'piped', base: 'https://pipedapi.adminforge.de' },
   { type: 'piped', base: 'https://watchapi.whatever.social' },
   { type: 'piped', base: 'https://api-piped.mha.fi' },
-  { type: 'piped', base: 'https://pipedapi.kavin.rocks' }
+  { type: 'piped', base: 'https://pipedapi.kavin.rocks' },
 ];
 
 // Chunk helper: split an array into fixed-size groups.
-const chunk = <T,>(arr: T[], n: number): T[][] => {
+const chunk = <T>(arr: T[], n: number): T[][] => {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
   return out;
@@ -69,7 +69,7 @@ type FetchResult = {
 async function fetchFromYouTubeAPI(
   rawQ: string,
   langs: string[],
-  apiKey: string
+  apiKey: string,
 ): Promise<FetchResult> {
   try {
     // --- Step A: search.list — one query per language, merge by videoId ---
@@ -89,7 +89,7 @@ async function fetchFromYouTubeAPI(
           if (!firstError) firstError = searchData.error;
           continue;
         }
-        for (const it of (searchData.items || [])) {
+        for (const it of searchData.items || []) {
           if (!it?.id?.videoId) continue;
           if (seenIds.has(it.id.videoId)) continue;
           seenIds.add(it.id.videoId);
@@ -106,7 +106,7 @@ async function fetchFromYouTubeAPI(
         success: false,
         error: 'API_ERROR',
         message: firstError.message || 'YouTube API error',
-        code: firstError.code
+        code: firstError.code,
       };
     }
 
@@ -117,7 +117,7 @@ async function fetchFromYouTubeAPI(
     const items = allItems;
     const videoIds: string[] = items.map((it: any) => it.id.videoId);
     const channelIds: string[] = Array.from(
-      new Set(items.map((it: any) => it.snippet?.channelId).filter(Boolean))
+      new Set(items.map((it: any) => it.snippet?.channelId).filter(Boolean)),
     );
 
     // --- Step B: videos.list for stats + full description (batched in 50s)
@@ -135,11 +135,13 @@ async function fetchFromYouTubeAPI(
             success: false,
             error: 'API_ERROR',
             message: vData.error.message || 'YouTube API error',
-            code: vData.error.code
+            code: vData.error.code,
           };
         }
-        for (const v of (vData.items || [])) videoStatsMap.set(v.id, v);
-      } catch (e) { continue; }
+        for (const v of vData.items || []) videoStatsMap.set(v.id, v);
+      } catch (e) {
+        continue;
+      }
     }
 
     // --- Step C: channels.list for subscriber counts (batched in 50s)
@@ -157,11 +159,13 @@ async function fetchFromYouTubeAPI(
             success: false,
             error: 'API_ERROR',
             message: cData.error.message || 'YouTube API error',
-            code: cData.error.code
+            code: cData.error.code,
           };
         }
-        for (const c of (cData.items || [])) channelStatsMap.set(c.id, c);
-      } catch (e) { continue; }
+        for (const c of cData.items || []) channelStatsMap.set(c.id, c);
+      } catch (e) {
+        continue;
+      }
     }
 
     // --- Compose results + score (engagement-corrected viral) ---
@@ -200,7 +204,7 @@ async function fetchFromYouTubeAPI(
           likes,
           score,
           description: snippet.description || '',
-          publishedAt: snippet.publishedAt || it.snippet?.publishedAt || ''
+          publishedAt: snippet.publishedAt || it.snippet?.publishedAt || '',
         };
       })
       .sort((a, b) => b.score - a.score)
@@ -242,10 +246,10 @@ async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchR
         likes: 0,
         score,
         description: v.description || '',
-        publishedAt: v.ago || ''
+        publishedAt: v.ago || '',
       };
     });
-    
+
     Logger.info(`yt-search returned ${videos.length} videos`);
     return { success: true, videos, source: 'yt-search' };
   } catch (err: any) {
@@ -256,7 +260,9 @@ async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchR
 
 export function registerOpportunityRoutes(app: Application): void {
   app.get('/opportunity-videos', requireAuth, async (req: Request, res: Response) => {
-    const user = await db.get('SELECT youtube_api_key FROM users WHERE id = ?', [req.session.userId]);
+    const user = await db.get('SELECT youtube_api_key FROM users WHERE id = ?', [
+      req.session.userId,
+    ]);
     const apiKey: string | undefined = user?.youtube_api_key;
 
     const rawQ = String(req.query.q || '').trim();
@@ -283,12 +289,12 @@ export function registerOpportunityRoutes(app: Application): void {
           success: true,
           videos: ytResult.videos,
           source: 'youtube_api',
-          languages: langs
+          languages: langs,
         });
       }
       Logger.warn(
         'YouTube API failed, falling back to Invidious/Piped',
-        ytResult.message || ytResult.error
+        ytResult.message || ytResult.error,
       );
     }
 
@@ -299,7 +305,7 @@ export function registerOpportunityRoutes(app: Application): void {
         success: true,
         videos: fbResult.videos,
         source: fbResult.source || 'fallback',
-        languages: langs
+        languages: langs,
       });
     }
 
@@ -307,7 +313,7 @@ export function registerOpportunityRoutes(app: Application): void {
       success: false,
       error: 'ALL_FALLBACKS_FAILED',
       message:
-        "YouTube API key olmadan arama şu an mümkün değil (public Invidious/Piped instance'ları kapalı). Ücretsiz bir YouTube API key alıp Ayarlar'a ekleyin: console.cloud.google.com/apis/credentials (10,000 unit/gün ücretsiz)."
+        "YouTube API key olmadan arama şu an mümkün değil (public Invidious/Piped instance'ları kapalı). Ücretsiz bir YouTube API key alıp Ayarlar'a ekleyin: console.cloud.google.com/apis/credentials (10,000 unit/gün ücretsiz).",
     });
   });
 }
