@@ -77,7 +77,7 @@ declare module 'express-session' {
 
 
 const app = express();
-const PORT = process.env.PORT || 3016;
+const PORT = process.env.PORT || 4000;
 
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   Logger.error('SESSION_SECRET is not set in production. Security risk!');

@@ -730,3 +730,10 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **PROJECT_STATUS.md güncelleme**
 - [x] **Build doğrulama**: `tsc --noEmit` 0 hata, `vite build` 1.26s başarılı
 
+## ✅ Sprint 20 — Port Standardizasyonu & RabbitMQ Entegrasyonu (17 Haziran 2026)
+- [x] **Port Standardizasyonu:** Kod genelindeki varsayılan `3016` port tanımları (`server.ts`, `queue.ts`, `payments.ts`, `colab-manager.ts`, `AdvancedVideoQueueManager.ts`) tamamen doğru port olan **`4000`** ile değiştirildi ve derlendi.
+- [x] **RabbitMQ Aktifleştirilmesi:** Windows Erlang hayalet port çakışmaları sonlandırılarak RabbitMQ servisi yerel makinede (5672/15672) tamamen mock'suz ve alarmsız aktifleştirildi.
+- [x] **Mock Kaldırılması:** `rabbitmq.ts` içerisindeki tüm mock/bypass yapıları kaldırıldı; testlerde ve lokal servislerde tamamen gerçek RabbitMQ tünelleri ve entegrasyonu koşturuldu.
+- [x] **Colab Maliyet Tasarrufu:** İşlem yapılmadığı durumlarda Colab VM'inin kapatılması ve durdurulması sağlandı.
+
+

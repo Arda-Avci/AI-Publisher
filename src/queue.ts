@@ -386,7 +386,7 @@ async function startProduction(job: VideoJob) {
             job_id: job.id,
             callback_url: process.env.PUBLIC_URL 
               ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
-              : `http://localhost:${process.env.PORT || 3016}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+              : `http://localhost:${process.env.PORT || 4000}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
           });
           Logger.info('[PRODUCTION] Cover generation request sent', { status: coverResponse.status });
 
@@ -663,7 +663,7 @@ async function startProduction(job: VideoJob) {
           speaker: currentSpeaker,
           callback_url: process.env.PUBLIC_URL 
             ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}` 
-            : `http://localhost:${process.env.PORT || 3016}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+            : `http://localhost:${process.env.PORT || 4000}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
         }, { timeout: 600000 });
 
         const receivedId = response.data?.task_id;

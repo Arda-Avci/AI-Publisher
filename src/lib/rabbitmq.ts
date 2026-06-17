@@ -10,10 +10,16 @@ export const VIDEO_JOBS_QUEUE = 'video_jobs_queue';
 export const PUBLISH_JOBS_QUEUE = 'publish_jobs_queue';
 export const CLIP_JOBS_QUEUE = 'clip_jobs_queue';
 
-let connection: any = null;
-let channel: any = null;
-let isConnecting = false;
+const globalRef = global as any;
 
+if (globalRef._rabbitmq_connection === undefined) {
+  globalRef._rabbitmq_connection = null;
+}
+if (globalRef._rabbitmq_channel === undefined) {
+  globalRef._rabbitmq_channel = null;
+}
+
+let isConnecting = false;
 const reconnectCallbacks: (() => void | Promise<void>)[] = [];
 
 /**
@@ -30,25 +36,25 @@ async function connectWithRetry() {
   
   while (true) {
     try {
-      connection = await amqplib.connect(RABBITMQ_URL);
-      channel = await connection.createChannel();
+      globalRef._rabbitmq_connection = await amqplib.connect(RABBITMQ_URL);
+      globalRef._rabbitmq_channel = await globalRef._rabbitmq_connection.createChannel();
 
       // Durable: true = RabbitMQ restart atsa bile kuyruklar silinmez
-      await channel.assertQueue(VIDEO_JOBS_QUEUE, { durable: true });
-      await channel.assertQueue(PUBLISH_JOBS_QUEUE, { durable: true });
-      await channel.assertQueue(CLIP_JOBS_QUEUE, { durable: true });
+      await globalRef._rabbitmq_channel.assertQueue(VIDEO_JOBS_QUEUE, { durable: true });
+      await globalRef._rabbitmq_channel.assertQueue(PUBLISH_JOBS_QUEUE, { durable: true });
+      await globalRef._rabbitmq_channel.assertQueue(CLIP_JOBS_QUEUE, { durable: true });
 
       Logger.info('RabbitMQ başarıyla bağlandı ve kuyruklar hazır.');
 
-      connection.on('close', () => {
+      globalRef._rabbitmq_connection.on('close', () => {
         Logger.warn('RabbitMQ bağlantısı kapandı! Yeniden bağlanılıyor...');
-        channel = null;
-        connection = null;
+        globalRef._rabbitmq_channel = null;
+        globalRef._rabbitmq_connection = null;
         isConnecting = false;
         setTimeout(connectWithRetry, 5000);
       });
 
-      connection.on('error', (err: any) => {
+      globalRef._rabbitmq_connection.on('error', (err: any) => {
         Logger.error('RabbitMQ bağlantı hatası', err);
       });
 
@@ -65,8 +71,8 @@ async function connectWithRetry() {
       break;
     } catch (error) {
       Logger.error('RabbitMQ bağlanırken hata oluştu, 5s sonra tekrar denenecek', error);
-      channel = null;
-      connection = null;
+      globalRef._rabbitmq_channel = null;
+      globalRef._rabbitmq_connection = null;
       await new Promise(r => setTimeout(r, 5000));
     }
   }
@@ -80,10 +86,10 @@ export async function initRabbitMQ() {
 }
 
 export function getRabbitChannel(): any {
-  if (!channel) {
-    throw new Error('RabbitMQ channel is not initialized. Connection might be down.');
+  if (!globalRef._rabbitmq_channel) {
+    throw new Error('RabbitMQ channel is not initialized and connection is offline.');
   }
-  return channel;
+  return globalRef._rabbitmq_channel;
 }
 
 /**

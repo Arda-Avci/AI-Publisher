@@ -130,3 +130,8 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - Faz 7: Testing & QA (Kalan 16 test maddesi)
 - Production deployment hazırlığı
 - Git push ve tag
+
+## 🟢 Tamamlananlar (17 Haziran 2026 - Sprint 20)
+- [x] **Port Standardizasyonu:** `3016` portu fallback değerleri `4000` olarak güncellendi ve tüm asenkron callback ağ geçitleri tekil porta bağlandı.
+- [x] **RabbitMQ Canlı Bağlantı:** Windows üzerinde RabbitMQ ve Erlang asılı süreçleri temizlenerek 5672/15672 portlarında mock'suz, canlı entegrasyon sağlandı.
+- [x] **Colab Maliyet Tasarrufu:** İşlem yapılmadığı zamanlarda Colab tünelinin ve VM'inin kapalı tutulması kuralı entegre edildi.

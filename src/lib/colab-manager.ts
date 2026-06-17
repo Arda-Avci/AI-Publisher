@@ -126,10 +126,10 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
 
   async start(): Promise<{ ngrokUrl: string }> {
     if (process.env.MOCK_COLAB === 'true') {
-      this.setStatus('running', 'http://localhost:3016/mock', null);
+      this.setStatus('running', 'http://localhost:4000/mock', null);
       this.state.startedAt = new Date().toISOString();
       this.startHealthChecks();
-      return { ngrokUrl: 'http://localhost:3016/mock' };
+      return { ngrokUrl: 'http://localhost:4000/mock' };
     }
     const envUrl = process.env.COLAB_URL;
     if (envUrl && envUrl.startsWith('http')) {
@@ -536,7 +536,7 @@ class ColabManagerImpl extends EventEmitter implements ColabManager {
           last_sent_at: new Date().toISOString(),
           last_status_code: 200,
           last_error: null,
-          last_url: "http://localhost:3016/api/v1/video/callback",
+          last_url: "http://localhost:4000/api/v1/video/callback",
           tunnel_connectivity: "healthy"
         },
         outputs: {

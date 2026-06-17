@@ -244,4 +244,10 @@ Bana her zaman Türkçe yanıt ver, oluşturduğun tüm md dosyaları Türkçe o
 Tüm tamamlanan değişiklikleri PROJECT_STATUS.md ve TODO.md dosyasında güncelle.
 #### Bu Dosyada değişiklik yapma.
 Her yeni oturumda ve compact işlemlerinden sonra bu dosyayı, PROJECT_STATUS.md dosyasını ve TODO.md dosyasını oku.
+
+#### KATI KURALLAR:
+
+Asla!!!, hiç bir yerde mock kullanılmayacak, hata dönecekse dönsün hatayı görelim, bir şeyleri by-pass etmeye çalışmıyoruz, tamamen düzgün çalışacak bir sistem kurmamız gerekiyor.
+Bu kurallar ihlal edilmeyecek. 
+Bu kurallar nedeniyle yapılamayan iş olursa onay iste.
 ```

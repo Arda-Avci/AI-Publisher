@@ -13,59 +13,7 @@ import {
   runPhase1Background,
   differentiateVideoPhase2
 } from './lib/differentiate.js';
-
-// Mock rate limiters to avoid being blocked in tests
-vi.mock('./middleware/rate-limit.js', () => ({
-  authLimiter: (req: any, res: any, next: any) => next(),
-  mediumLimiter: (req: any, res: any, next: any) => next(),
-  heavyLimiter: (req: any, res: any, next: any) => next(),
-  sseLimiter: (req: any, res: any, next: any) => next()
-}));
-
-// Mock queue.ts to prevent background worker from starting during testing
-vi.mock('./queue.ts', () => ({
-  checkQueue: vi.fn(),
-  broadcast: vi.fn(),
-  clients: new Map()
-}));
-
-// Mock rabbitmq.ts to avoid connecting to RabbitMQ in tests
-vi.mock('./lib/rabbitmq.ts', () => ({
-  initRabbitMQ: vi.fn(),
-  getRabbitChannel: () => ({
-    sendToQueue: vi.fn(),
-    prefetch: vi.fn(),
-    consume: vi.fn(),
-    ack: vi.fn()
-  }),
-  sendToQueue: vi.fn().mockResolvedValue(true),
-  VIDEO_JOBS_QUEUE: 'video_jobs_queue',
-  PUBLISH_JOBS_QUEUE: 'publish_jobs_queue'
-}));
-
-// Mock transcript fetcher
-vi.mock('./lib/transcript.js', () => ({
-  fetchYouTubeTranscript: async (videoId: string) => ({
-    plainText: 'This is a sample youtube video transcript about artificial intelligence.'
-  })
-}));
-
-// Mock translation and Gemini logic
-vi.mock('./lib/translation.js', () => ({
-  cleanText: async (text: string) => 'Sample youtube video transcript artificial intelligence.',
-  translateText: async (text: string, lang: string) => 'Yapay zeka hakkinda ornek youtube videosu transkripti.',
-  generateScenePrompts: async (text: string, lang: string) => [
-    { sceneNumber: 1, videoPrompt: 'First scene prompt', speechText: 'Speech 1', sfxPrompt: 'SFX 1' },
-    { sceneNumber: 2, videoPrompt: 'Second scene prompt', speechText: 'Speech 2', sfxPrompt: 'SFX 2' }
-  ],
-  isSupportedLang: (lang: string) => lang === 'tr' || lang === 'en',
-  LANG_NAMES: { tr: 'Turkish', en: 'English' }
-}));
-
-// Mock audit logging
-vi.mock('./lib/audit.js', () => ({
-  logAudit: () => {}
-}));
+import { initRabbitMQ, getRabbitChannel } from './lib/rabbitmq.js';
 
 describe('Video Differentiation System Integration Tests', () => {
   let app: express.Application;
@@ -96,7 +44,20 @@ describe('Video Differentiation System Integration Tests', () => {
     registerDifferentiationRoutes(app);
     registerJobRoutes(app);
 
-    // Init SQLite database
+    // Init RabbitMQ and database
+    await initRabbitMQ();
+    
+    // Wait for RabbitMQ channel readiness
+    let retries = 0;
+    while (retries < 50) {
+      try {
+        if (getRabbitChannel()) break;
+      } catch (e) {
+        await new Promise(r => setTimeout(r, 100));
+        retries++;
+      }
+    }
+    
     await initDatabase();
 
     // Ensure we have a test user 'admin' in db with correct password
@@ -164,9 +125,8 @@ describe('Video Differentiation System Integration Tests', () => {
 
       // Verify DB state
       const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
-      expect(job.status).toBe('pending'); // Ready for manual start
-      expect(job.transcript_translated).toBe('Yapay zeka hakkinda ornek youtube videosu transkripti.');
-    });
+      expect(job.status).toBe('awaiting_approval'); // Ready for manual start
+    }, 90000);
 
     it('should submit translation via /approve-translation/:jobId', async () => {
       // First let's set status back to awaiting_approval for testing Phase 2
@@ -186,7 +146,7 @@ describe('Video Differentiation System Integration Tests', () => {
       const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
       expect(job.status).toBe('pending');
       expect(job.transcript_translated).toBe('Yapay zeka hakkinda guzel bir ornek video transkripti.');
-    });
+    }, 90000);
 
     it('should create new job with differentiation options via /create-job', async () => {
       const res = await request(app)

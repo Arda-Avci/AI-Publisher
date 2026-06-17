@@ -132,7 +132,7 @@ Output JSON format:
         sceneText: scenes[i].text
       });
 
-      const _PORT = process.env.PORT || 3016;
+      const _PORT = process.env.PORT || 4000;
       const payload = {
         scene: scenes[i],
         init_image: lastFrameBase64,
