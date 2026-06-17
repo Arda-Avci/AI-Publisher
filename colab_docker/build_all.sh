@@ -88,6 +88,11 @@ for i in "${!MODELS[@]}"; do
     FILE_SIZE=$(du -h "$DRIVE_DIR/$MODEL.tar.gz" | cut -f1)
     echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
     echo "[INFO] Drive Dosya Boyutu: $FILE_SIZE"
+    
+    # Disk temizliği: Yerel docker imajını silelim ki Colab diski dolmasın
+    echo "[INFO] Disk alani kazanmak icin yerel imaj temizleniyor..."
+    docker rmi "ai-publisher-$MODEL:latest"
+    docker image prune -f
   else
     echo "❌ Hata: Olusturulan dosya Google Drive'da bulunamadi!"
   fi
