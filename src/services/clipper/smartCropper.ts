@@ -453,10 +453,11 @@ export class SmartCropper {
    * Select the best face box (largest area with sufficient confidence)
    */
   private selectBestFace(boxes: FaceBox[], minConfidence: number): FaceBox {
+    const defaultBox: FaceBox = { x: 0.5, y: 0.5, width: 0.3, height: 0.3, confidence: 1 };
     return (
       boxes
         .filter((b) => b.confidence >= minConfidence)
-        .sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? boxes[0]
+        .sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? boxes[0] ?? defaultBox
     );
   }
 

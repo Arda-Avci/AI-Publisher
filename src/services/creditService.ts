@@ -17,7 +17,7 @@ export function getModelCost(modelType?: string | null): { sceneCost: number; co
   const key = Object.keys(MODEL_COSTS).find((k) =>
     modelType.toLowerCase().includes(k.toLowerCase()),
   );
-  return key ? MODEL_COSTS[key] : DEFAULT_COST;
+  return key ? (MODEL_COSTS[key] || DEFAULT_COST) : DEFAULT_COST;
 }
 
 export class CreditService {

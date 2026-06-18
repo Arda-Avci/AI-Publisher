@@ -72,7 +72,11 @@ beforeAll(async () => {
   console.log('LOGIN RESPONSE BODY:', loginRes.body);
   if (loginRes.status === 200) {
     const cookies = loginRes.headers['set-cookie'];
-    if (cookies?.[0]) authCookie = cookies[0].split(';')[0];
+    const firstCookie = cookies?.[0];
+    if (firstCookie) {
+      const parts = firstCookie.split(';');
+      if (parts[0]) authCookie = parts[0];
+    }
   } else {
     console.log('LOGIN FAILED TEXT:', loginRes.text);
   }
@@ -164,7 +168,11 @@ describe('2. Redis broadcast', () => {
     });
 
     expect(received).toHaveLength(1);
-    expect(JSON.parse(received[0])).toEqual({ jobId: 999, stage: 'test-stage', percent: 50 });
+    const firstReceived = received[0];
+    expect(firstReceived).toBeDefined();
+    if (firstReceived) {
+      expect(JSON.parse(firstReceived)).toEqual({ jobId: 999, stage: 'test-stage', percent: 50 });
+    }
   });
 });
 
@@ -315,8 +323,9 @@ describe('6. RabbitMQ publish', () => {
     });
 
     expect(got).toBe(true);
-    if (received.length > 0) {
-      expect(JSON.parse(received[0].toString()).jobId).toBe(testJobId);
+    const firstReceived = received[0];
+    if (firstReceived) {
+      expect(JSON.parse(firstReceived.toString()).jobId).toBe(testJobId);
     }
   });
 });

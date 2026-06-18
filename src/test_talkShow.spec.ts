@@ -66,7 +66,10 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
       .post('/login')
       .send({ username: 'admin', password: 'admin123' });
     expect(loginRes.status).toBe(200);
-    authCookie = loginRes.headers['set-cookie'][0].split(';')[0];
+    const cookies = loginRes.headers['set-cookie'];
+    if (cookies && cookies[0]) {
+      authCookie = cookies[0].split(';')[0] || '';
+    }
   });
 
   describe('1. Orchestrator core (deterministic, AI disabled)', () => {
@@ -74,12 +77,20 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
       const result = await orchestrateTalkShow(SAMPLE_INPUT, { useAI: false });
       // 1 intro + (4 agents * 1 round) + 1 closing = 6 messages
       expect(result.transcript.length).toBe(6);
-      expect(result.transcript[0].role).toBe('meta_orchestrator');
-      expect(result.transcript[result.transcript.length - 1].role).toBe('meta_orchestrator');
+      const firstMsg = result.transcript[0];
+      const lastMsg = result.transcript[result.transcript.length - 1];
+      expect(firstMsg).toBeDefined();
+      expect(lastMsg).toBeDefined();
+      if (firstMsg) expect(firstMsg.role).toBe('meta_orchestrator');
+      if (lastMsg) expect(lastMsg.role).toBe('meta_orchestrator');
       for (let i = 1; i < result.transcript.length - 1; i++) {
-        expect(['match_analyst', 'former_player', 'bookmaker', 'data_scout']).toContain(
-          result.transcript[i].role,
-        );
+        const msg = result.transcript[i];
+        expect(msg).toBeDefined();
+        if (msg) {
+          expect(['match_analyst', 'former_player', 'bookmaker', 'data_scout']).toContain(
+            msg.role,
+          );
+        }
       }
     });
 

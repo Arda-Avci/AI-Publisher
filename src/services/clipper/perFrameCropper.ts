@@ -80,18 +80,21 @@ function getKeyframeAtTime(
 ): { cropX: number; cropY: number; cropW: number; cropH: number } | null {
   if (frames.length === 0) return null;
   if (frames.length === 1) {
+    const f = frames[0];
+    if (!f) return null;
     return {
-      cropX: frames[0].cropX,
-      cropY: frames[0].cropY,
-      cropW: frames[0].cropW,
-      cropH: frames[0].cropH,
+      cropX: f.cropX,
+      cropY: f.cropY,
+      cropW: f.cropW,
+      cropH: f.cropH,
     };
   }
 
   // Zamanın tam ortasındaki iki frame'i bul
   let leftIdx = 0;
   for (let i = 0; i < frames.length; i++) {
-    if (frames[i].timestamp <= time) leftIdx = i;
+    const f = frames[i];
+    if (f && f.timestamp <= time) leftIdx = i;
     else break;
   }
 
@@ -99,16 +102,19 @@ function getKeyframeAtTime(
 
   if (leftIdx === rightIdx) {
     // Tam bir keyframe'e denk geliyor
+    const f = frames[leftIdx];
+    if (!f) return null;
     return {
-      cropX: frames[leftIdx].cropX,
-      cropY: frames[leftIdx].cropY,
-      cropW: frames[leftIdx].cropW,
-      cropH: frames[leftIdx].cropH,
+      cropX: f.cropX,
+      cropY: f.cropY,
+      cropW: f.cropW,
+      cropH: f.cropH,
     };
   }
 
   const left = frames[leftIdx];
   const right = frames[rightIdx];
+  if (!left || !right) return null;
   const timeRange = right.timestamp - left.timestamp;
   const t = timeRange > 0 ? (time - left.timestamp) / timeRange : 0;
 
@@ -128,12 +134,14 @@ function smoothCropPositions(
 
   const result: Array<{ timestamp: number; cropX: number; cropY: number }> = [];
   for (let i = 0; i < frames.length; i++) {
+    const currentFrame = frames[i];
+    if (!currentFrame) continue;
     const start = Math.max(0, i - Math.floor(windowSize / 2));
     const end = Math.min(frames.length, i + Math.ceil(windowSize / 2));
     const slice = frames.slice(start, end);
 
     result.push({
-      timestamp: frames[i].timestamp,
+      timestamp: currentFrame.timestamp,
       cropX: Math.round(slice.reduce((s, f) => s + f.cropX, 0) / slice.length),
       cropY: Math.round(slice.reduce((s, f) => s + f.cropY, 0) / slice.length),
     });

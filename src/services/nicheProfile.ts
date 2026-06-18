@@ -198,16 +198,16 @@ function findBuiltInNiche(input: string): NicheProfile | null {
       return profile;
     }
   }
-  if (lower.includes('game') || lower.includes('oyun')) return BUILT_IN_NICHES.gaming_minecraft;
+  if (lower.includes('game') || lower.includes('oyun')) return BUILT_IN_NICHES.gaming_minecraft as NicheProfile;
   if (lower.includes('komedi') || lower.includes('funny') || lower.includes('comedy'))
-    return BUILT_IN_NICHES.comedy_sketch;
+    return BUILT_IN_NICHES.comedy_sketch as NicheProfile;
   if (
     lower.includes('eğitim') ||
     lower.includes('education') ||
     lower.includes('tutorial') ||
     lower.includes('how')
   )
-    return BUILT_IN_NICHES.educational;
+    return BUILT_IN_NICHES.educational as NicheProfile;
   return null;
 }
 
@@ -302,7 +302,13 @@ export function getNichePromptEnhancement(
   platform: string,
   originalPrompt: string,
 ): string {
-  const rules = profile.platformRules[platform] || profile.platformRules.youtube;
+  const rules = profile.platformRules[platform] || profile.platformRules.youtube || {
+    hookStyle: 'intro_hook',
+    pacing: 'moderate',
+    visualStyle: 'mixed',
+    audioStyle: 'background_music',
+    hashtagStrategy: '#content',
+  };
   return `${originalPrompt}
 
 Style: ${rules.visualStyle}

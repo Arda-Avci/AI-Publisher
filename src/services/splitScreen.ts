@@ -21,6 +21,27 @@ export const LAYOUT_RATIOS: Record<SplitLayout, { primaryPct: number; secondaryP
   '40/60': { primaryPct: 40, secondaryPct: 60 },
 };
 
+async function hasAudioStream(filePath: string): Promise<boolean> {
+  const probeArgs = [
+    '-v',
+    'error',
+    '-select_streams',
+    'a',
+    '-show_entries',
+    'stream=codec_type',
+    '-of',
+    'csv=p=0',
+    filePath,
+  ];
+  const { execFile } = await import('child_process');
+  return new Promise<boolean>((resolve) => {
+    execFile('ffprobe', probeArgs, { timeout: 10000 }, (err, stdout) => {
+      if (err) resolve(false);
+      else resolve(stdout.trim() === 'audio');
+    });
+  });
+}
+
 export async function applySplitScreen(
   primaryVideo: string,
   secondaryVideo: string,
@@ -57,7 +78,12 @@ export async function applySplitScreen(
     });
   });
 
-  const [wStr, hStr] = probeResult.split(',');
+  const parts = probeResult.split(',');
+  const wStr = parts[0];
+  const hStr = parts[1];
+  if (!wStr || !hStr) {
+    throw new Error(`Could not parse video dimensions: ${probeResult}`);
+  }
   const width = parseInt(wStr, 10);
   const height = parseInt(hStr, 10);
 
@@ -78,8 +104,25 @@ export async function applySplitScreen(
     ? `[0:v]scale=${primarySize}[prim];[1:v]scale=${secondarySize}[sec];[prim][sec]${stackType}[vout]`
     : `[0:v]scale=${primarySize}[prim];[1:v]scale=${secondarySize}[sec];[prim][sec]${stackType}[vout]`;
 
-  // Audio: mix both video audio tracks
-  const audioFilter = '[0:a][1:a]amix=inputs=2:duration=first[aout]';
+  const primaryHasAudio = await hasAudioStream(primaryVideo);
+  const secondaryHasAudio = await hasAudioStream(secondaryVideo);
+
+  let finalFilterComplex = filterComplex;
+  const maps: string[] = ['-map', '[vout]'];
+
+  if (primaryHasAudio && secondaryHasAudio) {
+    finalFilterComplex += ';[0:a][1:a]amix=inputs=2:duration=first[aout]';
+    maps.push('-map', '[aout]');
+  } else if (primaryHasAudio) {
+    finalFilterComplex += ';[0:a]anull[aout]';
+    maps.push('-map', '[aout]');
+  } else if (secondaryHasAudio) {
+    finalFilterComplex += ';[1:a]anull[aout]';
+    maps.push('-map', '[aout]');
+  } else {
+    finalFilterComplex += ';anullsrc=channel_layout=stereo:sample_rate=44100[aout]';
+    maps.push('-map', '[aout]');
+  }
 
   const args = [
     '-y',
@@ -88,11 +131,8 @@ export async function applySplitScreen(
     '-i',
     secondaryVideo,
     '-filter_complex',
-    `${filterComplex};${audioFilter}`,
-    '-map',
-    '[vout]',
-    '-map',
-    '[aout]',
+    finalFilterComplex,
+    ...maps,
     '-c:v',
     'libx264',
     '-pix_fmt',
@@ -108,11 +148,16 @@ export async function applySplitScreen(
 
   Logger.info('[SPLIT] Applying split screen', { layout, position, primarySize, secondarySize });
 
-  await runFFmpegWithFallback([
-    { cmd: 'ffmpeg', args: [...args, '-c:v', 'h264_nvenc'] },
-    { cmd: 'ffmpeg', args: [...args, '-c:v', 'libx264'] },
-    { cmd: 'ffmpeg', args },
-  ]);
+  const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
+  const fallbacks = isTest
+    ? [{ cmd: 'ffmpeg', args }]
+    : [
+        { cmd: 'ffmpeg', args: [...args, '-c:v', 'h264_nvenc'], timeoutMs: 2000 },
+        { cmd: 'ffmpeg', args: [...args, '-c:v', 'libx264'] },
+        { cmd: 'ffmpeg', args },
+      ];
+
+  await runFFmpegWithFallback(fallbacks);
 }
 
 export async function generateSplitScreenPreview(

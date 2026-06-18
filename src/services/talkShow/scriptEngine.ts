@@ -213,6 +213,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
       const segments: ScriptSegment[] = [];
       for (let i = 0; i < scenes.length; i++) {
         const scene = scenes[i];
+        if (!scene) continue;
         const characterName = scene.character_name || 'Sunucu';
         const character = charMap.get(characterName.toLowerCase().trim());
 
@@ -318,6 +319,7 @@ ${priorDialogue || 'Henüz konuşma yok.'}
       const segments: ScriptSegment[] = [];
       for (let i = 0; i < discussion.utterances.length; i++) {
         const utterance = discussion.utterances[i];
+        if (!utterance) continue;
         const isFirst = i === 0;
         const isLast = i === discussion.utterances.length - 1;
         const sceneType: SceneType = isFirst ? 'opening' : isLast ? 'closing' : 'talk';

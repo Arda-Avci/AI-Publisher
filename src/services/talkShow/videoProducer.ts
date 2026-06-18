@@ -44,6 +44,7 @@ export async function produceTalkShowVideo(
 
   for (let i = 0; i < discussion.utterances.length; i++) {
     const u = discussion.utterances[i];
+    if (!u) continue;
     const scenePath = path.join(workDir, `scene_${String(i).padStart(3, '0')}.mp4`);
     const audioPath = path.join(workDir, `audio_${String(i).padStart(3, '0')}.wav`);
     const speakerColor = SPEAKER_COLORS[u.speaker] || '#FFFFFF';

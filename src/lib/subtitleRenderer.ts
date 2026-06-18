@@ -70,22 +70,23 @@ function parseSrtCues(srtContent: string): SubtitleCue[] {
     if (lines.length < 3) continue;
 
     const timeLine = lines[1];
+    if (!timeLine) continue;
     const timeMatch = timeLine.match(
       /(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/,
     );
     if (!timeMatch) continue;
 
     const startTime =
-      parseInt(timeMatch[1]) * 3600 +
-      parseInt(timeMatch[2]) * 60 +
-      parseInt(timeMatch[3]) +
-      parseInt(timeMatch[4]) / 1000;
+      parseInt(timeMatch[1]!) * 3600 +
+      parseInt(timeMatch[2]!) * 60 +
+      parseInt(timeMatch[3]!) +
+      parseInt(timeMatch[4]!) / 1000;
 
     const endTime =
-      parseInt(timeMatch[5]) * 3600 +
-      parseInt(timeMatch[6]) * 60 +
-      parseInt(timeMatch[7]) +
-      parseInt(timeMatch[8]) / 1000;
+      parseInt(timeMatch[5]!) * 3600 +
+      parseInt(timeMatch[6]!) * 60 +
+      parseInt(timeMatch[7]!) +
+      parseInt(timeMatch[8]!) / 1000;
 
     const text = lines
       .slice(2)
@@ -93,7 +94,7 @@ function parseSrtCues(srtContent: string): SubtitleCue[] {
       .replace(/<[^>]+>/g, '');
 
     cues.push({
-      index: parseInt(lines[0]) || cues.length + 1,
+      index: parseInt(lines[0] ?? '0') || cues.length + 1,
       startTime,
       endTime,
       text,
@@ -140,7 +141,10 @@ export function generateWordTimings(
 
   // Last word ends exactly at duration
   if (timings.length > 0) {
-    timings[timings.length - 1].end = parseFloat(duration.toFixed(3));
+    const last = timings[timings.length - 1];
+    if (last) {
+      last.end = parseFloat(duration.toFixed(3));
+    }
   }
 
   return timings;

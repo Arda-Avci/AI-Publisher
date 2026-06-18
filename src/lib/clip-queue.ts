@@ -80,10 +80,11 @@ export async function startClipQueueWorker() {
       const channel = getRabbitChannel();
       await channel.prefetch(2);
 
-      // Kuyruğa priority desteği ekle
+      // Kuyruğu mevcut argumentlerle doğrula (x-max-priority uyumsuzluğunu önlemek için)
+      // Not: x-max-priority clip-queue.ts'de kullanılmıyor, rabbitmq.ts ile tutarlılık için kaldırıldı
       await channel.assertQueue(CLIP_JOBS_QUEUE, {
         durable: true,
-        arguments: { 'x-max-priority': 10 },
+        arguments: {},
       });
 
       Logger.info(

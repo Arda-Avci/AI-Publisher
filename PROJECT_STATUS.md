@@ -127,6 +127,7 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 
 ## 🔜 Sıradaki Adımlar
 
+- **Colab CPU Docker İnşa Süreci:** Colab'da "Seçenek C" hücresinin çalıştırılması, 11 Docker imajının (base + 10 model) derlenip Google Drive'a yedeklenmesi ve arşiv bütünlüğünün doğrulanması.
 - Faz 7: Testing & QA (Kalan 16 test maddesi)
 - Production deployment hazırlığı
 - Git push ve tag

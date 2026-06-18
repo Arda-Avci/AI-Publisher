@@ -82,9 +82,13 @@ describe('viralHook', () => {
     };
     const result = ViralTitlesSchema.parse(valid);
     expect(result.titles.length).toBe(2);
-    expect(result.titles[0].title).toBe('Test basligi 2026');
-    expect(result.titles[0].ctaIncluded).toBe(true);
-    expect(result.titles[0].emojiCount).toBe(1);
+    const firstTitle = result.titles[0];
+    expect(firstTitle).toBeDefined();
+    if (firstTitle) {
+      expect(firstTitle.title).toBe('Test basligi 2026');
+      expect(firstTitle.ctaIncluded).toBe(true);
+      expect(firstTitle.emojiCount).toBe(1);
+    }
   });
 
   it('ViralTitlesSchema rejects invalid style', () => {
@@ -111,8 +115,12 @@ describe('viralHook', () => {
     };
     const result = HashtagsSchema.parse(valid);
     expect(result.hashtags.length).toBe(2);
-    expect(result.hashtags[0].tag).toBe('#viral');
-    expect(result.hashtags[0].category).toBe('trend');
+    const firstTag = result.hashtags[0];
+    expect(firstTag).toBeDefined();
+    if (firstTag) {
+      expect(firstTag.tag).toBe('#viral');
+      expect(firstTag.category).toBe('trend');
+    }
     expect(result.trendingTopics).toContain('#AI2026');
   });
 

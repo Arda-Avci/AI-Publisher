@@ -43,7 +43,7 @@ export class StubSource implements DiscussionSource {
     const utterances: SportotoUtterance[] = [];
 
     for (let i = 0; i < utteranceCount; i++) {
-      const speaker = STUB_SPEAKERS[i % STUB_SPEAKERS.length];
+      const speaker = STUB_SPEAKERS[i % STUB_SPEAKERS.length] || 'Yorumcu';
       utterances.push({
         speaker,
         text: `${speaker} hafta ${week} hakkında yorum yapıyor: ${topic}. Bu maçta kritik anlar var.`,

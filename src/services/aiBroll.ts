@@ -272,6 +272,7 @@ export async function insertBroll(
 
   for (let i = 0; i < sorted.length; i++) {
     const clip = sorted[i];
+    if (!clip) continue;
     const clipStart = Math.max(0, clip.insertAtSeconds);
     const clipEnd = Math.min(totalDur, clipStart + clip.duration);
 
@@ -321,6 +322,7 @@ export async function insertBroll(
 
     for (let i = 0; i < insertPoints.length; i++) {
       const insertAt = insertPoints[i];
+      if (insertAt === undefined) continue;
       const nextInsertAt = i < insertPoints.length - 1 ? insertPoints[i + 1] : totalDur;
 
       // Segment before B-Roll
@@ -343,7 +345,9 @@ export async function insertBroll(
 
       // B-Roll clip
       const brollPath = brollPaths[i];
-      const brollDur = sorted[i].duration;
+      const sortedClip = sorted[i];
+      if (!brollPath || !sortedClip) continue;
+      const brollDur = sortedClip.duration;
       const brollOutPath = path.join(concatDir, `broll_${i}.mp4`);
 
       // Trim B-Roll to exact duration

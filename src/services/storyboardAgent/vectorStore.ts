@@ -56,7 +56,9 @@ export class InMemoryVectorStore {
     const emb = new Array(this.dimension).fill(0);
 
     for (let i = 0; i < words.length; i++) {
-      const hash = this.hashWord(words[i]);
+      const word = words[i];
+      if (!word) continue;
+      const hash = this.hashWord(word);
       const idx = Math.abs(hash) % this.dimension;
       emb[idx] += 1.0 / words.length;
     }
@@ -84,9 +86,11 @@ export class InMemoryVectorStore {
       normA = 0,
       normB = 0;
     for (let i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      const valA = a[i] ?? 0;
+      const valB = b[i] ?? 0;
+      dot += valA * valB;
+      normA += valA * valA;
+      normB += valB * valB;
     }
     const denom = Math.sqrt(normA) * Math.sqrt(normB);
     return denom === 0 ? 0 : dot / denom;

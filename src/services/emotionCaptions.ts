@@ -112,10 +112,10 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
               const timeMatch = match.match(/time=(\d+):(\d+):(\d+\.\d+)/);
               const levelMatch = match.match(/Peak_level\s*:\s*([-\d.]+)/i);
               if (timeMatch && levelMatch) {
-                const h = parseInt(timeMatch[1], 10);
-                const m = parseInt(timeMatch[2], 10);
-                const s = parseFloat(timeMatch[3]);
-                const level = parseFloat(levelMatch[1]);
+                const h = parseInt(timeMatch[1] || '0', 10);
+                const m = parseInt(timeMatch[2] || '0', 10);
+                const s = parseFloat(timeMatch[3] || '0');
+                const level = parseFloat(levelMatch[1] || '0');
                 peaks.push({ time: h * 3600 + m * 60 + s, level });
               }
             }
@@ -161,6 +161,7 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
 
               for (let i = 0; i < peakSegments.length; i++) {
                 const seg = peakSegments[i];
+                if (!seg) continue;
                 const wordIndex = Math.floor(seg.time / chunkDuration);
                 const start = wordIndex * chunkDuration;
                 const end = start + chunkDuration;
@@ -284,9 +285,9 @@ export async function detectEmotionPeaks(audioPath: string): Promise<EmotionDete
             const timestamps: number[] = [];
             for (const match of timeRangeMatch) {
               const parts = match.replace('time=', '').split(':');
-              const h = parseInt(parts[0], 10);
-              const m = parseInt(parts[1], 10);
-              const s = parseFloat(parts[2]);
+              const h = parseInt(parts[0] || '0', 10);
+              const m = parseInt(parts[1] || '0', 10);
+              const s = parseFloat(parts[2] || '0');
               timestamps.push(h * 3600 + m * 60 + s);
             }
 
@@ -383,6 +384,7 @@ export function generateHighlightSrt(
 
   for (let i = 0; i < sentences.length; i++) {
     const sentence = sentences[i];
+    if (!sentence) continue;
     const words = sentence.split(/\s+/);
 
     // Determine if this sentence should have highlights
@@ -413,7 +415,10 @@ export function generateHighlightSrt(
 
     // Highlight color for this entry
     const peakKey = Object.keys(peakColors).find((key) => {
-      const [start, end] = key.split('-').map(Number);
+      const parts = key.split('-').map(Number);
+      const start = parts[0];
+      const end = parts[1];
+      if (start === undefined || end === undefined) return false;
       // Distribute sentences evenly
       const sentencePosition = i / sentences.length;
       const totalDuration =
@@ -560,7 +565,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     const timeLine = lines[1];
     if (!timeLine || !timeLine.includes('-->')) continue;
 
-    const [startStr, endStr] = timeLine.split('-->').map((s) => s.trim());
+    const parts = timeLine.split('-->').map((s) => s.trim());
+    const startStr = parts[0];
+    const endStr = parts[1];
+    if (!startStr || !endStr) continue;
     const startSec = parseSrtTime(startStr);
     const endSec = parseSrtTime(endStr);
     const text = lines.slice(2).join('\n');
@@ -578,7 +586,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     while ((match = colorTagRegex.exec(text)) !== null) {
       hasColor = true;
-      const [full, color, word] = match;
+      const full = match[0];
+      const color = match[1];
+      const word = match[2];
+      if (!full || !color || !word) continue;
       const assColor = hexToAssColor(color);
       // ASS format for color override within a line
       assText = assText.replace(full, `{\\c${assColor}}${word}{\\c&H00FFFFFF&}`);
@@ -617,9 +628,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
  */
 function parseSrtTime(srtTime: string): number {
   const parts = srtTime.replace(',', '.').split(':');
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  const s = parseFloat(parts[2]);
+  const h = parseInt(parts[0] || '0', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  const s = parseFloat(parts[2] || '0');
   return h * 3600 + m * 60 + s;
 }
 

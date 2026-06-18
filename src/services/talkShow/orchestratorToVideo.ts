@@ -131,11 +131,13 @@ async function renderAgentScene(
 
 async function concatVideos(videoPaths: string[], outputPath: string): Promise<void> {
   if (videoPaths.length === 0) throw new Error('No scenes to concat');
+  const firstPath = videoPaths[0];
+  if (!firstPath) throw new Error('No scenes to concat');
   if (videoPaths.length === 1) {
-    fs.copyFileSync(videoPaths[0], outputPath);
+    fs.copyFileSync(firstPath, outputPath);
     return;
   }
-  const dir = path.dirname(videoPaths[0]);
+  const dir = path.dirname(firstPath);
   const concatFile = path.join(dir, 'orch_concat.txt');
   const content = videoPaths.map((v) => `file '${v.replace(/'/g, "'\\''")}'`).join('\n');
   fs.writeFileSync(concatFile, content, 'utf-8');
@@ -169,6 +171,7 @@ export async function orchestrateToVideo(
 
   for (let i = 0; i < input.result.transcript.length; i++) {
     const msg = input.result.transcript[i];
+    if (!msg) continue;
     const color = AGENT_COLORS[msg.role] || '#FFFFFF';
     const words = msg.content.split(/\s+/).length;
     const duration = Math.max(4, Math.min(15, Math.ceil((words / 150) * 60)));

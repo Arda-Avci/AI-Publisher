@@ -57,7 +57,7 @@ function getZenProvider() {
         // Standardize Authorization header
         const authKey = Object.keys(headers).find((k) => k.toLowerCase() === 'authorization');
         if (authKey && authKey !== 'Authorization') {
-          headers['Authorization'] = headers[authKey];
+          headers['Authorization'] = headers[authKey]!;
           delete headers[authKey];
         }
         if (!headers['Authorization'] && process.env.ZEN_API_KEY) {
@@ -67,7 +67,7 @@ function getZenProvider() {
         // Standardize Content-Type header
         const contentTypeKey = Object.keys(headers).find((k) => k.toLowerCase() === 'content-type');
         if (contentTypeKey && contentTypeKey !== 'Content-Type') {
-          headers['Content-Type'] = headers[contentTypeKey];
+          headers['Content-Type'] = headers[contentTypeKey]!;
           delete headers[contentTypeKey];
         }
         if (!headers['Content-Type']) {

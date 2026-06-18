@@ -82,7 +82,9 @@ describe('Video Differentiation System Integration Tests', () => {
     expect(res.status).toBe(200);
     const cookies = res.headers['set-cookie'];
     expect(cookies).toBeDefined();
-    authCookie = cookies[0].split(';')[0];
+    if (cookies && cookies[0]) {
+      authCookie = cookies[0].split(';')[0] || '';
+    }
   });
 
   describe('Differentiate Endpoints', () => {

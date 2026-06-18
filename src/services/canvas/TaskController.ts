@@ -134,7 +134,9 @@ export class TaskController {
       const index = queue.tasks.findIndex((t) => t.id === taskId);
       if (index !== -1) {
         const task = queue.tasks[index];
-        task.status = 'cancelled';
+        if (task) {
+          task.status = 'cancelled';
+        }
         Logger.info(`Task removed from queue: ${taskId}`);
         return true;
       }

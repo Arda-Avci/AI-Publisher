@@ -101,6 +101,7 @@ export async function applyBeatSync(
   for (let i = 1; i < beatMarkers.length; i++) {
     const prevBeat = beatMarkers[i - 1];
     const currBeat = beatMarkers[i];
+    if (!prevBeat || !currBeat) continue;
     const segmentDur = currBeat.timestamp - prevBeat.timestamp;
 
     if (segmentDur >= minSegmentDur) {
@@ -111,9 +112,11 @@ export async function applyBeatSync(
   // Always include end of video
   if (validCutPoints.length > 0) {
     const lastValidIdx = validCutPoints[validCutPoints.length - 1];
-    const lastBeat = beatMarkers[lastValidIdx];
-    if (lastBeat && videoDuration - lastBeat.timestamp >= minSegmentDur) {
-      validCutPoints.push(beatMarkers.length - 1);
+    if (lastValidIdx !== undefined) {
+      const lastBeat = beatMarkers[lastValidIdx];
+      if (lastBeat && videoDuration - lastBeat.timestamp >= minSegmentDur) {
+        validCutPoints.push(beatMarkers.length - 1);
+      }
     }
   }
 
@@ -133,8 +136,12 @@ export async function applyBeatSync(
     for (let i = 0; i < validCutPoints.length - 1; i++) {
       const startIdx = validCutPoints[i];
       const endIdx = validCutPoints[i + 1];
-      const startTime = beatMarkers[startIdx].timestamp;
-      const endTime = beatMarkers[endIdx].timestamp;
+      if (startIdx === undefined || endIdx === undefined) continue;
+      const startBeat = beatMarkers[startIdx];
+      const endBeat = beatMarkers[endIdx];
+      if (!startBeat || !endBeat) continue;
+      const startTime = startBeat.timestamp;
+      const endTime = endBeat.timestamp;
 
       const segmentPath = path.join(tempDir, `segment_${i.toString().padStart(3, '0')}.mp4`);
       await extractSegment(videoPath, segmentPath, startTime, endTime);
@@ -147,19 +154,27 @@ export async function applyBeatSync(
 
     // Handle remaining portion after last cut point
     const lastValidIdx = validCutPoints[validCutPoints.length - 1];
-    const lastStartTime = beatMarkers[lastValidIdx].timestamp;
-    if (videoDuration - lastStartTime >= minSegmentDur) {
-      const segmentPath = path.join(
-        tempDir,
-        `segment_${(validCutPoints.length - 1).toString().padStart(3, '0')}.mp4`,
-      );
-      await extractSegment(videoPath, segmentPath, lastStartTime, videoDuration);
-      segmentPaths.push(segmentPath);
+    if (lastValidIdx !== undefined) {
+      const lastBeat = beatMarkers[lastValidIdx];
+      if (lastBeat) {
+        const lastStartTime = lastBeat.timestamp;
+        if (videoDuration - lastStartTime >= minSegmentDur) {
+          const segmentPath = path.join(
+            tempDir,
+            `segment_${(validCutPoints.length - 1).toString().padStart(3, '0')}.mp4`,
+          );
+          await extractSegment(videoPath, segmentPath, lastStartTime, videoDuration);
+          segmentPaths.push(segmentPath);
+        }
+      }
     }
 
     // Concatenate segments with crossfade
     if (segmentPaths.length === 1) {
-      await fs.copy(segmentPaths[0], outputPath);
+      const firstSeg = segmentPaths[0];
+      if (firstSeg) {
+        await fs.copy(firstSeg, outputPath);
+      }
     } else if (segmentPaths.length > 1) {
       // Check if all segments are long enough for crossfade
       const canCrossfade = segmentPaths.every(async (p) => {
@@ -209,7 +224,11 @@ async function applyEvenBeatSync(
   // Calculate average beat interval
   let totalInterval = 0;
   for (let i = 1; i < beatMarkers.length; i++) {
-    totalInterval += beatMarkers[i].timestamp - beatMarkers[i - 1].timestamp;
+    const b1 = beatMarkers[i];
+    const b2 = beatMarkers[i - 1];
+    if (b1 && b2) {
+      totalInterval += b1.timestamp - b2.timestamp;
+    }
   }
   const avgInterval = totalInterval / (beatMarkers.length - 1);
 
@@ -238,7 +257,10 @@ async function applyEvenBeatSync(
     // Concatenate with crossfade
     if (segmentPaths.length > 0) {
       if (segmentPaths.length === 1) {
-        await fs.copy(segmentPaths[0], outputPath);
+        const firstSeg = segmentPaths[0];
+        if (firstSeg) {
+          await fs.copy(firstSeg, outputPath);
+        }
       } else {
         await concatVideosWithCrossfade(segmentPaths, outputPath, crossfadeDur);
       }
@@ -477,7 +499,7 @@ export async function findBeatCutPoints(
     // Skip if this would create a segment shorter than minimum
     if (cutPoints.length > 0) {
       const lastCut = cutPoints[cutPoints.length - 1];
-      if (timestamp - lastCut.timestamp < minSegmentDuration) {
+      if (lastCut && timestamp - lastCut.timestamp < minSegmentDuration) {
         continue;
       }
     }
@@ -518,8 +540,11 @@ export async function applyBeatSyncCuts(
     const segmentPaths: string[] = [];
 
     for (let i = 0; i < cutPoints.length - 1; i++) {
-      const startTime = cutPoints[i].timestamp;
-      const endTime = cutPoints[i + 1].timestamp;
+      const cp1 = cutPoints[i];
+      const cp2 = cutPoints[i + 1];
+      if (!cp1 || !cp2) continue;
+      const startTime = cp1.timestamp;
+      const endTime = cp2.timestamp;
       const segPath = path.join(tempDir, `seg_${String(i).padStart(3, '0')}.mp4`);
 
       await runFFmpeg('ffmpeg', [
@@ -542,33 +567,39 @@ export async function applyBeatSyncCuts(
     }
 
     // Handle last segment to end of video
-    const lastStart = cutPoints[cutPoints.length - 1].timestamp;
-    const duration = await getVideoDuration(videoPath);
-    if (duration - lastStart >= 1.0) {
-      const lastSegPath = path.join(
-        tempDir,
-        `seg_${String(cutPoints.length - 1).padStart(3, '0')}.mp4`,
-      );
-      await runFFmpeg('ffmpeg', [
-        '-y',
-        '-ss',
-        lastStart.toFixed(3),
-        '-i',
-        videoPath,
-        '-c:v',
-        'libx264',
-        '-pix_fmt',
-        'yuv420p',
-        '-c:a',
-        'aac',
-        lastSegPath,
-      ]);
-      segmentPaths.push(lastSegPath);
+    const lastCut = cutPoints[cutPoints.length - 1];
+    if (lastCut) {
+      const lastStart = lastCut.timestamp;
+      const duration = await getVideoDuration(videoPath);
+      if (duration - lastStart >= 1.0) {
+        const lastSegPath = path.join(
+          tempDir,
+          `seg_${String(cutPoints.length - 1).padStart(3, '0')}.mp4`,
+        );
+        await runFFmpeg('ffmpeg', [
+          '-y',
+          '-ss',
+          lastStart.toFixed(3),
+          '-i',
+          videoPath,
+          '-c:v',
+          'libx264',
+          '-pix_fmt',
+          'yuv420p',
+          '-c:a',
+          'aac',
+          lastSegPath,
+        ]);
+        segmentPaths.push(lastSegPath);
+      }
     }
 
     // Concat segments
     if (segmentPaths.length === 1) {
-      await fs.copy(segmentPaths[0], outputPath);
+      const firstSeg = segmentPaths[0];
+      if (firstSeg) {
+        await fs.copy(firstSeg, outputPath);
+      }
     } else {
       const concatFile = path.join(tempDir, 'concat.txt');
       const concatContent = segmentPaths

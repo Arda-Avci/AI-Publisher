@@ -96,7 +96,7 @@ interface TemplateMeta {
   colorPalette: string[];
 }
 
-const TEMPLATE_DESCRIPTIONS: Record<string, TemplateMeta> = {
+const TEMPLATE_DESCRIPTIONS: Record<ProductionTemplate, TemplateMeta> = {
   cinematic: {
     title: 'Sinematik',
     description: 'Dramatik aydınlatma, derin gölgeler ve Hollywood tarzı görsel hikaye anlatımı.',
@@ -454,6 +454,9 @@ export async function generateTemplatePreview(
   niche?: string,
 ): Promise<TemplatePreview> {
   const desc = TEMPLATE_DESCRIPTIONS[template];
+  if (!desc) {
+    throw new Error(`Template description not found: ${template}`);
+  }
   try {
     const models = getAIModelChain();
     const result = await withFallbackAndRetry<{ text: string }>(
@@ -493,6 +496,9 @@ function generateStaticTemplatePreview(
   niche?: string,
 ): TemplatePreview {
   const desc = TEMPLATE_DESCRIPTIONS[template];
+  if (!desc) {
+    throw new Error(`Template description not found: ${template}`);
+  }
   const staticPrompts: Record<string, string[]> = {
     cinematic: [
       'A dramatic establishing shot of a lone figure on a cliff edge at sunset, golden hour lighting casting long shadows. Cinematic wide shot with rack focus. Moody atmosphere with volumetric fog.',
@@ -554,6 +560,9 @@ export async function enhancePromptForTemplate(
   template: ProductionTemplate,
 ): Promise<string> {
   const templateContext = TEMPLATE_DESCRIPTIONS[template];
+  if (!templateContext) {
+    throw new Error(`Template context not found: ${template}`);
+  }
   try {
     const models = getAIModelChain();
     const result = await withFallbackAndRetry<{ text: string }>(

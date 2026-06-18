@@ -71,7 +71,7 @@ export async function detectSilenceRanges(
 
   for (const line of lines) {
     const match = line.match(/pts_time=(\d+\.?\d*),\s*level=(-?\d+\.?\d*)/);
-    if (match) {
+    if (match && match[1] && match[2]) {
       entries.push({ pts: match[1], pts_time: match[1], level: match[2] });
     }
   }
@@ -106,10 +106,13 @@ export async function detectSilenceRanges(
 
   // Bitiş sessizliği kontrolü
   if (inSilence) {
-    const lastTime = parseFloat(entries[entries.length - 1].pts_time);
-    const duration = lastTime - silenceStart;
-    if (duration >= minDurationSec) {
-      silenceRanges.push({ start: silenceStart, end: lastTime });
+    const lastEntry = entries[entries.length - 1];
+    if (lastEntry) {
+      const lastTime = parseFloat(lastEntry.pts_time);
+      const duration = lastTime - silenceStart;
+      if (duration >= minDurationSec) {
+        silenceRanges.push({ start: silenceStart, end: lastTime });
+      }
     }
   }
 
@@ -161,8 +164,11 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
     const diffs: number[] = [];
 
     for (let i = 1; i < pngFiles.length; i++) {
-      const prevPath = path.join(tempDir, pngFiles[i - 1]);
-      const currPath = path.join(tempDir, pngFiles[i]);
+      const prevFile = pngFiles[i - 1];
+      const currFile = pngFiles[i];
+      if (!prevFile || !currFile) continue;
+      const prevPath = path.join(tempDir, prevFile);
+      const currPath = path.join(tempDir, currFile);
 
       // SAD (Sum of Absolute Differences) benzeri basit karşılaştırma
       const { stdout: diffStdout } = await runInWorker<WorkerResult>(
@@ -228,7 +234,9 @@ export async function findStaticRanges(
   const sampleInterval = 5; // detectMotionLevels'deki örnekleme
 
   for (let i = 0; i < motionLevels.length; i++) {
-    const isStatic = motionLevels[i] < threshold;
+    const level = motionLevels[i];
+    if (level === undefined) continue;
+    const isStatic = level < threshold;
 
     if (isStatic && !inStatic) {
       inStatic = true;
@@ -366,6 +374,7 @@ export async function applySmartCut(
   if (cutRanges.length === 1) {
     // Tek parça — doğrudan kes
     const r = cutRanges[0];
+    if (!r) throw new Error('applySmartCut: cutRanges bos olamaz');
     await runInWorker<WorkerResult>(
       'ffmpeg',
       [
@@ -399,6 +408,7 @@ export async function applySmartCut(
 
     for (let i = 0; i < cutRanges.length; i++) {
       const r = cutRanges[i];
+      if (!r) continue;
       const segPath = path.join(tempDir, `seg_${String(i).padStart(4, '0')}.mp4`);
       segmentPaths.push(segPath);
 
@@ -461,11 +471,14 @@ function mergeTimeRanges(ranges: TimeRange[]): TimeRange[] {
   if (ranges.length === 0) return [];
 
   const sorted = [...ranges].sort((a, b) => a.start - b.start);
-  const merged: TimeRange[] = [sorted[0]];
+  const first = sorted[0];
+  if (!first) return [];
+  const merged: TimeRange[] = [first];
 
   for (let i = 1; i < sorted.length; i++) {
     const last = merged[merged.length - 1];
     const curr = sorted[i];
+    if (!last || !curr) continue;
 
     if (curr.start <= last.end) {
       // Overlap — genişlet
@@ -534,10 +547,12 @@ export function removeWordsFromTranscript(
   for (const line of lines) {
     // Parse "start end text" format (Whisper output)
     const parts = line.trim().split(/\s+/);
-    if (parts.length < 3) continue;
+    const p0 = parts[0];
+    const p1 = parts[1];
+    if (!p0 || !p1 || parts.length < 3) continue;
 
-    const start = parseFloat(parts[0]);
-    const end = parseFloat(parts[1]);
+    const start = parseFloat(p0);
+    const end = parseFloat(p1);
     const text = parts.slice(2).join(' ');
 
     if (isNaN(start) || isNaN(end)) continue;
@@ -582,7 +597,10 @@ export async function parseSrtToSegments(srtPath: string): Promise<TranscriptSeg
     const timeLine = lines[1];
     if (!timeLine || !timeLine.includes('-->')) continue;
 
-    const [startStr, endStr] = timeLine.split('-->').map((s) => s.trim());
+    const tParts = timeLine.split('-->').map((s) => s.trim());
+    const startStr = tParts[0];
+    const endStr = tParts[1];
+    if (!startStr || !endStr) continue;
     const start = parseSrtTimeToSeconds(startStr);
     const end = parseSrtTimeToSeconds(endStr);
     const text = lines
@@ -602,10 +620,11 @@ export async function parseSrtToSegments(srtPath: string): Promise<TranscriptSeg
 function parseSrtTimeToSeconds(srtTime: string): number {
   const parts = srtTime.replace(',', '.').split(':');
   if (parts.length !== 3) return 0;
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  const secParts = parts[2].split('.');
-  const s = parseInt(secParts[0], 10);
+  const h = parseInt(parts[0] || '0', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  const secStr = parts[2] || '0.0';
+  const secParts = secStr.split('.');
+  const s = parseInt(secParts[0] || '0', 10);
   const ms = secParts[1] ? parseInt(secParts[1], 10) : 0;
   return h * 3600 + m * 60 + s + ms / 1000;
 }
@@ -636,7 +655,9 @@ export async function cutVideoByTranscript(
     const segmentPaths: string[] = [];
 
     for (let i = 0; i < segments.length; i++) {
-      const { start, end } = segments[i];
+      const seg = segments[i];
+      if (!seg) continue;
+      const { start, end } = seg;
       const segPath = path.join(tempDir, `seg_${String(i).padStart(4, '0')}.mp4`);
 
       await runInWorker<WorkerResult>(

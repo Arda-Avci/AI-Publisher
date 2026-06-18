@@ -1195,9 +1195,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
                 <label class="form-label">${t.productionTemplate}</label>
                 <select name="production_template" class="form-select" onchange="
                   const hints = {
-                    cinematic: '${escapeHtml(t.templateCinematicDesc)}',
-                    dynamic: '${escapeHtml(t.templateDynamicDesc)}',
-                    simple: '${escapeHtml(t.templateSimpleDesc)}',
+                    cinematic: '${escapeHtml(t.templateCinematicDesc || '')}',
+                    dynamic: '${escapeHtml(t.templateDynamicDesc || '')}',
+                    simple: '${escapeHtml(t.templateSimpleDesc || '')}',
                     pixar: '${escapeHtml(t.templatePixarDesc || 'Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır.')}'
                   };
                   document.getElementById('template-hint').innerText = hints[this.value];

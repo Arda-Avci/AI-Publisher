@@ -127,6 +127,7 @@ export class InfiniteCanvas {
     if (nodeIndex === -1) return null;
 
     const node = canvas.nodes[nodeIndex];
+    if (!node) return null;
     Object.assign(node, updates, { updatedAt: new Date() });
     canvas.updatedAt = new Date();
 

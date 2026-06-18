@@ -5,26 +5,26 @@ import { chromium, Browser } from 'playwright';
 import { Logger } from '../lib/logger.js';
 import { loadServerTranslations, t } from '../lib/server-i18n.js';
 
-export const AUTH_FILE_MAP: Record<string, string> = {
+export const AUTH_FILE_MAP = {
   youtube: 'auth_youtube.json',
   tiktok: 'auth_tiktok.json',
   x: 'auth_x.json',
   meta: 'auth_meta.json',
-};
+} as const;
 
-const LOGIN_URLS: Record<string, string> = {
+const LOGIN_URLS = {
   youtube: 'https://studio.youtube.com',
   tiktok: 'https://www.tiktok.com/login',
   x: 'https://x.com/i/flow/login',
   meta: 'https://business.facebook.com/latest/reels_composer',
-};
+} as const;
 
-const PLATFORM_KEYS: Record<string, string> = {
+const PLATFORM_KEYS = {
   youtube: 'authPlatformYoutube',
   tiktok: 'authPlatformTiktok',
   x: 'authPlatformX',
   meta: 'authPlatformMeta',
-};
+} as const;
 
 function isValidPlatform(p: string): p is keyof typeof AUTH_FILE_MAP {
   return p in AUTH_FILE_MAP;

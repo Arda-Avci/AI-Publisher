@@ -1,4 +1,4 @@
-import { describe, it, beforeAll, afterAll, beforeEach, expect } from 'vitest';
+import { describe, it, beforeAll, afterAll, beforeEach, expect, vi } from 'vitest';
 import express from 'express';
 import session from 'express-session';
 import request from 'supertest';
@@ -131,8 +131,12 @@ describe('Sprint 4B — ScriptEngine + Script Routes', () => {
       vi.spyOn(engine, 'generateOutline').mockResolvedValue(MOCK_SCENES);
       const scenes = await engine.generateOutline('Test', 'Notlar', []);
       expect(scenes).toHaveLength(5);
-      expect(scenes[0].scene_type).toBe('opening');
-      expect(scenes[4].scene_type).toBe('closing');
+      if (scenes && scenes[0]) {
+        expect(scenes[0].scene_type).toBe('opening');
+      }
+      if (scenes && scenes[4]) {
+        expect(scenes[4].scene_type).toBe('closing');
+      }
     });
 
     it('generateDialogue returns dialogue text', async () => {
@@ -211,7 +215,10 @@ describe('Sprint 4B — ScriptEngine + Script Routes', () => {
 
       const script = await engine.generateFullScript(testShowId, adminUserId);
       scriptId = script.id;
-      segmentId = script.segments[0].id;
+      const firstSeg = script.segments[0];
+      if (firstSeg) {
+        segmentId = firstSeg.id;
+      }
     }, 15000);
 
     it('listScripts returns scripts', async () => {
@@ -339,7 +346,10 @@ describe('Sprint 4B — ScriptEngine + Script Routes', () => {
       });
 
       const loginRes = await request(app).post('/test-login').send();
-      authCookie = loginRes.headers['set-cookie'][0].split(';')[0];
+      const cookies = loginRes.headers['set-cookie'];
+      if (cookies && cookies[0]) {
+        authCookie = cookies[0].split(';')[0] || '';
+      }
     }, 30000);
 
     beforeEach(() => {

@@ -174,10 +174,16 @@ export async function uploadToYouTube(
 
     const titleBoxes = await page.$$('div#textbox[contenteditable="true"]');
     if (titleBoxes.length > 0) {
-      await humanType(page, titleBoxes[0], title);
+      const titleBox = titleBoxes[0];
+      if (titleBox) {
+        await humanType(page, titleBox, title);
+      }
 
       if (titleBoxes.length > 1) {
-        await humanType(page, titleBoxes[1], `${desc}\n\n${tags}`);
+        const descBox = titleBoxes[1];
+        if (descBox) {
+          await humanType(page, descBox, `${desc}\n\n${tags}`);
+        }
       }
     }
 

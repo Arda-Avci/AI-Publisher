@@ -64,8 +64,9 @@ export async function translateText(text: string, targetLang: SupportedLang): Pr
     const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
     const translatedChunks = [];
     for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]!;
       Logger.info(`[AI] Translating chunk ${i + 1}/${chunks.length}...`);
-      const translated = await translateText(chunks[i], targetLang);
+      const translated = await translateText(chunk, targetLang);
       translatedChunks.push(translated);
     }
     return translatedChunks.join(' ');
@@ -153,15 +154,16 @@ export async function rewriteTranscript(
     const chunks = splitTextIntoChunks(translatedTranscript, MAX_CHUNK_SIZE);
     const rewrittenChunks = [];
     for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]!;
       Logger.info(`[AI] Rewriting chunk ${i + 1}/${chunks.length}...`);
-      const rewritten = await rewriteTranscript(chunks[i], targetLang);
+      const rewritten = await rewriteTranscript(chunk, targetLang);
       rewrittenChunks.push(rewritten);
     }
     return rewrittenChunks.join(' ');
   }
 
   const prompt =
-    `Görevin: Aşağıdaki ${LANG_NAMES[targetLang]} dilindeki video transkriptini alıp, ` +
+    `Görevin: Aşağıdaki ${LANG_NAMES[targetLang] ?? targetLang} dilindeki video transkriptini alıp, ` +
     `sosyal medyada (YouTube Shorts, TikTok, Reels vb.) paylaşılmaya uygun, ilgi çekici, ` +
     `özgün ve akıcı yeni bir video anlatım metni (script) olarak yeniden yazmaktır.\n` +
     `Kurallar:\n` +
@@ -206,7 +208,7 @@ function splitTextIntoChunks(text: string, maxLen: number): string[] {
   }
 
   // Eğer tek bir cümle bile maxLen'den uzunsa veya bölme başarısızsa kaba kesim yap
-  if (chunks.length === 0 || (chunks.length === 1 && chunks[0].length > maxLen * 1.5)) {
+  if (chunks.length === 0 || (chunks.length === 1 && chunks[0] && chunks[0].length > maxLen * 1.5)) {
     const rawChunks: string[] = [];
     let idx = 0;
     while (idx < text.length) {

@@ -622,7 +622,7 @@ async function startProduction(job: VideoJob) {
         });
 
         // Kamera hareketini prompta ekleyelim (VRAM harcamayan prompt engineering metodu)
-        let customPrompt = scene.video_prompt;
+        let customPrompt = scene.video_prompt || '';
         if (scene.camera_motion && scene.camera_motion !== 'none') {
           const motionPrompts: Record<string, string> = {
             zoom_in: ', camera zooming in slowly, cinematic zoom, forward motion',
@@ -636,9 +636,9 @@ async function startProduction(job: VideoJob) {
         }
 
         const finalCharacterFeatures = job.character_features;
-        const finalPrompt = finalCharacterFeatures
+        const finalPrompt = (finalCharacterFeatures
           ? `${finalCharacterFeatures}, ${customPrompt}`
-          : customPrompt;
+          : customPrompt) || '';
         let referenceImageBase64 = '';
         let sendSourceVideoId = '';
 
@@ -711,7 +711,10 @@ async function startProduction(job: VideoJob) {
         const tagRegex = /@(\w+)/g;
         let tagMatch;
         while ((tagMatch = tagRegex.exec(finalPrompt)) !== null) {
-          detectedTags.push('@' + tagMatch[1].toLowerCase());
+          const tag = tagMatch[1];
+          if (tag) {
+            detectedTags.push('@' + tag.toLowerCase());
+          }
         }
 
         const currentSpeaker = scene.speaker
@@ -1549,10 +1552,10 @@ async function startProduction(job: VideoJob) {
       const dPath = path.join(process.cwd(), 'videolar', dName);
 
       const t1 = (dur * 0.3).toFixed(2);
-      const t2 = (dur * 0.5).toFixed(2);
-      const t3 = (dur * 0.65).toFixed(2);
       const t1End = (dur * 0.3 + 3).toFixed(2);
+      const t2 = (dur * 0.5).toFixed(2);
       const t2End = (dur * 0.5 + 4).toFixed(2);
+      const t3 = (dur * 0.65).toFixed(2);
       const t3End = (dur * 0.65 + 3).toFixed(2);
 
       try {

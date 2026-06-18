@@ -177,20 +177,23 @@ Kurallar:
       const analysis = result.object;
 
       // Uygun segmentleri ClipSegment[] formatına dönüştür
-      return analysis.segments.map((seg) => {
-        const eligible = eligibleSegments[seg.index];
-        return {
-          id: `seg-${seg.index}-${Date.now()}`,
-          startTime: eligible.start,
-          endTime: eligible.end,
-          duration: eligible.end - eligible.start,
-          score: Math.min(100, Math.max(0, seg.score)),
-          reason: seg.reason || 'AI-identified viral segment',
-          highlights: seg.highlights || [],
-          suggestedCaption: seg.caption || '',
-          suggestedHashtags: seg.hashtags || [],
-        };
-      });
+      return analysis.segments
+        .map((seg) => {
+          const eligible = eligibleSegments[seg.index];
+          if (!eligible) return null;
+          return {
+            id: `seg-${seg.index}-${Date.now()}`,
+            startTime: eligible.start,
+            endTime: eligible.end,
+            duration: eligible.end - eligible.start,
+            score: Math.min(100, Math.max(0, seg.score)),
+            reason: seg.reason || 'AI-identified viral segment',
+            highlights: seg.highlights || [],
+            suggestedCaption: seg.caption || '',
+            suggestedHashtags: seg.hashtags || [],
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
     } catch (error) {
       Logger.error(
         '[ViralAnalyzer-v2] Gemini structured output başarısız, keyword fallback kullanılıyor:',
@@ -250,6 +253,7 @@ Kurallar:
     const clipSegments: ClipSegment[] = [];
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
+      if (!segment) continue;
       const duration = segment.end - segment.start;
       if (duration < minDuration || duration > maxDuration) continue;
 

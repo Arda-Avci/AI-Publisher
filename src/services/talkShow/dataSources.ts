@@ -48,8 +48,8 @@ export async function fetchMatchFeed(match: MatchContext): Promise<MatchFeed> {
   const seed = hashCode(`${match.homeTeam}|${match.awayTeam}`);
   const formOptions = ['W', 'D', 'L'] as const;
   const recentForm = {
-    home: Array.from({ length: 5 }, (_, i) => formOptions[(seed + i) % 3]),
-    away: Array.from({ length: 5 }, (_, i) => formOptions[(seed * 2 + i) % 3]),
+    home: Array.from({ length: 5 }, (_, i) => formOptions[(seed + i) % 3] as 'W' | 'D' | 'L'),
+    away: Array.from({ length: 5 }, (_, i) => formOptions[(seed * 2 + i) % 3] as 'W' | 'D' | 'L'),
   };
   const headToHead = [
     { winner: 'home' as const, score: '2-1' },
@@ -68,7 +68,7 @@ export async function fetchWeather(venue: string): Promise<WeatherSnapshot> {
   const conditions: WeatherSnapshot['condition'][] = ['clear', 'cloudy', 'rain', 'snow', 'fog'];
   return {
     tempC: 8 + (seed % 18),
-    condition: conditions[seed % conditions.length],
+    condition: conditions[seed % conditions.length] || 'clear',
     windKph: 5 + (seed % 30),
     humidity: 40 + (seed % 50),
   };
@@ -81,13 +81,13 @@ export async function fetchInjuries(match: MatchContext): Promise<InjuryReport[]
     {
       team: 'home',
       player: `Yıldız ${seed % 11}`,
-      status: statuses[seed % 3],
+      status: statuses[seed % 3] || 'out',
       reason: 'Kas sakatlığı',
     },
     {
       team: 'away',
       player: `Kaptan ${(seed >> 1) % 11}`,
-      status: statuses[(seed + 1) % 3],
+      status: statuses[(seed + 1) % 3] || 'out',
       reason: 'Sarı kart cezası',
     },
   ];

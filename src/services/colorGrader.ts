@@ -35,23 +35,22 @@ interface ParsedColorCommand {
 
 // ── Preset Filtre Parametreleri ─────────────────────────────────────────────
 
-const PRESET_PARAMS: Record<
-  string,
-  {
-    eq_brightness: number;
-    eq_contrast: number;
-    eq_saturation: number;
-    eq_gamma_r: number;
-    eq_gamma_g: number;
-    eq_gamma_b: number;
-    colorbalance_shadows_r: number;
-    colorbalance_shadows_g: number;
-    colorbalance_shadows_b: number;
-    colorbalance_midtones_r: number;
-    colorbalance_midtones_g: number;
-    colorbalance_midtones_b: number;
-  }
-> = {
+interface PresetFilterParams {
+  eq_brightness: number;
+  eq_contrast: number;
+  eq_saturation: number;
+  eq_gamma_r: number;
+  eq_gamma_g: number;
+  eq_gamma_b: number;
+  colorbalance_shadows_r: number;
+  colorbalance_shadows_g: number;
+  colorbalance_shadows_b: number;
+  colorbalance_midtones_r: number;
+  colorbalance_midtones_g: number;
+  colorbalance_midtones_b: number;
+}
+
+const PRESET_PARAMS: Record<string, PresetFilterParams> = {
   warm: {
     eq_brightness: 0.0,
     eq_contrast: 1.1,
@@ -390,7 +389,7 @@ async function applyCustomGrade(
 }
 
 /** EQ filtresi parametrelerinden FFmpeg filter string oluşturur */
-function buildEqFilter(params: typeof PRESET_PARAMS.warm): string {
+function buildEqFilter(params: PresetFilterParams): string {
   const parts: string[] = [];
 
   parts.push(

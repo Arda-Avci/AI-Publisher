@@ -66,7 +66,11 @@ Bir iki uc
     });
     const words = parseJsonSubtitles(json);
     expect(words.length).toBe(2);
-    expect(words[0].word).toBe('test');
+    const firstWord = words[0];
+    expect(firstWord).toBeDefined();
+    if (firstWord) {
+      expect(firstWord.word).toBe('test');
+    }
   });
 
   it('parseJsonSubtitles handles invalid JSON', () => {
@@ -86,7 +90,11 @@ Bir iki uc
     const arr1 = [{ word: 'iki', start: 0.5, end: 1.0 }];
     const arr2 = [{ word: 'bir', start: 0.0, end: 0.5 }];
     const merged = mergeWordTimings([arr1, arr2]);
-    expect(merged[0].word).toBe('bir');
+    const firstMerged = merged[0];
+    expect(firstMerged).toBeDefined();
+    if (firstMerged) {
+      expect(firstMerged.word).toBe('bir');
+    }
   });
 
   it('extractTextFromSrt returns plain text', () => {
@@ -120,6 +128,9 @@ Birinci satir
     const words = parseSrtToWords(srt);
     expect(words.length).toBeGreaterThan(0);
     const lastWord = words[words.length - 1];
-    expect(lastWord.end).toBeGreaterThan(lastWord.start);
+    expect(lastWord).toBeDefined();
+    if (lastWord) {
+      expect(lastWord.end).toBeGreaterThan(lastWord.start);
+    }
   });
 });

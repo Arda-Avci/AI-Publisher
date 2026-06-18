@@ -220,7 +220,11 @@ function consensusFromTranscript(transcript: AgentMessage[]): OrchestratorResult
   }
   const counts: Record<string, number> = {};
   for (const v of votes) counts[v] = (counts[v] ?? 0) + 1;
-  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const top = sorted[0];
+  if (!top) {
+    return { pick: 'no_consensus', confidence: 0, rationale: 'Ajanlar yetersiz sinyal üretti' };
+  }
   const pick = top[0] as 'home' | 'away' | 'draw' | 'no_consensus';
   const confidence = clamp01((top[1] / votes.length) * averageConfidence(transcript));
   return {

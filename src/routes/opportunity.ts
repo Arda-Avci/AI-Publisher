@@ -227,7 +227,7 @@ async function fetchFromYouTubeAPI(
 async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchResult> {
   try {
     const opts: any = { query: rawQ };
-    if (_langs && _langs.length > 0) {
+    if (_langs && _langs.length > 0 && _langs[0]) {
       opts.hl = _langs[0];
       opts.gl = _langs[0] === 'en' ? 'US' : _langs[0].toUpperCase();
     }

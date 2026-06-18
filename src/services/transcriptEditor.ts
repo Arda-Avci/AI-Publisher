@@ -58,6 +58,7 @@ export function parseTranscriptEdits(
     if (idx < 0 || idx >= wordTimestamps.length) continue;
 
     const word = wordTimestamps[idx];
+    if (!word) continue;
     if (rangeStart === null) {
       rangeStart = word.start;
       rangeEnd = word.end;
@@ -96,12 +97,19 @@ export function findWordTimestamps(
   // Try to match words to timestamps by text content
   let timestampIdx = 0;
   for (let i = 0; i < words.length && timestampIdx < wordTimestamps.length; i++) {
-    const targetWord = words[i].toLowerCase().replace(/[.,!?]+$/, '');
+    const targetWordObj = words[i];
+    if (!targetWordObj) continue;
+    const targetWord = targetWordObj.toLowerCase().replace(/[.,!?]+$/, '');
     // Find the timestamp that matches this word
     while (timestampIdx < wordTimestamps.length) {
-      const tsWord = wordTimestamps[timestampIdx].word.toLowerCase().replace(/[.,!?]+$/, '');
+      const tsObj = wordTimestamps[timestampIdx];
+      if (!tsObj) {
+        timestampIdx++;
+        continue;
+      }
+      const tsWord = tsObj.word.toLowerCase().replace(/[.,!?]+$/, '');
       if (tsWord === targetWord || tsWord.includes(targetWord) || targetWord.includes(tsWord)) {
-        wordMap.set(i, wordTimestamps[timestampIdx]);
+        wordMap.set(i, tsObj);
         timestampIdx++;
         break;
       }
@@ -183,6 +191,9 @@ export async function assembleVideoSegments(
   if (segments.length === 1) {
     // Single segment — just extract that portion
     const seg = segments[0];
+    if (!seg) {
+      throw new Error('No segment found');
+    }
     await runFFmpeg('ffmpeg', [
       '-y',
       '-ss',
@@ -211,6 +222,7 @@ export async function assembleVideoSegments(
 
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
+      if (!seg) continue;
       const segPath = path.join(tempDir, `seg_${String(i).padStart(3, '0')}.mp4`);
       await runFFmpeg('ffmpeg', [
         '-y',

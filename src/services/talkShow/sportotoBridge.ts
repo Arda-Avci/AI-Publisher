@@ -90,7 +90,8 @@ export function discussionToScenes(discussion: SportotoDiscussion): Array<{
 }> {
   const WPM = 150;
   return discussion.utterances.map((u, idx) => {
-    const voiceConfig = SPEAKER_VOICE_MAP[u.speaker] || SPEAKER_VOICE_MAP.Moderator;
+    const defaultVoice = { ttsVoice: 'tr-TR-AhmetNeural', name: 'Moderatör', color: '#F59E0B' };
+    const voiceConfig = SPEAKER_VOICE_MAP[u.speaker] || SPEAKER_VOICE_MAP.Moderator || defaultVoice;
     const wordCount = u.text.split(/\s+/).length;
     const duration = Math.max(3, Math.ceil((wordCount / WPM) * 60));
 

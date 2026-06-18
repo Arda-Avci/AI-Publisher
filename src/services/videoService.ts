@@ -103,7 +103,9 @@ export async function runFFmpeg(
 
 export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<void> {
   for (let i = 0; i < commands.length; i++) {
-    const { cmd, args, timeoutMs = 30000 } = commands[i];
+    const cmdObj = commands[i];
+    if (!cmdObj) continue;
+    const { cmd, args, timeoutMs = 30000 } = cmdObj;
     try {
       Logger.info(
         `FFmpeg Coworker Pool'a gönderiliyor (Deneme ${i + 1}/${commands.length}): ${cmd} ${args.join(' ')}`,
@@ -198,7 +200,7 @@ export async function generateEndScreenImage(
   const w = isVertical ? 1080 : 1920;
   const h = isVertical ? 1920 : 1080;
 
-  const inputs: string[] = [`-f lavfi -i "color=c=black:s=${w}x${h}:d=1"`];
+  const inputs: string[][] = [['-f', 'lavfi', '-i', `color=c=black:s=${w}x${h}:d=1`]];
   let overlayFilter = `[0:v]`;
 
   if (avatarBase64 && avatarBase64.startsWith('data:image')) {
@@ -212,7 +214,7 @@ export async function generateEndScreenImage(
     const avatarSize = 300;
     const avatarX = `(W-${avatarSize})/2`;
     const avatarY = isVertical ? `(${h}-${avatarSize})/2-200` : `(${h}-${avatarSize})/2-200`;
-    inputs.push(`-loop 1 -i "${avatarPath}"`);
+    inputs.push(['-loop', '1', '-i', avatarPath]);
     overlayFilter = `[0:v][1:v]overlay=x=${avatarX}:y=${avatarY}[bg]`;
   } else {
     overlayFilter = `[0:v]null[bg]`;
@@ -220,12 +222,12 @@ export async function generateEndScreenImage(
 
   const textY = isVertical ? '(H/2)+200' : '(H/2)+200';
   const ctaText = 'SONRAKI VIDEYU IZLEYIN';
-
-  const finalFilter = `${overlayFilter};[bg]drawtext=text='${ctaText}':fontcolor=white:fontsize=${isVertical ? 64 : 72}:x=(w-text_w)/2:y=${textY}:box=1:boxcolor=red@0.8:boxborderw=20[out]`;
+  const isWin = process.platform === 'win32';
+  const systemFont = isWin ? "fontfile='C\\:/Windows/Fonts/arial.ttf':" : '';
+  const finalFilter = `${overlayFilter};[bg]drawtext=${systemFont}text='${ctaText}':fontcolor=white:fontsize=${isVertical ? 64 : 72}:x=(w-text_w)/2:y=${textY}:box=1:boxcolor=red@0.8:boxborderw=20[out]`;
 
   const args = ['-y'];
-  // We safely parse inputs: ["-f", "lavfi", "-i", "..."]
-  inputs.forEach((i) => args.push(...i.split(' ')));
+  inputs.forEach((i) => args.push(...i));
   args.push('-filter_complex', finalFilter, '-map', '[out]', '-frames:v', '1', outPath);
   await runFFmpeg('ffmpeg', args);
 }
@@ -246,11 +248,12 @@ export async function applyEndScreen(
     videoPath,
   ]);
   const dur = parseFloat(durStr.trim());
-  if (isNaN(dur) || dur < 5) throw new Error('Video 5 saniyeden kısa, end screen uygulanamaz');
+  if (isNaN(dur) || dur <= 0) throw new Error('Geçersiz video süresi, end screen uygulanamaz');
 
   const w = isVertical ? 1080 : 1920;
   const h = isVertical ? 1920 : 1080;
-  const endStart = (dur - 5).toFixed(3);
+  const endDuration = Math.min(5, dur);
+  const endStart = (dur - endDuration).toFixed(3);
 
   await runFFmpeg('ffmpeg', [
     '-y',
@@ -471,17 +474,21 @@ export async function extractLastFrame(videoPath: string): Promise<string> {
 }
 
 export async function getVideoDuration(videoPath: string): Promise<number> {
-  const { stdout } = await runFFmpeg('ffprobe', [
-    '-v',
-    'error',
-    '-show_entries',
-    'format=duration',
-    '-of',
-    'csv=p=0',
-    videoPath,
-  ]);
-  const d = parseFloat(stdout.trim());
-  return isNaN(d) ? 0 : d;
+  try {
+    const { stdout } = await runFFmpeg('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'csv=p=0',
+      videoPath,
+    ]);
+    const d = parseFloat(stdout.trim());
+    return isNaN(d) ? 0 : d;
+  } catch {
+    return 0;
+  }
 }
 
 export async function concatVideosWithCrossfade(
@@ -492,8 +499,12 @@ export async function concatVideosWithCrossfade(
   if (videoPaths.length === 0) {
     throw new Error('concatVideosWithCrossfade: Video listesi bos');
   }
+  const firstPath = videoPaths[0];
+  if (!firstPath) {
+    throw new Error('concatVideosWithCrossfade: Video listesi bos');
+  }
   if (videoPaths.length === 1) {
-    await fs.copy(videoPaths[0], outputPath);
+    await fs.copy(firstPath, outputPath);
     return;
   }
 
@@ -552,7 +563,11 @@ export async function concatVideosWithCrossfade(
   }
 
   const filterParts: string[] = [];
-  let runningDur = durations[0];
+  const runningDurVal = durations[0];
+  if (runningDurVal === undefined) {
+    throw new Error('concatVideosWithCrossfade: durations is empty');
+  }
+  let runningDur = runningDurVal;
 
   // Video xfade chain
   let lastVideoLabel = '0:v';
@@ -564,7 +579,9 @@ export async function concatVideosWithCrossfade(
       `[${lastVideoLabel}][${nextVideoLabel}]xfade=transition=fade:duration=${transDur}:offset=${offset.toFixed(3)}[${outVideoLabel}]`,
     );
     lastVideoLabel = outVideoLabel;
-    runningDur = runningDur + durations[i + 1] - transDur;
+    const nextDur = durations[i + 1];
+    if (nextDur === undefined) continue;
+    runningDur = runningDur + nextDur - transDur;
   }
 
   // Audio acrossfade chain
@@ -642,11 +659,16 @@ export async function applySmartAudioDucking(
 // Helper: SRT zaman formatını saniyeye çevir
 function parseSrtTimeToSeconds(srtTime: string): number {
   const parts = srtTime.split(':');
-  const secsParts = parts[2].split(',');
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  const s = parseInt(secsParts[0], 10);
-  const ms = parseInt(secsParts[1], 10);
+  const part0 = parts[0] || '0';
+  const part1 = parts[1] || '0';
+  const part2 = parts[2] || '0,0';
+  const secsParts = part2.split(',');
+  const sec0 = secsParts[0] || '0';
+  const sec1 = secsParts[1] || '0';
+  const h = parseInt(part0, 10);
+  const m = parseInt(part1, 10);
+  const s = parseInt(sec0, 10);
+  const ms = parseInt(sec1, 10);
   return h * 3600 + m * 60 + s + ms / 1000;
 }
 
@@ -709,6 +731,7 @@ export async function convertSrtToKineticAss(
     if (!timeLine || !timeLine.includes('-->')) continue;
 
     const [startStr, endStr] = timeLine.split('-->').map((s) => s.trim());
+    if (!startStr || !endStr) continue;
     const startSec = parseSrtTimeToSeconds(startStr);
     const endSec = parseSrtTimeToSeconds(endStr);
     const totalDuration = endSec - startSec;
@@ -854,6 +877,9 @@ export async function applyBrandKit(
   ]);
 
   const [vW, vH] = dims.trim().split('x').map(Number);
+  if (vW === undefined || vH === undefined || isNaN(vW) || isNaN(vH)) {
+    throw new Error('Could not parse video dimensions for brand kit');
+  }
   const logoW = Math.round(vW * 0.15); // Logonun genişliği videonun %15'i kadar olsun
 
   // Konumlandırma koordinatları
@@ -1018,8 +1044,11 @@ export async function applyBeatSyncCuts(
     const segmentPaths: string[] = [];
 
     for (let i = 0; i < beatCutPoints.length - 1; i++) {
-      const startTime = beatCutPoints[i].timestamp;
-      const endTime = beatCutPoints[i + 1].timestamp;
+      const startPt = beatCutPoints[i];
+      const endPt = beatCutPoints[i + 1];
+      if (!startPt || !endPt) continue;
+      const startTime = startPt.timestamp;
+      const endTime = endPt.timestamp;
       const segPath = path.join(tempDir, `seg_${String(i).padStart(3, '0')}.mp4`);
 
       await runFFmpeg('ffmpeg', [
@@ -1042,7 +1071,11 @@ export async function applyBeatSyncCuts(
     }
 
     // Handle last segment to end of video
-    const lastStart = beatCutPoints[beatCutPoints.length - 1].timestamp;
+    const lastPt = beatCutPoints[beatCutPoints.length - 1];
+    if (!lastPt) {
+      throw new Error('applyBeatSyncCuts: beatCutPoints is empty');
+    }
+    const lastStart = lastPt.timestamp;
     const duration = await getVideoDuration(videoPath);
     if (duration - lastStart >= 1.0) {
       const lastSegPath = path.join(
@@ -1067,8 +1100,12 @@ export async function applyBeatSyncCuts(
     }
 
     // Concat segments
+    const firstSeg = segmentPaths[0];
+    if (!firstSeg) {
+      throw new Error('applyBeatSyncCuts: No segment paths generated');
+    }
     if (segmentPaths.length === 1) {
-      await fs.copy(segmentPaths[0], outputPath);
+      await fs.copy(firstSeg, outputPath);
     } else {
       // Concat with crossfade transitions
       await concatVideosWithCrossfade(segmentPaths, outputPath, 0.5);
@@ -1106,8 +1143,11 @@ export async function applyBeatSyncCutsWithFilters(
   // e.g. "between(t,0.0,1.5)+between(t,2.0,3.5)+..."
   const selectExprs: string[] = [];
   for (let i = 0; i < cutTimestamps.length - 1; i++) {
-    const start = cutTimestamps[i].toFixed(3);
-    const end = cutTimestamps[i + 1].toFixed(3);
+    const startVal = cutTimestamps[i];
+    const endVal = cutTimestamps[i + 1];
+    if (startVal === undefined || endVal === undefined) continue;
+    const start = startVal.toFixed(3);
+    const end = endVal.toFixed(3);
     selectExprs.push(`between(t,${start},${end})`);
   }
   const selectExpr = selectExprs.join('+');
@@ -1146,7 +1186,10 @@ export async function applyBeatSyncCutsWithFilters(
     // Apply crossfade transitions by re-encoding segments with overlap
     const durations: number[] = [];
     for (let i = 0; i < cutTimestamps.length - 1; i++) {
-      durations.push(cutTimestamps[i + 1] - cutTimestamps[i]);
+      const startVal = cutTimestamps[i];
+      const endVal = cutTimestamps[i + 1];
+      if (startVal === undefined || endVal === undefined) continue;
+      durations.push(endVal - startVal);
     }
 
     // Simple copy for now — crossfade already applied via concatVideosWithCrossfade in the segment-based path

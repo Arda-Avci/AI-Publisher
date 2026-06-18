@@ -59,6 +59,7 @@ export function chunkStableSegments(
 
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i];
+    if (!frame) continue;
 
     // No face detected - skip or end segment
     if (frame.confidence === 0) {

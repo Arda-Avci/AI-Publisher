@@ -32,7 +32,7 @@ export async function extractCharacters(
   const lines = characterFeatures.split('\n').filter((l) => l.trim());
   for (const line of lines) {
     const match = line.match(/@(\w+)/);
-    if (match) {
+    if (match && match[1]) {
       characters.push({
         label: match[1],
         imageBase64: '',

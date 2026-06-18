@@ -216,16 +216,16 @@ function buildConcatFile(sceneVideos: string[], filePath: string): string {
 }
 
 async function concatScenes(sceneVideos: string[], outputPath: string): Promise<void> {
-  if (sceneVideos.length === 0) {
+  const firstVideo = sceneVideos[0];
+  if (!firstVideo) {
     throw new Error('Birleştirilecek sahne yok');
   }
-
   if (sceneVideos.length === 1) {
-    fs.cpSync(sceneVideos[0], outputPath);
+    fs.cpSync(firstVideo, outputPath);
     return;
   }
 
-  const concatFile = path.join(path.dirname(sceneVideos[0]), 'concat.txt');
+  const concatFile = path.join(path.dirname(firstVideo), 'concat.txt');
   buildConcatFile(sceneVideos, concatFile);
 
   const args = ['-y', '-f', 'concat', '-safe', '0', '-i', concatFile, '-c', 'copy', outputPath];
@@ -327,6 +327,7 @@ export async function compose(input: ComposeInput): Promise<ComposeResult> {
 
   for (let i = 0; i < input.scenes.length; i++) {
     const scene = input.scenes[i];
+    if (!scene) continue;
     Logger.info(
       `[SceneComposer] Sahne ${i + 1}/${input.scenes.length}: ${scene.type} "${scene.characterName}" (${scene.duration}s)`,
     );

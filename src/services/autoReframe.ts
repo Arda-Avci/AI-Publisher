@@ -186,7 +186,9 @@ export async function autoReframeHorizontalToVertical(
     videoPath,
   ]);
 
-  const [srcW, srcH] = dims.trim().split('x').map(Number);
+  const dimsParts = dims.trim().split('x').map(Number);
+  const srcW = dimsParts[0] ?? 1920;
+  const srcH = dimsParts[1] ?? 1080;
   const srcAspect = srcW / srcH;
 
   // Source is 16:9 horizontal — crop region center
@@ -333,7 +335,9 @@ export async function trackFaceAndReframe(videoPath: string, outputPath: string)
     'csv=s=x:p=0',
     videoPath,
   ]);
-  const [srcW, srcH] = dims.trim().split('x').map(Number);
+  const dimsParts = dims.trim().split('x').map(Number);
+  const srcW = dimsParts[0] ?? 1920;
+  const srcH = dimsParts[1] ?? 1080;
   const cropAspect = 9 / 16;
   const cropH = srcH;
   const cropW = Math.round(srcH * cropAspect);

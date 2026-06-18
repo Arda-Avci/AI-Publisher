@@ -92,7 +92,10 @@ export async function detectBPM(audioPath: string): Promise<number> {
     // Calculate average interval between peaks
     const intervals: number[] = [];
     for (let i = 1; i < peaks.length; i++) {
-      const interval = peaks[i] - peaks[i - 1];
+      const pCurrent = peaks[i];
+      const pPrev = peaks[i - 1];
+      if (pCurrent === undefined || pPrev === undefined) continue;
+      const interval = pCurrent - pPrev;
       if (interval > 0.3 && interval < 2.0) {
         // Valid beat interval (0.3s to 2s = 30-200 BPM)
         intervals.push(interval);
@@ -106,6 +109,9 @@ export async function detectBPM(audioPath: string): Promise<number> {
     // Calculate median interval
     intervals.sort((a, b) => a - b);
     const medianInterval = intervals[Math.floor(intervals.length / 2)];
+    if (medianInterval === undefined) {
+      return estimateBPMFromAudio(audioPath);
+    }
     const bpm = Math.round(60 / medianInterval);
 
     // Sanity check: BPM should be between 60 and 200
@@ -135,15 +141,21 @@ function parsePeakLevels(output: string): number[] {
     if (match) {
       // Extract timestamp-like value and peak level
       const timeMatch = line.match(/(\d+:\d+\.?\d*)/);
-      if (timeMatch) {
-        const parts = timeMatch[1].split(':');
-        currentTime = parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+      const tm1 = timeMatch ? timeMatch[1] : undefined;
+      if (tm1) {
+        const parts = tm1.split(':');
+        const p0 = parts[0] || '0';
+        const p1 = parts[1] || '0';
+        currentTime = parseInt(p0, 10) * 60 + parseFloat(p1);
       }
 
-      const peakValue = parseFloat(match[2]);
-      if (peakValue > -50) {
-        // Noise gate: ignore very quiet sections
-        peaks.push(currentTime);
+      const m2 = match[2];
+      if (m2 !== undefined) {
+        const peakValue = parseFloat(m2);
+        if (peakValue > -50) {
+          // Noise gate: ignore very quiet sections
+          peaks.push(currentTime);
+        }
       }
     }
   }

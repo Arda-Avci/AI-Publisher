@@ -47,6 +47,8 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] Colab sunucusunda çalışan koda gelişmiş sunucu sağlığı ve teşhis (diagnostics) izleme mekanizmasının entegre edilmesi (bellekteki aktif modeller, çıktı sayıları, recent activities logları ve callback tünel connectivity testi) ve Node.js backend (`colab-manager.ts` ve `/api/v1/colab/status` rotası) üzerinden bu verilerin geriye dönük uyumlu şekilde sunulması.
 - [x] **Google Drive Kalıcı Konteyner Depolama ve Otonom Yönetim:** Google Colab yapay zeka modelleri (CogVideoX, Wan 2.1, LTX-Video, HunyuanVideo, Kokoro TTS ve ses/senkronizasyon modelleri) bağımsız Docker konteynerlerine taşındı. Konteynerler Google Drive `/content/drive/MyDrive/Colab Notebooks/docker/images/` altında tar.gz olarak saklanıp setup sırasında otomatik yüklenmektedir. Lazy loading, model bazlı dinamik port yönlendirmesi, VRAM/OOM optimizasyonu (Stable Diffusion'da rembg dahil), 50 saniyelik agresif konteyner durdurma süresi ve 1 dakikalık VM inaktivite shutdown süresi entegre edilmiştir.
 - [x] **Maliyet Tasarruflu CPU Docker İnşa Altyapısı:** Colab CPU üzerinde 11 Docker imajının sıfırdan derlenmesi, paralel `pigz` sıkıştırma desteğiyle hızlandırılması, `verify_images.py --drive-only` ile Drive bütünlük denetimi (arşiv hata kontrolü) ve işlem sonunda `runtime.unassign()` ile Colab VM'inin otomatik sonlandırılması entegre edildi.
+- [ ] **Colab CPU Docker İnşa ve Doğrulama Sürecinin Çalıştırılması:** Defterdeki Seçenek C hücresinin CPU runtime'ında çalıştırılıp Google Drive'a 11 imajın (base + 10 model) kaydedilmesi ve bütünlük testlerinin yeşillenmesi.
+
 
 
 ## 💻 Bölüm 2: Node.js / TypeScript Komut Merkezi Katmanı

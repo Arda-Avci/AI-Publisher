@@ -55,10 +55,12 @@ export function getDashboardStyles(themeStyles: string): string {
         /* Motion */
         --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
         --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
         --duration-hover: 180ms;
-        --duration-modal: 280ms;
-        --duration-page: 600ms;
-        --transition-speed: 0.35s;
+        --duration-modal: 250ms;
+        --duration-page: 500ms;
+        --transition-speed: 0.25s;
 
         /* Border weights */
         --border-thin: 1px;
@@ -168,7 +170,7 @@ export function getDashboardStyles(themeStyles: string): string {
         height: auto;
         min-height: 64px;
         gap: 1rem;
-        animation: revealUp var(--duration-page) var(--ease-out-expo) both;
+        animation: revealUp var(--duration-page) var(--ease-out) both;
       }
       .header-brand {
         display: flex;
@@ -251,7 +253,7 @@ export function getDashboardStyles(themeStyles: string): string {
         justify-content: center;
         cursor: pointer;
         font-size: 1rem;
-        transition: all var(--duration-hover) var(--ease-out-expo);
+        transition: border-color 160ms var(--ease-out), color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out);
         backdrop-filter: blur(10px);
         position: relative;
         overflow: hidden;
@@ -261,7 +263,7 @@ export function getDashboardStyles(themeStyles: string): string {
         position: absolute;
         inset: 0;
         background: hsla(var(--primary), 0);
-        transition: background var(--duration-hover) var(--ease-out-expo);
+        transition: background 160ms var(--ease-out);
       }
       .icon-btn:hover {
         border-color: hsl(var(--primary));
@@ -270,7 +272,7 @@ export function getDashboardStyles(themeStyles: string): string {
         transform: translateY(-1px);
       }
       .icon-btn:hover::before { background: hsla(var(--primary), 0.08); }
-      .icon-btn:active { transform: translateY(0) scale(0.97); }
+      .icon-btn:active { transform: scale(0.95); }
       .icon-btn-label {
         font-size: 0.7rem;
         font-weight: 600;
@@ -312,12 +314,12 @@ export function getDashboardStyles(themeStyles: string): string {
       }
       /* Staggered reveal animation */
       .app-main > * {
-        animation: revealUp var(--duration-page) var(--ease-out-expo) both;
+        animation: revealUp var(--duration-page) var(--ease-out) both;
       }
-      .app-main > *:nth-child(1) { animation-delay: 100ms; }
-      .app-main > *:nth-child(2) { animation-delay: 200ms; }
-      .app-main > *:nth-child(3) { animation-delay: 300ms; }
-      .app-main > *:nth-child(4) { animation-delay: 400ms; }
+      .app-main > *:nth-child(1) { animation-delay: 60ms; }
+      .app-main > *:nth-child(2) { animation-delay: 100ms; }
+      .app-main > *:nth-child(3) { animation-delay: 140ms; }
+      .app-main > *:nth-child(4) { animation-delay: 180ms; }
       @media (max-width: 1024px) {
         .app-main { grid-template-columns: 1fr; }
       }
@@ -334,9 +336,7 @@ export function getDashboardStyles(themeStyles: string): string {
       }
       .glass-card {
         padding: var(--space-5);
-        transition: border-color var(--duration-hover) var(--ease-out-expo),
-                    box-shadow var(--duration-hover) var(--ease-out-expo),
-                    transform var(--duration-hover) var(--ease-out-expo);
+        transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
       }
       .glass-card:hover {
         border-color: hsla(var(--primary), 0.3);
@@ -344,14 +344,14 @@ export function getDashboardStyles(themeStyles: string): string {
       }
       /* Entrance animations */
       @keyframes revealUp {
-        from { opacity: 0; transform: translateY(8px); }
+        from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
       }
       @keyframes cardEntrance {
-        from { opacity: 0; transform: translateY(20px); }
+        from { opacity: 0; transform: translateY(12px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      .animate-in { animation: cardEntrance var(--duration-page) var(--ease-out-expo) both; }
+      .animate-in { animation: cardEntrance var(--duration-page) var(--ease-out) both; }
       .animate-delay-1 { animation-delay: 0.1s; }
       .animate-delay-2 { animation-delay: 0.2s; }
       .animate-delay-3 { animation-delay: 0.3s; }
@@ -380,7 +380,7 @@ export function getDashboardStyles(themeStyles: string): string {
         border-radius: var(--radius-md);
         color: hsl(var(--foreground));
         outline: none;
-        transition: all var(--duration-hover) var(--ease-out-expo);
+        transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background 160ms var(--ease-out);
       }
       .form-input:focus, .form-textarea:focus, .form-select:focus {
         border-color: hsl(var(--primary));
@@ -471,7 +471,7 @@ export function getDashboardStyles(themeStyles: string): string {
         box-shadow: var(--shadow-md), inset 0 1px 0 hsla(0 0% 100% / 0.15);
       }
       .btn-primary:active, .btn-publish:active {
-        transform: translateY(0);
+        transform: scale(0.97);
         box-shadow: var(--shadow-xs), inset 0 1px 0 hsla(0 0% 100% / 0.08);
       }
       .btn-primary {
@@ -507,6 +507,9 @@ export function getDashboardStyles(themeStyles: string): string {
         box-shadow: var(--shadow-sm);
         transform: translateY(-1px);
       }
+      .retry-btn:active {
+        transform: scale(0.95);
+      }
       .delete-btn {
         background: hsla(var(--destructive), 0.12);
         color: hsl(var(--destructive));
@@ -517,6 +520,9 @@ export function getDashboardStyles(themeStyles: string): string {
         color: hsl(var(--destructive-foreground));
         box-shadow: var(--shadow-sm);
         transform: translateY(-1px);
+      }
+      .delete-btn:active {
+        transform: scale(0.95);
       }
       /* S6: Cancel button — red-tinted outlined style for active jobs */
       .cancel-btn {
@@ -606,7 +612,7 @@ export function getDashboardStyles(themeStyles: string): string {
         border-radius: var(--radius-lg);
         padding: var(--space-4);
         margin-bottom: var(--space-3);
-        transition: all var(--duration-hover) var(--ease-out-expo);
+        transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out);
         position: relative;
         overflow: hidden;
       }
@@ -619,12 +625,12 @@ export function getDashboardStyles(themeStyles: string): string {
         height: 2px;
         background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), transparent);
         opacity: 0;
-        transition: opacity var(--duration-hover) var(--ease-out-expo);
+        transition: opacity 160ms var(--ease-out);
       }
       .job-card:hover {
         border-color: hsla(var(--primary), 0.3);
         box-shadow: var(--shadow-md);
-        transform: translateY(-1px);
+        transform: translateY(-2px);
       }
       .job-card:hover::before { opacity: 1; }
       .job-card-header {
@@ -707,12 +713,12 @@ export function getDashboardStyles(themeStyles: string): string {
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, hsla(0,0%,100%,0.4), transparent);
-        animation: progress-shimmer 2s linear infinite;
+        background: linear-gradient(90deg, transparent, hsla(0,0%,100%,0.3), transparent);
+        animation: progress-shimmer 1.5s ease-in-out infinite;
       }
       @keyframes progress-shimmer {
         0% { left: -100%; }
-        100% { left: 100%; }
+        100% { left: 200%; }
       }
       .progress-meta {
         display: flex;
@@ -915,17 +921,24 @@ export function getDashboardStyles(themeStyles: string): string {
         transform: translate(-50%, -50%);
         z-index: 10000;
         border-radius: var(--radius-2xl);
-        background: hsla(var(--background), 0.92);
+        background: hsla(var(--background), 0.95);
         backdrop-filter: blur(30px) saturate(180%);
         -webkit-backdrop-filter: blur(30px) saturate(180%);
         border: 1px solid hsla(var(--border), 0.6);
         box-shadow: var(--shadow-xl);
         overflow: hidden;
-        animation: modalReveal var(--duration-modal) var(--ease-out-expo);
+        animation: modalReveal var(--duration-modal) var(--ease-out);
       }
       @keyframes modalReveal {
-        from { opacity: 0; transform: translate(-50%, -50%) translateY(20px) scale(0.98); }
+        from { opacity: 0; transform: translate(-50%, -50%) translateY(16px) scale(0.97); }
         to { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); }
+      }
+      /* @starting-style for modern browsers — smoother modal enter */
+      .app-modal {
+        @starting-style {
+          opacity: 0;
+          transform: translate(-50%, -50%) translateY(20px) scale(0.96);
+        }
       }
       .modal-w-wide { width: 90%; max-width: 980px; max-height: 88vh; }
       .modal-w-std { width: 90%; max-width: 560px; max-height: 85vh; }
@@ -1933,11 +1946,14 @@ export function getDashboardStyles(themeStyles: string): string {
         padding: 0.55rem 1rem;
         font-size: 0.85rem;
         cursor: pointer;
-        transition: transform 0.12s ease, box-shadow 0.15s ease;
+        transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
       }
       .start-btn:hover {
         transform: translateY(-1px);
         box-shadow: 0 6px 18px hsla(190 90% 50% / 0.35);
+      }
+      .start-btn:active {
+        transform: scale(0.95);
       }
       .approval-pending-badge {
         background: hsla(45 100% 50% / 0.15);
@@ -2156,6 +2172,28 @@ export function getDashboardStyles(themeStyles: string): string {
         .help-topics { grid-template-columns: 1fr; }
       }
 
+      /* Touch device hover protection — Emil design principle */
+      @media (hover: none) and (pointer: coarse) {
+        .icon-btn:hover {
+          transform: none;
+          border-color: hsla(var(--border), 0.7);
+          color: hsl(var(--muted-foreground));
+          box-shadow: none;
+        }
+        .glass-card:hover, .job-card:hover {
+          transform: none;
+        }
+      }
+
+      /* Reduced motion accessibility — Emil design principle */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
       /* ========================================
          SETTINGS — D-NOTE INSPIRED LAYOUT
          ======================================== */
@@ -2252,7 +2290,7 @@ export function getDashboardStyles(themeStyles: string): string {
         border: 2px solid hsla(var(--border), 0.6);
         border-radius: 0.7rem;
         cursor: pointer;
-        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out), background 160ms var(--ease-out);
         font-family: inherit;
         text-align: left;
         overflow: hidden;
@@ -2370,7 +2408,7 @@ export function getDashboardStyles(themeStyles: string): string {
         height: 22px;
         background: hsla(var(--muted), 0.8);
         border-radius: 11px;
-        transition: background 0.25s ease;
+        transition: background 200ms var(--ease-out);
         flex-shrink: 0;
       }
       .settings-toggle-slider::before {
@@ -2382,7 +2420,7 @@ export function getDashboardStyles(themeStyles: string): string {
         height: 18px;
         background: white;
         border-radius: 50%;
-        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform 200ms var(--ease-out);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
       }
       .settings-toggle input:checked + .settings-toggle-slider {

@@ -10,6 +10,7 @@ import {
   extractLastFrame,
   applyEndScreen,
   getGridCoordinates,
+  generateEndScreenImage,
 } from './services/videoService.js';
 
 const outputPath = () => path.join(os.tmpdir(), `test_videoutils_${Date.now()}.mp4`);
@@ -32,9 +33,16 @@ describe('videoService utilities', () => {
   }, 30000);
 
   it('applyEndScreen produces output', async () => {
-    await expect(
-      applyEndScreen(FIXTURES.video, 'endscreen.png_exists', outputPath(), true),
-    ).resolves.toBeUndefined();
+    const tempEndScreen = path.join(os.tmpdir(), `endscreen_${Date.now()}.png`);
+    await generateEndScreenImage(null, tempEndScreen, true);
+    try {
+      await expect(
+        applyEndScreen(FIXTURES.video, tempEndScreen, outputPath(), true),
+      ).resolves.toBeUndefined();
+    } finally {
+      const fs = await import('fs-extra');
+      await fs.remove(tempEndScreen);
+    }
   }, 30000);
 
   it('concatVideosWithCrossfade with 2 segments', async () => {

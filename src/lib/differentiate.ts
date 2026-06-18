@@ -73,6 +73,7 @@ function applyDurationMode(scenes: GeneratedScene[], mode: DurationMode): Genera
   if (mode === 'longer') {
     if (scenes.length === 0) return scenes;
     const last = scenes[scenes.length - 1];
+    if (!last) return scenes;
     const extraCount = Math.max(1, Math.round(scenes.length * 0.5));
     const extras: GeneratedScene[] = [];
     for (let i = 0; i < extraCount; i++) {

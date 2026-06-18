@@ -40,11 +40,12 @@ function secondsToSrtTime(seconds: number): string {
  */
 function srtTimeToSeconds(srtTime: string): number {
   const parts = srtTime.split(':');
-  const secsParts = parts[2].split(',');
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  const s = parseInt(secsParts[0], 10);
-  const ms = parseInt(secsParts[1], 10);
+  const h = parseInt(parts[0] || '0', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  const secsStr = parts[2] || '0,0';
+  const secsParts = secsStr.split(',');
+  const s = parseInt(secsParts[0] || '0', 10);
+  const ms = parseInt(secsParts[1] || '0', 10);
   return h * 3600 + m * 60 + s + ms / 1000;
 }
 
@@ -342,24 +343,32 @@ export async function generateSrtFromWhisper(
           lineText = candidate;
         } else {
           if (lineWords.length > 0) {
-            entries.push({
-              index: index++,
-              startTime: lineWords[0].start,
-              endTime: lineWords[lineWords.length - 1].end,
-              text: lineText,
-            });
+            const firstWord = lineWords[0];
+            const lastWord = lineWords[lineWords.length - 1];
+            if (firstWord && lastWord) {
+              entries.push({
+                index: index++,
+                startTime: firstWord.start,
+                endTime: lastWord.end,
+                text: lineText,
+              });
+            }
           }
           lineWords = [w];
           lineText = w.word;
         }
       }
       if (lineWords.length > 0) {
-        entries.push({
-          index: index++,
-          startTime: lineWords[0].start,
-          endTime: lineWords[lineWords.length - 1].end,
-          text: lineText,
-        });
+        const firstWord = lineWords[0];
+        const lastWord = lineWords[lineWords.length - 1];
+        if (firstWord && lastWord) {
+          entries.push({
+            index: index++,
+            startTime: firstWord.start,
+            endTime: lastWord.end,
+            text: lineText,
+          });
+        }
       }
     } else {
       // Fallback: segment-level word-wrap

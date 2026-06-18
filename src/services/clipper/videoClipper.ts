@@ -188,6 +188,7 @@ export class VideoClipper {
 
       for (let i = 0; i < mergedSegments.length; i++) {
         const seg = mergedSegments[i];
+        if (!seg) continue;
         const clipPath = path.join(tempDir, `segment_${i}.mp4`);
 
         const cropFilter = this.buildMultiFaceCropFilter(
@@ -249,6 +250,8 @@ export class VideoClipper {
     if (frames.length <= windowSize) return frames;
     const result: Array<{ cropX: number; cropY: number; confidence: number }> = [];
     for (let i = 0; i < frames.length; i++) {
+      const currentF = frames[i];
+      if (!currentF) continue;
       const start = Math.max(0, i - Math.floor(windowSize / 2));
       const end = Math.min(frames.length, i + Math.ceil(windowSize / 2));
       const window = frames.slice(start, end);
@@ -257,7 +260,7 @@ export class VideoClipper {
       result.push({
         cropX: Math.round(sumX / window.length),
         cropY: Math.round(sumY / window.length),
-        confidence: frames[i].confidence,
+        confidence: currentF.confidence,
       });
     }
     return result;
@@ -274,8 +277,11 @@ export class VideoClipper {
     const changes: number[] = [];
     const threshold = videoWidth * thresholdRatio;
     for (let i = 1; i < frames.length; i++) {
-      const dx = Math.abs(frames[i].cropX - frames[i - 1].cropX);
-      const dy = Math.abs(frames[i].cropY - frames[i - 1].cropY);
+      const cur = frames[i];
+      const prev = frames[i - 1];
+      if (!cur || !prev) continue;
+      const dx = Math.abs(cur.cropX - prev.cropX);
+      const dy = Math.abs(cur.cropY - prev.cropY);
       if (dx > threshold || dy > threshold) {
         changes.push(i);
       }
@@ -299,7 +305,8 @@ export class VideoClipper {
   }> {
     if (sceneChanges.length === 0) return stableSegments;
 
-    const frameDuration = segment.duration / Math.max(sceneChanges[sceneChanges.length - 1] + 1, 1);
+    const lastChange = sceneChanges[sceneChanges.length - 1] ?? 0;
+    const frameDuration = segment.duration / Math.max(lastChange + 1, 1);
     const boundaries = sceneChanges.map((idx) => segment.startTime + idx * frameDuration);
 
     const merged: Array<{

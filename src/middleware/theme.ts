@@ -74,33 +74,33 @@ export async function themeMiddleware(req: Request, res: Response, next: NextFun
     PREMIUM_THEMES[0];
 
   // Build dynamic styles injecting to :root or .theme-x
-  const colors = isDark ? selectedTheme.dark : selectedTheme.light || selectedTheme.dark;
+  const colors = isDark ? selectedTheme?.dark : selectedTheme?.light || selectedTheme?.dark;
 
   const themeCssVariables = `
     :root {
-      --background: ${colors.background};
-      --foreground: ${colors.foreground};
-      --card: ${colors.card};
-      --card-foreground: ${colors.cardForeground};
-      --popover: ${colors.popover};
-      --popover-foreground: ${colors.popoverForeground};
-      --primary: ${colors.primary};
-      --primary-foreground: ${colors.primaryForeground};
-      --secondary: ${colors.secondary};
-      --secondary-foreground: ${colors.secondaryForeground};
-      --muted: ${colors.muted};
-      --muted-foreground: ${colors.mutedForeground};
-      --accent: ${colors.accent};
-      --accent-foreground: ${colors.accentForeground};
-      --destructive: ${colors.destructive};
-      --destructive-foreground: ${colors.destructiveForeground};
-      --border: ${colors.border};
-      --input: ${colors.input};
-      --ring: ${colors.ring};
-      --cyan: ${colors.primary};
-      --cyan-foreground: ${colors.primaryForeground};
+      --background: ${colors?.background};
+      --foreground: ${colors?.foreground};
+      --card: ${colors?.card};
+      --card-foreground: ${colors?.cardForeground};
+      --popover: ${colors?.popover};
+      --popover-foreground: ${colors?.popoverForeground};
+      --primary: ${colors?.primary};
+      --primary-foreground: ${colors?.primaryForeground};
+      --secondary: ${colors?.secondary};
+      --secondary-foreground: ${colors?.secondaryForeground};
+      --muted: ${colors?.muted};
+      --muted-foreground: ${colors?.mutedForeground};
+      --accent: ${colors?.accent};
+      --accent-foreground: ${colors?.accentForeground};
+      --destructive: ${colors?.destructive};
+      --destructive-foreground: ${colors?.destructiveForeground};
+      --border: ${colors?.border};
+      --input: ${colors?.input};
+      --ring: ${colors?.ring};
+      --cyan: ${colors?.primary};
+      --cyan-foreground: ${colors?.primaryForeground};
       --radius: 0.75rem;
-      --surface-glass: hsla(${colors.background.split(' ')[0]}, 30%, 8%, 0.6);
+      --surface-glass: hsla(${colors?.background?.split(' ')[0]}, 30%, 8%, 0.6);
     }
     
     ${generateThemesCss()}

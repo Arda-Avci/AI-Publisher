@@ -224,6 +224,11 @@ export async function splitScreenGrid(
   const inputs: string[] = [];
   videos.forEach((v) => inputs.push('-i', v));
 
+  const firstVideo = videos[0];
+  if (!firstVideo) {
+    throw new Error('splitScreenGrid: Video listesi bos');
+  }
+
   // Get dimensions of first video as reference
   const { stdout: dims } = await runFFmpeg('ffprobe', [
     '-v',
@@ -234,9 +239,11 @@ export async function splitScreenGrid(
     'stream=width,height',
     '-of',
     'csv=s=x:p=0',
-    videos[0],
+    firstVideo,
   ]);
-  const [refW, refH] = dims.trim().split('x').map(Number);
+  const parts = dims.trim().split('x').map(Number);
+  const refW = parts[0] ?? 1920;
+  const refH = parts[1] ?? 1080;
 
   // Calculate cell dimensions
   const rows = Math.ceil(videos.length / gridCols);
@@ -333,7 +340,9 @@ export async function overlayMascot(
     'csv=s=x:p=0',
     videoPath,
   ]);
-  const [vW, vH] = dims.trim().split('x').map(Number);
+  const dimsParts = dims.trim().split('x').map(Number);
+  const vW = dimsParts[0] ?? 1920;
+  const vH = dimsParts[1] ?? 1080;
 
   // Get mascot dimensions
   const { stdout: mascotDims } = await runFFmpeg('ffprobe', [
@@ -347,7 +356,9 @@ export async function overlayMascot(
     'csv=s=x:p=0',
     mascotPngPath,
   ]);
-  const [mW, mH] = mascotDims.trim().split('x').map(Number);
+  const mascotParts = mascotDims.trim().split('x').map(Number);
+  const mW = mascotParts[0] ?? 500;
+  const mH = mascotParts[1] ?? 500;
 
   // Scale mascot if needed
   const scaledW = Math.round(mW * scale);
@@ -428,7 +439,9 @@ export async function overlayMascotWithAnimation(
     'csv=s=x:p=0',
     mascotPngPath,
   ]);
-  const [mW, mH] = mascotDims.trim().split('x').map(Number);
+  const mascotParts = mascotDims.trim().split('x').map(Number);
+  const mW = mascotParts[0] ?? 500;
+  const mH = mascotParts[1] ?? 500;
 
   // Position mascot in bottom-right corner with margin
   const baseX = 'W-w-30';
@@ -527,7 +540,9 @@ export async function pipOverlay(
     'csv=s=x:p=0',
     mainVideo,
   ]);
-  const [vW, vH] = dims.trim().split('x').map(Number);
+  const dimsParts = dims.trim().split('x').map(Number);
+  const vW = dimsParts[0] ?? 1920;
+  const vH = dimsParts[1] ?? 1080;
 
   // PIP size: 25% of main video
   const pipW = Math.round(vW * 0.25);

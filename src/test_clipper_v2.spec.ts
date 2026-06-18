@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import type { TranscriptionResult } from './services/clipper/types.js';
 import { tokenTracker } from './lib/token-tracker.js';
 
