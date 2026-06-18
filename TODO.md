@@ -74,6 +74,7 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] SQLite ve iş akışının entegrasyon testlerini yaz ve Vitest ile doğrula (`src/test_integration.spec.ts`).
 - [x] PostgreSQL INSERT `lastID` regex hatasını gidererek entegrasyon testlerinin tamamını (13/13) yeşile döndür.
 - [x] Testlerdeki implicit any ve emitter tip uyumsuzluklarını onar, projeyi sıfır hata ile typecheck edilebilir hale getir.
+- [x] Vitest test suitindeki sonsuz döngüler, yanlış test iddiaları (resolves.toBeDefined) ve ses dosyası olmayan video girdilerinden kaynaklanan FFmpeg hataları tamamen giderildi.
 - [x] Windows ortamı FFmpeg metin basma (drawtext) hatasına karşı dinamik font belirleme mekanizması ekle.
 - [x] Playwright session yükleme kodlarının doğruluğunu denetle.
 - [x] Veritabanı kuyruk temizliğini gerçekleştir ve 2 aktif pending iş hazırla.
