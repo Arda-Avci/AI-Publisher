@@ -22,7 +22,14 @@ for cell in data.get("cells", []):
                 patched = True
                 print(f"Patched dockerd line.")
         
-        # 2. cgroup mounts patch
+        # 2. docker-buildx package installation patch
+        for i, line in enumerate(source):
+            if 'apt-get install -y -q docker.io pigz' in line and 'docker-buildx' not in line:
+                source[i] = line.replace('docker.io pigz', 'docker.io pigz docker-buildx')
+                patched = True
+                print("Patched apt-get install line to include docker-buildx.")
+        
+        # 3. cgroup mounts patch
         # find where sysctl settings are run
         sysctl_idx = -1
         has_cgroup = False
@@ -43,8 +50,7 @@ for cell in data.get("cells", []):
                 '    subprocess.run("mount -t tmpfs -o mode=755 cgroup /sys/fs/cgroup", shell=True, check=False)\n',
                 '    subprocess.run("mkdir -p /sys/fs/cgroup/docker", shell=True, check=False)\n'
             ]
-            # Insert after sysctl_idx + 1 (which would be subprocess.run("sysctl -w kernel.unprivileged_userns_clone=1"...))
-            # Let's find the exact subprocess.run for sysctl
+            # Insert after sysctl_idx + 1
             insert_idx = sysctl_idx + 1
             while insert_idx < len(source) and "subprocess.run" in source[insert_idx]:
                 insert_idx += 1
@@ -57,6 +63,6 @@ for cell in data.get("cells", []):
 if patched:
     with open(notebook_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    print("Notebook successfully updated with cgroup patch.")
+    print("Notebook successfully updated with all patches.")
 else:
     print("Notebook was already patched or target lines not found.")
