@@ -160,3 +160,6 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - [x] `npm run build` ile in-place JS derlemeleri tamamlanarak testlerin başarısı doğrulandı.
 - [x] **Google Colab IndentationError Giderilmesi (18 Haziran 2026):**
   - Colab notebook dosyasındaki `subprocess.Popen` komutunda oluşan girinti hatası (`IndentationError: unexpected indent`) yama betiği güncellenerek düzeltildi ve uzak depoya pushlandı.
+- [/] **Colab Docker Derleme Ortamı Kısıtlamaları (19 Haziran 2026):**
+  - Colab CPU (None) modunun `/sys/fs/cgroup` yolundaki katı salt-okunur (read-only) kısıtlamaları nedeniyle `docker build` komutlarının başarısız olduğu (`unable to apply cgroup configuration`) tespit edildi.
+  - Derleme işleminin (Seçenek C) T4 GPU runtime altında çalıştırılması kararlaştırıldı. İmajlar bir kez GPU'da derlenip Drive'a kaydedildikten sonra, tekrar derleme gerekmeyecektir.
