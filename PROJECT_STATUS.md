@@ -158,3 +158,5 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - [x] `applyEndScreen` ve `applySplitScreen` içindeki FFmpeg komutlarına `shortest=1` / `-shortest` eklenerek sonsuz döngü ve zaman aşımı (timeout) sorunları çözüldü.
   - [x] Test iddiaları (`toBeDefined` -> `toBeUndefined`) ve ses kanalı bulunmayan video girdileri için `checkHasAudio` sessiz kanal fallback'leri entegre edilerek FFmpeg çökme riskleri giderildi.
   - [x] `npm run build` ile in-place JS derlemeleri tamamlanarak testlerin başarısı doğrulandı.
+- [x] **Google Colab IndentationError Giderilmesi (18 Haziran 2026):**
+  - Colab notebook dosyasındaki `subprocess.Popen` komutunda oluşan girinti hatası (`IndentationError: unexpected indent`) yama betiği güncellenerek düzeltildi ve uzak depoya pushlandı.
