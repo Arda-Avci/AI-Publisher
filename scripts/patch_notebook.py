@@ -22,44 +22,52 @@ for cell in data.get("cells", []):
                 patched = True
                 print(f"Patched dockerd line.")
         
-        # 2. Clean previous cgroup lines and conditional checks entirely
+        # 2. docker-buildx package installation patch
+        for i, line in enumerate(source):
+            if 'apt-get install -y -q docker.io pigz' in line and 'docker-buildx' not in line:
+                source[i] = line.replace('docker.io pigz', 'docker.io pigz docker-buildx')
+                patched = True
+                print("Patched apt-get install line to include docker-buildx.")
+        
+        # 3. Clean previous cgroup lines and insert fresh cgroup2 mount
         clean_source = []
         for line in source:
-            # Skip any lines matching previous cgroup remount, mkdir, fallback prints, etc.
             if any(term in line for term in [
-                "📁 cgroup yetkilendirmesi", 
+                "cgroup yetkilendirmesi", 
                 "mount -o remount,rw", 
                 "mkdir -p /sys/fs/cgroup", 
                 "tmpfs fallback mount", 
                 "mount -t tmpfs",
-                "if not os.path.exists(\"/sys/fs/cgroup/docker\")"
+                "if not os.path.exists",
+                "umount -l /sys/fs/cgroup",
+                "cgroup kısıtlamaları kaldırılıyor"
             ]):
                 patched = True
                 continue
-            if 'print("📁 cgroup kısıtlamaları kaldırılıyor (lazy unmount)...")\n' in line or 'subprocess.run("umount -l /sys/fs/cgroup", shell=True, check=False)\n' in line:
-                # Already has the lazy unmount patch
-                continue
             clean_source.append(line)
         
-        # 3. Find where sysctl settings are run and insert lazy unmount
+        # find where sysctl settings are run
         sysctl_idx = -1
         for i, line in enumerate(clean_source):
             if "kernel.unprivileged_userns_clone=1" in line:
                 sysctl_idx = i
                 
         if sysctl_idx != -1:
-            unmount_lines = [
-                'print("📁 cgroup kısıtlamaları kaldırılıyor (lazy unmount)...")\n',
-                'subprocess.run("umount -l /sys/fs/cgroup", shell=True, check=False)\n'
+            # Insert cgroup2 mount lines right after the sysctl line
+            cgroup_lines = [
+                'print("📁 cgroup2 dosya sistemi yazılabilir olarak yeniden monte ediliyor...")\n',
+                'subprocess.run("umount -l /sys/fs/cgroup", shell=True, check=False)\n',
+                'subprocess.run("mount -t cgroup2 none /sys/fs/cgroup", shell=True, check=False)\n',
+                'subprocess.run("mkdir -p /sys/fs/cgroup/docker", shell=True, check=False)\n'
             ]
             insert_idx = sysctl_idx + 1
             while insert_idx < len(clean_source) and "subprocess.run" in clean_source[insert_idx]:
                 insert_idx += 1
             
-            clean_source[insert_idx:insert_idx] = unmount_lines
+            clean_source[insert_idx:insert_idx] = cgroup_lines
             cell["source"] = clean_source
             patched = True
-            print("Patched lazy unmount cgroup lines cleanly.")
+            print("Patched cgroup2 mount lines cleanly.")
 
 if patched:
     with open(notebook_path, "w", encoding="utf-8") as f:
