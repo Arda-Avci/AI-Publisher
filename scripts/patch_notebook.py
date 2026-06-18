@@ -17,7 +17,7 @@ for cell in data.get("cells", []):
         
         has_docker_setup = False
         for line in source:
-            if "docker-buildx" in line:
+            if "docker-buildx" in line or "podman pigz" in line:
                 has_docker_setup = True
                 break
         
@@ -30,6 +30,8 @@ for cell in data.get("cells", []):
                     # Add our new block for Podman installation
                     new_source.append('print("📦 Sistem paketleri (Podman & pigz) kuruluyor...")\n')
                     new_source.append('subprocess.run("apt-get update -q && apt-get install -y -q podman pigz", shell=True, check=True)\n')
+                    new_source.append('print("📦 Podman Docker Registry ayarları yapılandırılıyor...")\n')
+                    new_source.append('subprocess.run(\'mkdir -p /etc/containers && echo \\\'unqualified-search-registries = ["docker.io"]\\\' > /etc/containers/registries.conf\', shell=True, check=True)\n')
                     new_source.append('\n')
                     skip_mode = True
                     patched = True

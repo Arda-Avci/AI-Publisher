@@ -160,7 +160,8 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - [x] `npm run build` ile in-place JS derlemeleri tamamlanarak testlerin başarısı doğrulandı.
 - [x] **Google Colab IndentationError Giderilmesi (18 Haziran 2026):**
   - Colab notebook dosyasındaki `subprocess.Popen` komutunda oluşan girinti hatası (`IndentationError: unexpected indent`) yama betiği güncellenerek düzeltildi ve uzak depoya pushlandı.
-- [x] **Colab Docker Derleme Ortamı Kısıtlamaları (19 Haziran 2026):**
-  - Colab CPU (None) modunun `/sys/fs/cgroup` yolundaki katı salt-okunur (read-only) kısıtlamaları nedeniyle `docker build` komutlarının başarısız olduğu (`unable to apply cgroup configuration`) tespit edildi.
-  - Derleme işleminin (Seçenek C) T4 GPU runtime altında çalıştırılması kararlaştırıldı. İmajlar bir kez GPU'da derlenip Drive'a kaydedildikten sonra, tekrar derleme gerekmeyecektir.
-  - T4 GPU runtime'ı üzerinde `mount` yetkileri mevcut olduğu için, cgroup2'yi salt-okunur engelini aşacak şekilde yazılabilir olarak yeniden monte eden (`mount -t cgroup2`) ve dockerd'ı `cgroupfs` sürücüsüyle başlatan özelleştirilmiş başlatma mantığı notebook'a geri yüklendi ve pushlandı.
+- [x] **Google Colab Cgroup ve Docker Engellerinin Kökten Çözümü (19 Haziran 2026):**
+  - Colab ortamlarının (hem CPU hem GPU) `/sys/fs/cgroup` yolundaki katı salt-okunur (read-only) kısıtlamaları ve OCI runtime (`runc`) cgroup oluşturma hataları (`runc mkdir /sys/fs/cgroup/docker: read-only file system`) analiz edildi.
+  - Kırılgan docker daemon yamaları ve mount hileleri yerine, daemonless çalışan **Podman** ve **Buildah** mimarisine geçiş yapıldı.
+  - `colab_docker/build_all.sh` betiğindeki derleme adımları `podman build --isolation=chroot` parametresiyle güncellendi. Chroot izolasyonu host cgroup'unu aynen kullandığı ve alt-cgroup oluşturmaya teşebbüs etmediği için cgroup yetki hataları tamamen bypass edildi.
+  - `patch_notebook.py` betiği sadeleştirilerek Docker Daemon (`dockerd`) kurulumu ve başlatma adımları kaldırıldı; sadece `podman` ve `pigz` kurulması sağlandı. `Google_Colab_AI_Publisher.ipynb` bu betikle başarıyla yamalandı ve uzak depoya pushlandı.
