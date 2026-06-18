@@ -150,3 +150,7 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - `build_all.sh` dosyası paralel sıkıştırma yapan `pigz` aracı desteğiyle güncellendi (bulunmadığında `gzip` fallback korundu).
   - `verify_images.py` dosyasına `--drive-only` seçeneği ve `tarfile` kütüphanesi ile arşivlerin bozuk/eksik olup olmadığını kontrol eden bütünlük kontrolü entegre edildi.
   - `Google_Colab_AI_Publisher.ipynb` defterine en altta Seçenek C hücresi (Markdown + Kod) eklendi; inşa ve doğrulama bittiğinde maliyet tasarrufu için Colab VM'ini otomatik sonlandıran `runtime.unassign()` entegrasyonu sağlandı.
+- [x] **TypeScript Tip Güvenliği ve Derleme Hatalarının Giderilmesi (18 Haziran 2026):**
+  - Proje genelindeki tüm `strictNullChecks` ve tip uyuşmazlığı derleme hataları (özellikle array sınırları, regex exec grupları, as const nesneleri) giderildi.
+  - `npm run check:types` sıfır hata ile tamamlandı.
+  - Değişiklikler commit edilip başarıyla pushlandı.

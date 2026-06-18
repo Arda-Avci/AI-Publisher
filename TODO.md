@@ -740,4 +740,9 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **Mock Kaldırılması:** `rabbitmq.ts` içerisindeki tüm mock/bypass yapıları kaldırıldı; testlerde ve lokal servislerde tamamen gerçek RabbitMQ tünelleri ve entegrasyonu koşturuldu.
 - [x] **Colab Maliyet Tasarrufu:** İşlem yapılmadığı durumlarda Colab VM'inin kapatılması ve durdurulması sağlandı.
 
+## ✅ Sprint 21 — TypeScript Tip Güvenliği ve Derleme Hatalarının Giderilmesi (18 Haziran 2026)
+- [x] **Strict Type & strictNullChecks Düzeltmeleri:** Proje genelinde tsc derleme hatalarına neden olan 50'den fazla dosyada `strictNullChecks` uyumsuzlukları, array sınır dışı erişimleri, regex exec grupları ve tip uyumsuzlukları giderildi.
+- [x] **Tip Doğrulaması:** `npm run check:types` testi tamamen hatasız yeşillendirildi.
+- [x] **Git Entegrasyonu:** Tüm düzeltmeler commit edilerek `origin main` deposuna başarıyla push edildi.
+
 
