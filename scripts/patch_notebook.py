@@ -37,7 +37,7 @@ for cell in data.get("cells", []):
         # 2. Update dockerd startup to default flexible arguments
         for i, line in enumerate(clean_source):
             if '["dockerd"' in line:
-                clean_source[i] = '        subprocess.Popen(["dockerd", "-b", "none", "--iptables=0", "--storage-driver=vfs"], stdout=open("/tmp/dockerd.log", "w"), stderr=subprocess.STDOUT)\n'
+                clean_source[i] = 'subprocess.Popen(["dockerd", "-b", "none", "--iptables=0", "--storage-driver=vfs"], stdout=open("/tmp/dockerd.log", "w"), stderr=subprocess.STDOUT)\n'
                 patched = True
                 print("Updated dockerd startup command to flexible default.")
 
