@@ -264,7 +264,7 @@ export async function applyEndScreen(
     '-i',
     endScreenPath,
     '-filter_complex',
-    `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=enable='between(t,${endStart},${dur})':x=0:y=0`,
+    `[1:v]scale=${w}:${h}[es];[0:v][es]overlay=shortest=1:enable='between(t,${endStart},${dur})':x=0:y=0`,
     '-c:a',
     'copy',
     outputPath,

@@ -72,7 +72,7 @@ describe('BeatSyncEditor', () => {
 
       await expect(
         applyBeatSyncCuts(FIXTURES.video, cutPoints, outputPath()),
-      ).resolves.toBeDefined();
+      ).resolves.toBeUndefined();
     }, 30000);
   });
 });

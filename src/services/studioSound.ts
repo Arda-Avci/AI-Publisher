@@ -36,6 +36,43 @@ const DEFAULT_OPTIONS: StudioSoundOptions = {
   levelDb: -3,
 };
 
+async function checkHasAudio(inputVideo: string): Promise<boolean> {
+  try {
+    const { stdout } = await runFFmpeg('ffprobe', [
+      '-v',
+      'error',
+      '-select_streams',
+      'a',
+      '-show_entries',
+      'stream=codec_type',
+      '-of',
+      'csv=p=0',
+      inputVideo,
+    ]);
+    return !!stdout.trim();
+  } catch (err) {
+    Logger.warn('[studioSound] Probe audio failed, assuming audio exists', err);
+    return true;
+  }
+}
+
+async function getVideoDurationSeconds(inputVideo: string): Promise<number> {
+  try {
+    const { stdout } = await runFFmpeg('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'csv=p=0',
+      inputVideo,
+    ]);
+    return parseFloat(stdout.trim()) || 1.0;
+  } catch {
+    return 1.0;
+  }
+}
+
 /**
  * Enhances audio quality of a video file using FFmpeg filters.
  *
@@ -56,6 +93,28 @@ export async function enhanceAudio(
 ): Promise<void> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   Logger.info('[studioSound] Starting audio enhancement', { inputVideo, outputVideo, opts });
+
+  const hasAudio = await checkHasAudio(inputVideo);
+  if (!hasAudio) {
+    Logger.info('[studioSound] No audio track found, generating silent audio track');
+    const dur = await getVideoDurationSeconds(inputVideo);
+    const args = [
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'anullsrc=r=48000:cl=mono',
+      '-t',
+      dur.toString(),
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      outputVideo,
+    ];
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+    return;
+  }
 
   // Build filter chain
   const filterParts: string[] = [];
@@ -134,6 +193,22 @@ export async function enhanceVideoAudio(
   const opts = { ...DEFAULT_OPTIONS, ...options };
   Logger.info('[studioSound] Starting video+audio enhancement', { inputVideo, outputVideo, opts });
 
+  const hasAudio = await checkHasAudio(inputVideo);
+  if (!hasAudio) {
+    Logger.info('[studioSound] No audio track found, copying video only');
+    const args = [
+      '-y',
+      '-i',
+      inputVideo,
+      '-c:v',
+      'copy',
+      '-an',
+      outputVideo,
+    ];
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+    return;
+  }
+
   const filterParts: string[] = [];
 
   filterParts.push('highpass=f=200');
@@ -200,6 +275,28 @@ export async function removeBackgroundNoise(
 ): Promise<string> {
   Logger.info('[studioSound] Removing background noise', { audioPath, outputPath });
 
+  const hasAudio = await checkHasAudio(audioPath);
+  if (!hasAudio) {
+    Logger.info('[studioSound] No audio track found, generating silent audio track');
+    const dur = await getVideoDurationSeconds(audioPath);
+    const args = [
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'anullsrc=r=48000:cl=mono',
+      '-t',
+      dur.toString(),
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      outputPath,
+    ];
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+    return outputPath;
+  }
+
   const args = [
     '-y',
     '-i',
@@ -234,6 +331,28 @@ export async function removeBackgroundNoise(
  */
 export async function removeReverb(audioPath: string, outputPath: string): Promise<string> {
   Logger.info('[studioSound] Removing reverb', { audioPath, outputPath });
+
+  const hasAudio = await checkHasAudio(audioPath);
+  if (!hasAudio) {
+    Logger.info('[studioSound] No audio track found, generating silent audio track');
+    const dur = await getVideoDurationSeconds(audioPath);
+    const args = [
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'anullsrc=r=48000:cl=mono',
+      '-t',
+      dur.toString(),
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      outputPath,
+    ];
+    await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+    return outputPath;
+  }
 
   const args = [
     '-y',

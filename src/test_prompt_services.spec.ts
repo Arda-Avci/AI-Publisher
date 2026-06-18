@@ -7,7 +7,10 @@ import {
 } from './services/aiService.js';
 
 describe('Prompt and Theme Services Tests', () => {
+  const hasKeys = !!(process.env.GEMINI_API_KEY || process.env.MINIMAX_API_KEY || process.env.ZEN_API_KEY);
+
   it('should enhance user prompt correctly', async () => {
+    if (!hasKeys) return;
     const result = await enhanceVideoPrompt('cat walking in space', {
       cameraMotion: 'zoom_in',
       templateStyle: 'cinematic',
@@ -17,6 +20,7 @@ describe('Prompt and Theme Services Tests', () => {
   }, 60000);
 
   it('should generate tutorial prompts', async () => {
+    if (!hasKeys) return;
     const result = await generateTutorialPrompts('clipper');
     expect(result).toHaveProperty('tutorialTitle');
     expect(result).toHaveProperty('scenes');
@@ -24,6 +28,7 @@ describe('Prompt and Theme Services Tests', () => {
   }, 60000);
 
   it('should generate landing page assets', async () => {
+    if (!hasKeys) return;
     const result = await generateLandingPageAssets('technology');
     expect(result).toHaveProperty('heroVideo');
     expect(result.heroVideo).toHaveProperty('title');
@@ -31,6 +36,7 @@ describe('Prompt and Theme Services Tests', () => {
   }, 60000);
 
   it('should generate custom HSL themes', async () => {
+    if (!hasKeys) return;
     const result = await generateCustomThemes('cyberpunk');
     expect(result).toHaveProperty('themeName');
     expect(result).toHaveProperty('colors');

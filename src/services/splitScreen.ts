@@ -143,6 +143,7 @@ export async function applySplitScreen(
     '23',
     '-c:a',
     'aac',
+    '-shortest',
     outputPath,
   ];
 
