@@ -11,11 +11,11 @@ START_TIME=$SECONDS
 
 if [ -f "Dockerfile.base" ]; then
   echo "[INFO] Dockerfile.base bulundu. Insa basliyor..."
-  docker build --network=host -t ai-publisher-base:latest -f Dockerfile.base .
+  podman build --isolation=chroot --network=host -t ai-publisher-base:latest -f Dockerfile.base .
   
   if [ $? -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
-    SIZE=$(docker images --format "{{.Size}}" ai-publisher-base:latest)
+    SIZE=$(podman images --format "{{.Size}}" ai-publisher-base:latest)
     echo "✅ Base Docker Imajı basariyla olusturuldu."
     echo "[INFO] Imaj Boyutu: $SIZE"
     echo "[INFO] Insa Suresi: ${DURATION}s"
@@ -56,7 +56,7 @@ for i in "${!MODELS[@]}"; do
   
   # Faz 2: Docker Build Baslatma
   echo "[FAZ 2/5] Docker imaji insa ediliyor (ai-publisher-$MODEL:latest)..."
-  docker build --network=host -t "ai-publisher-$MODEL:latest" -f "$MODEL/Dockerfile" "$MODEL/"
+  podman build --isolation=chroot --network=host -t "ai-publisher-$MODEL:latest" -f "$MODEL/Dockerfile" "$MODEL/"
   
   if [ $? -ne 0 ]; then
     echo "❌ Hata: $MODEL imaji insa edilemedi!"
@@ -66,7 +66,7 @@ for i in "${!MODELS[@]}"; do
   
   # Faz 3: Imaj Boyutu Olcumu
   echo "[FAZ 3/5] Imaj boyutu hesaplaniyor..."
-  IMG_SIZE=$(docker images --format "{{.Size}}" "ai-publisher-$MODEL:latest")
+  IMG_SIZE=$(podman images --format "{{.Size}}" "ai-publisher-$MODEL:latest")
   echo "👉 Imaj basariyla kaydedildi. Local Boyut: $IMG_SIZE"
   
   # Faz 4: Google Drive'a Kaydetme ve Sikistirma (Gzip/Pigz)
@@ -76,10 +76,10 @@ for i in "${!MODELS[@]}"; do
   
   if command -v pigz &> /dev/null; then
     echo "[INFO] pigz (paralel gzip) bulundu. Cok cekirdekli hizli sikistirma baslatiliyor..."
-    docker save "ai-publisher-$MODEL:latest" | pigz > "$DRIVE_DIR/$MODEL.tar.gz"
+    podman save --format=docker-archive "ai-publisher-$MODEL:latest" | pigz > "$DRIVE_DIR/$MODEL.tar.gz"
   else
     echo "[INFO] gzip kullaniliyor (pigz bulunamadi)..."
-    docker save "ai-publisher-$MODEL:latest" | gzip > "$DRIVE_DIR/$MODEL.tar.gz"
+    podman save --format=docker-archive "ai-publisher-$MODEL:latest" | gzip > "$DRIVE_DIR/$MODEL.tar.gz"
   fi
   
   if [ $? -ne 0 ]; then
@@ -98,8 +98,8 @@ for i in "${!MODELS[@]}"; do
     
     # Disk temizliği: Yerel docker imajını silelim ki Colab diski dolmasın
     echo "[INFO] Disk alani kazanmak icin yerel imaj temizleniyor..."
-    docker rmi "ai-publisher-$MODEL:latest"
-    docker image prune -f
+    podman rmi "ai-publisher-$MODEL:latest"
+    podman image prune -f
   else
     echo "❌ Hata: Olusturulan dosya Google Drive'da bulunamadi!"
   fi
