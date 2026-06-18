@@ -164,4 +164,5 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - Colab ortamlarının (hem CPU hem GPU) `/sys/fs/cgroup` yolundaki katı salt-okunur (read-only) kısıtlamaları ve OCI runtime (`runc`) cgroup oluşturma hataları (`runc mkdir /sys/fs/cgroup/docker: read-only file system`) analiz edildi.
   - Kırılgan docker daemon yamaları ve mount hileleri yerine, daemonless çalışan **Podman** ve **Buildah** mimarisine geçiş yapıldı.
   - `colab_docker/build_all.sh` betiğindeki derleme adımları `podman build --isolation=chroot` parametresiyle güncellendi. Chroot izolasyonu host cgroup'unu aynen kullandığı ve alt-cgroup oluşturmaya teşebbüs etmediği için cgroup yetki hataları tamamen bypass edildi.
+  - Chroot ortamındaki internet/DNS erişim engellerini (`apt-get update` DNS çözümleme hataları) aşmak için podman derleme parametrelerine `--dns=8.8.8.8` entegrasyonu sağlandı.
   - `patch_notebook.py` betiği sadeleştirilerek Docker Daemon (`dockerd`) kurulumu ve başlatma adımları kaldırıldı; sadece `podman` ve `pigz` kurulması sağlandı. `Google_Colab_AI_Publisher.ipynb` bu betikle başarıyla yamalandı ve uzak depoya pushlandı.
