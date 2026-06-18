@@ -1,0 +1,30 @@
+export declare function loadServerTranslations(): void;
+export declare function t(key: string, lang?: 'tr' | 'en', params?: Record<string, string | number>): string;
+export declare const STAGE_KEYS: {
+    readonly DIRECTOR_PLANNING: "stageDirectorPlanning";
+    readonly SCENES_PREPARING: "stageScenesPreparing";
+    readonly COLAB_STARTING: "stageColabStarting";
+    readonly COLAB_VERIFYING: "stageColabProgress";
+    readonly COVER_SYNTHESIS: "stageCoverSynthesis";
+    readonly SCENE_GENERATING: "stageSceneGenerating";
+    readonly AUTO_CUT: "stageAutoCut";
+    readonly COLOR_GRADE: "stageColorGrade";
+    readonly SPLIT_SCREEN: "stageSplitScreen";
+    readonly MUSETALK: "stageMuseTalk";
+    readonly SHORTS_CONVERSION: "stageShortsConversion";
+    readonly DUBBING: "stageDubbing";
+    readonly BEAT_SYNC: "stageBeatSync";
+    readonly KINETIC_SUBTITLE: "stageKineticSubtitle";
+    readonly STUDIO_SOUND: "stageStudioSound";
+    readonly EYE_CONTACT: "stageEyeContact";
+    readonly SMART_REFRAME: "stageSmartReframe";
+    readonly INPAINT: "stageInpaint";
+    readonly VIRAL_HOOK: "stageViralHook";
+    readonly BROLL_INSERT: "stageBrollInsert";
+    readonly EMOTION_CAPTION: "stageEmotionCaption";
+    readonly COMPLETED: "stageCompleted";
+    readonly CANCELLED: "stageCancelled";
+    readonly ERROR: "stageError";
+};
+export type StageKey = (typeof STAGE_KEYS)[keyof typeof STAGE_KEYS];
+//# sourceMappingURL=server-i18n.d.ts.map

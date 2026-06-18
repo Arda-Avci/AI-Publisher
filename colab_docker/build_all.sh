@@ -11,7 +11,7 @@ START_TIME=$SECONDS
 
 if [ -f "Dockerfile.base" ]; then
   echo "[INFO] Dockerfile.base bulundu. Insa basliyor..."
-  docker build --network=host -t ai-publisher-base:latest -f Dockerfile.base .
+  docker build -t ai-publisher-base:latest -f Dockerfile.base .
   
   if [ $? -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
@@ -56,7 +56,7 @@ for i in "${!MODELS[@]}"; do
   
   # Faz 2: Docker Build Baslatma
   echo "[FAZ 2/5] Docker imaji insa ediliyor (ai-publisher-$MODEL:latest)..."
-  docker build --network=host -t "ai-publisher-$MODEL:latest" -f "$MODEL/Dockerfile" "$MODEL/"
+  docker build -t "ai-publisher-$MODEL:latest" -f "$MODEL/Dockerfile" "$MODEL/"
   
   if [ $? -ne 0 ]; then
     echo "❌ Hata: $MODEL imaji insa edilemedi!"
