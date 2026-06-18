@@ -22,13 +22,14 @@ import subprocess
 import requests
 import cv2
 import numpy as np
+from scipy.io import wavfile
 from flask import Flask, request, jsonify, send_file
 
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-CONTAINER_IDLE_TIMEOUT_SECONDS = 50  # 50 seconds
-VM_IDLE_TIMEOUT_SECONDS = 60         # 1 minute (60 seconds)
+CONTAINER_IDLE_TIMEOUT_SECONDS = 120  # 2 minutes — konteyner boşta kalma süresi
+VM_IDLE_TIMEOUT_SECONDS = 300          # 5 minutes — VM otomatik kapatma süresi
 
 # --- FILE PATHS ---
 LAST_VIDEO_PATH  = "/content/current_scene.mp4"
@@ -91,8 +92,11 @@ class ContainerManager:
         "kokorotts": 5011
     }
     
-    # GPU-heavy containers. We run only one at a time to prevent T4 VRAM OOM!
-    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "kokorotts"]
+    # GPU-heavy containers: only one can run at a time (T4 VRAM limit)
+    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan"]
+    
+    # CPU-only containers: can run concurrently, no GPU reservation needed
+    CPU_ONLY = ["whisper", "kokorotts"]
     
     def __init__(self):
         self.last_active = {name: time.time() for name in self.PORTS}
@@ -142,8 +146,11 @@ class ContainerManager:
                 subprocess.run(["docker", "start", f"ai-publisher-{name}"], check=True)
             else:
                 print(f"[SUPERVISOR] Creating and running container ai-publisher-{name}...")
-                cmd = [
-                    "docker", "run", "--gpus", "all", "-d",
+                use_gpu = name not in self.CPU_ONLY
+                cmd = ["docker", "run", "-d"]
+                if use_gpu:
+                    cmd.extend(["--gpus", "all"])
+                cmd.extend([
                     "--name", f"ai-publisher-{name}",
                     "-p", f"{port}:5000",
                     "-v", "/content:/content",
@@ -151,7 +158,7 @@ class ContainerManager:
                     "-e", "HF_HOME=/content/drive/MyDrive/Colab_Cache/huggingface",
                     "-e", "TORCH_HOME=/content/drive/MyDrive/Colab_Cache/torch",
                     f"ai-publisher-{name}:latest"
-                ]
+                ])
                 subprocess.run(cmd, check=True)
                 
             # Wait for container to respond to healthcheck

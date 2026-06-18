@@ -1,0 +1,282 @@
+# ============================================================
+# AI Publisher - Colab Docker Orkestrasyon
+# Tüm konteynerler container içinde port 5000'de çalışır.
+# docker-compose host tarafında 5001-5011 arası portlara映射 eder.
+#
+# Kullanım:
+#   docker compose up -d           # Tümünü başlat
+#   docker compose up -d cogvideox # Sadece video
+#   docker compose down            # Tümünü durdur
+#   docker compose logs -f <svc>   # Log takibi
+# ============================================================
+
+services:
+  # ── Video Motorları ──────────────────────────────────────
+  cogvideox:
+    build: ./cogvideox
+    image: ai-publisher-cogvideox:latest
+    container_name: ai-pub-cogvideox
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - ai-pub-net
+
+  wan:
+    build: ./wan
+    image: ai-publisher-wan:latest
+    container_name: ai-pub-wan
+    ports:
+      - "5008:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  ltx:
+    build: ./ltx
+    image: ai-publisher-ltx:latest
+    container_name: ai-pub-ltx
+    ports:
+      - "5009:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  hunyuan:
+    build: ./hunyuan
+    image: ai-publisher-hunyuan:latest
+    container_name: ai-pub-hunyuan
+    ports:
+      - "5010:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Ses / TTS Motorları ──────────────────────────────────
+  xtts:
+    build: ./xtts
+    image: ai-publisher-xtts:latest
+    container_name: ai-pub-xtts
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  kokorotts:
+    build: ./kokorotts
+    image: ai-publisher-kokorotts:latest
+    container_name: ai-pub-kokorotts
+    ports:
+      - "5011:5000"
+    volumes:
+      - ./shared:/app/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Ses Efekti (SFX) ────────────────────────────────────
+  audioldm2:
+    build: ./audioldm2
+    image: ai-publisher-audioldm2:latest
+    container_name: ai-pub-audioldm2
+    ports:
+      - "5003:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Lip-Sync Motorları ──────────────────────────────────
+  wav2lip:
+    build: ./wav2lip
+    image: ai-publisher-wav2lip:latest
+    container_name: ai-pub-wav2lip
+    ports:
+      - "5004:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  musetalk:
+    build: ./musetalk
+    image: ai-publisher-musetalk:latest
+    container_name: ai-pub-musetalk
+    ports:
+      - "5005:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Transkripsiyon ──────────────────────────────────────
+  whisper:
+    build: ./whisper
+    image: ai-publisher-whisper:latest
+    container_name: ai-pub-whisper
+    ports:
+      - "5006:5000"
+    volumes:
+      - ./shared:/app/shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Görsel Üretim ───────────────────────────────────────
+  stablediffusion:
+    build: ./stablediffusion
+    image: ai-publisher-stablediffusion:latest
+    container_name: ai-pub-stablediffusion
+    ports:
+      - "5007:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+networks:
+  ai-pub-net:
+    driver: bridge

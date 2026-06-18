@@ -144,3 +144,8 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - [x] **Derleme ve Test İyileştirmeleri:**
   - `src/__fixtures__/index.ts` ve `src/test_core.spec.ts` dosyalarındaki TS derleme hataları giderilerek `npm run check:types` sıfır hatayla çalışır hale getirildi.
   - Vitest test suitleri başarıyla çalıştırıldı ve yeşillendirildi.
+- [x] **Maliyet Tasarruflu Docker İnşa ve Doğrulama Altyapısı (18 Haziran 2026 - Sprint 21):**
+  - Colab üzerinde 11 adet Docker imajının (cogvideox, wan, ltx, hunyuan, xtts, audioldm2, wav2lip, musetalk, whisper, stablediffusion, kokorotts) CPU modunda sıfırdan inşa edilmesi sağlandı.
+  - `build_all.sh` dosyası paralel sıkıştırma yapan `pigz` aracı desteğiyle güncellendi (bulunmadığında `gzip` fallback korundu).
+  - `verify_images.py` dosyasına `--drive-only` seçeneği ve `tarfile` kütüphanesi ile arşivlerin bozuk/eksik olup olmadığını kontrol eden bütünlük kontrolü entegre edildi.
+  - `Google_Colab_AI_Publisher.ipynb` defterine en altta Seçenek C hücresi (Markdown + Kod) eklendi; inşa ve doğrulama bittiğinde maliyet tasarrufu için Colab VM'ini otomatik sonlandıran `runtime.unassign()` entegrasyonu sağlandı.

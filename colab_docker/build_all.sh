@@ -69,11 +69,18 @@ for i in "${!MODELS[@]}"; do
   IMG_SIZE=$(docker images --format "{{.Size}}" "ai-publisher-$MODEL:latest")
   echo "👉 Imaj basariyla kaydedildi. Local Boyut: $IMG_SIZE"
   
-  # Faz 4: Google Drive'a Kaydetme ve Sikistirma (Gzip)
+  # Faz 4: Google Drive'a Kaydetme ve Sikistirma (Gzip/Pigz)
   echo "[FAZ 4/5] Imaj Google Drive'a tar.gz olarak kaydediliyor..."
   echo "[INFO] Hedef Dosya: $DRIVE_DIR/$MODEL.tar.gz"
   SAVE_START=$SECONDS
-  docker save "ai-publisher-$MODEL:latest" | gzip > "$DRIVE_DIR/$MODEL.tar.gz"
+  
+  if command -v pigz &> /dev/null; then
+    echo "[INFO] pigz (paralel gzip) bulundu. Cok cekirdekli hizli sikistirma baslatiliyor..."
+    docker save "ai-publisher-$MODEL:latest" | pigz > "$DRIVE_DIR/$MODEL.tar.gz"
+  else
+    echo "[INFO] gzip kullaniliyor (pigz bulunamadi)..."
+    docker save "ai-publisher-$MODEL:latest" | gzip > "$DRIVE_DIR/$MODEL.tar.gz"
+  fi
   
   if [ $? -ne 0 ]; then
     echo "❌ Hata: $MODEL imaji Google Drive'a kaydedilirken sikinti olustu!"

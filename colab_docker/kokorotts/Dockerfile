@@ -7,6 +7,6 @@ RUN pip install --no-cache-dir \
 
 COPY app.py /app/app.py
 WORKDIR /app
-EXPOSE 5011
+EXPOSE 5000
 
 CMD ["python", "app.py"]
