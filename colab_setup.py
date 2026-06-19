@@ -143,10 +143,13 @@ else:
             run_cmd("rm -f registry_2.8.2_linux_amd64.tar.gz")
             run_cmd("chmod +x /usr/local/bin/registry")
             
-        # 2. Kaniko Kurulumu
+        # 2. Kaniko Kurulumu (Docker Imajından Kopyalayarak)
         if not os.path.exists("/usr/local/bin/kaniko"):
-            print("[INFO] Kaniko executor binary indiriliyor...")
-            run_cmd("wget -q https://github.com/GoogleContainerTools/kaniko/releases/latest/download/kaniko-project-executor -O /usr/local/bin/kaniko")
+            print("[INFO] Kaniko executor binary Docker imajından kopyalanıyor...")
+            run_cmd("docker pull gcr.io/kaniko-project/executor:latest")
+            run_cmd("docker create --name kaniko-temp gcr.io/kaniko-project/executor:latest")
+            run_cmd("docker cp kaniko-temp:/kaniko/executor /usr/local/bin/kaniko")
+            run_cmd("docker rm kaniko-temp")
             run_cmd("chmod +x /usr/local/bin/kaniko")
             
         # 3. pigz Kurulumu

@@ -176,4 +176,6 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - [x] **colab_setup.py ve Otomatik Kaniko Entegrasyonu (19 Haziran 2026):**
   - Hücre 1 çalıştırıldığında eksik imaj tespit edilirse, `build_all.sh` tetiklenmeden önce yerel registry ve kaniko binary'lerinin otomatik olarak kurulması ve başlatılması sağlandı. Bu sayede ilk hücre üzerinden de otonom imaj inşası başarıyla tamamlanabilir hale geldi.
   - Colab ortamlarında systemd/sysvinit desteği olmaması sebebiyle `service docker start` / `service docker restart` komutlarının `docker: unrecognized service` hatası vermesi engellendi; `dockerd` daemon'ı doğrudan arka planda parametreleriyle (`dockerd -b none --iptables=0 --storage-driver=vfs`) başlatılarak kararlı hale getirildi. Oturum yenilenmelerinde daemon'ın otomatik yeniden ayağa kaldırılması sağlandı.
+  - Kaniko executor binary'sinin GitHub releases üzerinden indirilirken karşılaşılan 404 (status 8) indirme hatasını çözmek için, binary doğrudan resmi Kaniko Docker imajından (`gcr.io/kaniko-project/executor:latest`) `docker pull` ve `docker cp` komutlarıyla çıkarılarak sisteme yüklendi. Notebook ve setup dosyaları bu doğrultuda güncellendi.
+
 

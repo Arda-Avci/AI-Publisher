@@ -17,7 +17,7 @@ for cell in data.get("cells", []):
         
         has_docker_setup = False
         for line in source:
-            if "docker-buildx" in line or "podman pigz" in line or "Google Colab Kısıtlamaları Nedeniyle" in line:
+            if "docker-buildx" in line or "podman pigz" in line or "Google Colab Kısıtlamaları Nedeniyle" in line or "Kaniko ve Yerel Registry" in line:
                 has_docker_setup = True
                 break
         
@@ -46,10 +46,13 @@ for cell in data.get("cells", []):
                 '  subprocess.run("rm -f registry_2.8.2_linux_amd64.tar.gz", shell=True)\n',
                 '  subprocess.run("chmod +x /usr/local/bin/registry", shell=True)\n',
                 '\n',
-                '# 2. Kaniko İndir ve Kur\n',
+                '# 2. Kaniko İndir ve Kur (Docker Imajından Kopyalayarak)\n',
                 'if not os.path.exists("/usr/local/bin/kaniko"):\n',
-                '  print("[INFO] Kaniko executor binary indiriliyor...")\n',
-                '  subprocess.run("wget -q https://github.com/GoogleContainerTools/kaniko/releases/latest/download/kaniko-project-executor -O /usr/local/bin/kaniko", shell=True)\n',
+                '  print("[INFO] Kaniko executor binary Docker imajından kopyalanıyor...")\n',
+                '  subprocess.run("docker pull gcr.io/kaniko-project/executor:latest", shell=True)\n',
+                '  subprocess.run("docker create --name kaniko-temp gcr.io/kaniko-project/executor:latest", shell=True)\n',
+                '  subprocess.run("docker cp kaniko-temp:/kaniko/executor /usr/local/bin/kaniko", shell=True)\n',
+                '  subprocess.run("docker rm kaniko-temp", shell=True)\n',
                 '  subprocess.run("chmod +x /usr/local/bin/kaniko", shell=True)\n',
                 '\n',
                 '# 3. pigz İndir (paralel gzip sıkıştırma için)\n',
