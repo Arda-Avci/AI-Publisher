@@ -31,9 +31,12 @@ for cell in data.get("cells", []):
                     new_source.append('print("📦 Sistem paketleri (Podman & pigz) kuruluyor...")\n')
                     new_source.append('subprocess.run("apt-get update -q && apt-get install -y -q podman pigz", shell=True, check=True)\n')
                     new_source.append('print("📦 Podman Docker Registry ayarları yapılandırılıyor...")\n')
-                    new_source.append('subprocess.run(\'mkdir -p /etc/containers && echo \\\'unqualified-search-registries = ["docker.io"]\\\' > /etc/containers/registries.conf\', shell=True, check=True)\n')
+                    new_source.append('os.makedirs("/etc/containers", exist_ok=True)\n')
+                    new_source.append('with open("/etc/containers/registries.conf", "w", encoding="utf-8") as f:\n')
+                    new_source.append('    f.write(\'unqualified-search-registries = ["docker.io"]\\n\')\n')
                     new_source.append('print("⚙️ Podman cgroups devre dışı bırakılıyor...")\n')
-                    new_source.append('subprocess.run(\'echo -e "[containers]\\\\ncgroups = \\\\"disabled\\\\"\\\\n\\\\n[engine]\\\\ncgroup_manager = \\\\"cgroupfs\\\\"" > /etc/containers/containers.conf\', shell=True, check=True)\n')
+                    new_source.append('with open("/etc/containers/containers.conf", "w", encoding="utf-8") as f:\n')
+                    new_source.append('    f.write(\'[containers]\\ncgroups = "disabled"\\n\\n[engine]\\ncgroup_manager = "cgroupfs"\\n\')\n')
                     new_source.append('\n')
                     skip_mode = True
                     patched = True
