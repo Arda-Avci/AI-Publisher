@@ -26,24 +26,29 @@ for cell in data.get("cells", []):
             skip_mode = False
             for line in source:
                 if "# 2. Docker ve pigz Kurulumu" in line:
-                    new_source.append(line)
-                    # Add our new block for Podman installation
-                    new_source.append('print("📦 Sistem paketleri (Podman & pigz) kuruluyor...")\n')
-                    new_source.append('subprocess.run("apt-get update -q && apt-get install -y -q podman pigz", shell=True, check=True)\n')
-                    new_source.append('print("📦 Podman Docker Registry ayarları yapılandırılıyor...")\n')
-                    new_source.append('os.makedirs("/etc/containers", exist_ok=True)\n')
-                    new_source.append('with open("/etc/containers/registries.conf", "w", encoding="utf-8") as f:\n')
-                    new_source.append('    f.write(\'unqualified-search-registries = ["docker.io"]\\n\')\n')
-                    new_source.append('print("⚙️ Podman cgroups devre dışı bırakılıyor...")\n')
-                    new_source.append('with open("/etc/containers/containers.conf", "w", encoding="utf-8") as f:\n')
-                    new_source.append('    f.write(\'[containers]\\ncgroups = "disabled"\\n\\n[engine]\\ncgroup_manager = "cgroupfs"\\n\')\n')
-                    new_source.append('\n')
+                    new_source.append('print("==========================================")\n')
+                    new_source.append('print("⚠️ Google Colab Kısıtlamaları Nedeniyle Derleme Yerelleştirildi!")\n')
+                    new_source.append('print("==========================================")\n')
+                    new_source.append('print("Google Colab\'ın güncellenen kernel ve cgroup kısıtlamaları (read-only filesystem)")\n')
+                    new_source.append('print("nedeniyle Docker/Podman derlemeleri Colab üzerinde teknik olarak engellenmektedir.")\n')
+                    new_source.append('print("Bu yüzden kredilerinizin boşa gitmesini önlemek amacıyla derleme süreci tamamen")\n')
+                    new_source.append('print("yerel bilgisayarınıza taşınmıştır.")\n')
+                    new_source.append('print("")\n')
+                    new_source.append('print("👉 ADIM ADIM YEREL DERLEME TALİMATI:")\n')
+                    new_source.append('print("1. Yerel bilgisayarınızda Docker Desktop uygulamasının açık ve çalışır olduğundan emin olun.")\n')
+                    new_source.append('print("2. Windows PowerShell terminalini açıp proje dizinine gidin:")\n')
+                    new_source.append('print("   cd C:\\\\Users\\\\Damla\\\\Proje\\\\AI-Publisher")\n')
+                    new_source.append('print("3. colab_docker/ klasöründeki yerel derleme betiğini çalıştırın:")\n')
+                    new_source.append('print("   .\\\\colab_docker\\\\build_local.ps1")\n')
+                    new_source.append('print("4. Bu betik sırayla tüm model imajlarını yerelde derleyecek, sıkıştıracak ve")\n')
+                    new_source.append('print("   \'colab_docker/dist/\' klasörüne kaydedecektir (Colab kredilerinizden 0 harcama!).")\n')
+                    new_source.append('print("5. Derleme bittiğinde, \'colab_docker/dist/\' içindeki 11 adet \'.tar.gz\' dosyasını")\n')
+                    new_source.append('print("   Google Drive\'ınızdaki \'Colab Notebooks/docker/images/\' dizinine sürükleyip bırakarak yükleyin.")\n')
+                    new_source.append('print("6. Yükleme tamamlandıktan sonra Colab sunucusunu (1. Hücre) normal şekilde başlatabilirsiniz.")\n')
+                    new_source.append('print("==========================================")\n')
                     skip_mode = True
                     patched = True
                     continue
-                
-                if "# 3. Depoyu Klonlama" in line:
-                    skip_mode = False
                 
                 if not skip_mode:
                     new_source.append(line)
