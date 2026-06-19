@@ -115,6 +115,29 @@ for cell in data.get("cells", []):
             ]
             cell["source"] = new_source
             patched = True
+            
+        # Hücre 1 (Ana Sunucu Başlatıcı) hücresini yamalayalım
+        has_server_run = False
+        for line in source:
+            if "repo_url = f\"https://{GITHUB_TOKEN}@github.com/Arda-Avci/AI-Publisher.git\"" in line:
+                has_server_run = True
+                break
+                
+        if has_server_run:
+            has_drive_mount = False
+            for line in source:
+                if "drive.mount" in line:
+                    has_drive_mount = True
+                    break
+            
+            if not has_drive_mount:
+                new_source = []
+                new_source.append("from google.colab import drive\n")
+                new_source.append("drive.mount('/content/drive')\n")
+                new_source.append("\n")
+                new_source.extend(source)
+                cell["source"] = new_source
+                patched = True
 
 if patched:
     with open(notebook_path, "w", encoding="utf-8") as f:

@@ -10,15 +10,12 @@ import subprocess
 import time
 import shutil
 
-# 1. Google Drive Mount
+# 1. Google Drive Mount Kontrolü
 if os.path.exists("/content"):
-    try:
-        from google.colab import drive
-        print("[INFO] Google Drive model/konteyner önbelleği için bağlanıyor...")
-        drive.mount('/content/drive')
-        print("[OK] Google Drive başarıyla bağlandı!")
-    except Exception as drive_e:
-        print(f"[WARN] Google Drive mount edilemedi: {drive_e}")
+    if os.path.exists("/content/drive/MyDrive"):
+        print("[OK] Google Drive bağlı ve erişilebilir!")
+    else:
+        print("[WARN] Google Drive bağlı görünmüyor. Lütfen defter hücresindeki mount onayını verdiğinizden emin olun.")
 
 # 2. Host Sistem Bağımlılıkları (Sadece Flask, Requests, Pyngrok ve OpenCV yeterlidir)
 def run_cmd(cmd, label="", max_retries=3):
