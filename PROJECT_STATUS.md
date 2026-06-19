@@ -179,7 +179,4 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - Kaniko executor binary'sinin GitHub releases üzerinden indirilirken karşılaşılan 404 (status 8) indirme hatasını çözmek için, binary doğrudan resmi Kaniko Docker imajından (`gcr.io/kaniko-project/executor:latest`) `docker pull` ve `docker cp` komutlarıyla çıkarılarak sisteme yüklendi. Notebook ve setup dosyaları bu doğrultuda güncellendi.
   - Yerel registry binary'sinin varsayılan yapılandırma dosyası (`/etc/docker/registry/config.yml`) olmadan serve edildiğinde çökmesi hatası çözüldü; minimal inmemory config dosyası oluşturularak registry bu config ile başlatıldı. Registry başlatılamazsa logları ekrana basarak süreci durduran hata yakalama hattı kuruldu.
   - Google Drive'ın alt süreç (python3 subprocess) içerisinden `drive.mount` ile bağlanmaya çalışıldığında IPython kernel eksikliği kaynaklı `'NoneType' object has no attribute 'kernel'` hatası vermesi engellendi. `colab_setup.py` alt sürecinden mount komutu tamamen kaldırılarak yerine dosya sistemi varlık denetimi yerleştirildi; asıl mount işlemi defterin 1. Hücresinin en üstüne enjekte edilerek ana IPython kernel'ına taşındı.
-
-
-
-
+  - Pytorch taban imajında bulunan ve APT paket kurulumlarında `unknown system group 'messagebus'` hatasıyla inşayı çökerten dpkg statoverride hatası `colab_docker/Dockerfile.base` içerisine `sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true` yaması eklenerek çözüldü, değişiklikler commit edilip pushlandı.
