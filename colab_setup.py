@@ -143,6 +143,25 @@ else:
             run_cmd("rm -f registry_2.8.2_linux_amd64.tar.gz")
             run_cmd("chmod +x /usr/local/bin/registry")
             
+        # Registry için minimal config oluştur
+        os.makedirs("/etc/docker/registry", exist_ok=True)
+        config_content = """version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+"""
+        with open("/etc/docker/registry/config.yml", "w", encoding="utf-8") as cfg_f:
+            cfg_f.write(config_content)
+            
         # 2. Kaniko Kurulumu (Docker Imajından Kopyalayarak)
         if not os.path.exists("/usr/local/bin/kaniko"):
             print("[INFO] Kaniko executor binary Docker imajından kopyalanıyor...")
@@ -158,17 +177,27 @@ else:
         # 4. Registry'yi Arka Planda Başlat
         print("[INFO] Yerel registry baslatiliyor...")
         subprocess.run("pkill -f 'registry serve' || true", shell=True)
-        subprocess.Popen(["/usr/local/bin/registry", "serve"], stdout=open("registry.log", "w"), stderr=subprocess.STDOUT)
+        subprocess.Popen(["/usr/local/bin/registry", "serve", "/etc/docker/registry/config.yml"], stdout=open("registry.log", "w"), stderr=subprocess.STDOUT)
         
         # Registry hazır olmasını bekle
         import urllib.request
-        for _ in range(10):
+        registry_ok = False
+        for _ in range(15):
             try:
                 urllib.request.urlopen("http://localhost:5000/v2/")
                 print("[OK] Registry başarıyla başlatıldı ve yanıt veriyor!")
+                registry_ok = True
                 break
             except Exception:
                 time.sleep(1)
+                
+        if not registry_ok:
+            print("[ERROR] Yerel registry localhost:5000 portunda başlatılamadı!")
+            if os.path.exists("registry.log"):
+                with open("registry.log", "r") as log_f:
+                    print("====== REGISTRY LOGLARI ======")
+                    print(log_f.read())
+            sys.exit(1)
                 
         # 5. build_all.sh yolunu bul
         build_script = "/content/AI-Publisher/colab_docker/build_all.sh"
