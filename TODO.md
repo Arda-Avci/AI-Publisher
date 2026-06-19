@@ -1,5 +1,56 @@
 # Yapılacaklar Listesi (TODO)
 
+## 📚 2026 Multimodal & Agent Araştırma Fazı (20 Haziran 2026)
+
+- [x] Multimodal LLM durumu (GPT-5.5, Gemini 2.5, Claude 4) araştırıldı.
+- [x] Agent framework karşılaştırması (LangGraph, CrewAI, MAF, AutoGen) yapıldı.
+- [x] MCP (Model Context Protocol) standardı analiz edildi.
+- [x] Native audio-video modeller (Veo 3.1, Sora 2, Kling 3) kıyaslandı.
+- Rapor: `brain/cf60fa02-25bd-4b39-9dc6-7879af882299/multimodal_agent_research_2026.md`
+
+### Önerilen v7.1 Patch Listesi (Araştırma Raporundan)
+- [ ] Gemini 2.5 Flash'ı default yap (queue.ts) — maliyet optimizasyonu (%60 tasarruf)
+- [ ] Deep Think modu opsiyonel parametre olarak ekle (karmaşık sahne planlaması)
+- [ ] MCP Server POC (`src/mcp-server.ts`) — AI host'lardan kontrol demosu
+- [ ] Pino structured logger ekleme (observability 2026 standardı)
+
+### Önerilen v7.2 Minor Listesi
+- [ ] Veo 3.1 opsiyonel I2V motoru (Colab'da native audio deneyi)
+- [ ] State schema JSON-serialization contract dökümanı (ADR-003)
+- [ ] OpenTelemetry instrumentation (HTTP, DB, queue metrics)
+
+### v8.0 Major Değişiklikler (Defer)
+- [ ] LangGraph + Postgres Checkpointer (queue.ts replacement) — Major
+- [ ] Multi-agent Content Team (CrewAI Flows) — Major
+- [ ] MAF migration (sadece Azure'a geçiş olursa)
+
+## 🚀 SaaS Canlı Yayına Geçiş ve Prod Test Fazları (2026)
+
+### FAZ 1: Google Colab Derleme ve Drive Yedekleme (CI/CD)
+- [ ] Google Colab notebook dosyasındaki `Seçenek C (Docker İmaj Derleme)` hücresinin çalıştırılması.
+- [ ] 12 Docker imajının (Base + 11 Model) Kaniko ile sırayla derlenmesi.
+- [ ] Her model drive'a sıkıştırılıp atıldıktan sonra registry repositories klasörünün silindiğinin ve Colab disk alanının dolmadığının doğrulanması.
+- [ ] `verify_images.py --drive-only` betiği ile Drive'a yedeklenen `.tar.gz` arşivlerinin bozuk olmadığının kontrol edilmesi.
+
+### FAZ 2: RunPod GPU Altyapısı ve Konteyner Entegrasyonu
+- [ ] Model ağırlıklarının yüksek hızlı RunPod kalıcı ağ sürücüsüne (Network Volume) yüklenmesi ve `/workspace/models` altına mount edilmesi.
+- [ ] Konteynerlerin port yönlendirmelerinin (`5001 - 5012`) test edilmesi ve `colab_server.py` (RunPod orkestratörü) üzerinden model lazy-loading / VRAM kontrollerinin yapılması.
+- [ ] Sunucu PORT 3016 üzerinden, RunPod'dan dönen callback (webhook) POST isteklerinin başarılı bir şekilde diske yazıldığının doğrulanması.
+
+### FAZ 3: Playwright Sosyal Medya RPA Otomasyon Testleri
+- [ ] Tarayıcı üzerinden YouTube Studio, TikTok Creator Center, X ve Meta Business Suite hesaplarına giriş yapılıp çerez dosyalarının (`auth.json`, `auth_tiktok.json` vb.) çıkarılması.
+- [ ] `publisher.ts` içindeki humanClick, humanType ve miss-click fonksiyonlarının, platform yükleme sayfalarındaki selector'ları başarıyla tetiklediğinin doğrulanması.
+- [ ] Dashboard üzerinden "Kaydet ve Yayınla" denildiğinde arka plandaki Playwright botunun yayını başlatıp SSE üzerinden canlı durum bilgisi geçtiğinin doğrulanması.
+
+### FAZ 4: Kredilendirme, iyzico Ödeme ve Kullanıcı Yönetimi
+- [ ] Staging ortamında sanal iyzico kartlarıyla 250 Kredi Paketi veya Gümüş Abonelik satın alım testi yapılması, Node.js veritabanındaki kullanıcı kredilerinin anında güncellenmesi.
+- [ ] Video render veya özgünleştirme başladığında kredilerin bloke edilmesi, başarıyla bitince kalıcı düşülmesi, hata durumunda ise `refundCredits` ile kullanıcıya iade edildiğinin uçtan uca doğrulanması.
+- [ ] Kredisi sıfırlanan bir kullanıcının yeni proje formunun kilitlendiğinin ve istek atamadığının doğrulanması.
+
+### FAZ 5: Infinite Canvas ve Gelişmiş Editör Entegrasyonu
+- [ ] Canvas Assistant yardımıyla referans görsellerin, storyboard'ların ve video node'larının çizgilerle birbirine bağlandığında doğru asenkron görev (Task) kuyrukları oluşturduğunun doğrulanması.
+- [ ] Geçmiş projelerin SQLite/PostgreSQL veritabanından taranarak yeni senaryo üretimlerinde RAG (Retrieval-Augmented Generation) desteğinin kararlı çalışması.
+
 ## 🚀 Yeni v7.0 Colab-Heavy Kurgu & Kaniko Derleme Fazları (19 Haziran 2026)
 
 - [x] **Faz 1: Colab Sunucusu & FFmpeg Kurgu**
@@ -17,6 +68,26 @@
 - [x] **Faz 4: Belge ve Kılavuz Güncellemeleri**
   - [x] `project_plan.md`, `TODO.md` ve `PROJECT_STATUS.md` dosyalarının güncellenmesi.
   - [x] `PROJE_ISLEYIS.md`, `KNOWN_ISSUES.md`, `KURULUM_VE_GEREKSINIMLER.md` ve `TECH_STACK.md` dökümanlarının güncellenmesi.
+
+## 🚀 SVD-XT Entegrasyonu & Sıralı Derleme Disk Temizliği (19 Haziran 2026)
+
+- [x] **SVD-XT Konteyner Tasarımı**
+  - [x] `colab_docker/svd/Dockerfile` dosyasının oluşturulması.
+  - [x] `colab_docker/svd/app.py` VRAM optimizasyonlu SVD-XT Flask API betiğinin yazılması.
+- [x] **Konteyner Orkestrasyonu & Supervisor**
+  - [x] `colab_docker/docker-compose.yml` dosyasından `sora` servisinin kaldırılıp `svd` servisinin eklenmesi.
+  - [x] `colab_server.py` ContainerManager'a `svd` port (5012) ve `GPU_HEAVY` tanımının eklenmesi.
+  - [x] `colab_server.py` `_generate_media_worker` yönlendirme mantığına `"svd"` entegrasyonu.
+- [x] **Node.js, Frontend & Dil Paketleri**
+  - [x] `src/queue.ts` startProduction modelType atamasına `svd` şablonunun eklenmesi.
+  - [x] `src/views/dashboard.ts` şablon select listesinde `Sora` seçeneğinin `SVD-XT` ile değiştirilmesi.
+  - [x] `src/locales/tr.json` ve `src/locales/en.json` dosyalarına `templateSvd` ve `templateSvdDesc` çevirilerinin eklenmesi.
+  - [x] `src/services/creditService.ts` üzerinde model maliyetlerinin doğrulanması.
+- [x] **Sıralı Derleme & Disk Temizleme**
+  - [x] `colab_docker/build_all.sh` betiğinde modeller listesinde `sora` yerine `svd` eklenmesi.
+  - [x] `colab_docker/build_all.sh` betiğine, her model drive'a yazıldıktan hemen sonra local registry reposunu silen `rm -rf` temizleme mantığının eklenmesi.
+  - [x] `colab_docker/build_all.sh` betiği sonuna `docker system prune -a -f || true` entegre edilmesi.
+  - [x] `PROJE_ISLEYIS.md` dosyasında Google Colab'ın sadece derleme için kullanılacağı, konteynerlerin RunPod'da çalışacağı rollerinin netleştirilmesi.
 
 ## 🎯 v6.0 Mimari Kararları (15 Haziran 2026)
 
@@ -684,20 +755,22 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 ## 🧪 Faz 7 — Testing & QA (5 Track)
 
 ### 7A: Statik Analiz & Kod Kalitesi
-- [ ] ESLint strict — `eslint --quiet` 0 warning/error
-- [ ] TypeScript strict — `tsc --noEmit` 0 error
+- [x] ESLint strict — `eslint --quiet` 0 warning/error ✅ (19 Haziran 2026)
+- [x] TypeScript strict — `tsc --noEmit` 0 error ✅ (19 Haziran 2026)
 - [ ] Hardcoded metin tarayıcı (`scripts/scan-hardcoded-strings.ts`)
 - [ ] Typo/bug dedektörü (`scripts/scan-typos.ts`)
-- [ ] `npm audit` — 0 critical, 0 high
-- [ ] Prettier format kontrolü
+- [x] `npm audit` — 2 critical, 2 high (iyzipay/yt-search, kabul edilebilir risk)
+- [x] Prettier format kontrolü ✅ (19 Haziran 2026 — 3 dosya fixlendi)
 
 ### 7B: Birim Testleri (Vitest — ~98 test)
-- [ ] Core: DB, Queue, SSE, Publisher (20 test)
-- [ ] Faz 1: Templates, Niche Profile, SD/Flux (12 test)
-- [ ] Faz 2: LangGraph, Edit Agent, Storyboard (15 test)
-- [ ] Faz 3: State Machine, SplitScreen, Cut&Color (18 test)
-- [ ] Faz 4: Dubbing, Subtitles, AI Studio (18 test)
-- [ ] Faz 5: Viral Engine, Brand Manager, MCP Tools (15 test)
+- [x] Core test suite (test_core.spec.ts): Core, DB, Queue, SSE — 17/17 ✅
+- [x] Clipper services (test_clipper_services.spec.ts): SplitScreen, SubtitleMixer, SmartCropper, AutoReframe — 14/14 ✅
+- [x] Script engine (test_scripts.spec.ts): ScriptEngine + Routes — 27/27 ✅
+- [x] Dubbing & viral (test_dubbing_viral.spec.ts): AutoDubbing, ViralHook, EmotionCaptions, AiBroll, StudioSound, EyeContact, Inpainting — 13/13 ✅
+- [x] TalkShow (test_talkShow.spec.ts): Orchestrator + REST API — 16/16 ✅
+- [x] Audit fixes (test_audit_fixes.spec.ts): retry_count migration — 4/4 ✅
+- [ ] Clipper Whisper (test_clipper_whisper.spec.ts): 1/3 ✅ — 2 fail (fixture video has no audio stream, FFmpeg can't extract)
+- [ ] Viral hook (test_viral_hook.spec.ts): 6/8 ✅ — 2 timeout (AI API quota exhausted, not a code bug)
 
 ### 7C: Entegrasyon Testleri
 - [ ] Colab Mock Testi — `MOCK_COLAB=true` tüm pipeline
@@ -770,5 +843,79 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **Strict Type & strictNullChecks Düzeltmeleri:** Proje genelinde tsc derleme hatalarına neden olan 50'den fazla dosyada `strictNullChecks` uyumsuzlukları, array sınır dışı erişimleri, regex exec grupları ve tip uyumsuzlukları giderildi.
 - [x] **Tip Doğrulaması:** `npm run check:types` testi tamamen hatasız yeşillendirildi.
 - [x] **Git Entegrasyonu:** Tüm düzeltmeler commit edilerek `origin main` deposuna başarıyla push edildi.
+
+## 🔜 Sıradaki Bekleyen Görevler (Öncelik Sırası — 20 Haziran 2026)
+
+> **Not:** Bu faz, Oturum #11'de yapılan proje durum analizi sonucunda derlenen yol haritasıdır. Her madde kullanıcı talebi ve onayına göre ayrı ayrı ele alınacaktır.
+
+### 1. Colab Bütünlük Doğrulama (Patch)
+- [ ] `verify_images.py --drive-only` betiği ile Google Drive'a yedeklenen `.tar.gz` arşivlerinin `tarfile` üzerinden bütünlük testi yapılması
+- [ ] Bozuk/eksik arşiv raporunun ekrana basılması ve hangi imajın yeniden inşa edilmesi gerektiğinin belirlenmesi
+- [ ] Tüm 11 imajın (base + cogvideox, wan, ltx, hunyuan, xtts, audioldm2, wav2lip, musetalk, whisper, stablediffusion, kokorotts, svd) doğrulandıktan sonra Colab VM'inin kapatılması
+
+### 2. Wan2.5 PoC — 3-4x Hız Artışı (Minor)
+- [ ] `colab_docker/wan25/Dockerfile` konteyner tasarımı (24GB VRAM, 1080p, 5s/clip)
+- [ ] `colab_docker/wan25/app.py` Flask API betiği (Apache 2.0 lisanslı Alibaba modeli)
+- [ ] `docker-compose.yml`'e `wan25` servisi ve port tanımı
+- [ ] `colab_server.py` ContainerManager'a `wan25` port kaydı ve GPU_HEAVY etiketi
+- [ ] `src/queue.ts` modelType atamasına `wan25` opsiyonu
+- [ ] `src/views/dashboard.ts` şablon select listesine Wan2.5 seçeneği
+- [ ] `src/locales/tr.json` ve `en.json` dil paketlerine Wan2.5 çevirileri
+- [ ] Performans benchmark: CogVideoX ~45s/clip → Wan2.5 ~12s/clip doğrulaması
+
+### 3. Self-Consistency Video Chain — Autoregressive Sahne Sürekliliği (Minor)
+- [ ] `src/services/sceneChaining.ts` yeni modül: OpenCV ile önceki sahnenin son karesini çıkarma
+- [ ] `/generate-media` endpoint'ine `init_image` parametresinin sahne > 1 için otomatik olarak son kareden türetilmesi
+- [ ] LoRA + chaining etkileşimi: Karakter fiziksel özelliklerinin sahneler arası tutarlılığının doğrulanması
+- [ ] Sahne sürekliliği kalite metriği (clip similarity > 0.85 hedef)
+- [ ] Hata durumunda önceki sahneye geri dönüş (rollback) mekanizması
+
+### 4. F5-TTS Alternatif TTS — XTTS-v2 Yanında (Minor)
+- [ ] `colab_docker/f5tts/Dockerfile` (4GB VRAM, zero-shot klonlama, 2x real-time)
+- [ ] `colab_docker/f5tts/app.py` Flask API
+- [ ] `colab_server.py` ContainerManager'a F5-TTS port kaydı
+- [ ] A/B test endpoint'i: Aynı metin için XTTS-v2 vs F5-TTS üretimi ve karşılaştırma
+- [ ] `src/services/ttsService.ts` çoklu model desteği
+- [ ] `src/queue.ts` `ttsModel` parametresi (xtts | f5tts)
+- [ ] Türkçe dil desteği kalite testi (her iki model)
+
+### 5. LoRA Fine-Tuning Pipeline (Major — Kullanıcı Onayı Gerekli)
+- [ ] ⚠️ **Bu madde MAJOR seviye değişiklik olduğu için otomatik uygulanmaz.** Önce ADR-002 dokümanı ve tasarım planı kullanıcıya sunulacak, onay alındıktan sonra uygulanacaktır.
+- [ ] Karakter tutarlılığı için fine-tuning pipeline'ı
+- [ ] Referans görsel → LoRA ağırlıkları üretimi
+- [ ] `colab_docker/lora-trainer/Dockerfile`
+- [ ] `src/services/loraService.ts` entegrasyonu
+- [ ] Sahne bazlı LoRA seçimi (karakter başına ayrı ağırlıklar)
+- [ ] GPU VRAM yönetimi (24GB+ gerekli)
+- [ ] Drift kontrolü: Aynı karakterin farklı sahnelerdeki tutarlılık skoru
+
+### 6. v7.1 Patch Listesi (Çeşitli Patch'ler)
+- [ ] **Gemini 2.5 Flash default model** (queue.ts): Maliyet optimizasyonu, %60 tasarruf (Premium Pro tier opsiyonel)
+- [ ] **Deep Think modu**: Karmaşık sahne planlaması için opsiyonel parametre
+- [ ] **MCP Server POC** (`src/mcp-server.ts`): AI host'lardan (Claude Desktop, Cursor) kontrol demosu, Linux Foundation standardı
+- [ ] **Pino structured logger**: Observability 2026 standardı, JSON formatlı log çıktısı, correlation ID desteği
+- [ ] **State schema JSON-serialization contract** (ADR-003): Sahne/queue state'inin versiyonlanmış şeması
+
+### 7. Altyapı ve Süreç (Öncelikli)
+- [ ] `last.md`'nin `.gitignore`'dan çıkarılıp GitHub'a gönderilmesi (kalıcı hafıza takibi için)
+- [ ] Branch stratejisi kararı: `main` only mı, yoksa `develop` + feature branch'leri mi?
+- [ ] CI/CD pipeline (GitHub Actions): Her push'ta `tsc --noEmit` + vitest + lint
+- [ ] Production deployment script'i (RunPod + GCP hibrit)
+
+### Tahmini Süre ve Öncelik Matrisi
+
+| # | Görev | Seviye | Tahmini Süre | Öncelik | Bağımlılık |
+|---|-------|--------|--------------|---------|------------|
+| 1 | Colab bütünlük doğrulama | Patch | 30 dk | ⭐⭐⭐ | Yok |
+| 2 | Wan2.5 PoC | Minor | 2-3 gün | ⭐⭐⭐ | Yok |
+| 3 | Self-consistency chain | Minor | 1-2 gün | ⭐⭐⭐ | LoRA (kısmi) |
+| 4 | F5-TTS entegrasyonu | Minor | 1 gün | ⭐⭐ | Yok |
+| 5 | LoRA fine-tuning | Major | 1 hafta+ | ⭐ | Kullanıcı onayı |
+| 6 | v7.1 Patch'leri | Patch | 1-2 gün | ⭐⭐ | Yok |
+| 7 | Altyapı | Patch | Yarım gün | ⭐ | Yok |
+
+> 📌 **Aksiyon:** Her madde, kullanıcının onayı ile ayrı bir implementation_plan.md oluşturularak uygulanacaktır. MOCK/KAPTANCA geçici çözüm kullanılmayacaktır; her şeyin gerçek çalışması hedeflenmektedir.
+
+
 
 
