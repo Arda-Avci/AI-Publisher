@@ -39,25 +39,43 @@ def run_cmd(cmd, label="", max_retries=3):
 if not shutil.which("docker") or not os.path.exists("/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"):
     print("[INFO] Docker ve NVIDIA Container Toolkit kurulumu başlatılıyor...")
     
-    # Docker.io Kurulumu ve Başlatılması
+    # Docker.io Kurulumu
     run_cmd("apt-get update -q && apt-get install -y -q docker.io", label="Docker.io Kurulumu")
-    run_cmd("service docker start", label="Docker Başlatma")
     
-    # NVIDIA Container Toolkit Kurulumu (Konteynerlerin GPU'ya erişebilmesi için)
+    # NVIDIA Container Toolkit Kurulumu
     run_cmd("curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg", label="NVIDIA GPG Anahtarı")
     run_cmd("curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list", label="NVIDIA Repo Listesi")
     run_cmd("apt-get update -q && apt-get install -y -q nvidia-container-toolkit", label="NVIDIA Toolkit Kurulumu")
     
-    # Docker Runtime Yapılandırması ve Yeniden Başlatılması
+    # Docker Runtime Yapılandırması
     run_cmd("nvidia-ctk runtime configure --runtime=docker", label="Docker NVIDIA Yapılandırması")
-    run_cmd("service docker restart", label="Docker Yeniden Başlatma")
+    
+    # Docker Daemon'ı arka planda başlat
+    print("[INFO] Docker Daemon başlatılıyor...")
+    subprocess.run("pkill -9 dockerd || true", shell=True)
+    subprocess.Popen(
+        ["dockerd", "-b", "none", "--iptables=0", "--storage-driver=vfs"],
+        stdout=open("dockerd.log", "w"),
+        stderr=subprocess.STDOUT
+    )
+    
+    # Hazır olmasını bekle
+    docker_ready = False
+    for _ in range(15):
+        res = subprocess.run(["docker", "info"], capture_output=True)
+        if res.returncode == 0:
+            docker_ready = True
+            print("[OK] Docker başarıyla başlatıldı!")
+            break
+        time.sleep(1)
+        
+    if not docker_ready:
+        print("[WARN] Docker daemon henüz tam hazır değil, logları kontrol edin (dockerd.log).")
     
     # Python host kütüphaneleri
     run_cmd("pip install -q flask requests pyngrok opencv-python-headless numpy yt-dlp", label="Host Python Kütüphaneleri")
     
     print("\n" + "="*60)
-    # PyTorch sürüm çakışması olmadığı için kernel restart etmeye gerek olmayabilir, 
-    # ancak temiz bir oturum için kernel'ı sonlandırmak iyi bir pratiktir.
     print("[INFO] Sistem kurulumu tamamlandı. Belleğin yenilenmesi için oturum kapatılıyor...")
     print("👉 Lütfen bu hücreyi TEKRAR ÇALIŞTIRIN.")
     print("="*60 + "\n")
@@ -65,7 +83,31 @@ if not shutil.which("docker") or not os.path.exists("/usr/share/keyrings/nvidia-
     sys.exit(100)
 
 else:
-    print("[OK] Sistem bağımlılıkları ve Docker hazır.")
+    print("[OK] Sistem bağımlılıkları ve Nvidia Toolkit kurulu.")
+    
+    # Docker Daemon'ın çalışıp çalışmadığını kontrol et ve çalışmıyorsa başlat
+    res = subprocess.run(["docker", "info"], capture_output=True)
+    if res.returncode != 0:
+        print("[INFO] Docker Daemon aktif değil, arka planda başlatılıyor...")
+        subprocess.run("pkill -9 dockerd || true", shell=True)
+        subprocess.Popen(
+            ["dockerd", "-b", "none", "--iptables=0", "--storage-driver=vfs"],
+            stdout=open("dockerd.log", "w"),
+            stderr=subprocess.STDOUT
+        )
+        # Hazır olmasını bekle
+        for _ in range(15):
+            res = subprocess.run(["docker", "info"], capture_output=True)
+            if res.returncode == 0:
+                print("[OK] Docker başarıyla başlatıldı!")
+                break
+            time.sleep(1)
+        else:
+            print("[ERROR] Docker Daemon başlatılamadı!")
+            sys.exit(1)
+    else:
+        print("[OK] Docker Daemon zaten aktif.")
+
     
     # Google Drive Konteyner Dizinleri
     DRIVE_DIR = "/content/drive/MyDrive/Colab Notebooks/docker/images"

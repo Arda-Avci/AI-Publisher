@@ -175,3 +175,5 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - `scripts/patch_notebook.py` betiği, Colab hücresine registry ve kaniko binary kurulumlarını programatik olarak enjekte edecek şekilde yeniden düzenlendi ve notebook başarıyla yamalandı.
 - [x] **colab_setup.py ve Otomatik Kaniko Entegrasyonu (19 Haziran 2026):**
   - Hücre 1 çalıştırıldığında eksik imaj tespit edilirse, `build_all.sh` tetiklenmeden önce yerel registry ve kaniko binary'lerinin otomatik olarak kurulması ve başlatılması sağlandı. Bu sayede ilk hücre üzerinden de otonom imaj inşası başarıyla tamamlanabilir hale geldi.
+  - Colab ortamlarında systemd/sysvinit desteği olmaması sebebiyle `service docker start` / `service docker restart` komutlarının `docker: unrecognized service` hatası vermesi engellendi; `dockerd` daemon'ı doğrudan arka planda parametreleriyle (`dockerd -b none --iptables=0 --storage-driver=vfs`) başlatılarak kararlı hale getirildi. Oturum yenilenmelerinde daemon'ın otomatik yeniden ayağa kaldırılması sağlandı.
+
