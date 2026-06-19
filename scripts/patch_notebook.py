@@ -15,13 +15,10 @@ for cell in data.get("cells", []):
     if cell.get("cell_type") == "code":
         source = cell.get("source", [])
         
-        has_docker_setup = False
-        for line in source:
-            if "docker-buildx" in line or "podman pigz" in line or "Google Colab Kısıtlamaları Nedeniyle" in line or "Kaniko ve Yerel Registry" in line:
-                has_docker_setup = True
-                break
+        has_docker_setup = cell.get("metadata", {}).get("id") == "build-docker-images"
         
         if has_docker_setup:
+
             new_source = [
                 '#@title 🛠️ Seçenek C: Tüm Docker İmajlarını İnşa Et (Maliyet Tasarruflu CPU Modu)\n',
                 'GITHUB_TOKEN = "" #@param {type:"string"}\n',
@@ -113,8 +110,12 @@ for cell in data.get("cells", []):
                 'subprocess.run("git pull origin main || true", shell=True)\n',
                 'subprocess.run("chmod +x colab_docker/build_all.sh", shell=True)\n',
                 '\n',
+                '# colab_docker dizinine gir\n',
+                'os.chdir(os.path.join(repo_dir, "colab_docker"))\n',
+                '\n',
                 '# build_all.sh betigini calistir ve anlik ciktiyi al\n',
-                'process = subprocess.Popen(["bash", "colab_docker/build_all.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)\n',
+                'process = subprocess.Popen(["bash", "build_all.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)\n',
+
                 'while True:\n',
                 '  output = process.stdout.readline()\n',
                 '  if output == \'\' and process.poll() is not None:\n',
