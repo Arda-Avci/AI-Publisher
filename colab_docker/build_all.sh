@@ -5,20 +5,44 @@ DRIVE_DIR="/content/drive/MyDrive/Colab Notebooks/docker/images"
 mkdir -p "$DRIVE_DIR"
 
 echo "=========================================="
-echo "🚀 FAZ 1: Base Docker Imajı Insa Ediliyor"
+echo "🚀 FAZ 1: Base Docker Imajı Insa Ediliyor (Kaniko)"
 echo "=========================================="
 START_TIME=$SECONDS
 
+# Local registry running check
+echo "[INFO] Yerel Registry baglantisi test ediliyor (localhost:5000)..."
+curl -s -f http://localhost:5000/v2/ > /dev/null
+if [ $? -ne 0 ]; then
+  echo "❌ Hata: Yerel registry localhost:5000 adresinde calismiyor!"
+  exit 1
+fi
+echo "👉 Yerel registry aktif."
+
 if [ -f "Dockerfile.base" ]; then
-  echo "[INFO] Dockerfile.base bulundu. Insa basliyor..."
-  podman build --dns=8.8.8.8 --network=host -t ai-publisher-base:latest -f Dockerfile.base .
+  echo "[INFO] Dockerfile.base bulundu. Kaniko ile insa basliyor..."
+  
+  kaniko --context=. \
+         --dockerfile=Dockerfile.base \
+         --destination=localhost:5000/ai-publisher-base:latest \
+         --tarPath=base.tar \
+         --whitelist-var-run=false \
+         --ignore-var-run \
+         --snapshot-mode=redo
   
   if [ $? -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
-    SIZE=$(podman images --format "{{.Size}}" ai-publisher-base:latest)
     echo "✅ Base Docker Imajı basariyla olusturuldu."
-    echo "[INFO] Imaj Boyutu: $SIZE"
     echo "[INFO] Insa Suresi: ${DURATION}s"
+    
+    # Sıkıştırma ve Drive'a yazma
+    echo "[INFO] Base imaji Drive'a kopyalaniyor..."
+    if command -v pigz &> /dev/null; then
+      pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
+    else
+      gzip -c base.tar > "$DRIVE_DIR/base.tar.gz"
+    fi
+    rm -f base.tar
+    echo "✅ Base imaji Drive'a kaydedildi."
   else
     echo "❌ Base Docker Imajı insa edilirken hata olustu!"
     exit 1
@@ -43,7 +67,7 @@ for i in "${!MODELS[@]}"; do
   MODEL_START=$SECONDS
   
   # Faz 1: Klasör ve Dockerfile Doğrulama
-  echo "[FAZ 1/5] Klasor ve Dockerfile dogrulaniyor..."
+  echo "[FAZ 1/4] Klasor ve Dockerfile dogrulaniyor..."
   if [ ! -d "$MODEL" ]; then
     echo "❌ Hata: '$MODEL' dizini bulunamadi!"
     continue
@@ -54,55 +78,55 @@ for i in "${!MODELS[@]}"; do
   fi
   echo "👉 Dogrulama basarili."
   
-  # Faz 2: Docker Build Baslatma
-  echo "[FAZ 2/5] Docker imaji insa ediliyor (ai-publisher-$MODEL:latest)..."
-  podman build --dns=8.8.8.8 --network=host -t "ai-publisher-$MODEL:latest" -f "$MODEL/Dockerfile" "$MODEL/"
+  # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
+  echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
+  sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
   
-  if [ $? -ne 0 ]; then
+  # Faz 3: Kaniko Build
+  echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
+  
+  kaniko --context="$MODEL/" \
+         --dockerfile="$MODEL/Dockerfile" \
+         --destination="localhost:5000/ai-publisher-$MODEL:latest" \
+         --tarPath="$MODEL.tar" \
+         --insecure \
+         --skip-tls-verify \
+         --whitelist-var-run=false \
+         --ignore-var-run \
+         --snapshot-mode=redo
+  
+  BUILD_STATUS=$?
+  
+  # Dockerfile'ı eski haline geri döndür
+  sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  
+  if [ $BUILD_STATUS -ne 0 ]; then
     echo "❌ Hata: $MODEL imaji insa edilemedi!"
+    rm -f "$MODEL.tar"
     continue
   fi
   echo "👉 Insa tamamlandi."
   
-  # Faz 3: Imaj Boyutu Olcumu
-  echo "[FAZ 3/5] Imaj boyutu hesaplaniyor..."
-  IMG_SIZE=$(podman images --format "{{.Size}}" "ai-publisher-$MODEL:latest")
-  echo "👉 Imaj basariyla kaydedildi. Local Boyut: $IMG_SIZE"
-  
-  # Faz 4: Google Drive'a Kaydetme ve Sikistirma (Gzip/Pigz)
-  echo "[FAZ 4/5] Imaj Google Drive'a tar.gz olarak kaydediliyor..."
-  echo "[INFO] Hedef Dosya: $DRIVE_DIR/$MODEL.tar.gz"
+  # Faz 4: Sıkıştırma ve Drive'a yazma
+  echo "[FAZ 4/4] Imaj sıkıştırılıp Drive'a kaydediliyor..."
   SAVE_START=$SECONDS
   
   if command -v pigz &> /dev/null; then
-    echo "[INFO] pigz (paralel gzip) bulundu. Cok cekirdekli hizli sikistirma baslatiliyor..."
-    podman save --format=docker-archive "ai-publisher-$MODEL:latest" | pigz > "$DRIVE_DIR/$MODEL.tar.gz"
+    pigz -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
   else
-    echo "[INFO] gzip kullaniliyor (pigz bulunamadi)..."
-    podman save --format=docker-archive "ai-publisher-$MODEL:latest" | gzip > "$DRIVE_DIR/$MODEL.tar.gz"
+    gzip -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
   fi
   
-  if [ $? -ne 0 ]; then
-    echo "❌ Hata: $MODEL imaji Google Drive'a kaydedilirken sikinti olustu!"
+  SAVE_STATUS=$?
+  rm -f "$MODEL.tar"
+  
+  if [ $SAVE_STATUS -ne 0 ]; then
+    echo "❌ Hata: $MODEL imaji kaydedilirken sıkıştırma sorunu oluştu!"
     continue
   fi
-  SAVE_DURATION=$((SECONDS - SAVE_START))
-  echo "👉 Sikistirma ve kaydetme tamamlandi. Suresi: ${SAVE_DURATION}s"
   
-  # Faz 5: Google Drive Dogrulamasi
-  echo "[FAZ 5/5] Google Drive dosyasi dogrulaniyor..."
-  if [ -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
-    FILE_SIZE=$(du -h "$DRIVE_DIR/$MODEL.tar.gz" | cut -f1)
-    echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
-    echo "[INFO] Drive Dosya Boyutu: $FILE_SIZE"
-    
-    # Disk temizliği: Yerel docker imajını silelim ki Colab diski dolmasın
-    echo "[INFO] Disk alani kazanmak icin yerel imaj temizleniyor..."
-    podman rmi "ai-publisher-$MODEL:latest"
-    podman image prune -f
-  else
-    echo "❌ Hata: Olusturulan dosya Google Drive'da bulunamadi!"
-  fi
+  SAVE_DURATION=$((SECONDS - SAVE_START))
+  echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
   
   MODEL_DURATION=$((SECONDS - MODEL_START))
   echo "⏱️ Toplam Islem Suresi ($MODEL): ${MODEL_DURATION}s"
@@ -112,4 +136,3 @@ echo ""
 echo "=========================================="
 echo "🎉 Tum Docker imajlari insa edildi ve Google Drive'a kaydedildi!"
 echo "=========================================="
-

@@ -166,3 +166,12 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - `colab_docker/build_all.sh` betiğindeki derleme adımları `podman build --isolation=chroot` parametresiyle güncellendi. Chroot izolasyonu host cgroup'unu aynen kullandığı ve alt-cgroup oluşturmaya teşebbüs etmediği için cgroup yetki hataları tamamen bypass edildi.
   - Chroot ortamındaki internet/DNS erişim engellerini (`apt-get update` DNS çözümleme hataları) aşmak için podman derleme parametrelerine `--dns=8.8.8.8` entegrasyonu sağlandı.
   - `patch_notebook.py` betiği sadeleştirilerek Docker Daemon (`dockerd`) kurulumu ve başlatma adımları kaldırıldı; sadece `podman` ve `pigz` kurulması sağlandı. `Google_Colab_AI_Publisher.ipynb` bu betikle başarıyla yamalandı ve uzak depoya pushlandı.
+- [x] **Yerel Docker Derleme Altyapısına Geçiş Denemesi (19 Haziran 2026):**
+  - Colab kredilerini korumak amacıyla yerel PowerShell derleme alternatifi kuruldu fakat kullanıcının yerel Docker çalıştıramaması sebebiyle Colab'a geri dönüldü.
+- [x] **Google Colab Kaniko ve Yerel Registry ile Docker Derleme Altyapısı (19 Haziran 2026):**
+  - Colab VM üzerindeki cgroup read-only kısıtlamalarını (`runc cgroup.subtree_control` hatası) aşmak için Google Kaniko (daemonless / user-space build tool) mimarisine geçiş yapıldı.
+  - Modeller arası `FROM ai-publisher-base:latest` bağımlılığını sürdürmek için Colab VM'i üzerinde arka planda hafif Go-tabanlı Docker Registry (`localhost:5000`) ayağa kaldırıldı.
+  - `colab_docker/build_all.sh` betiği tamamen Kaniko ve local registry tabanlı olarak güncellendi.
+  - `scripts/patch_notebook.py` betiği, Colab hücresine registry ve kaniko binary kurulumlarını programatik olarak enjekte edecek şekilde yeniden düzenlendi ve notebook başarıyla yamalandı.
+
+
