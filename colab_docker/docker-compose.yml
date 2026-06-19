@@ -381,6 +381,31 @@ services:
     networks:
       - ai-pub-net
 
+  # ── LoRA Fine-Tuning ────────────────────────────────────
+  lora-trainer:
+    build: ./lora-trainer
+    image: ai-publisher-lora-trainer:latest
+    container_name: ai-pub-lora-trainer
+    ports:
+      - "5016:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
 
 networks:
   ai-pub-net:

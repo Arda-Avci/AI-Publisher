@@ -694,6 +694,25 @@ async function startProduction(job: VideoJob) {
           }
         }
 
+        // LoRA: load character weights if enabled
+        let loraWeightsPath = '';
+        if (job.lora_enabled && scene.speaker) {
+          try {
+            const row: any = await db.get(
+              `SELECT weights_path FROM character_lora_weights
+               WHERE job_id = ? AND character_name = ? AND training_status = 'completed'
+               ORDER BY created_at DESC LIMIT 1`,
+              [job.id, scene.speaker],
+            );
+            if (row?.weights_path) {
+              loraWeightsPath = row.weights_path;
+              Logger.info(`[LoRA] Using weights for character "${scene.speaker}"`, { weightsPath: row.weights_path });
+            }
+          } catch (e) {
+            Logger.warn(`[LoRA] No weights found for character "${scene.speaker}", proceeding without LoRA`, e);
+          }
+        }
+
         let modelType = 'CogVideoX-5b';
         if (job.production_template === 'cinematic') {
           modelType = 'HunyuanVideo';
@@ -839,6 +858,7 @@ async function startProduction(job: VideoJob) {
               callback_url: process.env.PUBLIC_URL
                 ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
                 : `http://localhost:${process.env.PORT || 4000}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`,
+              lora_weights_path: loraWeightsPath,
             },
             { timeout: 600000 },
           );

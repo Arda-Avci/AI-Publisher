@@ -344,5 +344,11 @@
   "login": "Giriş Yap",
   "loginServerError": "Sunucu hatası.",
   "loginSubtitle": "Sosyal medya için AI video üretim platformu",
-  "languageToggleEN": "🇬🇧 English"
+  "languageToggleEN": "🇬🇧 English",
+  "loraEnabled": "Karakter Sabitliği (LoRA)",
+  "loraEnabledHint": "Referans görsellerle karakter yüzünü sabitler, sahneler arası drift önlenir",
+  "characterImages": "Karakter Referans Görselleri",
+  "characterImagesHint": "En az 3 farklı açıdan karakter yüzü (JPG/PNG)",
+  "loraTraining": "Karakter Eğitimi Başladı",
+  "loraTrainingProgress": "Karakter: {{name}} — Eğitim: %{{percent}}"
 }

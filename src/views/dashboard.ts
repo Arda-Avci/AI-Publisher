@@ -1140,6 +1140,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <input type="file" name="material" class="form-input" accept="image/*" style="padding: 0.5rem;">
                 </div>
               </div>
+              <div class="option-group">
+                <label>${t.characterImages}</label>
+                <span class="hint">${t.characterImagesHint}</span>
+                <input type="file" id="characterImages" name="character_images" accept="image/*" multiple>
+              </div>
               <div class="form-grid-2">
                 <div>
                   <label class="form-label">Arka Plan Müziği (Background Music)</label>
@@ -1185,6 +1190,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     <input type="checkbox" name="deep_think" value="1">
                     🧠 ${t.deepThink}
                     <small style="display:block;opacity:0.6;font-size:0.6rem;margin-top:2px;">${t.deepThinkHint}</small>
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="lora_enabled" value="1">
+                    🎭 ${t.loraEnabled}
+                    <small style="display:block;opacity:0.6;font-size:0.6rem;margin-top:2px;">${t.loraEnabledHint}</small>
                   </label>
                 </div>
               </div>

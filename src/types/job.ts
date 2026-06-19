@@ -89,6 +89,9 @@
   viral_hook_enabled?: number;
   broll_enabled?: number;
   emotion_captions?: number;
+
+  // LoRA fine-tuning
+  lora_enabled?: number;
 }
 
 export interface VideoScene {

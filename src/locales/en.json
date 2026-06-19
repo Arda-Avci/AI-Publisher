@@ -344,5 +344,11 @@
   "login": "Sign In",
   "loginServerError": "Server error.",
   "loginSubtitle": "AI video production for social media",
-  "languageToggleEN": "🇹🇷 Türkçe"
+  "languageToggleEN": "🇹🇷 Türkçe",
+  "loraEnabled": "Character Consistency (LoRA)",
+  "loraEnabledHint": "Stabilizes character face across scenes using reference images",
+  "characterImages": "Character Reference Images",
+  "characterImagesHint": "At least 3 different angles of character face (JPG/PNG)",
+  "loraTraining": "Character Training Started",
+  "loraTrainingProgress": "Character: {{name}} — Training: %{{percent}}"
 }

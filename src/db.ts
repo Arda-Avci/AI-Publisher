@@ -433,6 +433,23 @@ export async function initDatabase() {
     'ALTER TABLE characters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
   );
 
+  // LoRA fine-tuning tables
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS character_lora_weights (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES video_jobs(id) ON DELETE CASCADE,
+      character_name TEXT NOT NULL,
+      weights_path TEXT NOT NULL,
+      training_status TEXT DEFAULT 'pending',
+      error_message TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS lora_enabled INTEGER DEFAULT 0;",
+  );
+
   // Sprint 3.B Talk-Show character extensions
   await db.exec(
     "ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(20) DEFAULT 'zen'",

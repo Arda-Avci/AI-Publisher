@@ -18,11 +18,11 @@ REQUIRED_IMAGES = [
     "cogvideox", "wan", "ltx", "hunyuan",
     "xtts", "audioldm2", "wav2lip", "musetalk",
     "whisper", "stablediffusion", "kokorotts", "svd",
-    "wan25", "f5tts"
+    "wan25", "f5tts", "lora-trainer"
 ]
 
 # GPU konteynerleri (T4 VRAM sınırlaması)
-GPU_HEAVY = {"cogvideox", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "wan25", "f5tts"}
+GPU_HEAVY = {"cogvideox", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "wan25", "f5tts", "lora-trainer"}
 
 drive_only = "--drive-only" in sys.argv
 

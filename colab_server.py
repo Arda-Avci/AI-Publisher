@@ -93,11 +93,12 @@ class ContainerManager:
         "svd": 5012,
         "animatediff": 5013,
         "wan25": 5014,
-        "f5tts": 5015
+        "f5tts": 5015,
+        "lora-trainer": 5016
     }
     
     # GPU-heavy containers: only one can run at a time (T4 VRAM limit)
-    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts"]
+    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts", "lora-trainer"]
     
     # CPU-only containers: can run concurrently, no GPU reservation needed
     CPU_ONLY = ["whisper", "kokorotts"]
@@ -533,6 +534,26 @@ def _generate_media_worker(task_id, data):
             print(f"❌ Base64 decode failed: {exc}")
             image_path = None
 
+    # 0. LoRA INFERENCE: generate character-consistent init image if weights provided
+    lora_weights_path = data.get("lora_weights_path", "")
+    if lora_weights_path:
+        _update_task(task_id, stage="lora_injection", stagePercent=12, message="Karakter referansı LoRA ile oluşturuluyor...")
+        try:
+            lora_url = container_manager.ensure_container("lora-trainer")
+            lora_image_path = f"/content/lora_scene_{scene_number}_init.jpg"
+            res = requests.post(f"{lora_url}/infer", json={
+                "weights_path": lora_weights_path,
+                "prompt": final_prompt,
+                "output_path": lora_image_path
+            }, timeout=120).json()
+            if res.get("status") == "success" and os.path.exists(lora_image_path):
+                image_path = lora_image_path
+                print(f"[SUPERVISOR] LoRA image generated for scene {scene_number}")
+            else:
+                print(f"[SUPERVISOR] LoRA inference returned non-success: {res}")
+        except Exception as exc:
+            print(f"[SUPERVISOR] LoRA injection failed (falling back to default init): {exc}")
+
     # 1. VIDEO GENERATION (Proxy to the chosen video container)
     model_lower = video_model.lower()
     if "wan25" in model_lower or "wan2.5" in model_lower:
@@ -837,6 +858,62 @@ def generate_media():
     thread = threading.Thread(target=_generate_media_worker_with_callback, args=(task_id, data))
     thread.start()
     return jsonify({"status": "accepted", "task_id": task_id, "message": "İş kuyruğa alındı."}), 202
+
+@app.route("/api/v1/lora/train", methods=["POST"])
+def lora_train():
+    global last_activity_time
+    last_activity_time = time.time()
+
+    data = request.get_json(force=True) or {}
+    job_id = data.get("job_id")
+    character_name = data.get("character_name", "character")
+    image_paths = data.get("image_paths", [])
+    callback_url = data.get("callback_url", "")
+
+    if not image_paths:
+        return jsonify({"status": "error", "message": "image_paths required"}), 400
+
+    task_id = str(uuid.uuid4())
+    TASKS[task_id] = {"status": "processing", "stage": "lora_training", "stagePercent": 0}
+
+    def _train_worker(tid, params):
+        try:
+            TASKS[tid]["stagePercent"] = 5
+            TASKS[tid]["message"] = "LoRA eğitimi başlatılıyor..."
+            url = container_manager.ensure_container("lora-trainer")
+            res = requests.post(f"{url}/train", json=params, timeout=600).json()
+            if res.get("status") == "success":
+                TASKS[tid] = {
+                    "status": "success",
+                    "stage": "lora_training_complete",
+                    "stagePercent": 100,
+                    "message": "LoRA eğitimi tamamlandı",
+                    "weights_path": res.get("weights_path"),
+                    "steps_completed": res.get("steps_completed", 0)
+                }
+                if callback_url:
+                    try:
+                        requests.post(callback_url, json={
+                            "task_id": tid, "job_id": job_id,
+                            "status": "success", "type": "lora",
+                            "weights_path": res.get("weights_path"),
+                            "steps_completed": res.get("steps_completed")
+                        }, timeout=30)
+                    except Exception:
+                        pass
+            else:
+                TASKS[tid] = {"status": "error", "stage": "lora_training_failed", "message": res.get("message", "LoRA training failed")}
+        except Exception as e:
+            TASKS[tid] = {"status": "error", "stage": "lora_training_failed", "message": str(e)}
+
+    thread = threading.Thread(target=_train_worker, args=(task_id, {
+        "job_id": job_id,
+        "character_name": character_name,
+        "image_paths": image_paths,
+        "output_dir": f"/content/lora_weights/{job_id}"
+    }))
+    thread.start()
+    return jsonify({"status": "accepted", "task_id": task_id}), 202
 
 @app.route("/status/<task_id>", methods=["GET"])
 def task_status(task_id):
