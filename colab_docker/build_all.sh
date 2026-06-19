@@ -16,9 +16,12 @@ if [ $? -ne 0 ]; then
   echo "❌ Hata: Yerel registry localhost:5000 adresinde calismiyor!"
   exit 1
 fi
-echo "👉 Yerel registry aktif."
+echo "[DEBUG] pwd: $(pwd)"
+echo "[DEBUG] listing files:"
+ls -la
 
 if [ -f "Dockerfile.base" ]; then
+
   echo "[INFO] Dockerfile.base bulundu. Kaniko ile insa basliyor..."
   
   kaniko --context=. \
