@@ -38,6 +38,7 @@ Wav2Lip/
 !TECH_STACK.md
 !KURULUM_VE_GEREKSINIMLER.md
 !KNOWN_ISSUES.md
+!last.md
 *.txt
 !requirements.txt
 *.log

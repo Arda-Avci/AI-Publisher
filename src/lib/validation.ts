@@ -76,7 +76,7 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
 
   // tts_provider: optional, string, enum: xtts, openai, edge
   if (tts_provider) {
-    const validTts = ['xtts', 'openai', 'edge'];
+    const validTts = ['xtts', 'openai', 'edge', 'f5tts'];
     if (typeof tts_provider !== 'string' || !validTts.includes(tts_provider)) {
       errors.push({ field: 'tts_provider', message: 'Geçersiz TTS sağlayıcısı.' });
     }
@@ -103,7 +103,7 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
 
   // production_template: optional, string, enum: cinematic, dynamic, simple
   if (body.production_template) {
-    const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar'];
+    const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar', 'animatediff', 'svd', 'wan25', 'cogvideox5b', 'cogvideox2b'];
     if (
       typeof body.production_template !== 'string' ||
       !validTemplates.includes(body.production_template)

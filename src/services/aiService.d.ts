@@ -47,7 +47,7 @@ export declare function generateMarketingCopy(transcript: string): Promise<{
         metaTags: string;
     };
 }>;
-export declare function generateStudioScenes(job: any): Promise<{
+export declare function generateStudioScenes(job: any, deepThink?: boolean): Promise<{
     scenes: {
         sceneNumber: number;
         videoPrompt: string;

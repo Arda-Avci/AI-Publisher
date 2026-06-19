@@ -5,7 +5,11 @@ import { FIXTURES } from './__fixtures__/index.js';
 
 import { detectBPM, findBeatPeaks, buildBeatMarkers } from './services/beatAnalyzer.js';
 import { applyBeatSync, applyBeatSyncCuts } from './services/beatSyncEditor.js';
-import { parseTranscriptEdits, findWordTimestamps, assembleVideoSegments } from './services/transcriptEditor.js';
+import {
+  parseTranscriptEdits,
+  findWordTimestamps,
+  assembleVideoSegments,
+} from './services/transcriptEditor.js';
 import { autoCutVideo, detectMotionLevels } from './services/autoEditor.js';
 import { applyLUT, applyColorGrade } from './services/colorGrader.js';
 
@@ -120,9 +124,7 @@ describe('TranscriptEditor', () => {
 describe('AutoEditor', () => {
   describe('autoCutVideo()', () => {
     it('should extract audio and detect silence', async () => {
-      await expect(
-        autoCutVideo(FIXTURES.video, { aggressive: false }),
-      ).resolves.toBeDefined();
+      await expect(autoCutVideo(FIXTURES.video, { aggressive: false })).resolves.toBeDefined();
     }, 30000);
   });
 
@@ -137,9 +139,7 @@ describe('AutoEditor', () => {
 describe('ColorGrader', () => {
   describe('applyLUT()', () => {
     it('should call runInWorker with LUT filter', async () => {
-      await expect(
-        applyLUT(FIXTURES.video, FIXTURES.lut, outputPath()),
-      ).resolves.toBeUndefined();
+      await expect(applyLUT(FIXTURES.video, FIXTURES.lut, outputPath())).resolves.toBeUndefined();
     }, 30000);
 
     it('should throw when LUT file not found', async () => {
@@ -152,9 +152,7 @@ describe('ColorGrader', () => {
   describe('applyColorGrade()', () => {
     it('should complete with preset grade', async () => {
       const grade = { type: 'preset' as const, preset: 'warm' as const };
-      await expect(
-        applyColorGrade(FIXTURES.video, grade, outputPath()),
-      ).resolves.toBeUndefined();
+      await expect(applyColorGrade(FIXTURES.video, grade, outputPath())).resolves.toBeUndefined();
     }, 30000);
   });
 });

@@ -17,11 +17,12 @@ DRIVE_DIR = "/content/drive/MyDrive/Colab Notebooks/docker/images"
 REQUIRED_IMAGES = [
     "cogvideox", "wan", "ltx", "hunyuan",
     "xtts", "audioldm2", "wav2lip", "musetalk",
-    "whisper", "stablediffusion", "kokorotts"
+    "whisper", "stablediffusion", "kokorotts", "svd",
+    "wan25", "f5tts"
 ]
 
 # GPU konteynerleri (T4 VRAM sınırlaması)
-GPU_HEAVY = {"cogvideox", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan"}
+GPU_HEAVY = {"cogvideox", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "wan25", "f5tts"}
 
 drive_only = "--drive-only" in sys.argv
 

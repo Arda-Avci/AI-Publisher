@@ -10,4 +10,4 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
 
-// axios çağrılarını mock'layalım
+// axios çağrılarını mock'layalım

@@ -18,12 +18,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
       req.originalUrl.startsWith('/differentiate-status') ||
       req.originalUrl.startsWith('/opportunity-videos')
     ) {
-      res
-        .status(401)
-        .json({
-          success: false,
-          error: 'Oturum süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.',
-        });
+      res.status(401).json({
+        success: false,
+        error: 'Oturum süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.',
+      });
     } else {
       res.redirect('/login');
     }

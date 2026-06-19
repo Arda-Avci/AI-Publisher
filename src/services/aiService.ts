@@ -1,4 +1,4 @@
-import { getAIModelChain } from '../lib/ai-provider.js';
+import { getAIModelChain, getObjectModelChain, getDeepThinkModel } from '../lib/ai-provider.js';
 import { generateObject } from 'ai';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { z } from 'zod';
@@ -44,7 +44,7 @@ export const MarketingSchema = z.object({
 });
 
 export async function generateMarketingCopy(transcript: string) {
-  const models = getAIModelChain();
+  const models = getObjectModelChain();
   const result = await withFallbackAndRetry(
     (model) => {
       const isMinimax = model.modelId && model.modelId.includes('MiniMax');
@@ -80,8 +80,8 @@ Görevlerin:
   return result.object;
 }
 
-export async function generateStudioScenes(job: any) {
-  const models = getAIModelChain();
+export async function generateStudioScenes(job: any, deepThink?: boolean) {
+  const models = deepThink ? [getDeepThinkModel()] : getObjectModelChain();
 
   // Eğer iş akışında transkript varsa (Phase 1 yapılmışsa) ana referans metnimiz budur.
   const transcriptText =

@@ -18,7 +18,7 @@ graph TD
 ```
 
 1.  **Beyin (Host Sunucu - 7/24 Aktif):** Web arayüzünü, veritabanını (SQLite/PostgreSQL) ve Redis (SSE Durum) katmanlarını yönetir. Gemini API ve Zen modelleri ile master promptları sahnelere ve pazarlama metinlerine böler. Ağır video render ve FFmpeg işlemleriyle uğraşmaz, sadece orkestratör olarak çalışır.
-2.  **Kas (İşçi - Google Colab / RunPod L4 GPU):** Yapay zeka modellerini (CogVideoX, XTTS, AudioLDM2) barındırır. İş geldiğinde uyanır, video sentezi, altyazı gömme, logo yerleştirme, renk derecelendirme ve ses miksleme adımlarını GPU gücüyle kendi lokal NVMe diskinde tamamlayıp webhook ile Node.js'e bildirir.
+2.  **Kas (İşçi - RunPod GPU Cloud):** Yapay zeka modellerini (CogVideoX, XTTS, AudioLDM2, SVD-XT vb.) barındıran Docker konteynerlerini çalıştırır. Video sentezi, altyazı gömme, logo yerleştirme, renk derecelendirme ve ses miksleme adımlarını tamamen RunPod üzerinde gerçekleştirip webhook ile Node.js'e bildirir. Google Colab sunucusu ise asıl üretimde kullanılmaz, sadece Docker Compose derleme (CI/CD) ve Google Drive'a imaj yedekleme işlemleri için kullanılır.
 3.  **Depo (Backblaze B2 - S3 Uyumlu):** Terabayt başına aylık ~$6.95 maliyetiyle videoları saklar. Kullanıcıların tarayıcıları videoları doğrudan buradan stream eder.
 
 ---
@@ -58,10 +58,10 @@ Bu JSON buluttaki Süper-İşçi'ye gönderilir. Süper-İşçi içindeki FFmpeg
 
 ## 📦 3. "Süper-İşçi" (All-in-One Worker) Docker Optimizasyonu
 
-Ağır kütüphanelerin (PyTorch, CUDA, Whisper, FFmpeg) ve model ağırlıklarının (CogVideo, SVD, XTTS) tek bir Docker imajına gömülmesi imaj boyutunu 15-20 GB seviyesine çıkarır. Bu durum "Cold Start" (ilk açılış) süresini uzatır. Bunu aşmak için:
+Ağır kütüphanelerin (PyTorch, CUDA, Whisper, FFmpeg) ve model ağırlıklarının (CogVideo, SVD, vb.) tek bir Docker imajına gömülmesi imaj boyutunu 15-20 GB seviyesine çıkarır ve "Cold Start" (ilk açılış) süresini uzatır. Bunu aşmak için:
 
 *   **Kod ve Ağırlıklar Ayrılmıştır:** Docker imajı sadece CUDA runtime, FFmpeg, Python ve PIP paketlerini içerir (Boyut: ~6-8 GB). Base image olarak `nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04` kullanılır.
-*   **Network Volume Mount:** Model ağırlıkları RunPod veya Google Drive üzerindeki kalıcı bir alanda tutulur. Konteyner ayağa kalkarken `/workspace/models` patikasına mount edilir. Python kodu modelleri internetten çekmek yerine bu hızlı disk yolundan saniyeler içinde VRAM'e yükler.
+*   **RunPod Network Volume:** Model ağırlıkları RunPod üzerindeki yüksek hızlı kalıcı ağ sürücüsünde (Network Volume) tutulur. Konteyner ayağa kalkarken bu sürücü `/workspace/models` patikasına mount edilir. Python kodu, modelleri doğrudan bu yerel disk patikasından okuyarak saniyeler içinde VRAM'e yükler.
 
 ---
 

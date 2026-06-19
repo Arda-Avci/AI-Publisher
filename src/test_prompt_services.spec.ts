@@ -7,7 +7,11 @@ import {
 } from './services/aiService.js';
 
 describe('Prompt and Theme Services Tests', () => {
-  const hasKeys = !!(process.env.GEMINI_API_KEY || process.env.MINIMAX_API_KEY || process.env.ZEN_API_KEY);
+  const hasKeys = !!(
+    process.env.GEMINI_API_KEY ||
+    process.env.MINIMAX_API_KEY ||
+    process.env.ZEN_API_KEY
+  );
 
   it('should enhance user prompt correctly', async () => {
     if (!hasKeys) return;

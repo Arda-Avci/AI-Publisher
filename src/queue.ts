@@ -9,7 +9,6 @@ import {
   getOrBuildEndScreen,
   applyVideoDifferentiationFilters,
   concatVideosWithCrossfade,
-  extractLastFrame,
   convertSrtToKineticAss,
   applyColorGradeFilter,
 } from './services/videoService.js';
@@ -48,9 +47,9 @@ function broadcast(jobId: number, data: object) {
 
 // S6: export broadcast so background tasks (e.g. publish uploads) can
 // push SSE events to the browser without holding the HTTP request open.
-export { broadcast };
+export { broadcast, checkQueue };
 
-export async function checkQueue() {
+async function checkQueue() {
   if (isProcessing) {
     Logger.info('checkQueue: zaten işleniyor, bekleniyor');
     return;
@@ -217,7 +216,7 @@ async function startProduction(job: VideoJob) {
         } else {
           Logger.info('[PRODUCTION] Calling AI generateStudioScenes...');
           try {
-            object = await generateStudioScenes(job);
+            object = await generateStudioScenes(job, job.deep_think === 1);
             Logger.info('[PRODUCTION] AI generateStudioScenes succeeded', {
               sceneCount: object.scenes.length,
             });
@@ -641,9 +640,9 @@ async function startProduction(job: VideoJob) {
         }
 
         const finalCharacterFeatures = job.character_features;
-        const finalPrompt = (finalCharacterFeatures
-          ? `${finalCharacterFeatures}, ${customPrompt}`
-          : customPrompt) || '';
+        const finalPrompt =
+          (finalCharacterFeatures ? `${finalCharacterFeatures}, ${customPrompt}` : customPrompt) ||
+          '';
         let referenceImageBase64 = '';
         let sendSourceVideoId = '';
 
@@ -677,22 +676,21 @@ async function startProduction(job: VideoJob) {
             }
           }
         } else {
-          // scene_number > 1: autoregressive continuation from previous generated scene video
-          sendSourceVideoId = ''; // Force CogVideo to use the continuation frame
-          try {
-            const prevVideoPath = path.join(
-              process.cwd(),
-              'videolar',
-              `ms_${job.id}_${scene.scene_number - 1}.mp4`,
-            );
-            if (await fs.pathExists(prevVideoPath)) {
-              referenceImageBase64 = await extractLastFrame(prevVideoPath);
-              Logger.info(
-                `[INFO] Devam videosu için önceki sahnenin (${scene.scene_number - 1}) son karesi çıkartıldı.`,
-              );
+          // scene_number > 1: autoregressive continuation via SceneChaining module
+          sendSourceVideoId = '';
+          const { getSceneChainingFrame } = await import('./services/sceneChaining.js');
+          const chainingResult = await getSceneChainingFrame({
+            jobId: job.id,
+            currentScene: scene.scene_number,
+            totalScenes,
+            workDir: process.cwd(),
+            characterFeatures: job.character_features,
+          });
+          if (chainingResult.success && chainingResult.referenceImageBase64) {
+            referenceImageBase64 = chainingResult.referenceImageBase64;
+            if (chainingResult.fallbackUsed) {
+              Logger.warn(`[PRODUCTION] Scene chaining fallback used for scene ${scene.scene_number}`);
             }
-          } catch (e) {
-            Logger.warn(`[WARN] Önceki sahnenin son karesi çıkartılamadı:`, e);
           }
         }
 
@@ -703,10 +701,16 @@ async function startProduction(job: VideoJob) {
           modelType = 'Wan2.1';
         } else if (job.production_template === 'simple') {
           modelType = 'LTX-Video';
+        } else if (job.production_template === 'animatediff') {
+          modelType = 'AnimateDiff';
+        } else if (job.production_template === 'svd' || job.model_type === 'SVD-XT') {
+          modelType = 'SVD-XT';
         } else if (job.production_template === 'cogvideox5b' || job.model_type === 'CogVideoX-5b') {
           modelType = 'CogVideoX-5b';
         } else if (job.production_template === 'cogvideox2b') {
           modelType = 'CogVideoX-2b';
+        } else if (job.production_template === 'wan25') {
+          modelType = 'Wan2.5';
         } else if (job.model_type) {
           modelType = job.model_type;
         }
@@ -760,7 +764,7 @@ async function startProduction(job: VideoJob) {
             const uploadsDir = path.join(process.cwd(), 'uploads');
             const logoFileName = `brand_logo_${job.id}.png`;
             const tempLogoFile = path.join(uploadsDir, logoFileName);
-            if (!await fs.pathExists(tempLogoFile)) {
+            if (!(await fs.pathExists(tempLogoFile))) {
               const b64 = user.brand_logo_base64.replace(/^data:image\/\w+;base64,/, '');
               await fs.writeFile(tempLogoFile, Buffer.from(b64, 'base64'));
             }
@@ -820,12 +824,17 @@ async function startProduction(job: VideoJob) {
               character_images: characterImages,
               speaker: currentSpeaker,
               background_music: remoteMusicUrl,
-              music_volume: scene.music_volume !== undefined && scene.music_volume !== null ? scene.music_volume : 0.15,
+              music_volume:
+                scene.music_volume !== undefined && scene.music_volume !== null
+                  ? scene.music_volume
+                  : 0.15,
               logo_url: remoteLogoUrl,
               differentiation_layout: job.differentiation_layout === 1 ? 'horizontal' : 'none',
               subtitle_primary_color: user?.brand_primary_color || '#00F2FE',
               subtitle_secondary_color: user?.brand_secondary_color || '#FFFFFF',
-              subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
+              subtitle_font_name: user?.brand_font_path
+                ? path.basename(user.brand_font_path, path.extname(user.brand_font_path))
+                : 'Arial',
               subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
               callback_url: process.env.PUBLIC_URL
                 ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
@@ -1061,8 +1070,6 @@ async function startProduction(job: VideoJob) {
           fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`);
         }
 
-
-
         let finalSubtitleFile = srtFile;
         let tempAssFile = '';
         if (job.kinetic_subtitles === 1 && srtFile) {
@@ -1096,7 +1103,9 @@ async function startProduction(job: VideoJob) {
         let tempLogoFile = '';
         try {
           if (process.env.MOCK_COLAB === 'false') {
-            Logger.info('[PRODUCTION] Skipping local FFmpeg mix, using pre-mixed Colab video.', { mS });
+            Logger.info('[PRODUCTION] Skipping local FFmpeg mix, using pre-mixed Colab video.', {
+              mS,
+            });
             if (await fs.pathExists(tV)) {
               await fs.copy(tV, mS, { overwrite: true });
             } else {
@@ -1108,7 +1117,9 @@ async function startProduction(job: VideoJob) {
 
             let musicIndex = -1;
             if (job.background_music_path) {
-              const musicAbsPath = path.resolve(path.join(process.cwd(), job.background_music_path));
+              const musicAbsPath = path.resolve(
+                path.join(process.cwd(), job.background_music_path),
+              );
               if (await fs.pathExists(musicAbsPath)) {
                 inputArgs.push('-i', musicAbsPath);
                 // -i flag sayısı - 1 = input sırası (0-indexed)

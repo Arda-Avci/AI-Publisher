@@ -52,9 +52,7 @@ describe('videoService utilities', () => {
   }, 30000);
 
   it('concatVideosWithCrossfade handles empty array', async () => {
-    await expect(
-      concatVideosWithCrossfade([], outputPath()),
-    ).rejects.toThrow('Video listesi bos');
+    await expect(concatVideosWithCrossfade([], outputPath())).rejects.toThrow('Video listesi bos');
   }, 30000);
 
   it('convertSrtToKineticAss creates ASS file', async () => {

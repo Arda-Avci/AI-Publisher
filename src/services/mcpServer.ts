@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 import { colab } from '../lib/colab-manager.js';
+import { checkQueue } from '../queue.js';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { generateText } from 'ai';
 
@@ -68,6 +69,41 @@ const MCP_TOOLS: MCPTool[] = [
       required: ['jobId'],
     },
   },
+  {
+    name: 'generate_video',
+    description: 'Create a new video production job from a text prompt and add it to the queue',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'Master prompt / video topic' },
+        notes: { type: 'string', description: 'Production notes (optional)' },
+        characterFeatures: { type: 'string', description: 'Character physical description (optional)' },
+        deepThink: { type: 'boolean', description: 'Enable Deep Think mode for complex scenes (optional)' },
+        platform: {
+          type: 'string',
+          enum: ['youtube', 'tiktok', 'x', 'meta'],
+          description: 'Target platform (optional)',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'publish_video',
+    description: 'Publish a completed video job to one or more social media platforms',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        jobId: { type: 'number', description: 'Job ID to publish' },
+        platforms: {
+          type: 'array',
+          items: { type: 'string', enum: ['youtube', 'tiktok', 'x', 'meta'] },
+          description: 'Platforms to publish to',
+        },
+      },
+      required: ['jobId', 'platforms'],
+    },
+  },
 ];
 
 async function executeTool(name: string, args: any): Promise<any> {
@@ -126,6 +162,73 @@ async function executeTool(name: string, args: any): Promise<any> {
       );
       if (!job) return { success: false, error: 'Job not found' };
       return { success: true, data: job };
+    }
+
+    case 'generate_video': {
+      const { prompt, notes, characterFeatures, deepThink, platform } = args;
+      if (!prompt) return { success: false, error: 'Prompt is required' };
+
+      const targetPlatforms = platform ? [platform] : ['youtube'];
+      const result = await db.run(
+        `INSERT INTO video_jobs
+          (user_id, master_prompt, production_notes, character_features, status, target_platforms, deep_think, created_at)
+        VALUES (?, ?, ?, ?, 'pending', ?, ?, datetime('now'))`,
+        [1, prompt, notes || '', characterFeatures || '', JSON.stringify(targetPlatforms), deepThink ? 1 : 0],
+      );
+      const jobId = result.lastID;
+
+      // Trigger queue check
+      checkQueue().catch((err: any) =>
+        Logger.warn('[MCP] Queue check after generate_video failed:', err),
+      );
+
+      return { success: true, data: { jobId, message: 'Video job created and queued' } };
+    }
+
+    case 'publish_video': {
+      const { jobId, platforms } = args;
+      if (!jobId || !platforms || !Array.isArray(platforms) || platforms.length === 0) {
+        return { success: false, error: 'jobId and platforms array are required' };
+      }
+
+      const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
+      if (!job) return { success: false, error: 'Job not found' };
+      if (job.status !== 'completed') {
+        return { success: false, error: 'Job is not completed yet' };
+      }
+
+      // Update target platforms
+      const existingPlatforms = (() => {
+        try { return JSON.parse(job.target_platforms || '[]'); } catch { return []; }
+      })();
+      const mergedPlatforms = [...new Set([...existingPlatforms, ...platforms])];
+      await db.run('UPDATE video_jobs SET target_platforms = ? WHERE id = ?', [
+        JSON.stringify(mergedPlatforms), jobId,
+      ]);
+
+      // Publish status updated in DB. Publish queue worker handles actual upload.
+      for (const platform of platforms) {
+        const statusField =
+          platform === 'youtube' ? 'yt_status'
+          : platform === 'tiktok' ? 'tt_status'
+          : platform === 'x' ? 'x_status'
+          : 'meta_status';
+        await db.run(`UPDATE video_jobs SET ${statusField} = 'publishing' WHERE id = ?`, [jobId]);
+      }
+
+      // Trigger publish via RabbitMQ
+      try {
+        const { getRabbitChannel, PUBLISH_JOBS_QUEUE } = await import('../lib/rabbitmq.js');
+        const channel = getRabbitChannel();
+        for (const platform of platforms) {
+          const msg = JSON.stringify({ jobId, platform, videoPath: '', jobData: {} });
+          channel.sendToQueue(PUBLISH_JOBS_QUEUE, Buffer.from(msg));
+        }
+      } catch (queueErr: any) {
+        Logger.warn('[MCP] Failed to send publish message to queue:', queueErr);
+      }
+
+      return { success: true, data: { jobId, platforms, message: 'Publishing started' } };
     }
 
     default:

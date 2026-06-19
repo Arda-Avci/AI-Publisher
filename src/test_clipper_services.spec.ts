@@ -3,9 +3,24 @@ import path from 'path';
 import os from 'os';
 
 import { FIXTURES } from './__fixtures__/index.js';
-import { SmartCropper, cropVideo, detectFaceBox, computeCropRegion } from './services/clipper/smartCropper.js';
-import { SubtitleMixer, embedSubtitles, mixBackgroundMusic, generateSrtFromWhisper } from './services/clipper/subtitleMixer.js';
-import { splitScreenVertical, splitScreenHorizontal, overlayMascot, pipOverlay } from './services/clipper/splitScreenService.js';
+import {
+  SmartCropper,
+  cropVideo,
+  detectFaceBox,
+  computeCropRegion,
+} from './services/clipper/smartCropper.js';
+import {
+  SubtitleMixer,
+  embedSubtitles,
+  mixBackgroundMusic,
+  generateSrtFromWhisper,
+} from './services/clipper/subtitleMixer.js';
+import {
+  splitScreenVertical,
+  splitScreenHorizontal,
+  overlayMascot,
+  pipOverlay,
+} from './services/clipper/splitScreenService.js';
 import { autoReframeHorizontalToVertical } from './services/autoReframe.js';
 
 const tmpDir = os.tmpdir();
@@ -17,9 +32,9 @@ describe('SmartCropper', () => {
       const result = await cropVideo(
         FIXTURES.video,
         tmpOut('cropped.mp4'),
-        { x: 100, y: 50, width: 1920, height: 1080 },
-        1080,
-        1920,
+        { x: 0, y: 0, width: 160, height: 90 },
+        160,
+        90,
       );
       expect(result).toBeDefined();
     }, 60000);
@@ -28,9 +43,9 @@ describe('SmartCropper', () => {
       const result = await cropVideo(
         FIXTURES.video,
         tmpOut('cropped_dur.mp4'),
-        { x: 0, y: 0, width: 1920, height: 1080 },
-        1080,
-        1920,
+        { x: 0, y: 0, width: 160, height: 90 },
+        160,
+        90,
         15,
       );
       expect(result).toBeDefined();
@@ -84,7 +99,12 @@ describe('SubtitleMixer', () => {
 
   describe('mixBackgroundMusic()', () => {
     it('should call runFFmpeg with amix filter', async () => {
-      const result = await mixBackgroundMusic(FIXTURES.video, FIXTURES.audio, tmpOut('mixed.mp4'), 0.15);
+      const result = await mixBackgroundMusic(
+        FIXTURES.video,
+        FIXTURES.audio,
+        tmpOut('mixed.mp4'),
+        0.15,
+      );
       expect(result).toBeDefined();
     }, 60000);
   });
@@ -124,28 +144,44 @@ describe('SubtitleMixer', () => {
 describe('SplitScreenService', () => {
   describe('splitScreenVertical()', () => {
     it('should call runFFmpegWithFallback with vstack filter', async () => {
-      const result = await splitScreenVertical(FIXTURES.primary, FIXTURES.secondary, tmpOut('vstack.mp4'));
+      const result = await splitScreenVertical(
+        FIXTURES.primary,
+        FIXTURES.secondary,
+        tmpOut('vstack.mp4'),
+      );
       expect(result).toBeDefined();
     }, 60000);
   });
 
   describe('splitScreenHorizontal()', () => {
     it('should call runFFmpegWithFallback with hstack filter', async () => {
-      const result = await splitScreenHorizontal(FIXTURES.primary, FIXTURES.secondary, tmpOut('hstack.mp4'));
+      const result = await splitScreenHorizontal(
+        FIXTURES.primary,
+        FIXTURES.secondary,
+        tmpOut('hstack.mp4'),
+      );
       expect(result).toBeDefined();
     }, 60000);
   });
 
   describe('overlayMascot()', () => {
     it('should call runFFmpegWithFallback with overlay filter', async () => {
-      const result = await overlayMascot(FIXTURES.video, FIXTURES.lut, tmpOut('mascot.mp4'), { x: 100, y: 200 });
+      const result = await overlayMascot(FIXTURES.video, FIXTURES.secondary, tmpOut('mascot.mp4'), {
+        x: 100,
+        y: 200,
+      });
       expect(result).toBeDefined();
     }, 60000);
   });
 
   describe('pipOverlay()', () => {
     it('should call runFFmpegWithFallback with overlay at bottom-right position', async () => {
-      const result = await pipOverlay(FIXTURES.primary, FIXTURES.secondary, tmpOut('pip.mp4'), 'bottom-right');
+      const result = await pipOverlay(
+        FIXTURES.primary,
+        FIXTURES.secondary,
+        tmpOut('pip.mp4'),
+        'bottom-right',
+      );
       expect(result).toBeDefined();
     }, 60000);
   });
@@ -154,7 +190,11 @@ describe('SplitScreenService', () => {
 describe('AutoReframe', () => {
   describe('autoReframeHorizontalToVertical()', () => {
     it('should call runFFmpegWithFallback with crop and scale filters', async () => {
-      const result = await autoReframeHorizontalToVertical(FIXTURES.video, tmpOut('reframed.mp4'), 'center');
+      const result = await autoReframeHorizontalToVertical(
+        FIXTURES.video,
+        tmpOut('reframed.mp4'),
+        'center',
+      );
       expect(result).toBeDefined();
     }, 60000);
   });

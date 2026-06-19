@@ -89,11 +89,15 @@ class ContainerManager:
         "wan": 5008,
         "ltx": 5009,
         "hunyuan": 5010,
-        "kokorotts": 5011
+        "kokorotts": 5011,
+        "svd": 5012,
+        "animatediff": 5013,
+        "wan25": 5014,
+        "f5tts": 5015
     }
     
     # GPU-heavy containers: only one can run at a time (T4 VRAM limit)
-    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan"]
+    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts"]
     
     # CPU-only containers: can run concurrently, no GPU reservation needed
     CPU_ONLY = ["whisper", "kokorotts"]
@@ -531,7 +535,10 @@ def _generate_media_worker(task_id, data):
 
     # 1. VIDEO GENERATION (Proxy to the chosen video container)
     model_lower = video_model.lower()
-    if "wan" in model_lower:
+    if "wan25" in model_lower or "wan2.5" in model_lower:
+        container_name = "wan25"
+        model_display = "Wan 2.5"
+    elif "wan" in model_lower:
         container_name = "wan"
         model_display = "Wan 2.1"
     elif "ltx" in model_lower:
@@ -540,6 +547,12 @@ def _generate_media_worker(task_id, data):
     elif "hunyuan" in model_lower:
         container_name = "hunyuan"
         model_display = "HunyuanVideo"
+    elif "animatediff" in model_lower:
+        container_name = "animatediff"
+        model_display = "AnimateDiff"
+    elif "svd" in model_lower or "stable-video" in model_lower or "stablevideo" in model_lower:
+        container_name = "svd"
+        model_display = "Stable Video Diffusion (SVD-XT)"
     else:
         container_name = "cogvideox"
         model_display = "CogVideoX"
@@ -567,11 +580,12 @@ def _generate_media_worker(task_id, data):
 
     _update_task(task_id, stagePercent=30, message="Video üretildi, ses sentezleniyor...")
 
-    # 2. SPEECH SYNTHESIS (Proxy to xtts container)
+    # 2. SPEECH SYNTHESIS (Proxy to xtts or f5tts container)
     if speech_text:
         try:
             video_duration = 49 / 8 # 6.125s
-            url = container_manager.ensure_container("xtts")
+            tts_container = "f5tts" if tts_provider == "f5tts" else "xtts"
+            url = container_manager.ensure_container(tts_container)
             payload = {
                 "text": speech_text,
                 "output_path": AUDIO_PATH,
@@ -583,12 +597,12 @@ def _generate_media_worker(task_id, data):
             }
             res = requests.post(f"{url}/synthesize", json=payload, timeout=180).json()
             if res.get("status") != "success":
-                raise RuntimeError(res.get("message", "XTTS container error"))
+                raise RuntimeError(res.get("message", f"{tts_container} container error"))
             
             DIAGNOSTICS["outputs"]["speech_synthesized"] += 1
             log_diagnostic_activity(f"Speech synthesized for task: {task_id}")
         except Exception as exc:
-            _update_task(task_id, status="error", message=f"XTTS Sentezleme Hatası: {str(exc)}")
+            _update_task(task_id, status="error", message=f"{tts_provider} Sentezleme Hatası: {str(exc)}")
             return
     else:
         # Create silent audio
@@ -877,15 +891,16 @@ def synthesize_speech_route():
     last_activity_time = time.time()
     
     try:
-        url = container_manager.ensure_container("xtts")
         data = request.get_json(force=True) or {}
+        tts_container = "f5tts" if data.get("provider") == "f5tts" else "xtts"
+        url = container_manager.ensure_container(tts_container)
         output_path = f"/tmp/synth_speech_{uuid.uuid4().hex[:8]}.wav"
         data["output_path"] = output_path
         
         res = requests.post(f"{url}/synthesize", json=data, timeout=180).json()
         if res.get("status") == "success" and os.path.exists(output_path):
             return send_file(output_path, mimetype="audio/wav", as_attachment=True, download_name="speech.wav")
-        return jsonify({"error": res.get("message", "XTTS container speech generation failed")}), 500
+        return jsonify({"error": res.get("message", f"{tts_container} container speech generation failed")}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

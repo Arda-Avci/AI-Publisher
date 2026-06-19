@@ -208,7 +208,10 @@ function splitTextIntoChunks(text: string, maxLen: number): string[] {
   }
 
   // Eğer tek bir cümle bile maxLen'den uzunsa veya bölme başarısızsa kaba kesim yap
-  if (chunks.length === 0 || (chunks.length === 1 && chunks[0] && chunks[0].length > maxLen * 1.5)) {
+  if (
+    chunks.length === 0 ||
+    (chunks.length === 1 && chunks[0] && chunks[0].length > maxLen * 1.5)
+  ) {
     const rawChunks: string[] = [];
     let idx = 0;
     while (idx < text.length) {

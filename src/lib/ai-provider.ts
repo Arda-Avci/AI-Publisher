@@ -246,12 +246,15 @@ export async function checkZenModelsHealth(): Promise<void> {
 
 /**
  * Returns an array of configured AI models for the system (fallback chain).
- * Order: Zen API Free models -> Minimax -> Gemini -> OpenRouter
+ * Order: Gemini 2.5 Flash -> Zen API Free models -> Minimax
  */
 export function getAIModelChain() {
   const models = [];
 
-  // 1. Zen API Free Modelleri (Kullanıcı Talebiyle İlk Sırada)
+  // 1. Gemini 2.5 Flash - PRIMARY MODEL
+  models.push(google('gemini-2.5-flash'));
+
+  // 2. Zen API Free modelleri (fallback)
   const zen = getZenProvider();
   if (zen) {
     const zenModels = ['big-pickle', 'mimo-v2.5-free', 'nemotron-3-ultra-free'];
@@ -260,7 +263,7 @@ export function getAIModelChain() {
     }
   }
 
-  // 2. Anthropic / Minimax (3 Zen modelinden sonra)
+  // 3. Minimax (final fallback)
   if (process.env.ANTHROPIC_API_KEY) {
     let minimaxBaseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
     // Minimax Anthropic-compatible API requires /v1 suffix for the Anthropic SDK proxy to access /v1/messages
@@ -279,9 +282,43 @@ export function getAIModelChain() {
     models.push(minimax(modelName));
   }
 
-  // 3. Google Gemini 2.5 Flash
+  return models;
+}
+
+/**
+ * Returns model chain for structured output (schema-based) operations.
+ * Only models that support response_format are included (Zen doesn't).
+ * Order: Gemini 2.5 Flash -> Minimax
+ */
+export function getObjectModelChain() {
+  const models = [];
+
+  // 1. Gemini 2.5 Flash - PRIMARY
   models.push(google('gemini-2.5-flash'));
 
+  // 2. Minimax (fallback for structured output)
+  if (process.env.ANTHROPIC_API_KEY) {
+    let minimaxBaseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
+    if (!minimaxBaseURL.endsWith('/v1')) {
+      minimaxBaseURL = minimaxBaseURL.replace(/\/+$/, '') + '/v1';
+    }
+    const minimax = createAnthropic({
+      baseURL: minimaxBaseURL,
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+    let modelName = process.env.MODEL || 'MiniMax-M3';
+    modelName = modelName.replace(/^"|"$/g, '');
+    models.push(minimax(modelName));
+  }
+
   return models;
+}
+
+/**
+ * Deep Think model using Gemini 2.5 Pro with extended thinking.
+ * Used for complex scene planning and reasoning tasks.
+ */
+export function getDeepThinkModel() {
+  return google('gemini-2.5-pro-exp-03-25');
 }
 // trigger restart

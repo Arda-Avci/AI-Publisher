@@ -457,7 +457,9 @@ export class SmartCropper {
     return (
       boxes
         .filter((b) => b.confidence >= minConfidence)
-        .sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? boxes[0] ?? defaultBox
+        .sort((a, b) => b.width * b.height - a.width * a.height)[0] ??
+      boxes[0] ??
+      defaultBox
     );
   }
 

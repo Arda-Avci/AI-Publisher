@@ -97,7 +97,7 @@ export async function splitScreenVertical(
   bottomVideo: string,
   output: string,
   options: SplitScreenOptions = {},
-): Promise<void> {
+): Promise<string> {
   const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight } = options;
 
   Logger.info(`[SplitScreen] Creating vertical split: ${topVideo} | ${bottomVideo}`);
@@ -141,6 +141,7 @@ export async function splitScreenVertical(
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   Logger.info(`[SplitScreen] Vertical split saved: ${output}`);
+  return output;
 }
 
 /**
@@ -155,7 +156,7 @@ export async function splitScreenHorizontal(
   rightVideo: string,
   output: string,
   options: SplitScreenOptions = {},
-): Promise<void> {
+): Promise<string> {
   const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight } = options;
 
   Logger.info(`[SplitScreen] Creating horizontal split: ${leftVideo} | ${rightVideo}`);
@@ -199,6 +200,7 @@ export async function splitScreenHorizontal(
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   Logger.info(`[SplitScreen] Horizontal split saved: ${output}`);
+  return output;
 }
 
 /**
@@ -211,7 +213,7 @@ export async function splitScreenGrid(
   videos: string[],
   output: string,
   gridCols: number = 2,
-): Promise<void> {
+): Promise<string> {
   if (videos.length === 0) {
     throw new Error('splitScreenGrid: Video listesi bos');
   }
@@ -309,6 +311,7 @@ export async function splitScreenGrid(
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   Logger.info(`[SplitScreen] Grid split saved: ${output}`);
+  return output;
 }
 
 /**
@@ -323,7 +326,7 @@ export async function overlayMascot(
   mascotPngPath: string,
   output: string,
   position: OverlayPosition,
-): Promise<void> {
+): Promise<string> {
   const { x, y, scale = 1.0, opacity = 1.0 } = position;
 
   Logger.info(`[SplitScreen] Overlaying mascot: ${mascotPngPath} on ${videoPath}`);
@@ -398,6 +401,7 @@ export async function overlayMascot(
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   Logger.info(`[SplitScreen] Mascot overlay saved: ${output}`);
+  return output;
 }
 
 /**
@@ -412,7 +416,7 @@ export async function overlayMascotWithAnimation(
   mascotPngPath: string,
   output: string,
   animType: AnimationType,
-): Promise<void> {
+): Promise<string> {
   Logger.info(`[SplitScreen] Overlaying animated mascot (${animType}): ${mascotPngPath}`);
 
   // Get video duration
@@ -511,6 +515,7 @@ export async function overlayMascotWithAnimation(
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   Logger.info(`[SplitScreen] Animated mascot overlay saved: ${output}`);
+  return output;
 }
 
 /**
@@ -525,7 +530,7 @@ export async function pipOverlay(
   pipVideo: string,
   output: string,
   position: PipPosition,
-): Promise<void> {
+): Promise<string> {
   Logger.info(`[SplitScreen] Creating PIP overlay: ${pipVideo} at ${position}`);
 
   // Get main video dimensions
@@ -607,4 +612,5 @@ export async function pipOverlay(
 
   await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
   Logger.info(`[SplitScreen] PIP overlay saved: ${output}`);
+  return output;
 }

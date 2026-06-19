@@ -196,15 +196,7 @@ export async function enhanceVideoAudio(
   const hasAudio = await checkHasAudio(inputVideo);
   if (!hasAudio) {
     Logger.info('[studioSound] No audio track found, copying video only');
-    const args = [
-      '-y',
-      '-i',
-      inputVideo,
-      '-c:v',
-      'copy',
-      '-an',
-      outputVideo,
-    ];
+    const args = ['-y', '-i', inputVideo, '-c:v', 'copy', '-an', outputVideo];
     await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
     return;
   }

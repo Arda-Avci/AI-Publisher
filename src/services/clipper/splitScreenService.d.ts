@@ -39,7 +39,7 @@ export type PipPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-rig
  * @param output - Output file path
  * @param options - Split screen options
  */
-export declare function splitScreenVertical(topVideo: string, bottomVideo: string, output: string, options?: SplitScreenOptions): Promise<void>;
+export declare function splitScreenVertical(topVideo: string, bottomVideo: string, output: string, options?: SplitScreenOptions): Promise<string>;
 /**
  * Create horizontal (left/right) split-screen video
  * @param leftVideo - Path to left video
@@ -47,14 +47,14 @@ export declare function splitScreenVertical(topVideo: string, bottomVideo: strin
  * @param output - Output file path
  * @param options - Split screen options
  */
-export declare function splitScreenHorizontal(leftVideo: string, rightVideo: string, output: string, options?: SplitScreenOptions): Promise<void>;
+export declare function splitScreenHorizontal(leftVideo: string, rightVideo: string, output: string, options?: SplitScreenOptions): Promise<string>;
 /**
  * Create grid split-screen from multiple videos
  * @param videos - Array of video paths
  * @param output - Output file path
  * @param gridCols - Number of columns (default: 2)
  */
-export declare function splitScreenGrid(videos: string[], output: string, gridCols?: number): Promise<void>;
+export declare function splitScreenGrid(videos: string[], output: string, gridCols?: number): Promise<string>;
 /**
  * Overlay a mascot/avatar PNG on video at specified position
  * @param videoPath - Path to main video
@@ -62,7 +62,7 @@ export declare function splitScreenGrid(videos: string[], output: string, gridCo
  * @param output - Output file path
  * @param position - Overlay position coordinates
  */
-export declare function overlayMascot(videoPath: string, mascotPngPath: string, output: string, position: OverlayPosition): Promise<void>;
+export declare function overlayMascot(videoPath: string, mascotPngPath: string, output: string, position: OverlayPosition): Promise<string>;
 /**
  * Overlay a mascot with animation effects
  * @param videoPath - Path to main video
@@ -70,7 +70,7 @@ export declare function overlayMascot(videoPath: string, mascotPngPath: string, 
  * @param output - Output file path
  * @param animType - Animation type: 'float' (gentle vertical oscillation), 'bounce' (drop from top), 'blink' (toggle visibility)
  */
-export declare function overlayMascotWithAnimation(videoPath: string, mascotPngPath: string, output: string, animType: AnimationType): Promise<void>;
+export declare function overlayMascotWithAnimation(videoPath: string, mascotPngPath: string, output: string, animType: AnimationType): Promise<string>;
 /**
  * Picture-in-Picture overlay (secondary video in corner of primary)
  * @param mainVideo - Path to main video (background)
@@ -78,5 +78,5 @@ export declare function overlayMascotWithAnimation(videoPath: string, mascotPngP
  * @param output - Output file path
  * @param position - PIP position preset
  */
-export declare function pipOverlay(mainVideo: string, pipVideo: string, output: string, position: PipPosition): Promise<void>;
+export declare function pipOverlay(mainVideo: string, pipVideo: string, output: string, position: PipPosition): Promise<string>;
 //# sourceMappingURL=splitScreenService.d.ts.map

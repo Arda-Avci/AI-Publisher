@@ -24,7 +24,13 @@ interface HelpVideoForm {
   sortOrder: number;
 }
 
-function FormFields({ form, setForm }: { form: HelpVideoForm; setForm: React.Dispatch<React.SetStateAction<HelpVideoForm>> }) {
+function FormFields({
+  form,
+  setForm,
+}: {
+  form: HelpVideoForm;
+  setForm: React.Dispatch<React.SetStateAction<HelpVideoForm>>;
+}) {
   return (
     <>
       <div>
@@ -132,7 +138,9 @@ export default function AdminHelpVideos() {
       const r = await fetch('/api/v1/help-videos');
       const d = await r.json();
       if (d.success) setVideos(d.videos || []);
-    } catch (e) { console.error('Failed to fetch help videos', e); }
+    } catch (e) {
+      console.error('Failed to fetch help videos', e);
+    }
     setLoading(false);
   };
 
@@ -140,10 +148,18 @@ export default function AdminHelpVideos() {
     let cancelled = false;
     fetch('/api/v1/help-videos')
       .then((r) => r.json())
-      .then((d) => { if (!cancelled && d.success) setVideos(d.videos || []); })
-      .catch((e) => { if (!cancelled) console.error('Failed to fetch help videos', e); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((d) => {
+        if (!cancelled && d.success) setVideos(d.videos || []);
+      })
+      .catch((e) => {
+        if (!cancelled) console.error('Failed to fetch help videos', e);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -167,7 +183,9 @@ export default function AdminHelpVideos() {
         sortOrder: 0,
       });
       fetchVideos();
-    } catch (e) { console.error('Failed to create help video', e); }
+    } catch (e) {
+      console.error('Failed to create help video', e);
+    }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -190,7 +208,9 @@ export default function AdminHelpVideos() {
       });
       setEditing(null);
       fetchVideos();
-    } catch (e) { console.error('Failed to update help video', e); }
+    } catch (e) {
+      console.error('Failed to update help video', e);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -198,7 +218,9 @@ export default function AdminHelpVideos() {
     try {
       await fetch(`/api/v1/help-videos/admin/${id}`, { method: 'DELETE' });
       fetchVideos();
-    } catch (e) { console.error('Failed to delete help video', e); }
+    } catch (e) {
+      console.error('Failed to delete help video', e);
+    }
   };
 
   const startEdit = (v: HelpVideo) => {

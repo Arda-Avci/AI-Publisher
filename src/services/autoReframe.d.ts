@@ -41,7 +41,7 @@ export interface AutoReframeOptions {
  * @param trackingMode     - 'face' (detect and follow faces) or 'center' (static center crop)
  * @param options          - Additional options
  */
-export declare function autoReframeHorizontalToVertical(videoPath: string, outputPath: string, trackingMode?: TrackingMode, options?: AutoReframeOptions): Promise<void>;
+export declare function autoReframeHorizontalToVertical(videoPath: string, outputPath: string, trackingMode?: TrackingMode, options?: AutoReframeOptions): Promise<string>;
 /**
  * Detects faces across the video and reframes to 9:16 keeping the primary
  * face centered using OpenCV cascade detection + FFmpeg crop.

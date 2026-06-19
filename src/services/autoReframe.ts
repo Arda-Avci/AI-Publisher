@@ -154,7 +154,7 @@ export async function autoReframeHorizontalToVertical(
   outputPath: string,
   trackingMode: TrackingMode = 'face',
   options: AutoReframeOptions = {},
-): Promise<void> {
+): Promise<string> {
   const opts: AutoReframeOptions = {
     trackingMode,
     targetHeight: 1920,
@@ -297,6 +297,8 @@ export async function autoReframeHorizontalToVertical(
     Logger.error('[autoReframe] Auto-reframe failed', err);
     throw err;
   }
+
+  return outputPath;
 }
 
 /**

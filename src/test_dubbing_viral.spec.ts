@@ -24,14 +24,22 @@ describe('AutoDubbing', () => {
 
   describe('replaceAudioTrack()', () => {
     it('should call runFFmpegWithFallback with map for audio replacement', async () => {
-      const result = await replaceAudioTrack(FIXTURES.video, FIXTURES.audio, tmpOut('replaced.mp4'));
+      const result = await replaceAudioTrack(
+        FIXTURES.video,
+        FIXTURES.audio,
+        tmpOut('replaced.mp4'),
+      );
       expect(result).toBeUndefined();
     }, 60000);
   });
 });
 
 describe('ViralHook', () => {
-  const hasKeys = !!(process.env.GEMINI_API_KEY || process.env.MINIMAX_API_KEY || process.env.ZEN_API_KEY);
+  const hasKeys = !!(
+    process.env.GEMINI_API_KEY ||
+    process.env.MINIMAX_API_KEY ||
+    process.env.ZEN_API_KEY
+  );
 
   describe('generateViralTitles()', () => {
     it('should return array of viral title suggestions', async () => {
@@ -57,8 +65,20 @@ describe('EmotionCaptions', () => {
     it('should generate SRT entries with highlight styling', async () => {
       const transcript = 'Hello world. This is amazing!';
       const peaks = [
-        { startSeconds: 0.0, endSeconds: 2.0, word: 'Wow', intensity: 0.9, suggestedColor: '#FF4444' },
-        { startSeconds: 2.0, endSeconds: 4.0, word: 'Amazing', intensity: 0.6, suggestedColor: '#FF9500' },
+        {
+          startSeconds: 0.0,
+          endSeconds: 2.0,
+          word: 'Wow',
+          intensity: 0.9,
+          suggestedColor: '#FF4444',
+        },
+        {
+          startSeconds: 2.0,
+          endSeconds: 4.0,
+          word: 'Amazing',
+          intensity: 0.6,
+          suggestedColor: '#FF9500',
+        },
       ];
 
       const result = generateHighlightSrt(transcript, peaks);

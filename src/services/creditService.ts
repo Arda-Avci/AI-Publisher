@@ -8,6 +8,8 @@ const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
   'Wan2.1': { sceneCost: 20, coverCost: 10 },
   HunyuanVideo: { sceneCost: 25, coverCost: 12 },
   'LTX-Video': { sceneCost: 5, coverCost: 3 },
+  'SVD-XT': { sceneCost: 12, coverCost: 6 },
+  'AnimateDiff': { sceneCost: 8, coverCost: 4 },
 };
 
 const DEFAULT_COST = { sceneCost: 10, coverCost: 5 };
@@ -17,7 +19,7 @@ export function getModelCost(modelType?: string | null): { sceneCost: number; co
   const key = Object.keys(MODEL_COSTS).find((k) =>
     modelType.toLowerCase().includes(k.toLowerCase()),
   );
-  return key ? (MODEL_COSTS[key] || DEFAULT_COST) : DEFAULT_COST;
+  return key ? MODEL_COSTS[key] || DEFAULT_COST : DEFAULT_COST;
 }
 
 export class CreditService {

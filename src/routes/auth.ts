@@ -35,12 +35,10 @@ export function registerAuthRoutes(app: Application): void {
       });
     } else {
       logAudit({ userId: null, action: 'auth.login.failed', details: { username }, req });
-      res
-        .status(401)
-        .json({
-          success: false,
-          error: req.t?.invalidLogin || 'Geçersiz kullanıcı adı veya şifre',
-        });
+      res.status(401).json({
+        success: false,
+        error: req.t?.invalidLogin || 'Geçersiz kullanıcı adı veya şifre',
+      });
     }
   });
 

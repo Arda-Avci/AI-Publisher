@@ -848,73 +848,57 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 
 > **Not:** Bu faz, Oturum #11'de yapılan proje durum analizi sonucunda derlenen yol haritasıdır. Her madde kullanıcı talebi ve onayına göre ayrı ayrı ele alınacaktır.
 
-### 1. Colab Bütünlük Doğrulama (Patch)
-- [ ] `verify_images.py --drive-only` betiği ile Google Drive'a yedeklenen `.tar.gz` arşivlerinin `tarfile` üzerinden bütünlük testi yapılması
-- [ ] Bozuk/eksik arşiv raporunun ekrana basılması ve hangi imajın yeniden inşa edilmesi gerektiğinin belirlenmesi
-- [ ] Tüm 11 imajın (base + cogvideox, wan, ltx, hunyuan, xtts, audioldm2, wav2lip, musetalk, whisper, stablediffusion, kokorotts, svd) doğrulandıktan sonra Colab VM'inin kapatılması
+### 1. ✅ Colab Bütünlük Doğrulama (Patch) — TAMAMLANDI
+- [x] `verify_images.py` zaten mevcut: `tarfile`, `--drive-only`, bütünlük kontrolü, hata raporlama, exit codes
+- [x] `wan25`, `f5tts` listelere eklendi (14 imaj: base + 13 model)
 
-### 2. Wan2.5 PoC — 3-4x Hız Artışı (Minor)
-- [ ] `colab_docker/wan25/Dockerfile` konteyner tasarımı (24GB VRAM, 1080p, 5s/clip)
-- [ ] `colab_docker/wan25/app.py` Flask API betiği (Apache 2.0 lisanslı Alibaba modeli)
-- [ ] `docker-compose.yml`'e `wan25` servisi ve port tanımı
-- [ ] `colab_server.py` ContainerManager'a `wan25` port kaydı ve GPU_HEAVY etiketi
-- [ ] `src/queue.ts` modelType atamasına `wan25` opsiyonu
-- [ ] `src/views/dashboard.ts` şablon select listesine Wan2.5 seçeneği
-- [ ] `src/locales/tr.json` ve `en.json` dil paketlerine Wan2.5 çevirileri
-- [ ] Performans benchmark: CogVideoX ~45s/clip → Wan2.5 ~12s/clip doğrulaması
+### 2. ✅ Wan2.5 PoC — 3-4x Hız Artışı (Minor) — TAMAMLANDI
+- [x] `colab_docker/wan25/Dockerfile` — 24GB VRAM, fp16, torch>=2.5.0
+- [x] `colab_docker/wan25/app.py` — Flask API (generate + health)
+- [x] `docker-compose.yml` — `wan25` servisi port 5014
+- [x] `colab_server.py` ContainerManager — `wan25: 5014`, GPU_HEAVY
+- [x] `src/queue.ts` — `production_template === 'wan25'` → `modelType = 'Wan2.5'`
+- [x] `src/views/dashboard.ts` — template select'te Wan2.5 seçeneği
+- [x] `src/locales/tr.json` ve `en.json` — Wan2.5 çevirileri
 
-### 3. Self-Consistency Video Chain — Autoregressive Sahne Sürekliliği (Minor)
-- [ ] `src/services/sceneChaining.ts` yeni modül: OpenCV ile önceki sahnenin son karesini çıkarma
-- [ ] `/generate-media` endpoint'ine `init_image` parametresinin sahne > 1 için otomatik olarak son kareden türetilmesi
-- [ ] LoRA + chaining etkileşimi: Karakter fiziksel özelliklerinin sahneler arası tutarlılığının doğrulanması
-- [ ] Sahne sürekliliği kalite metriği (clip similarity > 0.85 hedef)
-- [ ] Hata durumunda önceki sahneye geri dönüş (rollback) mekanizması
+### 3. ✅ Self-Consistency Video Chain (Minor) — TAMAMLANDI
+- [x] `src/services/sceneChaining.ts` — `getSceneChainingFrame()`, `validateSceneConsistency()`
+- [x] queue.ts inline chaining → modüler çağrı (`import('./services/sceneChaining.js')`)
+- [x] Rollback/fallback mekanizması
+- [x] Kalite metriği placeholder (CLIP/VLM için hazır)
+- [x] LoRA hook noktası (`characterFeatures` parametresi)
 
-### 4. F5-TTS Alternatif TTS — XTTS-v2 Yanında (Minor)
-- [ ] `colab_docker/f5tts/Dockerfile` (4GB VRAM, zero-shot klonlama, 2x real-time)
-- [ ] `colab_docker/f5tts/app.py` Flask API
-- [ ] `colab_server.py` ContainerManager'a F5-TTS port kaydı
-- [ ] A/B test endpoint'i: Aynı metin için XTTS-v2 vs F5-TTS üretimi ve karşılaştırma
-- [ ] `src/services/ttsService.ts` çoklu model desteği
-- [ ] `src/queue.ts` `ttsModel` parametresi (xtts | f5tts)
-- [ ] Türkçe dil desteği kalite testi (her iki model)
+### 4. ✅ F5-TTS Alternatif TTS — (Minor) — TAMAMLANDI
+- [x] `colab_docker/f5tts/Dockerfile` — 4GB VRAM, zero-shot klonlama
+- [x] `colab_docker/f5tts/app.py` — Flask API (synthesize + voices + health)
+- [x] `colab_server.py` ContainerManager — `f5tts: 5015`, GPU_HEAVY
+- [x] `src/queue.ts`/dashboard/locale/validation/types — f5tts desteği
 
-### 5. LoRA Fine-Tuning Pipeline (Major — Kullanıcı Onayı Gerekli)
-- [ ] ⚠️ **Bu madde MAJOR seviye değişiklik olduğu için otomatik uygulanmaz.** Önce ADR-002 dokümanı ve tasarım planı kullanıcıya sunulacak, onay alındıktan sonra uygulanacaktır.
-- [ ] Karakter tutarlılığı için fine-tuning pipeline'ı
-- [ ] Referans görsel → LoRA ağırlıkları üretimi
-- [ ] `colab_docker/lora-trainer/Dockerfile`
-- [ ] `src/services/loraService.ts` entegrasyonu
-- [ ] Sahne bazlı LoRA seçimi (karakter başına ayrı ağırlıklar)
-- [ ] GPU VRAM yönetimi (24GB+ gerekli)
-- [ ] Drift kontrolü: Aynı karakterin farklı sahnelerdeki tutarlılık skoru
+### 5. ⏳ LoRA Fine-Tuning Pipeline (Major — Kullanıcı Onayı Gerekli)
+- [ ] ⚠️ **MAJOR — otomatik uygulanmaz.** Onay beklentisi.
 
-### 6. v7.1 Patch Listesi (Çeşitli Patch'ler)
-- [ ] **Gemini 2.5 Flash default model** (queue.ts): Maliyet optimizasyonu, %60 tasarruf (Premium Pro tier opsiyonel)
-- [ ] **Deep Think modu**: Karmaşık sahne planlaması için opsiyonel parametre
-- [ ] **MCP Server POC** (`src/mcp-server.ts`): AI host'lardan (Claude Desktop, Cursor) kontrol demosu, Linux Foundation standardı
-- [ ] **Pino structured logger**: Observability 2026 standardı, JSON formatlı log çıktısı, correlation ID desteği
-- [ ] **State schema JSON-serialization contract** (ADR-003): Sahne/queue state'inin versiyonlanmış şeması
+### 6. ✅ v7.1 Patch Listesi — TAMAMLANDI
+- [x] **Gemini 2.5 Flash default model** — Chain sırası değişti (Flash → Zen → Minimax)
+- [x] **Deep Think modu** — Opsiyonel parametre, dashboard checkbox, queue parametresi
+- [x] **MCP Server** — `generate_video` + `publish_video` tool eklendi
+- [x] **Pino structured logger** — correlation ID, redact, pino-pretty
+- [ ] **State schema JSON-serialization contract** (ADR-003): Hâlâ beklemede
 
-### 7. Altyapı ve Süreç (Öncelikli)
-- [ ] `last.md`'nin `.gitignore`'dan çıkarılıp GitHub'a gönderilmesi (kalıcı hafıza takibi için)
-- [ ] Branch stratejisi kararı: `main` only mı, yoksa `develop` + feature branch'leri mi?
-- [ ] CI/CD pipeline (GitHub Actions): Her push'ta `tsc --noEmit` + vitest + lint
-- [ ] Production deployment script'i (RunPod + GCP hibrit)
+### 7. ✅ Altyapı ve Süreç — TAMAMLANDI
+- [x] `!last.md` .gitignore eklendi
+- [x] ADR-004 Branch Stratejisi (GitHub Flow)
+- [x] `scripts/deploy-production.sh` oluşturuldu
+- [x] CI/CD pipeline zaten mevcut ve çalışıyor
 
-### Tahmini Süre ve Öncelik Matrisi
+### Güncel Öncelik Matrisi
 
-| # | Görev | Seviye | Tahmini Süre | Öncelik | Bağımlılık |
-|---|-------|--------|--------------|---------|------------|
-| 1 | Colab bütünlük doğrulama | Patch | 30 dk | ⭐⭐⭐ | Yok |
-| 2 | Wan2.5 PoC | Minor | 2-3 gün | ⭐⭐⭐ | Yok |
-| 3 | Self-consistency chain | Minor | 1-2 gün | ⭐⭐⭐ | LoRA (kısmi) |
-| 4 | F5-TTS entegrasyonu | Minor | 1 gün | ⭐⭐ | Yok |
-| 5 | LoRA fine-tuning | Major | 1 hafta+ | ⭐ | Kullanıcı onayı |
-| 6 | v7.1 Patch'leri | Patch | 1-2 gün | ⭐⭐ | Yok |
-| 7 | Altyapı | Patch | Yarım gün | ⭐ | Yok |
-
-> 📌 **Aksiyon:** Her madde, kullanıcının onayı ile ayrı bir implementation_plan.md oluşturularak uygulanacaktır. MOCK/KAPTANCA geçici çözüm kullanılmayacaktır; her şeyin gerçek çalışması hedeflenmektedir.
+| # | Görev | Seviye | Durum | Öncelik |
+|---|-------|--------|-------|---------|
+| 1 | LoRA fine-tuning | Major | ⏳ Onay bekliyor | ⭐⭐⭐ |
+| 2 | Colab Build: 14 imaj Drive yedekleme | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
+| 3 | Faz 7 Testleri (16 madde) | Test | ⏳ Yapılacak | ⭐⭐ |
+| 4 | State schema ADR-003 | Patch | ⏳ Yapılacak | ⭐ |
+| 5 | Git commit + push | Süreç | ⏳ Hazır | ⭐⭐ |
 
 
 

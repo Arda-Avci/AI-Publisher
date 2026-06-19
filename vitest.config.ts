@@ -9,7 +9,7 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
     },
-    exclude: ['**/.claude/**', '**/node_modules/**', 'client/**'],
+    exclude: ['**/.claude/**', '**/node_modules/**', 'client/**', '**/*.spec.js'],
     execArgv: ['--max-old-space-size=4096'],
     fileParallelism: false,
     testTimeout: 300000,

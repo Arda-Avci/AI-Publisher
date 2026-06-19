@@ -62,6 +62,8 @@
 
   storyboard_enabled?: number;
 
+  deep_think?: number;
+
   // v6.0 Grup 1
   niche_profile?: string;
   niche_enabled?: number;

@@ -16,7 +16,7 @@ export interface Character {
     role_archetype: 'protagonist' | 'mentor' | 'comic_relief' | 'antagonist' | 'supporting' | 'narrator';
     reference_image_base64?: string;
     tts_voice_id: string;
-    voice_provider: 'edge' | 'openai' | 'xtts';
+    voice_provider: 'edge' | 'openai' | 'xtts' | 'f5tts';
     llm_provider?: LlmProvider;
     llm_model?: string;
     avatar_style?: AvatarStyle;

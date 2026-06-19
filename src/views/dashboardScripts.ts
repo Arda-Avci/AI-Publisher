@@ -168,14 +168,15 @@ export function getDashboardScripts(params: {
       function ttsVoiceHint(provider) {
         const hint = document.getElementById('tts-voice-hint');
         const input = document.getElementById('tts-voice-input');
-        const defaults = { xtts: 'Claribel Dervla', openai: 'alloy', edge: 'tr-TR-EmelNeural' };
+        const defaults = { xtts: 'Claribel Dervla', f5tts: 'default', openai: 'alloy', edge: 'tr-TR-EmelNeural' };
         const hints = {
           xtts: 'XTTS: Claribel Dervla / herhangi bir ses adı',
+          f5tts: 'F5-TTS: default (zero-shot, referans ses kullanılır)',
           openai: 'OpenAI: alloy, echo, fable, nova, shimmer',
           edge: 'Edge: tr-TR-EmelNeural, tr-TR-AhmetNeural, en-US-JennyNeural'
         };
         input.placeholder = defaults[provider] || 'Claribel Dervla';
-        if (!input.value || input.value === defaults.xtts || input.value === 'alloy' || input.value === 'tr-TR-EmelNeural') {
+        if (!input.value || input.value === defaults.xtts || input.value === 'default' || input.value === 'alloy' || input.value === 'tr-TR-EmelNeural') {
           input.value = defaults[provider] || 'Claribel Dervla';
         }
         hint.textContent = hints[provider] || hints.xtts;

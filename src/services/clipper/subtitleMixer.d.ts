@@ -9,16 +9,7 @@
  * await subtitleMixer.generateSrtFromWhisper(transcript, outputPath);
  */
 import type { WhisperWord, SubtitleStyleOptions, SubtitleMixerOptions, SubtitleMixerResult } from '../../types/clipper.js';
-/**
- * Embed SRT subtitles into a video using FFmpeg subtitles filter.
- * Supports styled subtitles via ASS format conversion.
- *
- * @param videoPath - Source video path
- * @param srtPath - SRT subtitle file path
- * @param outputPath - Destination video path
- * @param styleOptions - Optional subtitle styling
- */
-export declare function embedSubtitles(videoPath: string, srtPath: string, outputPath: string, styleOptions?: SubtitleStyleOptions): Promise<void>;
+export declare function embedSubtitles(videoPath: string, srtPath: string, outputPath: string, styleOptions?: SubtitleStyleOptions): Promise<string>;
 /**
  * Mix background music into video, looping the music to match video duration.
  *
@@ -27,7 +18,7 @@ export declare function embedSubtitles(videoPath: string, srtPath: string, outpu
  * @param outputPath - Destination video path
  * @param musicVolume - Music volume (0.0-1.0, default 0.15)
  */
-export declare function mixBackgroundMusic(videoPath: string, musicPath: string, outputPath: string, musicVolume?: number): Promise<void>;
+export declare function mixBackgroundMusic(videoPath: string, musicPath: string, outputPath: string, musicVolume?: number): Promise<string>;
 /**
  * Apply audio ducking: lower background music volume when speech is present.
  * Uses FFmpeg's sidechaincompress filter for voice-activated ducking.

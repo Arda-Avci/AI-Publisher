@@ -7,4 +7,3 @@ import { encryptUsername } from './lib/crypto.js';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs-extra';
-

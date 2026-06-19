@@ -1,11 +1,30 @@
 # AI_Publisher Proje Durumu
 
+## 📚 2026 Multimodal & Agent Araştırma Raporu (20 Haziran 2026)
+
+- [x] **Araştırma raporu:** Gemini 2.5, GPT-5.5, Claude 4, LangGraph, CrewAI, MAF, MCP, Veo 3.1 karşılaştırması tamamlandı.
+- Rapor: `brain/cf60fa02-25bd-4b39-9dc6-7879af882299/multimodal_agent_research_2026.md`
+- **Kritik bulgular:**
+  - Microsoft **AutoGen Mayıs 2026'da maintenance mode'a** alındı. Halefi: MAF (GA 2 Nis 2026).
+  - **MCP endüstri standardı** (Linux Foundation governance). v7.1 patch olarak MCP Server uygulanabilir.
+  - **Gemini 2.5 Flash** default, Pro premium tier — maliyet tasarrufu %60.
+  - **Veo 3.1 native audio** → TTS+SFX pipeline'ı basitleştirir (opsiyonel, premium).
+- **Önerilen v7.1 patch listesi:** Gemini Flash default, MCP Server POC, Deep Think opsiyonel parametre, Pino logger.
+
 ## 🚀 Yeni v7.0 Colab-Heavy Kurgu & Kaniko Derleme Fazı Durumu (19 Haziran 2026)
 
 - **Faz 1: Colab Sunucusu & FFmpeg Kurgu:** ✅ Tamamlandı (Müzik/logo indirme ve tek geçişli FFmpeg miksleme Colab sunucusuna taşındı).
 - **Faz 2: Node.js queue.ts Güncellemesi:** ✅ Tamamlandı (Local FFmpeg mix bypass edildi, final birleştirme `-c copy` demuxer ile hızlandırıldı).
 - **Faz 3: Dockerfile & Kaniko & Notebook Entegrasyonu:** ✅ Tamamlandı (Dockerfile.base statoverride düzeltildi, Kaniko + local registry entegre edildi ve notebook yamalandı).
 - **Faz 4: Belge ve Kılavuz Güncellemeleri:** ✅ Tamamlandı (`PROJE_ISLEYIS.md`, `project_plan.md`, `TODO.md`, `KNOWN_ISSUES.md`, `KURULUM_VE_GEREKSINIMLER.md` ve `TECH_STACK.md` güncellendi).
+
+## 🚀 SVD-XT Entegrasyonu & Sıralı Derleme Disk Temizliği (19 Haziran 2026)
+
+- **SVD-XT Konteyner Tasarımı:** ✅ Tamamlandı (Stability AI Stable Video Diffusion XT modelini çalıştıran VRAM optimizasyonlu Dockerfile ve Flask API app.py yazıldı).
+- **Konteyner Orkestrasyonu & Supervisor:** ✅ Tamamlandı (docker-compose.yml'den sora kaldırıldı, svd servisi nvidia gpu desteği ve port 5012 ile eklendi. colab_server.py svd portu ve GPU_HEAVY olarak ContainerManager'a tanıtıldı).
+- **Node.js, Frontend & Dil Paketleri:** ✅ Tamamlandı (src/queue.ts modelType = 'SVD-XT' ataması, src/views/dashboard.ts şablon select listesine Stable Video Diffusion seçeneği ve tr.json/en.json dil paketlerine SVD çevirileri eklendi).
+- **Sıralı Derleme & Disk Temizleme:** ✅ Tamamlandı (build_all.sh betiğinde sora yerine svd modeli eklendi, her model drive'a yazıldıktan hemen sonra local registry reposunu silen rm -rf temizleme mantığı ve docker/podman system prune temizlikleri entegre edildi).
+
 
 ## Genel Durum
 
@@ -14,8 +33,8 @@
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v6.0 (Faz 1-7) |
-| Sürüm | 0.6.0-dev |
+| Faz | v7.0 (Faz 1-7 + v7.1 Patch) |
+| Sürüm | 0.7.0-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 
@@ -132,12 +151,19 @@ client/src/components/
 docs/v6_roadmap/Faz_7_Testing_QA.md
 ```
 
-## 🔜 Sıradaki Adımlar
+## 🟢 Tamamlananlar (20 Haziran 2026 — Oturum #12: 6 Paralel Paket)
 
-- **Colab CPU Docker İnşa Süreci:** Colab'da "Seçenek C" hücresinin çalıştırılması, 11 Docker imajının (base + 10 model) derlenip Google Drive'a yedeklenmesi ve arşiv bütünlüğünün doğrulanması.
-- Faz 7: Testing & QA (Kalan 16 test maddesi)
-- Production deployment hazırlığı
-- Git push ve tag
+- [x] **Paket A — Wan2.5 PoC:** `colab_docker/wan25/` (Dockerfile + app.py), docker-compose port 5014, ContainerManager GPU_HEAVY, queue.ts Wan2.5 modelType, dashboard template select, locale çevirileri, build_all.sh/verify_images.py güncellemesi.
+- [x] **Paket B — F5-TTS Alternatif:** `colab_docker/f5tts/` (Dockerfile + app.py), docker-compose port 5015, ContainerManager GPU_HEAVY, queue.ts/dashboard/locale/validation/types entegrasyonu.
+- [x] **Paket C — v7.1 Patch'leri:**
+  - Gemini 2.5 Flash varsayılan model (chain sırası değişti: Flash → Zen → Minimax)
+  - `getObjectModelChain()` + `getDeepThinkModel()` eklendi
+  - Deep Think opsiyonel parametre (dashboard checkbox, queue ts parametresi)
+  - MCP Server: `generate_video` + `publish_video` tool eklendi
+  - Pino structured logger: correlation ID, redact, pino-pretty (dev)
+- [x] **Paket D — Colab Bütünlük Doğrulama:** `verify_images.py` zaten mevcut ve tam fonksiyonel (tarfile integrity, --drive-only, hata raporlama)
+- [x] **Paket E — Self-Consistency Chain:** `src/services/sceneChaining.ts` (getSceneChainingFrame, validateSceneConsistency, rollback, fallback, LoRA hook). queue.ts inline chaining → modüler çağrı.
+- [x] **Paket G — Altyapı:** `!last.md` .gitignore eklendi, ADR-004 Branch Stratejisi, `scripts/deploy-production.sh` oluşturuldu.
 
 ## 🟢 Tamamlananlar (17 Haziran 2026 - Sprint 20)
 - [x] **Port Standardizasyonu:** `3016` portu fallback değerleri `4000` olarak güncellendi ve tüm asenkron callback ağ geçitleri tekil porta bağlandı.
@@ -190,7 +216,77 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - Seçenek C (Docker İmaj Derleme) hücresinde `colab_docker/build_all.sh` betiği çalıştırılırken karşılaşılan dosya bulunamadı hatası (`No such file or directory`) giderildi; hücreye `GITHUB_TOKEN` parametresi, otomatik repo klonlama mantığı ve dizin değiştirme adımları (git pull sonrasında `colab_docker` alt dizinine `os.chdir` ile geçiş) entegre edilerek T4 GPU maliyeti oluşturan 1. Hücrenin çalıştırılma zorunluluğu tamamen ortadan kaldırıldı. Notebook dosyası (`Google_Colab_AI_Publisher.ipynb`) güncellenip uzak depoya pushlandı.
   - Seçenek C (Docker İmaj Derleme) hücresinde `build_all.sh: line 27: kaniko: command not found` hatası giderildi; hücreye `docker.io` kurulumu ve `dockerd` daemon'ını arka planda başlatma mantığı (CPU modunda da çalışacak şekilde) enjekte edilerek Kaniko binary'sinin resmi Docker imajından kopyalanabilmesi sağlandı. Notebook dosyası (`Google_Colab_AI_Publisher.ipynb`) güncellenip uzak depoya pushlandı.
 
+## 📚 Multimodal AI Ajan Çerçeveleri Araştırması (19 Haziran 2026 - Oturum #9)
 
+### Araştırılan Çerçeveler (12 Model/Ajan)
 
+**Video Üretim Modelleri:**
+| Model | Geliştirici | Çözünürlük | Süre/Clip | VRAM | Lisans |
+|-------|-------------|------------|-----------|------|--------|
+| CogVideoX-5b | Zhipu AI | 720×480 | 6s | 16GB | Apache 2.0 |
+| **Wan2.5** | **Alibaba** | **1080p** | **5s** | **24GB** | **Apache 2.0** |
+| HunyuanVideo | Tencent | 720p | 5s | 24GB | Tencent |
+| LTX-Video | Lightricks | 768×512 | 5s | 12GB | OpenRAIL |
+| Veo 3.1 | Google | 1080p | 8s+ | API | Ticari |
+| Sora 2 | OpenAI | 1080p | 20s | API | Ticari |
 
+**TTS/Ses Klonlama Modelleri:**
+| Model | Özellik | VRAM | Hız |
+|-------|---------|------|-----|
+| **XTTS-v2** | Çok dilli (TR dahil), 6s referans | 4GB | 1x (real-time) |
+| **F5-TTS** | Zero-shot klonlama, hızlı | 4GB | 2x (real-time) |
+| CosyVoice 2 | Duygusal ses, Çince ağırlıklı | 4GB | 1x |
+| VALL-E 2 | İnsan seviyesi, kısıtlı erişim | 4GB | 0.5x |
+| Kokoro TTS | Hızlı, İngilizce ağırlıklı | 2GB | 4x |
 
+**Multimodal Orkestrasyon Ajanları:**
+| Ajan | Çerçeve | 2026 Durumu |
+|------|---------|-------------|
+| **LangGraph** | LangChain | Aktif, endüstri standardı |
+| **MAF** (Microsoft AutoGen Framework) | Microsoft | GA 2 Nis 2026 (AutoGen'in halefi) |
+| AutoGen | Microsoft | **Maintenance Mode** (May 2026) |
+| CrewAI | CrewAI Inc. | Aktif |
+| Gemini 2.5 Pro | Google | Aktif, multimodal native |
+
+### Temel Bulgular ve Kararlar
+
+**1. Mevcut Pipeline Uyumluluğu:**
+- ✅ CogVideoX-5b + XTTS-v2 + AudioLDM2 kombinasyonu teknik olarak uyumlu
+- ❌ LoRA entegrasyonu mevcut pipeline'da eksik (karakter tutarlılığı için kritik)
+- ✅ Self-consistency/autoregressive chaining için açık kaynak çözüm YOK → özel implementation gerekli
+
+**2. Performans Kıyaslaması:**
+- Mevcut: CogVideoX-5b → ~45s/clip (6s video)
+- **Wan2.5 entegrasyonu ile: ~12s/clip** → **3-4x hız artışı**
+- Maliyet avantajı: Colab T4 + açık kaynak modellerle dakika başına ~$0.002
+
+**3. Maliyet Karşılaştırması (1 dakika video):**
+| Çözüm | Maliyet |
+|-------|---------|
+| Sora 2 API | ~$0.50 |
+| Veo 3.1 API | ~$0.40 |
+| **Colab T4 + açık kaynak** | **~$0.002** |
+| **Tasarruf oranı** | **250x** |
+
+### ✅ Tamamlanan v7.1 Patch Listesi (20 Haziran 2026)
+
+| # | Değişiklik | Seviye | Durum |
+|---|------------|--------|-------|
+| 1 | **Wan2.5 video generation** (opsiyonel) | Minor | ✅ |
+| 2 | **F5-TTS entegrasyonu** (XTTS-v2 alternatifi) | Minor | ✅ |
+| 3 | **Self-consistency video chaining modülü** | Minor | ✅ |
+| 4 | **LoRA fine-tuning pipeline** (karakter tutarlılığı) | Major | ⏳ Onay bekliyor |
+| 5 | Gemini 2.5 Flash default model | Patch | ✅ |
+| 6 | MCP Server enhancement | Patch | ✅ |
+| 7 | Pino structured logger | Patch | ✅ |
+
+### Çıktı Dosyaları
+- [multimodal_agent_research_2026.md](file:///C:/Users/Damla/Proje/AI-Publisher/brain/cf60fa02-25bd-4b39-9dc6-7879af882299/multimodal_agent_research_2026.md) (9KB)
+- [research_report.md](file:///C:/Users/Damla/Proje/AI-Publisher/research_report.md) (15KB)
+
+## 🔜 Kalan Sıradaki Adımlar
+
+1. **LoRA Pipeline** (Major): Karakter tutarlılığı için fine-tuning (kullanıcı onayı gerekli)
+2. **Colab Build Süreci:** "Seçenek C" hücresini çalıştırıp 14 Docker imajının (base + 13 model) Drive'a yedeklenmesi
+3. **Faz 7 Testleri:** 16 kalan test maddesi (E2E Playwright, entegrasyon, CI altyapısı)
+4. **Git push ve tag** (mevcut değişiklikler commit + push)

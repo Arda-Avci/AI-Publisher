@@ -60,12 +60,47 @@ function srtTimeToSeconds(srtTime: string): number {
  * @param outputPath - Destination video path
  * @param styleOptions - Optional subtitle styling
  */
+function srtToAssHeader(
+  playResX: number,
+  playResY: number,
+  fontName: string,
+  primaryColor: string,
+  fontSize: number,
+  bold: boolean,
+  alignment: number,
+  marginV: number,
+  marginL: number,
+  marginR: number,
+): string {
+  const bgrColor = (() => {
+    const cleaned = primaryColor.replace('#', '');
+    if (cleaned.length === 6) {
+      const r = cleaned.substring(0, 2);
+      const g = cleaned.substring(2, 4);
+      const b = cleaned.substring(4, 6);
+      return `&H00${b}${g}${r}`;
+    }
+    return '&H00FFFFFF';
+  })();
+
+  return `[Script Info]
+ScriptType: v4.00+
+PlayResX: ${playResX}
+PlayResY: ${playResY}
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,${fontName},${Math.round(fontSize)},${bgrColor},&H00FFFFFF,&H00000000,&H00000000,${bold ? -1 : 0},0,0,0,100,100,0,0,1,0,0,${alignment},${marginL},${marginR},${marginV},1
+`;
+}
+
 export async function embedSubtitles(
   videoPath: string,
   srtPath: string,
   outputPath: string,
   styleOptions?: SubtitleStyleOptions,
-): Promise<void> {
+): Promise<string> {
   await fs.ensureDir(path.dirname(outputPath));
 
   const style = styleOptions ?? {};
@@ -77,23 +112,10 @@ export async function embedSubtitles(
   const marginX = style.marginX ?? 20;
   const marginY = style.marginY ?? 20;
 
-  // Convert hex color to FFmpeg format (BGR)
-  const hexToFfmpegColor = (hex: string): string => {
-    const cleaned = hex.replace('#', '');
-    if (cleaned.length === 6) {
-      const r = cleaned.substring(0, 2);
-      const g = cleaned.substring(2, 4);
-      const b = cleaned.substring(4, 6);
-      return `0x${b}${g}${r}`; // BGR format
-    }
-    return '0xFFFFFF';
-  };
+  const alignment = position === 'top' ? 5 : position === 'center' ? 6 : 2;
+  const marginV = position === 'top' ? marginY : position === 'bottom' ? marginY : 0;
 
-  const ffmpegColor = hexToFfmpegColor(primaryColor);
-  const alignment = position === 'top' ? 'top' : position === 'center' ? 'center' : 'bottom';
-  const marginV = position === 'top' ? marginY : position === 'bottom' ? marginY : 'h/2';
-
-  // Video boyutlarını al (original_size Windows FFmpeg bug fix için)
+  // Video boyutlarını al
   let videoWidth = 1920,
     videoHeight = 1080;
   try {
@@ -124,28 +146,65 @@ export async function embedSubtitles(
     /* use defaults */
   }
 
-  // Build force_style string for libass
-  const forceStyle = [
-    `FontName=${fontFamily}`,
-    `FontSize=${fontSizeRatio}`,
-    `PrimaryColour=${ffmpegColor}`,
-    `Bold=${bold ? -1 : 0}`,
-    `Alignment=${alignment === 'top' ? 5 : alignment === 'center' ? 6 : 2}`,
-    `MarginV=${marginV}`,
-    `MarginL=${marginX}`,
-    `MarginR=${marginX}`,
-  ].join(',');
+  // SRT -> ASS dönüşümü yap, ASS filter ile göm (Windows FFmpeg original_size bug'ını bypass)
+  // Use relative path in tmp/ to avoid drive-letter colon in FFmpeg filter graph syntax
+  const tmpDir = path.join(process.cwd(), 'tmp');
+  await fs.ensureDir(tmpDir);
+  const assFilename = `subs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.ass`;
+  const assPath = path.join(tmpDir, assFilename);
+  // Use relative path for FFmpeg filter (no drive letter colon)
+  const assFilterPath = `tmp/${assFilename}`;
 
-  const srtEscaped = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-  // original_size Windows FFmpeg libass bug fix
-  const vf = `subtitles=${srtEscaped}:force_style='${forceStyle}':original_size=${videoWidth}x${videoHeight}`;
+  // ASS header + SRT içeriğini ASS events bölümüne çevir
+  const srtContent = await fs.readFile(srtPath, 'utf-8');
+  const assHeader = srtToAssHeader(
+    videoWidth,
+    videoHeight,
+    fontFamily,
+    primaryColor,
+    videoHeight * fontSizeRatio,
+    bold,
+    alignment,
+    marginV,
+    marginX,
+    marginX,
+  );
+  // SRT -> ASS event conversion (Dialogue: start,end,style,text)
+  const assEvents = srtContent
+    .replace(/\r\n/g, '\n')
+    .split(/\n\n+/)
+    .map((block) => {
+      const lines = block.trim().split('\n');
+      if (lines.length < 3) return '';
+      const timeMatch = lines[1]?.match(
+        /(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/,
+      );
+      if (!timeMatch) return '';
+      const start = toAssTime(timeMatch[1]!, timeMatch[2]!, timeMatch[3]!, timeMatch[4]!);
+      const end = toAssTime(timeMatch[5]!, timeMatch[6]!, timeMatch[7]!, timeMatch[8]!);
+      const text = lines
+        .slice(2)
+        .join('\\N')
+        .replace(/{[^}]*}/g, '')
+        .replace(/"/g, '\\"');
+      if (!text.trim()) return '';
+      return `Dialogue: 0,${start},${end},Default,,0,0,0,,${text}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  const assContent =
+    assHeader +
+    '[Events]\nFormat: Layer, Start, End, Style, Actor, MarginL, MarginR, MarginV, Effect, Text\n' +
+    assEvents;
+  await fs.writeFile(assPath, assContent, 'utf-8');
 
   const args = [
     '-y',
     '-i',
     videoPath,
     '-vf',
-    vf,
+    `ass=${assFilterPath}`,
     '-c:a',
     'copy',
     '-c:v',
@@ -165,7 +224,15 @@ export async function embedSubtitles(
   } catch (err) {
     Logger.error('[SubtitleMixer] Failed to embed subtitles:', err);
     throw err;
+  } finally {
+    fs.remove(assPath).catch(() => {});
   }
+
+  return outputPath;
+}
+
+function toAssTime(h: string, m: string, s: string, ms: string): string {
+  return `${h.padStart(1, '0')}:${m.padStart(2, '0')}:${s.padStart(2, '0')}.${ms.padEnd(3, '0').slice(0, 3)}`;
 }
 
 // ── Background music mixing ──────────────────────────────────────────────────
@@ -183,7 +250,7 @@ export async function mixBackgroundMusic(
   musicPath: string,
   outputPath: string,
   musicVolume = 0.15,
-): Promise<void> {
+): Promise<string> {
   await fs.ensureDir(path.dirname(outputPath));
 
   const duration = await getVideoDuration(videoPath);
@@ -205,17 +272,29 @@ export async function mixBackgroundMusic(
     Logger.warn('[SubtitleMixer] Could not get music duration:', err);
   }
 
-  // Calculate loop count to cover video duration
+  // Check if video has audio stream
+  let hasAudio = true;
+  try {
+    const { stdout } = await runFFmpeg('ffprobe', [
+      '-v',
+      'error',
+      '-select_streams',
+      'a:0',
+      '-show_entries',
+      'stream=index',
+      '-of',
+      'csv=p=0',
+      videoPath,
+    ]);
+    hasAudio = stdout.trim().length > 0;
+  } catch {
+    hasAudio = false;
+  }
+
   const loopCount = musicDuration > 0 ? Math.ceil(duration / musicDuration) : 1;
   const musicVolLinear = Math.max(0, Math.min(1, musicVolume));
 
-  // Use AMIX to blend audio streams, with adelay to sync loop starts
-  const filter = [
-    `[1:a]volume=${musicVolLinear}[music]`,
-    `[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
-  ].join(';');
-
-  const args = [
+  const args: string[] = [
     '-y',
     '-i',
     videoPath,
@@ -224,20 +303,22 @@ export async function mixBackgroundMusic(
     '-i',
     musicPath,
     '-filter_complex',
-    filter,
-    '-map',
-    '0:v',
-    '-map',
-    '[aout]',
-    '-c:v',
-    'copy',
-    '-c:a',
-    'aac',
-    '-b:a',
-    '192k',
-    '-shortest',
-    outputPath,
   ];
+
+  if (hasAudio) {
+    args.push(
+      `[1:a]volume=${musicVolLinear}[music];[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
+      '-map',
+      '0:v',
+      '-map',
+      '[aout]',
+    );
+  } else {
+    // Video has no audio - use music as main audio
+    args.push(`[1:a]volume=${musicVolLinear}[aout]`, '-map', '0:v', '-map', '[aout]');
+  }
+
+  args.push('-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', outputPath);
 
   try {
     await runFFmpeg('ffmpeg', args, 180000);
@@ -246,6 +327,8 @@ export async function mixBackgroundMusic(
     Logger.error('[SubtitleMixer] Failed to mix background music:', err);
     throw err;
   }
+
+  return outputPath;
 }
 
 // ── Audio ducking ─────────────────────────────────────────────────────────────

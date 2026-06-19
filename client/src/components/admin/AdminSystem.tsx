@@ -69,10 +69,21 @@ export default function AdminSystem() {
     let cancelled = false;
     fetch('/api/v1/admin/system')
       .then((r) => r.json())
-      .then((d) => { if (!cancelled) { if (d.success) setHealth(d.data); else setError(d.error); } })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((d) => {
+        if (!cancelled) {
+          if (d.success) setHealth(d.data);
+          else setError(d.error);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const formatBytes = (bytes: number) => {

@@ -87,9 +87,7 @@ describe('Sprint 9 — Multi-Agent Talk-Show Orchestrator', () => {
         const msg = result.transcript[i];
         expect(msg).toBeDefined();
         if (msg) {
-          expect(['match_analyst', 'former_player', 'bookmaker', 'data_scout']).toContain(
-            msg.role,
-          );
+          expect(['match_analyst', 'former_player', 'bookmaker', 'data_scout']).toContain(msg.role);
         }
       }
     });

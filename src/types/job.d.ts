@@ -59,6 +59,7 @@ export interface VideoJob {
     dubbing_status?: string;
     dubbing_output_path?: string;
     storyboard_enabled?: number;
+    deep_think?: number;
     niche_profile?: string;
     niche_enabled?: number;
     split_layout?: string;

@@ -12,7 +12,7 @@ import { initRabbitMQ } from './lib/rabbitmq.js';
 import { startPublishQueueWorker } from './lib/publish-queue.js';
 import { startClipQueueWorker } from './lib/clip-queue.js';
 import { i18nMiddleware } from './middleware/i18n.js';
-import { Logger } from './lib/logger.js';
+import { Logger, setCorrelationId } from './lib/logger.js';
 import { csrfMiddleware } from './middleware/csrf.js';
 
 import { themeMiddleware } from './middleware/theme.js';
@@ -96,6 +96,9 @@ process.on('uncaughtException', (err) => {
   Logger.error('Uncaught Exception — sunucu yeniden başlatılıyor', err);
   process.exit(1);
 });
+
+// Correlation ID — her istek için unique ID ata
+app.use((_req, _res, next) => { setCorrelationId(); next(); });
 
 // UTF-8 encoding middleware — tüm response'larda Türkçe karakter desteği
 app.use(utf8Middleware);

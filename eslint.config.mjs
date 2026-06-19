@@ -22,6 +22,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'videolar/', 'uploads/', '*.py', 'Wav2Lip/', 'scratch/', 'fix_translations.js', 'src/**/*.js', 'src/**/*.js.map', 'client/src/**/*.js', 'client/src/**/*.js.map', 'client/tests/'],
+    ignores: ['dist/', 'node_modules/', 'videolar/', 'uploads/', '*.py', 'Wav2Lip/', 'scratch/', 'fix_translations.js', 'src/**/*.js', 'src/**/*.js.map', 'src/**/*.d.ts', 'client/src/**/*.js', 'client/src/**/*.js.map', 'client/tests/'],
   }
 );

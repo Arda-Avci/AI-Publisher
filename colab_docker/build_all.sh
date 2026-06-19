@@ -63,7 +63,7 @@ else
   exit 1
 fi
 
-MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts")
+MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts")
 TOTAL_MODELS=${#MODELS[@]}
 
 for i in "${!MODELS[@]}"; do
@@ -139,6 +139,17 @@ for i in "${!MODELS[@]}"; do
   SAVE_DURATION=$((SECONDS - SAVE_START))
   echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
   
+  # Local Registry repository ve gecici dosyalari silerek diskte yer acma
+  echo "[INFO] Registry deposu ve disk temizligi yapiliyor ($MODEL)..."
+  rm -rf "/var/lib/registry/docker/registry/v2/repositories/ai-publisher-$MODEL" || true
+  
+  if command -v docker &> /dev/null; then
+    docker system prune -f || true
+  fi
+  if command -v podman &> /dev/null; then
+    podman system prune -f || true
+  fi
+  
   MODEL_DURATION=$((SECONDS - MODEL_START))
   echo "⏱️ Toplam Islem Suresi ($MODEL): ${MODEL_DURATION}s"
 done
@@ -147,3 +158,10 @@ echo ""
 echo "=========================================="
 echo "🎉 Tum Docker imajlari insa edildi ve Google Drive'a kaydedildi!"
 echo "=========================================="
+
+if command -v docker &> /dev/null; then
+  docker system prune -a -f || true
+fi
+if command -v podman &> /dev/null; then
+  podman system prune -a -f || true
+fi

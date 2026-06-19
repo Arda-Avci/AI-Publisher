@@ -18,8 +18,7 @@ describe('Publisher Mocks', () => {
 });
 
 describe('DB Complex Queries', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('select pending jobs ordered by id asc', async () => {
     const mockPool = { query: vi.fn().mockResolvedValue({ rows: [{ id: 1 }, { id: 2 }] }) };
@@ -47,8 +46,7 @@ describe('DB Complex Queries', () => {
 });
 
 describe('Queue Worker', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('consume message parses JSON payload', () => {
     const payload = { jobId: 42 };
@@ -64,8 +62,7 @@ describe('Queue Worker', () => {
 });
 
 describe('Broadcast Progress', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('broadcastProgress publishes to correct channel', async () => {
     const mockPub = { publish: vi.fn().mockResolvedValue(1) };
@@ -82,8 +79,7 @@ describe('Broadcast Progress', () => {
 });
 
 describe('DB Insert & Select Patterns', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('insert video_scenes with scene_number', async () => {
     const mockPool = { query: vi.fn().mockResolvedValue({ rows: [{ id: 10 }], rowCount: 1 }) };
@@ -112,8 +108,7 @@ describe('DB Insert & Select Patterns', () => {
 });
 
 describe('Queue State Transitions', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('pending to processing transition', async () => {
     const mockPool = { query: vi.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
@@ -147,8 +142,7 @@ describe('Queue State Transitions', () => {
 });
 
 describe('Credit Operations', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('check sufficient credits returns boolean', () => {
     const balance = 100;
@@ -169,8 +163,7 @@ describe('Credit Operations', () => {
 });
 
 describe('Publisher Auth File Check', () => {
-  beforeEach(() => {
-    });
+  beforeEach(() => {});
 
   it('YouTube auth file path is correct', () => {
     const authFile = 'auth_youtube.json';

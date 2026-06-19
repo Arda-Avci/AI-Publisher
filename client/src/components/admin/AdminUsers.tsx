@@ -42,10 +42,21 @@ export default function AdminUsers() {
     if (search) params.set('search', search);
     fetch(`/api/v1/admin/users?${params}`)
       .then((r) => r.json())
-      .then((d) => { if (!cancelled && d.success) { setUsers(d.users); setTotal(d.total); } })
-      .catch((e) => { if (!cancelled) console.error(e); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((d) => {
+        if (!cancelled && d.success) {
+          setUsers(d.users);
+          setTotal(d.total);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) console.error(e);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [offset, search]);
 
   const toggleAdmin = async (id: number) => {

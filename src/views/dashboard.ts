@@ -1181,6 +1181,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     <input type="checkbox" name="audio_ducking" value="1">
                     🎵 Ses Ördekleme
                   </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" name="deep_think" value="1">
+                    🧠 ${t.deepThink}
+                    <small style="display:block;opacity:0.6;font-size:0.6rem;margin-top:2px;">${t.deepThinkHint}</small>
+                  </label>
                 </div>
               </div>
               <div>
@@ -1198,7 +1203,10 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     cinematic: '${escapeHtml(t.templateCinematicDesc || '')}',
                     dynamic: '${escapeHtml(t.templateDynamicDesc || '')}',
                     simple: '${escapeHtml(t.templateSimpleDesc || '')}',
-                    pixar: '${escapeHtml(t.templatePixarDesc || 'Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır.')}'
+                    pixar: '${escapeHtml(t.templatePixarDesc || 'Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır.')}',
+                    animatediff: '${escapeHtml(t.templateAnimatediffDesc || 'SD 1.5 tabanlı AnimateDiff ile metinden akıcı animasyonlu videolar üretir. Çizgi film/stilize animasyon için idealdir.')}',
+                    svd: '${escapeHtml(t.templateSvdDesc || 'Stability AI Stable Video Diffusion XT ile görselden yüksek kaliteli video üretir. Düşük VRAM tüketimi ile 25 kare video sentezler.')}',
+                    wan25: '${escapeHtml(t.templateWan25Desc || 'Alibaba Wan2.5 ile 1080p, 5s/clip, 3-4x hız artışı')}'
                   };
                   document.getElementById('template-hint').innerText = hints[this.value];
                 ">
@@ -1206,6 +1214,9 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <option value="dynamic">${t.templateDynamic}</option>
                   <option value="simple">${t.templateSimple}</option>
                   <option value="pixar">${t.templatePixar || 'Pixar 3D Çizgi Film / Animasyon (Wan 2.1)'}</option>
+                  <option value="animatediff">${t.templateAnimatediff || 'AnimateDiff (SD 1.5 Tabanlı)'}</option>
+                  <option value="svd">${t.templateSvd || 'SVD-XT (Stable Video Diffusion)'}</option>
+                  <option value="wan25">${t.templateWan25 || 'Wan2.5 (3-4x Hızlı)'}</option>
                 </select>
                 <small style="opacity:0.6;font-size:0.65rem;display:block;margin-top:4px;" id="template-hint">${t.templateCinematicDesc}</small>
               </div>
@@ -1214,6 +1225,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <label class="form-label">TTS Sağlayıcı</label>
                   <select name="tts_provider" class="form-input" onchange="ttsVoiceHint(this.value)">
                     <option value="xtts">🎙️ XTTS-v2 (Coqui, ses klonlama)</option>
+                    <option value="f5tts">🧬 F5-TTS (Zero-Shot Klonlama)</option>
                     <option value="openai">🤖 OpenAI TTS (API anahtarı gerekli)</option>
                     <option value="edge">🌐 Edge Speech (ücretsiz, API gerekmez)</option>
                   </select>

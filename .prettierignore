@@ -1,0 +1,7 @@
+*.d.ts
+dist/
+node_modules/
+videolar/
+uploads/
+Wav2Lip/
+scratch/

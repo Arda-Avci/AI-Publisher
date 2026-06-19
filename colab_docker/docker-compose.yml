@@ -277,6 +277,111 @@ services:
     networks:
       - ai-pub-net
 
+  # ── AnimateDiff (guoyww/AnimateDiff) ────────────────────
+  animatediff:
+    build: ./animatediff
+    image: ai-publisher-animatediff:latest
+    container_name: ai-pub-animatediff
+    ports:
+      - "5013:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Stable Video Diffusion (SVD-XT) ─────────────────────
+  svd:
+    build: ./svd
+    image: ai-publisher-svd:latest
+    container_name: ai-pub-svd
+    ports:
+      - "5012:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Wan2.5 (Alibaba) ────────────────────────────────────
+  wan25:
+    build: ./wan25
+    image: ai-publisher-wan25:latest
+    container_name: ai-pub-wan25
+    ports:
+      - "5014:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── F5-TTS (Zero-Shot Voice Cloning) ────────────────────
+  f5tts:
+    build: ./f5tts
+    image: ai-publisher-f5tts:latest
+    container_name: ai-pub-f5tts
+    ports:
+      - "5015:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+
 networks:
   ai-pub-net:
     driver: bridge
