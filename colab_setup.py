@@ -91,14 +91,47 @@ else:
     # Imajlar eksikse build scriptini tetikleme seçeneği sunulur veya otomatik inşa edilir
     if not images_loaded:
         print("[INFO] Eksik Docker imajları tespit edildi. İnşa süreci başlatılıyor...")
+        
+        # 1. Registry Kurulumu ve Başlatılması
+        if not os.path.exists("/usr/local/bin/registry"):
+            print("[INFO] Docker Registry binary indiriliyor...")
+            run_cmd("wget -q https://github.com/distribution/distribution/releases/download/v2.8.2/registry_2.8.2_linux_amd64.tar.gz")
+            run_cmd("tar -xzf registry_2.8.2_linux_amd64.tar.gz registry")
+            run_cmd("mv registry /usr/local/bin/registry")
+            run_cmd("rm -f registry_2.8.2_linux_amd64.tar.gz")
+            run_cmd("chmod +x /usr/local/bin/registry")
+            
+        # 2. Kaniko Kurulumu
+        if not os.path.exists("/usr/local/bin/kaniko"):
+            print("[INFO] Kaniko executor binary indiriliyor...")
+            run_cmd("wget -q https://github.com/GoogleContainerTools/kaniko/releases/latest/download/kaniko-project-executor -O /usr/local/bin/kaniko")
+            run_cmd("chmod +x /usr/local/bin/kaniko")
+            
+        # 3. pigz Kurulumu
+        run_cmd("apt-get update -q && apt-get install -y -q pigz")
+        
+        # 4. Registry'yi Arka Planda Başlat
+        print("[INFO] Yerel registry baslatiliyor...")
+        subprocess.run("pkill -f 'registry serve' || true", shell=True)
+        subprocess.Popen(["/usr/local/bin/registry", "serve"], stdout=open("registry.log", "w"), stderr=subprocess.STDOUT)
+        
+        # Registry hazır olmasını bekle
+        import urllib.request
+        for _ in range(10):
+            try:
+                urllib.request.urlopen("http://localhost:5000/v2/")
+                print("[OK] Registry başarıyla başlatıldı ve yanıt veriyor!")
+                break
+            except Exception:
+                time.sleep(1)
+                
+        # 5. build_all.sh yolunu bul
         build_script = "/content/AI-Publisher/colab_docker/build_all.sh"
         if not os.path.exists(build_script):
-            # Yerel kopyalama dene
             if os.path.exists("colab_docker/build_all.sh"):
                 build_script = "colab_docker/build_all.sh"
             else:
                 # GitHub fallback
-                import urllib.request
                 os.makedirs("colab_docker", exist_ok=True)
                 for f_name in ["Dockerfile.base", "build_all.sh"]:
                     urllib.request.urlretrieve(f"https://raw.githubusercontent.com/Arda-Avci/AI-Publisher/main/colab_docker/{f_name}", f"colab_docker/{f_name}")
@@ -111,8 +144,7 @@ else:
                 build_script = "colab_docker/build_all.sh"
                 
         os.chmod(build_script, 0o755)
-        print(f"[INFO] Imajlar sıfırdan inşa ediliyor (Bu işlem uzun sürebilir ve Google Drive'a kaydedilir)...")
-        # Dockerfile dizinine gidip çalıştır
+        print(f"[INFO] Imajlar Kaniko ile sıfırdan inşa ediliyor (Google Drive'a kaydedilir)...")
         current_dir = os.getcwd()
         os.chdir(os.path.dirname(build_script))
         run_cmd(f"./{os.path.basename(build_script)}", label="Tüm Konteynerleri İnşa Et")

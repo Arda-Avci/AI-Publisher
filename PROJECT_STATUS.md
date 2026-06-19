@@ -173,5 +173,5 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - Modeller arası `FROM ai-publisher-base:latest` bağımlılığını sürdürmek için Colab VM'i üzerinde arka planda hafif Go-tabanlı Docker Registry (`localhost:5000`) ayağa kaldırıldı.
   - `colab_docker/build_all.sh` betiği tamamen Kaniko ve local registry tabanlı olarak güncellendi.
   - `scripts/patch_notebook.py` betiği, Colab hücresine registry ve kaniko binary kurulumlarını programatik olarak enjekte edecek şekilde yeniden düzenlendi ve notebook başarıyla yamalandı.
-
-
+- [x] **colab_setup.py ve Otomatik Kaniko Entegrasyonu (19 Haziran 2026):**
+  - Hücre 1 çalıştırıldığında eksik imaj tespit edilirse, `build_all.sh` tetiklenmeden önce yerel registry ve kaniko binary'lerinin otomatik olarak kurulması ve başlatılması sağlandı. Bu sayede ilk hücre üzerinden de otonom imaj inşası başarıyla tamamlanabilir hale geldi.
