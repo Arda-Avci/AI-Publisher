@@ -181,6 +181,8 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - Google Drive'ın alt süreç (python3 subprocess) içerisinden `drive.mount` ile bağlanmaya çalışıldığında IPython kernel eksikliği kaynaklı `'NoneType' object has no attribute 'kernel'` hatası vermesi engellendi. `colab_setup.py` alt sürecinden mount komutu tamamen kaldırılarak yerine dosya sistemi varlık denetimi yerleştirildi; asıl mount işlemi defterin 1. Hücresinin en üstüne enjekte edilerek ana IPython kernel'ına taşındı.
   - Pytorch taban imajında bulunan ve APT paket kurulumlarında `unknown system group 'messagebus'` hatasıyla inşayı çökerten dpkg statoverride hatası `colab_docker/Dockerfile.base` içerisine `sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true` yaması eklenerek çözüldü, değişiklikler commit edilip pushlandı.
   - Seçenek C (Docker İmaj Derleme) hücresinde `colab_docker/build_all.sh` betiği çalıştırılırken karşılaşılan dosya bulunamadı hatası (`No such file or directory`) giderildi; hücreye `GITHUB_TOKEN` parametresi, otomatik repo klonlama mantığı ve dizin değiştirme adımları (git pull sonrasında `colab_docker` alt dizinine `os.chdir` ile geçiş) entegre edilerek T4 GPU maliyeti oluşturan 1. Hücrenin çalıştırılma zorunluluğu tamamen ortadan kaldırıldı. Notebook dosyası (`Google_Colab_AI_Publisher.ipynb`) güncellenip uzak depoya pushlandı.
+  - Colab üzerinde `Dockerfile.base bulunamadi!` hatasını teşhis etmek amacıyla `colab_docker/build_all.sh` betiğinin en başına çalışılan dizin bilgisini (`pwd`) ve dizin içeriğini (`ls -la`) ekrana yazdıran debug satırları enjekte edildi ve pushlandı.
+
 
 
 
