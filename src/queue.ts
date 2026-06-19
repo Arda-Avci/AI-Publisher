@@ -580,6 +580,11 @@ async function startProduction(job: VideoJob) {
         }
       }
 
+      const user: any = await db.get(
+        'SELECT personal_avatar_base64, personal_voice_base64, brand_logo_base64, brand_primary_color, brand_secondary_color, brand_font_path, text_position_grid FROM users WHERE id = ?',
+        [job.user_id],
+      );
+
       Logger.info('[PRODUCTION] Stage 3: Scene generation starting', { totalScenes });
       for (const scene of dbScenes) {
         Logger.info(`  ── SAHNE ${scene.scene_number}/${totalScenes} başlıyor`);
@@ -728,10 +733,6 @@ async function startProduction(job: VideoJob) {
 
         for (const tag of detectedTags) {
           if (tag === '@me') {
-            const user: any = await db.get(
-              'SELECT personal_avatar_base64, personal_voice_base64 FROM users WHERE id = ?',
-              [job.user_id],
-            );
             if (user?.personal_avatar_base64) characterImages['@me'] = user.personal_avatar_base64;
             if (user?.personal_voice_base64) characterVoices['@me'] = user.personal_voice_base64;
           } else {
@@ -751,6 +752,32 @@ async function startProduction(job: VideoJob) {
           if (spkVoice) {
             speakerAudioBase64 = spkVoice;
           }
+        }
+
+        let remoteLogoUrl = '';
+        if (job.brand_kit_enabled === 1 && user?.brand_logo_base64) {
+          try {
+            const uploadsDir = path.join(process.cwd(), 'uploads');
+            const logoFileName = `brand_logo_${job.id}.png`;
+            const tempLogoFile = path.join(uploadsDir, logoFileName);
+            if (!await fs.pathExists(tempLogoFile)) {
+              const b64 = user.brand_logo_base64.replace(/^data:image\/\w+;base64,/, '');
+              await fs.writeFile(tempLogoFile, Buffer.from(b64, 'base64'));
+            }
+            remoteLogoUrl = process.env.PUBLIC_URL
+              ? `${process.env.PUBLIC_URL}/uploads/${logoFileName}`
+              : `http://localhost:${process.env.PORT || 4000}/uploads/${logoFileName}`;
+          } catch (logoErr) {
+            Logger.warn('Remote logo url preparation failed:', logoErr);
+          }
+        }
+
+        let remoteMusicUrl = '';
+        if (job.background_music_path) {
+          const baseName = path.basename(job.background_music_path);
+          remoteMusicUrl = process.env.PUBLIC_URL
+            ? `${process.env.PUBLIC_URL}/uploads/${baseName}`
+            : `http://localhost:${process.env.PORT || 4000}/uploads/${baseName}`;
         }
 
         Logger.info("Colab'a sahne gönderiliyor", {
@@ -792,6 +819,14 @@ async function startProduction(job: VideoJob) {
               reference_audio_base64: speakerAudioBase64,
               character_images: characterImages,
               speaker: currentSpeaker,
+              background_music: remoteMusicUrl,
+              music_volume: scene.music_volume !== undefined && scene.music_volume !== null ? scene.music_volume : 0.15,
+              logo_url: remoteLogoUrl,
+              differentiation_layout: job.differentiation_layout === 1 ? 'horizontal' : 'none',
+              subtitle_primary_color: user?.brand_primary_color || '#00F2FE',
+              subtitle_secondary_color: user?.brand_secondary_color || '#FFFFFF',
+              subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
+              subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
               callback_url: process.env.PUBLIC_URL
                 ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
                 : `http://localhost:${process.env.PORT || 4000}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`,
@@ -1026,10 +1061,7 @@ async function startProduction(job: VideoJob) {
           fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`);
         }
 
-        const user = await db.get(
-          'SELECT brand_logo_base64, brand_primary_color, brand_secondary_color, brand_font_path, text_position_grid FROM users WHERE id = ?',
-          [job.user_id],
-        );
+
 
         let finalSubtitleFile = srtFile;
         let tempAssFile = '';
@@ -1063,185 +1095,194 @@ async function startProduction(job: VideoJob) {
 
         let tempLogoFile = '';
         try {
-          const filterComplexParts: string[] = [];
-          const inputArgs = ['-y', '-i', tV, '-i', tS, '-i', tE];
-
-          let musicIndex = -1;
-          if (job.background_music_path) {
-            const musicAbsPath = path.resolve(path.join(process.cwd(), job.background_music_path));
-            if (await fs.pathExists(musicAbsPath)) {
-              inputArgs.push('-i', musicAbsPath);
-              // -i flag sayısı - 1 = input sırası (0-indexed)
-              musicIndex = inputArgs.filter((a) => a === '-i').length - 1;
-              Logger.info(
-                `Müzik dosyası FFmpeg'e eklendi: index=${musicIndex}, path=${musicAbsPath}`,
-              );
-            }
-          }
-
-          let videoInput = '[0:v]';
-
-          if (finalSubtitleFile) {
-            const assFilterPath = finalSubtitleFile.replace(/\\/g, '/').replace(/:/g, '\\:');
-            const subFilter = finalSubtitleFile.endsWith('.ass')
-              ? `ass=${assFilterPath}`
-              : `subtitles=${assFilterPath}`;
-            filterComplexParts.push(`${videoInput}${subFilter}[v_sub]`);
-            videoInput = '[v_sub]';
-          }
-
-          if (job.brand_kit_enabled === 1 && user?.brand_logo_base64) {
-            const uploadsDir = path.join(process.cwd(), 'uploads');
-            await fs.ensureDir(uploadsDir);
-            tempLogoFile = path.join(
-              uploadsDir,
-              `brand_logo_q_${job.id}_${scene.scene_number}_${Date.now()}.png`,
-            );
-            const b64 = user.brand_logo_base64.replace(/^data:image\/\w+;base64,/, '');
-            await fs.writeFile(tempLogoFile, Buffer.from(b64, 'base64'));
-
-            inputArgs.push('-i', tempLogoFile);
-            const logoIndex = inputArgs.length / 2 - 1;
-
-            const logoW = 160;
-            filterComplexParts.push(`[${logoIndex}:v]scale=${logoW}:-1[logo]`);
-
-            let overlayX = 'W-w-20';
-            let overlayY = '20';
-            const positionGrid = user.text_position_grid || 'top_right';
-            if (positionGrid === 'top_left') {
-              overlayX = '20';
-              overlayY = '20';
-            } else if (positionGrid === 'top_center') {
-              overlayX = '(W-w)/2';
-              overlayY = '20';
-            } else if (positionGrid === 'bottom_left') {
-              overlayX = '20';
-              overlayY = 'H-h-20';
-            } else if (positionGrid === 'bottom_right') {
-              overlayX = 'W-w-20';
-              overlayY = 'H-h-20';
-            } else if (positionGrid === 'bottom_center') {
-              overlayX = '(W-w)/2';
-              overlayY = 'H-h-20';
-            }
-
-            filterComplexParts.push(
-              `${videoInput}[logo]overlay=x=${overlayX}:y=${overlayY}[v_logo]`,
-            );
-            videoInput = '[v_logo]';
-          }
-
-          let sfxSource = '[2:a]';
-          if (job.auto_sfx_placement === 1) {
-            const positionX = scene.scene_number % 2 === 0 ? 0.5 : -0.5;
-            const panLeft = ((1 - positionX) / 2).toFixed(2);
-            const panRight = ((1 + positionX) / 2).toFixed(2);
-            filterComplexParts.push(
-              `[2:a]pan=stereo|c0=${panLeft}*c0|c1=${panRight}*c0[sfx_panned]`,
-            );
-            sfxSource = '[sfx_panned]';
-          }
-
-          if (musicIndex !== -1) {
-            const vol =
-              scene.music_volume !== undefined && scene.music_volume !== null
-                ? scene.music_volume
-                : 0.2;
-            filterComplexParts.push(`[${musicIndex}:a]volume=${vol}[music_vol]`);
-
-            if (job.audio_ducking === 1) {
-              filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
-              filterComplexParts.push(`[music_vol]volume=0.2[music_low]`);
-              filterComplexParts.push(
-                `[music_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_music_ducked]`,
-              );
-              filterComplexParts.push(
-                `[sfx_low][bg_music_ducked]amix=inputs=2:duration=first[ducked_bg]`,
-              );
-              filterComplexParts.push(
-                `[1:a][ducked_bg]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
-              );
+          if (process.env.MOCK_COLAB === 'false') {
+            Logger.info('[PRODUCTION] Skipping local FFmpeg mix, using pre-mixed Colab video.', { mS });
+            if (await fs.pathExists(tV)) {
+              await fs.copy(tV, mS, { overwrite: true });
             } else {
-              filterComplexParts.push(
-                `[1:a]${sfxSource}[music_vol]amix=inputs=3:duration=first[aout]`,
-              );
+              throw new Error(`Colab mixed video dosyası bulunamadı: ${tV}`);
             }
           } else {
-            if (job.audio_ducking === 1) {
-              filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
-              filterComplexParts.push(
-                `[sfx_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`,
-              );
-              filterComplexParts.push(
-                `[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
-              );
-            } else {
-              filterComplexParts.push(`[1:a]${sfxSource}amix=inputs=2:duration=first[aout]`);
+            const filterComplexParts: string[] = [];
+            const inputArgs = ['-y', '-i', tV, '-i', tS, '-i', tE];
+
+            let musicIndex = -1;
+            if (job.background_music_path) {
+              const musicAbsPath = path.resolve(path.join(process.cwd(), job.background_music_path));
+              if (await fs.pathExists(musicAbsPath)) {
+                inputArgs.push('-i', musicAbsPath);
+                // -i flag sayısı - 1 = input sırası (0-indexed)
+                musicIndex = inputArgs.filter((a) => a === '-i').length - 1;
+                Logger.info(
+                  `Müzik dosyası FFmpeg'e eklendi: index=${musicIndex}, path=${musicAbsPath}`,
+                );
+              }
             }
-          }
 
-          const filterComplexStr = filterComplexParts.join(';');
-          const baseArgs = [
-            ...inputArgs,
-            '-filter_complex',
-            filterComplexStr,
-            '-map',
-            videoInput,
-            '-map',
-            '[aout]',
-          ];
-          const nvencArgs = [
-            ...baseArgs,
-            '-c:v',
-            'h264_nvenc',
-            '-pix_fmt',
-            'yuv420p',
-            '-c:a',
-            'aac',
-            '-shortest',
-            mS,
-          ];
-          const libx264Args = [
-            ...baseArgs,
-            '-c:v',
-            'libx264',
-            '-pix_fmt',
-            'yuv420p',
-            '-preset',
-            'medium',
-            '-crf',
-            '23',
-            '-c:a',
-            'aac',
-            '-shortest',
-            mS,
-          ];
-          const defArgs = [...baseArgs, '-c:a', 'aac', '-shortest', mS];
+            let videoInput = '[0:v]';
 
-          await runFFmpegWithFallback([
-            { cmd: 'ffmpeg', args: nvencArgs },
-            { cmd: 'ffmpeg', args: libx264Args },
-            { cmd: 'ffmpeg', args: defArgs },
-          ]);
+            if (finalSubtitleFile) {
+              const assFilterPath = finalSubtitleFile.replace(/\\/g, '/').replace(/:/g, '\\:');
+              const subFilter = finalSubtitleFile.endsWith('.ass')
+                ? `ass=${assFilterPath}`
+                : `subtitles=${assFilterPath}`;
+              filterComplexParts.push(`${videoInput}${subFilter}[v_sub]`);
+              videoInput = '[v_sub]';
+            }
 
-          // 3C: Color Grade post-processing
-          if (
-            job.color_grade_enabled === 1 &&
-            job.color_grade_preset &&
-            job.color_grade_preset !== 'none'
-          ) {
-            Logger.info('[COLOR GRADE] Applying grade', {
-              preset: job.color_grade_preset,
-              scene: scene.scene_number,
-            });
-            const gradedPath = mS.replace('.mp4', '_graded.mp4');
-            try {
-              await applyColorGradeFilter(mS, gradedPath, job.color_grade_preset);
-              await fs.move(gradedPath, mS, { overwrite: true });
-              Logger.info('[COLOR GRADE] Applied successfully');
-            } catch (gradeErr) {
-              Logger.warn('[COLOR GRADE] Failed, skipping:', gradeErr);
+            if (job.brand_kit_enabled === 1 && user?.brand_logo_base64) {
+              const uploadsDir = path.join(process.cwd(), 'uploads');
+              await fs.ensureDir(uploadsDir);
+              tempLogoFile = path.join(
+                uploadsDir,
+                `brand_logo_q_${job.id}_${scene.scene_number}_${Date.now()}.png`,
+              );
+              const b64 = user.brand_logo_base64.replace(/^data:image\/\w+;base64,/, '');
+              await fs.writeFile(tempLogoFile, Buffer.from(b64, 'base64'));
+
+              inputArgs.push('-i', tempLogoFile);
+              const logoIndex = inputArgs.length / 2 - 1;
+
+              const logoW = 160;
+              filterComplexParts.push(`[${logoIndex}:v]scale=${logoW}:-1[logo]`);
+
+              let overlayX = 'W-w-20';
+              let overlayY = '20';
+              const positionGrid = user.text_position_grid || 'top_right';
+              if (positionGrid === 'top_left') {
+                overlayX = '20';
+                overlayY = '20';
+              } else if (positionGrid === 'top_center') {
+                overlayX = '(W-w)/2';
+                overlayY = '20';
+              } else if (positionGrid === 'bottom_left') {
+                overlayX = '20';
+                overlayY = 'H-h-20';
+              } else if (positionGrid === 'bottom_right') {
+                overlayX = 'W-w-20';
+                overlayY = 'H-h-20';
+              } else if (positionGrid === 'bottom_center') {
+                overlayX = '(W-w)/2';
+                overlayY = 'H-h-20';
+              }
+
+              filterComplexParts.push(
+                `${videoInput}[logo]overlay=x=${overlayX}:y=${overlayY}[v_logo]`,
+              );
+              videoInput = '[v_logo]';
+            }
+
+            let sfxSource = '[2:a]';
+            if (job.auto_sfx_placement === 1) {
+              const positionX = scene.scene_number % 2 === 0 ? 0.5 : -0.5;
+              const panLeft = ((1 - positionX) / 2).toFixed(2);
+              const panRight = ((1 + positionX) / 2).toFixed(2);
+              filterComplexParts.push(
+                `[2:a]pan=stereo|c0=${panLeft}*c0|c1=${panRight}*c0[sfx_panned]`,
+              );
+              sfxSource = '[sfx_panned]';
+            }
+
+            if (musicIndex !== -1) {
+              const vol =
+                scene.music_volume !== undefined && scene.music_volume !== null
+                  ? scene.music_volume
+                  : 0.2;
+              filterComplexParts.push(`[${musicIndex}:a]volume=${vol}[music_vol]`);
+
+              if (job.audio_ducking === 1) {
+                filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
+                filterComplexParts.push(`[music_vol]volume=0.2[music_low]`);
+                filterComplexParts.push(
+                  `[music_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_music_ducked]`,
+                );
+                filterComplexParts.push(
+                  `[sfx_low][bg_music_ducked]amix=inputs=2:duration=first[ducked_bg]`,
+                );
+                filterComplexParts.push(
+                  `[1:a][ducked_bg]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
+                );
+              } else {
+                filterComplexParts.push(
+                  `[1:a]${sfxSource}[music_vol]amix=inputs=3:duration=first[aout]`,
+                );
+              }
+            } else {
+              if (job.audio_ducking === 1) {
+                filterComplexParts.push(`${sfxSource}volume=0.25[sfx_low]`);
+                filterComplexParts.push(
+                  `[sfx_low][1:a]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]`,
+                );
+                filterComplexParts.push(
+                  `[1:a][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]`,
+                );
+              } else {
+                filterComplexParts.push(`[1:a]${sfxSource}amix=inputs=2:duration=first[aout]`);
+              }
+            }
+
+            const filterComplexStr = filterComplexParts.join(';');
+            const baseArgs = [
+              ...inputArgs,
+              '-filter_complex',
+              filterComplexStr,
+              '-map',
+              videoInput,
+              '-map',
+              '[aout]',
+            ];
+            const nvencArgs = [
+              ...baseArgs,
+              '-c:v',
+              'h264_nvenc',
+              '-pix_fmt',
+              'yuv420p',
+              '-c:a',
+              'aac',
+              '-shortest',
+              mS,
+            ];
+            const libx264Args = [
+              ...baseArgs,
+              '-c:v',
+              'libx264',
+              '-pix_fmt',
+              'yuv420p',
+              '-preset',
+              'medium',
+              '-crf',
+              '23',
+              '-c:a',
+              'aac',
+              '-shortest',
+              mS,
+            ];
+            const defArgs = [...baseArgs, '-c:a', 'aac', '-shortest', mS];
+
+            await runFFmpegWithFallback([
+              { cmd: 'ffmpeg', args: nvencArgs },
+              { cmd: 'ffmpeg', args: libx264Args },
+              { cmd: 'ffmpeg', args: defArgs },
+            ]);
+
+            // 3C: Color Grade post-processing
+            if (
+              job.color_grade_enabled === 1 &&
+              job.color_grade_preset &&
+              job.color_grade_preset !== 'none'
+            ) {
+              Logger.info('[COLOR GRADE] Applying grade', {
+                preset: job.color_grade_preset,
+                scene: scene.scene_number,
+              });
+              const gradedPath = mS.replace('.mp4', '_graded.mp4');
+              try {
+                await applyColorGradeFilter(mS, gradedPath, job.color_grade_preset);
+                await fs.move(gradedPath, mS, { overwrite: true });
+                Logger.info('[COLOR GRADE] Applied successfully');
+              } catch (gradeErr) {
+                Logger.warn('[COLOR GRADE] Failed, skipping:', gradeErr);
+              }
             }
           }
         } finally {
@@ -1368,9 +1409,28 @@ async function startProduction(job: VideoJob) {
     const fName = `film_${job.id}_${Date.now()}.mp4`;
     let fPath = path.join(process.cwd(), 'videolar', fName);
 
-    // Concat with crossfade transition
-    Logger.info('Sahneler crossfade gecisleriyle birlestiriliyor...', { finalScenes });
-    await concatVideosWithCrossfade(finalScenes, fPath);
+    if (process.env.MOCK_COLAB === 'false') {
+      Logger.info('Sahneler demuxer concat (-c copy) ile birleştiriliyor...', { finalScenes });
+      const txt = path.join(path.dirname(fPath), `temp_concat_${Date.now()}.txt`);
+      await fs.writeFile(
+        txt,
+        finalScenes.map((p) => `file '${path.resolve(p).replace(/\\/g, '/')}'`).join('\n'),
+      );
+      try {
+        await runFFmpegWithFallback([
+          {
+            cmd: 'ffmpeg',
+            args: ['-y', '-f', 'concat', '-safe', '0', '-i', txt, '-c', 'copy', fPath],
+          },
+        ]);
+      } finally {
+        await fs.remove(txt);
+      }
+    } else {
+      // Concat with crossfade transition
+      Logger.info('Sahneler crossfade gecisleriyle birlestiriliyor...', { finalScenes });
+      await concatVideosWithCrossfade(finalScenes, fPath);
+    }
 
     // Temizlik
     for (const f of finalScenes) {

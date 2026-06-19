@@ -33,6 +33,11 @@ Wav2Lip/
 !CLAUDE.md
 !PROJECT_STATUS.md
 !TODO.md
+!project_plan.md
+!PROJE_ISLEYIS.md
+!TECH_STACK.md
+!KURULUM_VE_GEREKSINIMLER.md
+!KNOWN_ISSUES.md
 *.txt
 !requirements.txt
 *.log

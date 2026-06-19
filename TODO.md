@@ -1,5 +1,23 @@
 # Yapılacaklar Listesi (TODO)
 
+## 🚀 Yeni v7.0 Colab-Heavy Kurgu & Kaniko Derleme Fazları (19 Haziran 2026)
+
+- [x] **Faz 1: Colab Sunucusu & FFmpeg Kurgu**
+  - [x] `colab_server.py` dosyasında müzik/logo indirme ve tek geçişli kurgu (mixing) adımlarının yazılması.
+  - [x] kinetik altyazı, farklılaştırma filtreleri ve logo yerleşiminin Colab FFmpeg ile yapılması.
+  - [x] Üretilen pre-mixed medyanın callback webhook (`/api/v1/video/callback`) ile Node.js'e push edilmesi.
+- [x] **Faz 2: Node.js queue.ts Güncellemesi**
+  - [x] `/generate-media` payload'ına kurgu, farklılaştırma ve logo parametrelerinin eklenmesi.
+  - [x] `MOCK_COLAB === 'false'` iken local FFmpeg mix adımlarının bypass edilmesi.
+  - [x] Final birleştirme adımının `-c copy` (demuxer) ile re-encode etmeden hızlı yapılması.
+- [x] **Faz 3: Dockerfile & Kaniko & Notebook Entegrasyonu**
+  - [x] `Dockerfile.base` imajına FFmpeg, OpenCV, libass ve yazı tiplerinin dahil edilmesi.
+  - [x] `build_all.sh` betiğinin Kaniko ve localhost:5000 yerel registry ile güncellenmesi.
+  - [x] `Google_Colab_AI_Publisher.ipynb` defterinin High-RAM modunda dockerd ve Kaniko bypass adımlarına göre güncellenmesi.
+- [x] **Faz 4: Belge ve Kılavuz Güncellemeleri**
+  - [x] `project_plan.md`, `TODO.md` ve `PROJECT_STATUS.md` dosyalarının güncellenmesi.
+  - [x] `PROJE_ISLEYIS.md`, `KNOWN_ISSUES.md`, `KURULUM_VE_GEREKSINIMLER.md` ve `TECH_STACK.md` dökümanlarının güncellenmesi.
+
 ## 🎯 v6.0 Mimari Kararları (15 Haziran 2026)
 
 | Karar | Seçim | Alternatif(ler) | Tasarruf |

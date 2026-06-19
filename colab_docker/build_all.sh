@@ -4,6 +4,14 @@
 DRIVE_DIR="/content/drive/MyDrive/Colab Notebooks/docker/images"
 mkdir -p "$DRIVE_DIR"
 
+# Get absolute path of kaniko to prevent command not found errors
+KANIKO_BIN="kaniko"
+if [ -f "/usr/local/bin/kaniko" ]; then
+  KANIKO_BIN="/usr/local/bin/kaniko"
+elif [ -f "/kaniko/executor" ]; then
+  KANIKO_BIN="/kaniko/executor"
+fi
+
 echo "=========================================="
 echo "🚀 FAZ 1: Base Docker Imajı Insa Ediliyor (Kaniko)"
 echo "=========================================="
@@ -24,7 +32,7 @@ if [ -f "Dockerfile.base" ]; then
 
   echo "[INFO] Dockerfile.base bulundu. Kaniko ile insa basliyor..."
   
-  kaniko --context=. \
+  $KANIKO_BIN --context=. \
          --dockerfile=Dockerfile.base \
          --destination=localhost:5000/ai-publisher-base:latest \
          --tarPath=base.tar \
@@ -88,7 +96,7 @@ for i in "${!MODELS[@]}"; do
   # Faz 3: Kaniko Build
   echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
   
-  kaniko --context="$MODEL/" \
+  $KANIKO_BIN --context="$MODEL/" \
          --dockerfile="$MODEL/Dockerfile" \
          --destination="localhost:5000/ai-publisher-$MODEL:latest" \
          --tarPath="$MODEL.tar" \

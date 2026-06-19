@@ -218,6 +218,187 @@ def trigger_vm_shutdown():
 threading.Thread(target=idle_monitor_thread, daemon=True).start()
 
 # --- HELPER FUNCTIONS ---
+def download_file(url, dest_path):
+    if not url: return None
+    try:
+        headers = {"ngrok-skip-browser-warning": "any-value", "bypass-tunnel-reminder": "true"}
+        resp = requests.get(url, headers=headers, stream=True, timeout=30)
+        if resp.status_code == 200:
+            with open(dest_path, "wb") as f:
+                shutil.copyfileobj(resp.raw, f)
+            return dest_path
+    except Exception as e:
+        print(f"[SUPERVISOR] Failed downloading file from {url}: {e}")
+    return None
+
+def parse_srt_time_to_seconds(srt_time):
+    parts = srt_time.split(':')
+    part0 = parts[0] if len(parts) > 0 else '0'
+    part1 = parts[1] if len(parts) > 1 else '0'
+    part2 = parts[2] if len(parts) > 2 else '0,0'
+    secs_parts = part2.split(',')
+    sec0 = secs_parts[0] if len(secs_parts) > 0 else '0'
+    sec1 = secs_parts[1] if len(secs_parts) > 1 else '0'
+    h = int(part0)
+    m = int(part1)
+    s = int(sec0)
+    ms = int(sec1)
+    return h * 3600 + m * 60 + s + ms / 1000.0
+
+def format_seconds_to_ass_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds % 1) * 100)
+    return f"{h}:{m:02d}:{s:02d}.{ms:02d}"
+
+def convert_srt_to_kinetic_ass(srt_path, ass_path, primary_color='#00F2FE', secondary_color='#FFFFFF', font_name='Arial', anim_style='bounce'):
+    if not os.path.exists(srt_path): return
+    with open(srt_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    blocks = content.strip().split('\n\n')
+    events = []
+    
+    def hex_to_ass_color(hex_str):
+        cleaned = hex_str.replace('#', '')
+        if len(cleaned) == 6:
+            r = cleaned[0:2]
+            g = cleaned[2:4]
+            b = cleaned[4:6]
+            return f"&H00{b}{g}{r}&"
+        return '&H00FFFFFF&'
+        
+    ass_primary = hex_to_ass_color(primary_color)
+    ass_secondary = hex_to_ass_color(secondary_color)
+    
+    style_tags = {
+        'bounce': '\\fscx125\\fscy125',
+        'pulse': '\\fscx140\\fscy140',
+        'shake': '\\fscx110\\fscy110\\frx5\\fry3',
+        'pop': '\\fscx150\\fscy150\\bord3',
+        'wave': '\\fscx120\\fscy120\\frx10'
+    }
+    
+    active_style = style_tags.get(anim_style, style_tags['bounce'])
+    
+    for block in blocks:
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        if len(lines) < 3: continue
+        time_line = lines[1]
+        text_lines = " ".join(lines[2:])
+        if '-->' not in time_line: continue
+        
+        start_str, end_str = time_line.split('-->')
+        start_sec = parse_srt_time_to_seconds(start_str.strip())
+        end_sec = parse_srt_time_to_seconds(end_str.strip())
+        total_duration = end_sec - start_sec
+        
+        words = [w for w in text_lines.split() if len(w) > 0]
+        if not words: continue
+        
+        word_duration = total_duration / len(words)
+        
+        for i in range(len(words)):
+            w_start = start_sec + i * word_duration
+            w_end = w_start + word_duration
+            
+            text_parts = []
+            for idx, w in enumerate(words):
+                if idx == i:
+                    text_parts.append(f"{{\\c{ass_primary}\\b1{active_style}}}{w}{{\\r}}")
+                else:
+                    text_parts.append(f"{{\\c{ass_secondary}\\b0}}{w}")
+            
+            start_ass = format_seconds_to_ass_time(w_start)
+            end_ass = format_seconds_to_ass_time(w_end)
+            events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{' '.join(text_parts)}")
+            
+    ass_header = f"""[Script Info]
+Title: Kinetic Subtitles
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,{font_name},42,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,10,10,120,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+    with open(ass_path, 'w', encoding='utf-8') as f:
+        f.write(ass_header + "\n".join(events))
+
+def mix_video_on_colab(video_path, speech_path, sfx_path, subtitle_path, music_path, logo_path, output_path, data):
+    differentiation_layout = data.get("differentiation_layout")
+    music_volume = float(data.get("music_volume", 0.15))
+    
+    primary_color = data.get("subtitle_primary_color", "#00F2FE")
+    secondary_color = data.get("subtitle_secondary_color", "#FFFFFF")
+    font_name = data.get("subtitle_font_name", "Arial")
+    anim_style = data.get("subtitle_anim_style", "bounce")
+    
+    ass_path = "/content/subtitle_kinetic.ass"
+    if subtitle_path and os.path.exists(subtitle_path):
+        convert_srt_to_kinetic_ass(subtitle_path, ass_path, primary_color, secondary_color, font_name, anim_style)
+    
+    inputs = ["-i", video_path, "-i", speech_path, "-i", sfx_path]
+    
+    music_idx = -1
+    if music_path and os.path.exists(music_path):
+        inputs.extend(["-i", music_path])
+        music_idx = len(inputs) // 2 - 1
+        
+    logo_idx = -1
+    if logo_path and os.path.exists(logo_path):
+        inputs.extend(["-i", logo_path])
+        logo_idx = len(inputs) // 2 - 1
+        
+    filter_parts = []
+    
+    current_v = "0:v"
+    
+    if differentiation_layout in ("vertical", "horizontal"):
+        w, h = (1080, 1920) if differentiation_layout == "vertical" else (1920, 1080)
+        scale_orig = "972:-1" if differentiation_layout == "vertical" else "1728:-1"
+        filter_parts.append(
+            f"[{current_v}]split[orig][bg];"
+            f"[bg]scale={w}:{h},boxblur=40[blurred];"
+            f"[orig]scale={scale_orig},eq=contrast=1.05:saturation=1.1[scaled];"
+            f"[blurred][scaled]overlay=(W-w)/2:(H-h)/2,vignette=pi/8[diffv]"
+        )
+        current_v = "diffv"
+        
+    if logo_idx != -1:
+        filter_parts.append(f"[{logo_idx}:v]scale=120:-1[scaled_logo]")
+        filter_parts.append(f"[{current_v}][scaled_logo]overlay=W-w-20:20[logov]")
+        current_v = "logov"
+        
+    if os.path.exists(ass_path):
+        filter_parts.append(f"[{current_v}]subtitles={ass_path}[subv]")
+        current_v = "subv"
+        
+    if music_idx != -1:
+        filter_parts.append("[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=0[speech_sfx]")
+        filter_parts.append(f"[{music_idx}:a]volume={music_volume}[bg]")
+        filter_parts.append(f"[bg][speech_sfx]sidechaincompress=threshold=0.12:ratio=2.5:attack=15:release=250[bg_ducked]")
+        filter_parts.append("[speech_sfx][bg_ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]")
+        audio_map = "[aout]"
+    else:
+        filter_parts.append("[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=0[aout]")
+        audio_map = "[aout]"
+        
+    cmd = ["ffmpeg", "-y"]
+    cmd.extend(inputs)
+    cmd.extend(["-filter_complex", ";".join(filter_parts)])
+    cmd.extend(["-map", f"[{current_v}]", "-map", audio_map])
+    cmd.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-c:a", "aac", "-b:a", "192k", "-shortest", output_path])
+    
+    print(f"[SUPERVISOR] Running FFmpeg Mix command: {' '.join(cmd)}")
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        print(f"[SUPERVISOR] FFmpeg mix failed: {res.stderr}")
+        raise RuntimeError(f"FFmpeg mixing failed: {res.stderr}")
+
 def check_tunnel_connectivity():
     last_url = DIAGNOSTICS["callbacks"]["last_url"]
     if not last_url:
@@ -483,6 +664,41 @@ def _generate_media_worker(task_id, data):
     else:
         silence = np.zeros(int(16000 * 3), dtype=np.int16)
         wavfile.write(SFX_PATH, 16000, silence)
+
+    _update_task(task_id, stage="mixing", stagePercent=80, message="Kurgu ve miksaj yapılıyor...")
+    try:
+        music_url = data.get("background_music")
+        logo_url = data.get("logo_url")
+        
+        music_path = None
+        if music_url:
+            music_path = "/content/bg_music.mp3"
+            download_file(music_url, music_path)
+            
+        logo_path = None
+        if logo_url:
+            logo_path = "/content/logo.png"
+            download_file(logo_url, logo_path)
+            
+        temp_mixed = "/content/temp_mixed.mp4"
+        mix_video_on_colab(
+            video_path=LAST_VIDEO_PATH,
+            speech_path=AUDIO_PATH,
+            sfx_path=SFX_PATH,
+            subtitle_path=SUBTITLE_PATH if os.path.exists(SUBTITLE_PATH) else None,
+            music_path=music_path,
+            logo_path=logo_path,
+            output_path=temp_mixed,
+            data=data
+        )
+        if os.path.exists(temp_mixed):
+            shutil.copyfile(temp_mixed, LAST_VIDEO_PATH)
+            os.remove(temp_mixed)
+        if music_path and os.path.exists(music_path): os.remove(music_path)
+        if logo_path and os.path.exists(logo_path): os.remove(logo_path)
+        if os.path.exists("/content/subtitle_kinetic.ass"): os.remove("/content/subtitle_kinetic.ass")
+    except Exception as mix_err:
+        print(f"[SUPERVISOR] Video mixing failed: {mix_err}")
 
     _update_task(task_id, stage="finalizing", stagePercent=90, message="Dosyalar hazırlanıyor...")
     TASKS[task_id] = {
