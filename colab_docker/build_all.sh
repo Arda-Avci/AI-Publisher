@@ -42,13 +42,12 @@ if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
   echo "✅ Base image Drive'da ve registry'de mevcut. Build atlandi."
   BASE_SKIPPED=true
 elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ]; then
-  echo "📥 Base image Drive'da mevcut ama registry'de yok. Drive'dan yuklenip registry'ye push ediliyor..."
+  echo "📥 Base image Drive'da mevcut ama registry'de yok. Docker load yapiliyor..."
   if command -v docker &> /dev/null; then
-    # docker load, tag'i korur (localhost:5000/ai-publisher-base:latest)
     docker load -i "$DRIVE_DIR/base.tar.gz"
-    docker push localhost:5000/ai-publisher-base:latest
-    echo "✅ Base image Drive'dan yuklendi ve registry'ye push edildi. Build atlandi."
-    BASE_SKIPPED=true
+    # docker push VFS ile cok yavas -> registry kullanma, model Dockerfile'larini yama
+    echo "✅ Base image Docker'a yuklendi. Registry push atlandi (VFS yavas)."
+    BASE_LOADED=true
   else
     echo "⚠️ Docker bulunamadi, Kaniko ile build edilecek..."
     if [ -f "Dockerfile.base" ]; then
@@ -146,34 +145,53 @@ for i in "${!MODELS[@]}"; do
   fi
   echo "👉 Dogrulama basarili."
   
-  # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
-  echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
-  sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-  
-  # Faz 3: Kaniko Build
-  echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
-  
-  $KANIKO_BIN --context="$MODEL/" \
-         --dockerfile="$MODEL/Dockerfile" \
-         --destination="localhost:5000/ai-publisher-$MODEL:latest" \
-         --tarPath="$MODEL.tar" \
-         --insecure \
-         --skip-tls-verify \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
-  
-  BUILD_STATUS=$?
-  
-  # Dockerfile'ı eski haline geri döndür
-  sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  if [ "$BASE_LOADED" = "true" ] && command -v docker &> /dev/null; then
+    # Docker mevcut -> docker build ile (registry gerekmez, VFS'den kacinir)
+    echo "[FAZ 2/3] Docker ile model imaji insa ediliyor (registry atlandi)..."
+    
+    docker build -t "ai-publisher-$MODEL:latest" "$MODEL/"
+    BUILD_STATUS=$?
+    
+    if [ $BUILD_STATUS -eq 0 ]; then
+      echo "👉 Docker build tamamlandi. Imaj diske aktariliyor..."
+      docker save "ai-publisher-$MODEL:latest" -o "$MODEL.tar"
+      SAVE_STATUS=$?
+    fi
+  else
+    # Kaniko ile build (registry gerekli)
+    # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
+    echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
+    sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+    
+    # Faz 3: Kaniko Build
+    echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
+    
+    $KANIKO_BIN --context="$MODEL/" \
+           --dockerfile="$MODEL/Dockerfile" \
+           --destination="localhost:5000/ai-publisher-$MODEL:latest" \
+           --tarPath="$MODEL.tar" \
+           --insecure \
+           --skip-tls-verify \
+           --whitelist-var-run=false \
+           --ignore-var-run \
+           --snapshot-mode=redo
+    
+    BUILD_STATUS=$?
+    
+    # Dockerfile'ı eski haline geri döndür
+    sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+    
+    SAVE_STATUS=$BUILD_STATUS
+    if [ $BUILD_STATUS -eq 0 ]; then
+      echo "👉 Kaniko insa tamamlandi."
+    fi
+  fi
   
   if [ $BUILD_STATUS -ne 0 ]; then
     echo "❌ Hata: $MODEL imaji insa edilemedi!"
     rm -f "$MODEL.tar"
     continue
   fi
-  echo "👉 Insa tamamlandi."
   
   # Faz 4: Sıkıştırma ve Drive'a yazma
   echo "[FAZ 4/4] Imaj sıkıştırılıp Drive'a kaydediliyor..."
@@ -195,10 +213,6 @@ for i in "${!MODELS[@]}"; do
   
   SAVE_DURATION=$((SECONDS - SAVE_START))
   echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
-  
-  # Local Registry repository ve gecici dosyalari silerek diskte yer acma
-  echo "[INFO] Registry deposu ve disk temizligi yapiliyor ($MODEL)..."
-  rm -rf "/var/lib/registry/docker/registry/v2/repositories/ai-publisher-$MODEL" || true
   
   if command -v docker &> /dev/null; then
     docker system prune -f || true
