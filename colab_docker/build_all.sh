@@ -50,6 +50,8 @@ elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ]; then
   if command -v docker &> /dev/null; then
     docker load -i "$DRIVE_DIR/base.tar.gz"
     # docker push VFS ile cok yavas -> registry kullanma, model Dockerfile'larini yama
+    # docker load tag'i localhost:5000/... olarak kaydeder, Dockerfile FROM icin de tag lazim
+    docker tag localhost:5000/ai-publisher-base:latest ai-publisher-base:latest 2>/dev/null || true
     echo "✅ Base image Docker'a yuklendi. Registry push atlandi (VFS yavas)."
     BASE_LOADED=true
   else
