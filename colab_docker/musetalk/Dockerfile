@@ -1,7 +1,11 @@
 FROM ai-publisher-base:latest
 
-# Clone MuseTalk repository
-RUN git clone https://github.com/TencentGameMate/MuseTalk.git /app/MuseTalk
+# Clone MuseTalk repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
+RUN curl -sL https://github.com/TencentGameMate/MuseTalk/archive/refs/heads/main.tar.gz -o /tmp/musetalk.tar.gz && \
+    mkdir -p /app/MuseTalk && \
+    tar -xzf /tmp/musetalk.tar.gz -C /tmp/ && \
+    mv /tmp/MuseTalk-main/* /app/MuseTalk/ && \
+    rm -rf /tmp/musetalk.tar.gz /tmp/MuseTalk-main
 
 # Install MuseTalk-specific dependencies
 RUN pip install --no-cache-dir \
