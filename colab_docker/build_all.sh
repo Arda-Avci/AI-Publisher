@@ -44,8 +44,8 @@ if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
 elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ]; then
   echo "📥 Base image Drive'da mevcut ama registry'de yok. Drive'dan yuklenip registry'ye push ediliyor..."
   if command -v docker &> /dev/null; then
+    # docker load, tag'i korur (localhost:5000/ai-publisher-base:latest)
     docker load -i "$DRIVE_DIR/base.tar.gz"
-    docker tag ai-publisher-base:latest localhost:5000/ai-publisher-base:latest
     docker push localhost:5000/ai-publisher-base:latest
     echo "✅ Base image Drive'dan yuklendi ve registry'ye push edildi. Build atlandi."
     BASE_SKIPPED=true
