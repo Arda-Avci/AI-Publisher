@@ -24,7 +24,25 @@ if curl -s -f http://localhost:5000/v2/ > /dev/null 2>&1; then
   REGISTRY_UP=true
   echo "[OK] Registry calisiyor."
 else
-  echo "[WARN] Registry localhost:5000 calismiyor. Docker build fallback kullanilacak."
+  echo "[WARN] Registry localhost:5000 calismiyor. Baslatilmayi deneniyor..."
+  if command -v registry &> /dev/null; then
+    pkill -f 'registry serve' 2>/dev/null || true
+    nohup registry serve /etc/docker/registry/config.yml > /tmp/registry.log 2>&1 &
+    sleep 2
+    for _ in $(seq 1 10); do
+      if curl -s -f http://localhost:5000/v2/ > /dev/null 2>&1; then
+        REGISTRY_UP=true
+        echo "[OK] Registry baslatildi!"
+        break
+      fi
+      sleep 1
+    done
+    if [ "$REGISTRY_UP" = "false" ]; then
+      echo "[WARN] Registry baslatilamadi. Log: /tmp/registry.log"
+    fi
+  else
+    echo "[WARN] Registry binary bulunamadi. Kanilo build gerektiginde hata alinabilir."
+  fi
 fi
 echo "[DEBUG] pwd: $(pwd)"
 echo "[DEBUG] listing files:"
