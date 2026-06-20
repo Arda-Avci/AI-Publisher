@@ -28,7 +28,20 @@ echo "[DEBUG] pwd: $(pwd)"
 echo "[DEBUG] listing files:"
 ls -la
 
-if [ -f "Dockerfile.base" ]; then
+# Base image zaten Drive'da varsa ve registry'de mevcutsa atla
+BASE_IN_DRIVE=0
+BASE_IN_REGISTRY=0
+
+if [ -f "$DRIVE_DIR/base.tar.gz" ]; then
+  BASE_IN_DRIVE=1
+  echo "[INFO] base.tar.gz Drive'da mevcut, registry kontrol ediliyor..."
+  curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1 && BASE_IN_REGISTRY=1
+fi
+
+if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
+  echo "✅ Base image Drive'da ve registry'de mevcut. Build atlandi."
+  BASE_SKIPPED=true
+elif [ -f "Dockerfile.base" ]; then
 
   echo "[INFO] Dockerfile.base bulundu. Kaniko ile insa basliyor..."
   
@@ -69,6 +82,15 @@ TOTAL_MODELS=${#MODELS[@]}
 for i in "${!MODELS[@]}"; do
   MODEL="${MODELS[$i]}"
   IDX=$((i + 1))
+  
+  # Drive'da varsa atla (incremental build)
+  if [ -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
+    echo ""
+    echo "======================================================================"
+    echo "⏭️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da mevcut, atlandi)"
+    echo "======================================================================"
+    continue
+  fi
   
   echo ""
   echo "======================================================================"
@@ -156,7 +178,8 @@ done
 
 echo ""
 echo "=========================================="
-echo "🎉 Tum Docker imajlari insa edildi ve Google Drive'a kaydedildi!"
+echo "🎉 Build tamamlandi! Eksik imajlar insa edildi ve Drive'a kaydedildi."
+echo "   Drive'da zaten var olan imajlar atlandi (incremental build)."
 echo "=========================================="
 
 if command -v docker &> /dev/null; then
