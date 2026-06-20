@@ -86,13 +86,23 @@ for i in "${!MODELS[@]}"; do
   MODEL="${MODELS[$i]}"
   IDX=$((i + 1))
   
-  # Drive'da varsa atla (incremental build)
+  # Drive'da varsa ve ≥100MB ise atla (incremental build)
+  MIN_SIZE=$((100 * 1024 * 1024))
   if [ -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
-    echo ""
-    echo "======================================================================"
-    echo "⏭️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da mevcut, atlandi)"
-    echo "======================================================================"
-    continue
+    FILE_SIZE=$(stat -c%s "$DRIVE_DIR/$MODEL.tar.gz" 2>/dev/null || echo 0)
+    if [ "$FILE_SIZE" -ge "$MIN_SIZE" ] 2>/dev/null; then
+      echo ""
+      echo "======================================================================"
+      echo "⏭️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da mevcut, atlandi)"
+      echo "======================================================================"
+      continue
+    else
+      echo ""
+      echo "======================================================================"
+      echo "⚠️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da bozuk/kücük: ${FILE_SIZE:-0} byte, yeniden build)"
+      echo "======================================================================"
+      rm -f "$DRIVE_DIR/$MODEL.tar.gz"
+    fi
   fi
   
   echo ""
