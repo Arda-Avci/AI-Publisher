@@ -65,10 +65,10 @@ if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
   BASE_SKIPPED=true
 elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ] && [ "$REGISTRY_UP" = "true" ]; then
   echo "📥 Base image Drive'da mevcut ama registry'de yok. crane ile push ediliyor..."
+  CRANE_OK=false
   if command -v docker &> /dev/null; then
     docker load -i "$DRIVE_DIR/base.tar.gz"
     docker tag localhost:5000/ai-publisher-base:latest ai-publisher-base:latest 2>/dev/null || true
-    # crane ile push (Docker daemon bypass -> VFS yavasligi yok)
     CRANE_BIN="/usr/local/bin/crane"
     if [ ! -f "$CRANE_BIN" ]; then
       echo "crane bulunamadi, indiriliyor..."
@@ -76,40 +76,21 @@ elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ] && [ "$REGISTRY_UP"
       tar -xzf /tmp/crane.tar.gz -C /usr/local/bin/ crane
       rm -f /tmp/crane.tar.gz
     fi
-    echo "crane ile base image registry'ye push ediliyor..."
+    echo "crane ile base image registry'ye push ediliyor (timeout: 120s)..."
     docker save localhost:5000/ai-publisher-base:latest -o /tmp/base-for-push.tar
-    $CRANE_BIN push /tmp/base-for-push.tar localhost:5000/ai-publisher-base:latest
+    timeout 120 $CRANE_BIN push /tmp/base-for-push.tar localhost:5000/ai-publisher-base:latest && CRANE_OK=true
     rm -f /tmp/base-for-push.tar
+  fi
+  if [ "$CRANE_OK" = "true" ]; then
     echo "✅ Base image registry'ye push edildi. Build atlandi."
     BASE_SKIPPED=true
   else
-    echo "⚠️ Docker bulunamadi, Kaniko ile build edilecek..."
-    if [ -f "Dockerfile.base" ]; then
-      $KANIKO_BIN --context=. \
-         --dockerfile=Dockerfile.base \
-         --destination=localhost:5000/ai-publisher-base:latest \
-         --tarPath=base.tar \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
-      if [ $? -eq 0 ]; then
-        DURATION=$((SECONDS - START_TIME))
-        echo "✅ Base Docker Imajı basariyla olusturuldu."
-        echo "[INFO] Insa Suresi: ${DURATION}s"
-        if command -v pigz &> /dev/null; then
-          pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
-        else
-          gzip -c base.tar > "$DRIVE_DIR/base.tar.gz"
-        fi
-        rm -f base.tar
-        echo "✅ Base imaji Drive'a kaydedildi."
-      else
-        echo "❌ Base Docker Imajı insa edilirken hata olustu!"
-        exit 1
-      fi
-    fi
+    echo "⚠️ crane push basarisiz. Kaniko ile base build edilecek..."
   fi
-elif [ -f "Dockerfile.base" ]; then
+fi
+
+# Kaniko ile base build (crane basarisizsa veya BASE_IN_REGISTRY=1 degilse)
+if [ "$BASE_SKIPPED" != "true" ] && [ -f "Dockerfile.base" ]; then
 
   echo "[INFO] Dockerfile.base bulundu. Kaniko ile insa basliyor..."
   
