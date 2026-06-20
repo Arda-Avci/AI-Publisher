@@ -1,7 +1,7 @@
 FROM ai-publisher-base:latest
 
 RUN pip install --no-cache-dir \
-    "f5-tts>=1.2.0" \
+    "f5-tts>=1.1.0" \
     "torch>=2.5.0" \
     soundfile \
     librosa
