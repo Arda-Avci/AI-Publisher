@@ -1,7 +1,7 @@
 FROM ai-publisher-base:latest
 
 # Install system dependencies for XTTS and rubberband
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     rubberband-cli \
     rubberband-ladspa \
     && rm -rf /var/lib/apt/lists/*

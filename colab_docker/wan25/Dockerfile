@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir \
     imageio-ffmpeg \
     decord \
     open_clip_torch \
-    ""torch>=2.5.0""
+    "torch>=2.5.0"
 
 COPY app.py /app/app.py
 WORKDIR /app
