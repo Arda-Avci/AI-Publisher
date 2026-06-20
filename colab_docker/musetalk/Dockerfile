@@ -9,12 +9,13 @@ RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.g
     fi; \
     if gzip -t /tmp/musetalk.tar.gz 2>/dev/null; then \
       echo "[OK] Gecerli tar.gz, ayiklamiyor..."; \
-      mkdir -p /app/MuseTalk && \
       tar -xzf /tmp/musetalk.tar.gz -C /tmp/ && \
+      rm -rf /app/MuseTalk && \
+      mkdir -p /app/MuseTalk && \
       if [ -d /tmp/MuseTalk-main ]; then \
-        mv /tmp/MuseTalk-main/* /app/MuseTalk/; \
+        cp -a /tmp/MuseTalk-main/. /app/MuseTalk/; \
       elif [ -d /tmp/MuseTalk-master ]; then \
-        mv /tmp/MuseTalk-master/* /app/MuseTalk/; \
+        cp -a /tmp/MuseTalk-master/. /app/MuseTalk/; \
       fi && \
       rm -rf /tmp/musetalk.tar.gz /tmp/MuseTalk-main /tmp/MuseTalk-master; \
     else \
@@ -23,9 +24,10 @@ RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.g
       echo ""; \
       echo "[INFO] zip deneniyor..."; \
       curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/master.zip -o /tmp/musetalk.zip; \
+      rm -rf /app/MuseTalk && \
       mkdir -p /app/MuseTalk && \
       unzip -q /tmp/musetalk.zip -d /tmp/ && \
-      mv /tmp/MuseTalk-master/* /app/MuseTalk/ && \
+      cp -a /tmp/MuseTalk-master/. /app/MuseTalk/ && \
       rm -rf /tmp/musetalk.zip /tmp/MuseTalk-master; \
     fi && \
     ls -la /app/MuseTalk/
