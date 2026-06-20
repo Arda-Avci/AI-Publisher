@@ -874,8 +874,15 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] `colab_server.py` ContainerManager — `f5tts: 5015`, GPU_HEAVY
 - [x] `src/queue.ts`/dashboard/locale/validation/types — f5tts desteği
 
-### 5. ⏳ LoRA Fine-Tuning Pipeline (Major — Kullanıcı Onayı Gerekli)
-- [ ] ⚠️ **MAJOR — otomatik uygulanmaz.** Onay beklentisi.
+### 5. ✅ LoRA Fine-Tuning Pipeline (Major) — TAMAMLANDI
+- [x] lora-trainer container (Dockerfile + app.py, port 5016, rank=32)
+- [x] src/services/loraService.ts (trainLoRA, inferWithLoRA)
+- [x] character_lora_weights tablosu + lora_enabled kolonu
+- [x] queue.ts LoRA weights lookup + payload entegrasyonu
+- [x] Dashboard checkbox + karakter referans görsel yükleme
+- [x] TR/EN locale key'leri
+- [x] docker-compose, build_all.sh, verify_images, colab_server.py güncellemesi
+- [x] ADR-005 LoRA Pipeline mimari karar kaydı
 
 ### 6. ✅ v7.1 Patch Listesi — TAMAMLANDI
 - [x] **Gemini 2.5 Flash default model** — Chain sırası değişti (Flash → Zen → Minimax)
@@ -890,15 +897,34 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] `scripts/deploy-production.sh` oluşturuldu
 - [x] CI/CD pipeline zaten mevcut ve çalışıyor
 
+## ✅ Docker Mimari Düzeltme (20 Haziran 2026)
+- [x] **colab_setup.ipynb Hücre 5:** ALL_MODELS listesi güncellendi (wan25, f5tts, lora-trainer, svd, animatediff eklendi)
+- [x] **colab_setup.ipynb Hücre 6:** `docker compose up -d` kaldırıldı, lazy-loading açıklaması eklendi
+- [x] **colab_setup.ipynb Hücre 1, 8:** Lazy-loading mimari referansları güncellendi
+- [x] **Google_Colab_AI_Publisher.ipynb:** Legacy uyarısı eklendi, encoding düzeltildi
+- [x] **Kritik tespit:** T4 GPU (15GB VRAM) 14 GPU container'ını aynı anda kaldıramaz → ContainerManager lazy-loading ile sadece ihtiyaç duyulan container ayakta
+
+## ✅ colab_setup.ipynb CPU Build Final (20 Haziran 2026 — Oturum #14)
+- [x] **Hücre 3 yeniden yazıldı:** Docker + NVIDIA Toolkit → Kaniko (daemonless) + Registry + pigz. CPU runtime'da çalışır.
+- [x] **Hücre 5 yeniden yazıldı:** Python `docker build` loop → `build_all.sh` Popen çağrısı. Drive'dan mevcut `.tar.gz` yükler.
+- [x] **Hücre 4 (Repo):** `git lfs pull` + `git lfs install` eklendi
+- [x] **Hücre 1:** İki aşamalı çalışma modeli (BUILD CPU / RUN GPU), güncel adım listesi
+- [x] **Notebook geneli:** BUILD (CPU, Kaniko daemonless) ↔ RUN (GPU, Docker daemon) ayrımı netleştirildi
+
 ### Güncel Öncelik Matrisi
 
 | # | Görev | Seviye | Durum | Öncelik |
 |---|-------|--------|-------|---------|
-| 1 | LoRA fine-tuning | Major | ⏳ Onay bekliyor | ⭐⭐⭐ |
-| 2 | Colab Build: 14 imaj Drive yedekleme | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
-| 3 | Faz 7 Testleri (16 madde) | Test | ⏳ Yapılacak | ⭐⭐ |
-| 4 | State schema ADR-003 | Patch | ⏳ Yapılacak | ⭐ |
-| 5 | Git commit + push | Süreç | ⏳ Hazır | ⭐⭐ |
+| 1 | LoRA fine-tuning | Major | ✅ Tamamlandı | ⭐⭐⭐ |
+| 2 | LoRA pre-trained + multi-char + Drive + SSE | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 3 | test_clipper_whisper fix (video ses) | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 4 | test_viral_hook fix (API timeout) | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 5 | State schema ADR-003 | Patch | ✅ Tamamlandı | ⭐ |
+| 6 | Docker mimari fix (notebook lazy-loading) | Patch | ✅ Tamamlandı | ⭐⭐⭐ |
+| 7 | colab_setup.ipynb CPU build final (Hücre 3,5,4,1) | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 8 | **Colab CPU Build Test:** notebook'u CPU runtime çalıştır | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
+| 9 | Node.js notification fix | Patch | ⏳ Yapılacak | ⭐⭐ |
+| 10 | Faz 7 Testleri (16 madde) | Test | ⏳ Yapılacak | ⭐⭐ |
 
 
 

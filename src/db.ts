@@ -440,14 +440,47 @@ export async function initDatabase() {
       job_id INTEGER NOT NULL REFERENCES video_jobs(id) ON DELETE CASCADE,
       character_name TEXT NOT NULL,
       weights_path TEXT NOT NULL,
+      drive_path TEXT DEFAULT '',
       training_status TEXT DEFAULT 'pending',
       error_message TEXT,
+      steps_completed INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
   await db.exec(
     "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS lora_enabled INTEGER DEFAULT 0;",
+  );
+
+  // Multi-character + pre-trained LoRA tables
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS pre_trained_loras (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'hf',
+      repo_or_path TEXT NOT NULL,
+      description TEXT,
+      lora_type TEXT DEFAULT 'style',
+      is_active INTEGER DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS scene_characters (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL REFERENCES video_jobs(id) ON DELETE CASCADE,
+      scene_number INTEGER NOT NULL,
+      character_name TEXT NOT NULL,
+      lora_weights_id INTEGER REFERENCES character_lora_weights(id),
+      reference_images TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS character_images TEXT;',
+  );
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS multi_character INTEGER DEFAULT 0;',
   );
 
   // Sprint 3.B Talk-Show character extensions

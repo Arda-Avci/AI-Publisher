@@ -350,5 +350,14 @@
   "characterImages": "Karakter Referans Görselleri",
   "characterImagesHint": "En az 3 farklı açıdan karakter yüzü (JPG/PNG)",
   "loraTraining": "Karakter Eğitimi Başladı",
-  "loraTrainingProgress": "Karakter: {{name}} — Eğitim: %{{percent}}"
+  "loraTrainingProgress": "Karakter: {{name}} — Eğitim: %{{percent}}",
+  "pretrainedLora": "Hazır Karakter Kütüphanesi",
+  "pretrainedLoraHint": "Önceden eğitilmiş LoRA karakter/stil seç (Drive'da varsa tekrar eğitmene gerek yok)",
+  "pretrainedLoraNone": "Seçilmedi",
+  "pretrainedLoraLoad": "Yükle",
+  "multiCharacter": "Çoklu Karakter",
+  "multiCharacterHint": "Her sahne için farklı karakter LoRA'sı kullan",
+  "loraTrainingComplete": "Karakter Eğitimi Tamamlandı",
+  "loraTrainingFailed": "Karakter Eğitimi Başarısız",
+  "loraDriveCached": "Drive önbelleğinde bulundu, tekrar eğitime gerek yok"
 }

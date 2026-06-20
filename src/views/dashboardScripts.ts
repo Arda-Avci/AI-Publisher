@@ -1292,6 +1292,57 @@ export function getDashboardScripts(params: {
         if (result.success) setTimeout(() => window.location.reload(), 1500);
       }
 
+      // LoRA toggle - show/hide options
+      document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'loraEnabled') {
+          const loraOptions = document.getElementById('loraOptions');
+          if (loraOptions) loraOptions.style.display = e.target.checked ? 'block' : 'none';
+          if (e.target.checked) loadPretrainedList();
+        }
+      });
+
+      function loadPretrainedList() {
+        fetch('/api/v1/lora/pretrained')
+          .then(function(r) { return r.json(); })
+          .then(function(resp) {
+            if (!resp.success) return;
+            var sel = document.getElementById('pretrainedLoraSelect');
+            if (!sel) return;
+            var existing = sel.querySelectorAll('option:not([value=""])');
+            existing.forEach(function(o) { o.remove(); });
+            resp.data.forEach(function(lora) {
+              var opt = document.createElement('option');
+              opt.value = lora.id;
+              opt.setAttribute('data-source', lora.source || '');
+              opt.textContent = lora.name + ' (' + lora.type + ')';
+              sel.appendChild(opt);
+            });
+          })
+          .catch(function() {});
+      }
+
+      document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'loadPretrainedBtn') {
+          var sel = document.getElementById('pretrainedLoraSelect');
+          if (!sel || !sel.value) return;
+          var status = document.getElementById('pretrainedStatus');
+          if (status) status.textContent = 'Loading...';
+          fetch('/api/v1/lora/pretrained/load', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hf_repo: sel.value })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(resp) {
+            if (status) {
+              if (resp.success) status.textContent = '✅ Loaded: ' + (resp.data && resp.data.weights_path ? resp.data.weights_path : '');
+              else status.textContent = '❌ Failed to load';
+            }
+          })
+          .catch(function() { if (status) status.textContent = '❌ Error'; });
+        }
+      });
+
       document.getElementById('jobForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -1304,6 +1355,21 @@ export function getDashboardScripts(params: {
         data.platforms = formData.getAll('platforms');
         data.has_shorts = formData.get('has_shorts') === 'on';
         data.has_subtitles = formData.get('has_subtitles') === 'on';
+
+        // Append LoRA-related fields
+        var loraCb = document.getElementById('loraEnabled');
+        if (loraCb && loraCb.checked) {
+          var charFiles = document.getElementById('characterImages');
+          if (charFiles && charFiles.files && charFiles.files.length > 0) {
+            for (var i = 0; i < charFiles.files.length; i++) {
+              formData.append('character_images', charFiles.files[i]);
+            }
+          }
+          var multiCb = document.getElementById('multiCharacter');
+          if (multiCb && multiCb.checked) {
+            formData.append('multi_character', '1');
+          }
+        }
         
         const editJobInput = document.getElementById('edit_job_id');
         const editJobId = editJobInput ? editJobInput.value : '';

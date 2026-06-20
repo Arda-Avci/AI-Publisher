@@ -275,7 +275,7 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 | 1 | **Wan2.5 video generation** (opsiyonel) | Minor | ✅ |
 | 2 | **F5-TTS entegrasyonu** (XTTS-v2 alternatifi) | Minor | ✅ |
 | 3 | **Self-consistency video chaining modülü** | Minor | ✅ |
-| 4 | **LoRA fine-tuning pipeline** (karakter tutarlılığı) | Major | ⏳ Onay bekliyor |
+| 4 | **LoRA fine-tuning pipeline** (karakter tutarlılığı) | Major | ✅ |
 | 5 | Gemini 2.5 Flash default model | Patch | ✅ |
 | 6 | MCP Server enhancement | Patch | ✅ |
 | 7 | Pino structured logger | Patch | ✅ |
@@ -283,10 +283,27 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 ### Çıktı Dosyaları
 - [multimodal_agent_research_2026.md](file:///C:/Users/Damla/Proje/AI-Publisher/brain/cf60fa02-25bd-4b39-9dc6-7879af882299/multimodal_agent_research_2026.md) (9KB)
 - [research_report.md](file:///C:/Users/Damla/Proje/AI-Publisher/research_report.md) (15KB)
+- ADR-005: LoRA Pipeline architecture decision record
+
+## 🟢 Tamamlananlar (20 Haziran 2026 — Oturum #13: Docker Mimari Düzeltme)
+
+- [x] **colab_setup.ipynb Hücre 5 güncelleme:** `ALL_MODELS` listesine `wan25`, `f5tts`, `lora-trainer`, `svd`, `animatediff` eklendi (eksik 5 model tamamlandı)
+- [x] **colab_setup.ipynb Hücre 6 yeniden yazım:** `docker compose up -d` kaldırıldı. **Lazy-loading mimarisi** ile değiştirildi. ContainerManager `docker run` ile ihtiyaç duydukça container başlatır, eski GPU container'ını durdurur
+- [x] **colab_setup.ipynb Hücre 1, 8:** Lazy-loading açıklamaları eklendi
+- [x] **Google_Colab_AI_Publisher.ipynb:** Legacy uyarısı eklendi, encoding düzeltildi
+- [x] **Sorun tespiti:** `docker compose up -d` tüm 14 GPU container'ını aynı anda başlatmaya çalışır → T4 (15GB VRAM) yetmez. ContainerManager lazy-loading bunu çözer
+
+## 🟢 Tamamlananlar (20 Haziran 2026 — Oturum #14: colab_setup.ipynb CPU Build Final)
+
+- [x] **Hücre 3 tamamen yeniden yazıldı:** Docker + NVIDIA Toolkit kurulumu kaldırıldı. Kaniko binary (gcr.io imajından docker cp), local registry (localhost:5000, Go binary), pigz kurulumu eklendi. CPU runtime'da daemonless build için optimize edildi.
+- [x] **Hücre 5 tamamen yeniden yazıldı:** Python `docker build` loop kaldırıldı. `build_all.sh` doğrudan subprocess.Popen ile çağrılıyor. Drive'da mevcut `.tar.gz` arşivleri varsa `docker load` ile yükleniyor. Sadece eksik imajlar build ediliyor.
+- [x] **Hücre 4 (Repo Güncelleme):** `git lfs pull` ve `git lfs install` eklendi (model ağırlıklarının çekilmesi için).
+- [x] **Hücre 1:** İki aşamalı çalışma modeli eklendi (BUILD CPU / RUN GPU). Tüm adım listesi güncellendi.
+- [x] **Mimari netleştirme:** BUILD (CPU, Kaniko daemonless) ↔ RUN (GPU, Docker daemon + colab_server.py) ayrımı notebook'ta belirginleştirildi.
 
 ## 🔜 Kalan Sıradaki Adımlar
 
-1. **LoRA Pipeline** (Major): Karakter tutarlılığı için fine-tuning (kullanıcı onayı gerekli)
-2. **Colab Build Süreci:** "Seçenek C" hücresini çalıştırıp 14 Docker imajının (base + 13 model) Drive'a yedeklenmesi
-3. **Faz 7 Testleri:** 16 kalan test maddesi (E2E Playwright, entegrasyon, CI altyapısı)
-4. **Git push ve tag** (mevcut değişiklikler commit + push)
+1. **Colab CPU Build Test:** colab_setup.ipynb'i CPU runtime'da çalıştır, 16 imajın Drive'a yedeklendiğini doğrula
+2. **Faz 7 Testleri:** 16 kalan test maddesi (E2E Playwright, entegrasyon, CI altyapısı)
+3. **Node.js notification fix** (Sprint sonu)
+4. **GPU Runtime Setup:** Docker daemon + NVIDIA Container Toolkit ayrı bir GPU oturumunda kurulur, imajlar Drive'dan yüklenir, colab_server.py başlatılır

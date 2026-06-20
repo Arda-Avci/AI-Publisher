@@ -8,7 +8,8 @@ RUN pip install --no-cache-dir \
     transformers>=4.44.0 \
     bitsandbytes>=0.43.0 \
     pillow \
-    open_clip_torch
+    open_clip_torch \
+    requests
 
 COPY app.py /app/app.py
 WORKDIR /app

@@ -1140,11 +1140,6 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <input type="file" name="material" class="form-input" accept="image/*" style="padding: 0.5rem;">
                 </div>
               </div>
-              <div class="option-group">
-                <label>${t.characterImages}</label>
-                <span class="hint">${t.characterImagesHint}</span>
-                <input type="file" id="characterImages" name="character_images" accept="image/*" multiple>
-              </div>
               <div class="form-grid-2">
                 <div>
                   <label class="form-label">Arka Plan Müziği (Background Music)</label>
@@ -1192,12 +1187,38 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     <small style="display:block;opacity:0.6;font-size:0.6rem;margin-top:2px;">${t.deepThinkHint}</small>
                   </label>
                   <label class="checkbox-item">
-                    <input type="checkbox" name="lora_enabled" value="1">
+                    <input type="checkbox" id="loraEnabled" name="lora_enabled" value="1">
                     🎭 ${t.loraEnabled}
                     <small style="display:block;opacity:0.6;font-size:0.6rem;margin-top:2px;">${t.loraEnabledHint}</small>
                   </label>
                 </div>
               </div>
+
+              <!-- LoRA Options (shown when loraEnabled checked) -->
+              <div id="loraOptions" style="display:none; margin-top:10px; padding:10px; background:var(--surface); border-radius:8px;">
+                <div class="option-group">
+                  <label>${t.characterImages}</label>
+                  <span class="hint">${t.characterImagesHint}</span>
+                  <input type="file" id="characterImages" name="character_images" accept="image/*" multiple>
+                </div>
+
+                <div class="option-group">
+                  <label>${t.pretrainedLora}</label>
+                  <span class="hint">${t.pretrainedLoraHint}</span>
+                  <select id="pretrainedLoraSelect" name="pretrained_lora_id">
+                    <option value="">${t.pretrainedLoraNone}</option>
+                  </select>
+                  <button type="button" id="loadPretrainedBtn" class="btn-secondary" style="margin-top:5px;">${t.pretrainedLoraLoad}</button>
+                  <div id="pretrainedStatus" style="margin-top:5px; font-size:0.85em; color:var(--text-muted);"></div>
+                </div>
+
+                <div class="option-item">
+                  <input type="checkbox" id="multiCharacter" name="multi_character" value="1">
+                  <label for="multiCharacter">${t.multiCharacter}</label>
+                  <span class="hint">${t.multiCharacterHint}</span>
+                </div>
+              </div>
+
               <div>
                 <label class="form-label">${t.differentiationDurationMode}</label>
                 <select name="differentiation_duration_mode" class="form-select">

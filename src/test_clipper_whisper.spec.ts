@@ -8,11 +8,12 @@ import { initDatabase, db } from './db.js';
 import { encryptUsername } from './lib/crypto.js';
 import { transcribeVideoAudioWithTimestamps } from './lib/audio-transcriber.js';
 import clipperRouter from './routes/clipper.js';
-import { FIXTURES } from './__fixtures__/index.js';
+import { FIXTURES, fx } from './__fixtures__/index.js';
 
 describe('Clipper & Whisper Integration Tests', () => {
   let app: express.Application;
   let testUserId: number;
+  let videoWithAudio: string;
 
   beforeAll(async () => {
     // Setup Express for router testing
@@ -44,17 +45,29 @@ describe('Clipper & Whisper Integration Tests', () => {
     ]);
     const user = await db.get('SELECT id FROM users WHERE username = ?', [testUsername]);
     testUserId = user.id;
+
+    // Create a test video with audio track for whisper tests
+    videoWithAudio = fx('whisper_test_audio.mp4');
+    if (!require('fs').existsSync(videoWithAudio)) {
+      const { execSync } = require('child_process');
+      execSync(
+        `ffmpeg -y -i ${JSON.stringify(FIXTURES.video)} -f lavfi -i anullsrc=r=44100:cl=mono -c:v copy -c:a aac -shortest ${JSON.stringify(videoWithAudio)}`,
+        { timeout: 10000 },
+      );
+    }
   });
 
   afterAll(async () => {
     if (testUserId) {
       await db.run('DELETE FROM users WHERE id = ?', [testUserId]);
     }
+    // Clean up generated audio fixture
+    try { require('fs').unlinkSync(videoWithAudio); } catch {}
   });
 
   it('1. Colab /transcribe endpointi basariyla cagrildiginda segmentleri donmeli', async () => {
-    // Real HTTP call to Colab. Will fail if COLAB_URL not set or Colab not running.
-    const result = await transcribeVideoAudioWithTimestamps(FIXTURES.video);
+    // Use video with audio track for whisper
+    const result = await transcribeVideoAudioWithTimestamps(videoWithAudio);
 
     expect(result).toHaveProperty('text');
     expect(result).toHaveProperty('segments');
@@ -62,8 +75,8 @@ describe('Clipper & Whisper Integration Tests', () => {
   }, 60000);
 
   it('2. Colab hata verdiginde Gemini fallback mekanizmasi structured JSON olarak segmentleri cikarmali', async () => {
-    // Real call: will try Colab first, fall back to Gemini if configured
-    const result = await transcribeVideoAudioWithTimestamps(FIXTURES.video);
+    // Use video with audio track
+    const result = await transcribeVideoAudioWithTimestamps(videoWithAudio);
 
     expect(result).toHaveProperty('text');
     expect(result).toHaveProperty('segments');
@@ -72,7 +85,7 @@ describe('Clipper & Whisper Integration Tests', () => {
 
   it('3. /api/v1/clipper/extract rotasi asenkron deşifre akışını basariyla tetiklemeli', async () => {
     const res = await request(app).post('/api/v1/clipper/extract').send({
-      videoPath: FIXTURES.video,
+      videoPath: videoWithAudio,
       videoId: 123,
       minDuration: 10,
       maxDuration: 60,

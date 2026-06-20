@@ -32,6 +32,7 @@ const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
 import { broadcastProgress } from './lib/redis.js';
 import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/viralHook.js';
 import { insertBroll } from './services/aiBroll.js';
+import { getSceneCharacterWeights, getTrainingProgress } from './services/loraService.js';
 import {
   detectEmotionPeaks,
   generateHighlightSrt,
@@ -48,6 +49,21 @@ function broadcast(jobId: number, data: object) {
 // S6: export broadcast so background tasks (e.g. publish uploads) can
 // push SSE events to the browser without holding the HTTP request open.
 export { broadcast, checkQueue };
+
+// LoRA training progress polling (if training is in progress)
+async function pollLoraProgress(jobId: number): Promise<void> {
+  try {
+    const progress = await getTrainingProgress(jobId);
+    if (progress.percent > 0 && progress.percent < 100) {
+      broadcast(jobId, { stageKey: 'lora_training', percent: progress.percent, status: progress.status });
+      if (progress.percent > 0) {
+        setTimeout(() => pollLoraProgress(jobId), 3000);
+      }
+    }
+  } catch {
+    /* silently fail */
+  }
+}
 
 async function checkQueue() {
   if (isProcessing) {
@@ -504,6 +520,39 @@ async function startProduction(job: VideoJob) {
         Logger.warn('[PRODUCTION] Cover synthesis error, skipping', coverErr);
       }
 
+      // ── LoRA Training Step (multi-character) ──
+      if (job.lora_enabled && job.multi_character && job.character_images) {
+        Logger.info('[LoRA] Multi-character training step starting...', { jobId: job.id });
+        await db.run(
+          "UPDATE video_jobs SET current_stage = 'LoRA Eğitimi', progress_percent = 13 WHERE id = $1",
+          [job.id],
+        );
+        broadcast(job.id, { stageKey: 'stageLoraTraining', percent: 13, message: 'Karakter LoRA ağırlıkları eğitiliyor...' });
+
+        try {
+          const charImages: { name: string; paths: string[] }[] = JSON.parse(job.character_images);
+          for (const char of charImages) {
+            if (!char.paths || char.paths.length === 0) continue;
+            await db.run(
+              "UPDATE video_jobs SET current_stage = $1, progress_percent = 13 WHERE id = $2",
+              [`LoRA: ${char.name} eğitiliyor`, job.id],
+            );
+            broadcast(job.id, { stageKey: 'stageLoraTraining', percent: 13, character: char.name, message: `${char.name} eğitiliyor...` });
+
+            const { trainLoRA } = await import('./services/loraService.js');
+            const result = await trainLoRA(job.id!, char.name, char.paths);
+            if (result.success) {
+              Logger.info(`[LoRA] Character "${char.name}" trained successfully`, { jobId: job.id, weightsPath: result.weightsPath });
+              pollLoraProgress(job.id!);
+            } else {
+              Logger.warn(`[LoRA] Character "${char.name}" training failed, continuing`, { jobId: job.id, error: result.error });
+            }
+          }
+        } catch (trainErr) {
+          Logger.warn('[LoRA] Training step failed, continuing without LoRA', trainErr);
+        }
+      }
+
       // Sahneleri teker teker üret
       // ── S3: Kullanıcının Wav2Lip lip-sync tercihini oku ──
       const userSettings: any = await db.get(
@@ -696,20 +745,28 @@ async function startProduction(job: VideoJob) {
 
         // LoRA: load character weights if enabled
         let loraWeightsPath = '';
-        if (job.lora_enabled && scene.speaker) {
-          try {
-            const row: any = await db.get(
-              `SELECT weights_path FROM character_lora_weights
-               WHERE job_id = ? AND character_name = ? AND training_status = 'completed'
-               ORDER BY created_at DESC LIMIT 1`,
-              [job.id, scene.speaker],
-            );
-            if (row?.weights_path) {
-              loraWeightsPath = row.weights_path;
-              Logger.info(`[LoRA] Using weights for character "${scene.speaker}"`, { weightsPath: row.weights_path });
+        if (job.lora_enabled) {
+          if (job.multi_character) {
+            const sceneChar = await getSceneCharacterWeights(job.id!, scene.scene_number);
+            if (sceneChar?.weightsPath) {
+              loraWeightsPath = sceneChar.weightsPath;
+              Logger.info(`[LoRA] Scene ${scene.scene_number} uses character "${sceneChar.characterName}"`, { weightsPath: sceneChar.weightsPath });
             }
-          } catch (e) {
-            Logger.warn(`[LoRA] No weights found for character "${scene.speaker}", proceeding without LoRA`, e);
+          } else if (scene.speaker) {
+            try {
+              const row: any = await db.get(
+                `SELECT weights_path FROM character_lora_weights
+                 WHERE job_id = $1 AND character_name = $2 AND training_status = 'completed'
+                 ORDER BY created_at DESC LIMIT 1`,
+                [job.id, scene.speaker],
+              );
+              if (row?.weights_path) {
+                loraWeightsPath = row.weights_path;
+                Logger.info(`[LoRA] Using weights for character "${scene.speaker}"`, { weightsPath: row.weights_path });
+              }
+            } catch (e) {
+              Logger.warn(`[LoRA] No weights found for character "${scene.speaker}", proceeding without LoRA`, e);
+            }
           }
         }
 

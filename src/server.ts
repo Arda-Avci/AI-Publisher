@@ -63,6 +63,7 @@ import transcriptEditorRouter from './routes/transcriptEditor.js';
 import aiStudioRouter from './routes/aiStudio.js';
 import storyboardRouter from './routes/storyboard.js';
 import editQueueRouter from './routes/editQueue.js';
+import { loraRouter } from './routes/lora.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -203,6 +204,7 @@ app.use('/api/v1/studio', aiStudioRouter);
 app.use('/api/v1/storyboard', storyboardRouter);
 app.use('/api/v1/edit-queue', editQueueRouter);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/lora', loraRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

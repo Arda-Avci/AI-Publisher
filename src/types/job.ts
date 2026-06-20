@@ -92,6 +92,8 @@
 
   // LoRA fine-tuning
   lora_enabled?: number;
+  character_images?: string;
+  multi_character?: number;
 }
 
 export interface VideoScene {

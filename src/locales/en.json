@@ -350,5 +350,14 @@
   "characterImages": "Character Reference Images",
   "characterImagesHint": "At least 3 different angles of character face (JPG/PNG)",
   "loraTraining": "Character Training Started",
-  "loraTrainingProgress": "Character: {{name}} — Training: %{{percent}}"
+  "loraTrainingProgress": "Character: {{name}} — Training: %{{percent}}",
+  "pretrainedLora": "Character Library",
+  "pretrainedLoraHint": "Select pre-trained LoRA character/style (skips training if cached on Drive)",
+  "pretrainedLoraNone": "None selected",
+  "pretrainedLoraLoad": "Load",
+  "multiCharacter": "Multi-Character",
+  "multiCharacterHint": "Use different character LoRA per scene",
+  "loraTrainingComplete": "Character Training Complete",
+  "loraTrainingFailed": "Character Training Failed",
+  "loraDriveCached": "Found on Drive cache, no retraining needed"
 }

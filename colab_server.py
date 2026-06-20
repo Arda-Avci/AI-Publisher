@@ -538,6 +538,14 @@ def _generate_media_worker(task_id, data):
     lora_weights_path = data.get("lora_weights_path", "")
     if lora_weights_path:
         _update_task(task_id, stage="lora_injection", stagePercent=12, message="Karakter referansı LoRA ile oluşturuluyor...")
+
+        # Try Drive cache first
+        safe_name = os.path.basename(lora_weights_path.rstrip("/\\"))
+        drive_path = f"/content/drive/MyDrive/Colab_Cache/lora_weights/{safe_name}"
+        if os.path.isdir(drive_path):
+            lora_weights_path = drive_path
+            print(f"[LoRA] Using Drive-cached weights: {drive_path}")
+
         try:
             lora_url = container_manager.ensure_container("lora-trainer")
             lora_image_path = f"/content/lora_scene_{scene_number}_init.jpg"
@@ -548,11 +556,11 @@ def _generate_media_worker(task_id, data):
             }, timeout=120).json()
             if res.get("status") == "success" and os.path.exists(lora_image_path):
                 image_path = lora_image_path
-                print(f"[SUPERVISOR] LoRA image generated for scene {scene_number}")
+                print(f"[LoRA] Image generated for scene {scene_number}")
             else:
-                print(f"[SUPERVISOR] LoRA inference returned non-success: {res}")
+                print(f"[LoRA] Inference returned non-success: {res}")
         except Exception as exc:
-            print(f"[SUPERVISOR] LoRA injection failed (falling back to default init): {exc}")
+            print(f"[LoRA] Injection failed (falling back to default init): {exc}")
 
     # 1. VIDEO GENERATION (Proxy to the chosen video container)
     model_lower = video_model.lower()
@@ -906,11 +914,14 @@ def lora_train():
         except Exception as e:
             TASKS[tid] = {"status": "error", "stage": "lora_training_failed", "message": str(e)}
 
+    use_cogvideo = data.get("use_cogvideo", True)
     thread = threading.Thread(target=_train_worker, args=(task_id, {
         "job_id": job_id,
         "character_name": character_name,
         "image_paths": image_paths,
-        "output_dir": f"/content/lora_weights/{job_id}"
+        "output_dir": f"/content/lora_weights/{job_id}",
+        "callback_url": callback_url,
+        "use_cogvideo": use_cogvideo
     }))
     thread.start()
     return jsonify({"status": "accepted", "task_id": task_id}), 202
