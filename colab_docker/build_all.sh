@@ -17,12 +17,14 @@ echo "🚀 FAZ 1: Base Docker Imajı Insa Ediliyor (Kaniko)"
 echo "=========================================="
 START_TIME=$SECONDS
 
-# Local registry running check
+# Local registry running check (fatal degil, uyari olarak)
 echo "[INFO] Yerel Registry baglantisi test ediliyor (localhost:5000)..."
-curl -s -f http://localhost:5000/v2/ > /dev/null
-if [ $? -ne 0 ]; then
-  echo "❌ Hata: Yerel registry localhost:5000 adresinde calismiyor!"
-  exit 1
+REGISTRY_UP=false
+if curl -s -f http://localhost:5000/v2/ > /dev/null 2>&1; then
+  REGISTRY_UP=true
+  echo "[OK] Registry calisiyor."
+else
+  echo "[WARN] Registry localhost:5000 calismiyor. Docker build fallback kullanilacak."
 fi
 echo "[DEBUG] pwd: $(pwd)"
 echo "[DEBUG] listing files:"
@@ -35,7 +37,9 @@ BASE_IN_REGISTRY=0
 if [ -f "$DRIVE_DIR/base.tar.gz" ]; then
   BASE_IN_DRIVE=1
   echo "[INFO] base.tar.gz Drive'da mevcut, registry kontrol ediliyor..."
-  curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1 && BASE_IN_REGISTRY=1
+  if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1; then
+    BASE_IN_REGISTRY=1
+  fi
 fi
 
 if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
