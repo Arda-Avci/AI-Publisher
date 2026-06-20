@@ -45,15 +45,25 @@ fi
 if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
   echo "✅ Base image Drive'da ve registry'de mevcut. Build atlandi."
   BASE_SKIPPED=true
-elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ]; then
-  echo "📥 Base image Drive'da mevcut ama registry'de yok. Docker load yapiliyor..."
+elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ] && [ "$REGISTRY_UP" = "true" ]; then
+  echo "📥 Base image Drive'da mevcut ama registry'de yok. crane ile push ediliyor..."
   if command -v docker &> /dev/null; then
     docker load -i "$DRIVE_DIR/base.tar.gz"
-    # docker push VFS ile cok yavas -> registry kullanma, model Dockerfile'larini yama
-    # docker load tag'i localhost:5000/... olarak kaydeder, Dockerfile FROM icin de tag lazim
     docker tag localhost:5000/ai-publisher-base:latest ai-publisher-base:latest 2>/dev/null || true
-    echo "✅ Base image Docker'a yuklendi. Registry push atlandi (VFS yavas)."
-    BASE_LOADED=true
+    # crane ile push (Docker daemon bypass -> VFS yavasligi yok)
+    CRANE_BIN="/usr/local/bin/crane"
+    if [ ! -f "$CRANE_BIN" ]; then
+      echo "crane bulunamadi, indiriliyor..."
+      curl -Lo /tmp/crane.tar.gz https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz
+      tar -xzf /tmp/crane.tar.gz -C /usr/local/bin/ crane
+      rm -f /tmp/crane.tar.gz
+    fi
+    echo "crane ile base image registry'ye push ediliyor..."
+    docker save localhost:5000/ai-publisher-base:latest -o /tmp/base-for-push.tar
+    $CRANE_BIN push /tmp/base-for-push.tar localhost:5000/ai-publisher-base:latest
+    rm -f /tmp/base-for-push.tar
+    echo "✅ Base image registry'ye push edildi. Build atlandi."
+    BASE_SKIPPED=true
   else
     echo "⚠️ Docker bulunamadi, Kaniko ile build edilecek..."
     if [ -f "Dockerfile.base" ]; then
@@ -151,46 +161,31 @@ for i in "${!MODELS[@]}"; do
   fi
   echo "👉 Dogrulama basarili."
   
-  if [ "$BASE_LOADED" = "true" ] && command -v docker &> /dev/null; then
-    # Docker mevcut -> docker build ile (registry gerekmez, VFS'den kacinir)
-    echo "[FAZ 2/3] Docker ile model imaji insa ediliyor (registry atlandi)..."
-    
-    docker build -t "ai-publisher-$MODEL:latest" "$MODEL/"
-    BUILD_STATUS=$?
-    
-    if [ $BUILD_STATUS -eq 0 ]; then
-      echo "👉 Docker build tamamlandi. Imaj diske aktariliyor..."
-      docker save "ai-publisher-$MODEL:latest" -o "$MODEL.tar"
-      SAVE_STATUS=$?
-    fi
-  else
-    # Kaniko ile build (registry gerekli)
-    # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
-    echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
-    sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-    
-    # Faz 3: Kaniko Build
-    echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
-    
-    $KANIKO_BIN --context="$MODEL/" \
-           --dockerfile="$MODEL/Dockerfile" \
-           --destination="localhost:5000/ai-publisher-$MODEL:latest" \
-           --tarPath="$MODEL.tar" \
-           --insecure \
-           --skip-tls-verify \
-           --whitelist-var-run=false \
-           --ignore-var-run \
-           --snapshot-mode=redo
-    
-    BUILD_STATUS=$?
-    
-    # Dockerfile'ı eski haline geri döndür
-    sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-    
-    SAVE_STATUS=$BUILD_STATUS
-    if [ $BUILD_STATUS -eq 0 ]; then
-      echo "👉 Kaniko insa tamamlandi."
-    fi
+  # Kaniko ile build (daemonless -> cgroup hatasi olmaz)
+  # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
+  echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
+  sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  
+  # Faz 3: Kaniko Build
+  echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
+  
+  $KANIKO_BIN --context="$MODEL/" \
+         --dockerfile="$MODEL/Dockerfile" \
+         --destination="localhost:5000/ai-publisher-$MODEL:latest" \
+         --tarPath="$MODEL.tar" \
+         --insecure \
+         --skip-tls-verify \
+         --whitelist-var-run=false \
+         --ignore-var-run \
+         --snapshot-mode=redo
+  
+  BUILD_STATUS=$?
+  
+  # Dockerfile'ı eski haline geri döndür
+  sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  
+  if [ $BUILD_STATUS -eq 0 ]; then
+    echo "👉 Kaniko insa tamamlandi."
   fi
   
   if [ $BUILD_STATUS -ne 0 ]; then
