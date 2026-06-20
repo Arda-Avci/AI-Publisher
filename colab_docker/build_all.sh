@@ -48,52 +48,11 @@ echo "[DEBUG] pwd: $(pwd)"
 echo "[DEBUG] listing files:"
 ls -la
 
-# Base image zaten Drive'da varsa ve registry'de mevcutsa atla
-BASE_IN_DRIVE=0
-BASE_IN_REGISTRY=0
-
-if [ -f "$DRIVE_DIR/base.tar.gz" ]; then
-  BASE_IN_DRIVE=1
-  echo "[INFO] base.tar.gz Drive'da mevcut, registry kontrol ediliyor..."
-  if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1; then
-    BASE_IN_REGISTRY=1
-  fi
-fi
-
-if [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 1 ]; then
-  echo "✅ Base image Drive'da ve registry'de mevcut. Build atlandi."
-  BASE_SKIPPED=true
-elif [ $BASE_IN_DRIVE -eq 1 ] && [ $BASE_IN_REGISTRY -eq 0 ] && [ "$REGISTRY_UP" = "true" ]; then
-  echo "📥 Base image Drive'da mevcut ama registry'de yok. crane ile push ediliyor..."
-  CRANE_OK=false
-  if command -v docker &> /dev/null; then
-    docker load -i "$DRIVE_DIR/base.tar.gz"
-    docker tag localhost:5000/ai-publisher-base:latest ai-publisher-base:latest 2>/dev/null || true
-    CRANE_BIN="/usr/local/bin/crane"
-    if [ ! -f "$CRANE_BIN" ]; then
-      echo "crane bulunamadi, indiriliyor..."
-      curl -Lo /tmp/crane.tar.gz https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz
-      tar -xzf /tmp/crane.tar.gz -C /usr/local/bin/ crane
-      rm -f /tmp/crane.tar.gz
-    fi
-    echo "crane ile base image registry'ye push ediliyor (timeout: 120s)..."
-    docker save localhost:5000/ai-publisher-base:latest -o /tmp/base-for-push.tar
-    timeout 120 $CRANE_BIN push /tmp/base-for-push.tar localhost:5000/ai-publisher-base:latest && CRANE_OK=true
-    rm -f /tmp/base-for-push.tar
-  fi
-  if [ "$CRANE_OK" = "true" ]; then
-    echo "✅ Base image registry'ye push edildi. Build atlandi."
-    BASE_SKIPPED=true
-  else
-    echo "⚠️ crane push basarisiz. Kaniko ile base build edilecek..."
-  fi
-fi
-
-# Kaniko ile base build (crane basarisizsa veya BASE_IN_REGISTRY=1 degilse)
-if [ "$BASE_SKIPPED" != "true" ] && [ -f "Dockerfile.base" ]; then
-
-  echo "[INFO] Dockerfile.base bulundu. Kaniko ile insa basliyor..."
-  
+# Base: Registry'de yoksa Kaniko ile build et (Drive'a da kaydeder)
+if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1; then
+  echo "✅ Base image registry'de mevcut. Build atlandi."
+elif [ -f "Dockerfile.base" ]; then
+  echo "[INFO] Base registry'de yok, Dockerfile.base Kaniko ile build ediliyor..."
   $KANIKO_BIN --context=. \
          --dockerfile=Dockerfile.base \
          --destination=localhost:5000/ai-publisher-base:latest \
@@ -101,14 +60,9 @@ if [ "$BASE_SKIPPED" != "true" ] && [ -f "Dockerfile.base" ]; then
          --whitelist-var-run=false \
          --ignore-var-run \
          --snapshot-mode=redo
-  
   if [ $? -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
-    echo "✅ Base Docker Imajı basariyla olusturuldu."
-    echo "[INFO] Insa Suresi: ${DURATION}s"
-    
-    # Sıkıştırma ve Drive'a yazma
-    echo "[INFO] Base imaji Drive'a kopyalaniyor..."
+    echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
     if command -v pigz &> /dev/null; then
       pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
     else
