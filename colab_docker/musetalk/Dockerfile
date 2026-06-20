@@ -2,10 +2,10 @@ FROM ai-publisher-base:latest
 
 # Clone MuseTalk repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
 # Once main/master branch farki olabiliyor -> once main dene, olmazsa master
-RUN curl -sL --retry 3 https://github.com/TencentGameMate/MuseTalk/archive/main.tar.gz -o /tmp/musetalk.tar.gz; \
+RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.gz -o /tmp/musetalk.tar.gz; \
     if ! gzip -t /tmp/musetalk.tar.gz 2>/dev/null; then \
       echo "[WARN] main branch tar.gz gecersiz, master deneniyor..."; \
-      curl -sL --retry 3 https://github.com/TencentGameMate/MuseTalk/archive/master.tar.gz -o /tmp/musetalk.tar.gz; \
+      curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/master.tar.gz -o /tmp/musetalk.tar.gz; \
     fi; \
     if gzip -t /tmp/musetalk.tar.gz 2>/dev/null; then \
       echo "[OK] Gecerli tar.gz, ayiklamiyor..."; \
@@ -22,7 +22,7 @@ RUN curl -sL --retry 3 https://github.com/TencentGameMate/MuseTalk/archive/main.
       cat /tmp/musetalk.tar.gz | head -c 500; \
       echo ""; \
       echo "[INFO] zip deneniyor..."; \
-      curl -sL --retry 3 https://github.com/TencentGameMate/MuseTalk/archive/master.zip -o /tmp/musetalk.zip; \
+      curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/master.zip -o /tmp/musetalk.zip; \
       mkdir -p /app/MuseTalk && \
       unzip -q /tmp/musetalk.zip -d /tmp/ && \
       mv /tmp/MuseTalk-master/* /app/MuseTalk/ && \
@@ -44,7 +44,7 @@ RUN pip install --no-cache-dir pytorch3d 2>/dev/null || true
 RUN mkdir -p /app/MuseTalk/models && \
     cd /app/MuseTalk && \
     pip install --no-cache-dir huggingface_hub && \
-    python -c "from huggingface_hub import snapshot_download; snapshot_download('TencentGameMate/MuseTalk', local_dir='models', ignore_patterns=['*.git*', 'docs/*'])" 2>/dev/null || \
+    python -c "from huggingface_hub import snapshot_download; snapshot_download('TMElyralab/MuseTalk', local_dir='models', ignore_patterns=['*.git*', 'docs/*'])" 2>/dev/null || \
     echo "[WARN] MuseTalk model weights will be downloaded at runtime"
 
 COPY app.py /app/app.py

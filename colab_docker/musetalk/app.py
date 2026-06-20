@@ -60,7 +60,7 @@ def load_musetalk_model():
             try:
                 from huggingface_hub import snapshot_download
                 snapshot_download(
-                    "TencentGameMate/MuseTalk",
+                    "TMElyralab/MuseTalk",
                     local_dir=models_dir,
                     ignore_patterns=["*.git*", "docs/*", "*.md"],
                 )
