@@ -6,8 +6,7 @@ RUN pip install --no-cache-dir \
     imageio \
     imageio-ffmpeg \
     decord \
-    open_clip_torch \
-    motion-diffusers
+    open_clip_torch
 
 COPY app.py /app/app.py
 WORKDIR /app
