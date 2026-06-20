@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
+﻿FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 
 # Fix dpkg statoverride messagebus bug
 RUN sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true
@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     flask \
     requests \
     scipy \
-    numpy<2.0.0 \
+    "numpy<2.0.0" \
     accelerate \
-    transformers>=4.46 \
+    "transformers>=4.46" \
     pillow

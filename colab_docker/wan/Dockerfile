@@ -1,8 +1,8 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # Install Wan 2.1 specific video generation dependencies
 RUN pip install --no-cache-dir \
-    diffusers>=0.35,<0.36 \
+    "diffusers>=0.35,<0.36" \
     imageio \
     imageio-ffmpeg \
     decord \

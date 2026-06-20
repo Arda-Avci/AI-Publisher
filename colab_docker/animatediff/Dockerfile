@@ -2,7 +2,7 @@ FROM ai-publisher-base:latest
 
 # Install AnimateDiff specific dependencies
 RUN pip install --no-cache-dir \
-    diffusers>=0.29.0 \
+    "diffusers>=0.29.0" \
     imageio \
     imageio-ffmpeg \
     decord \

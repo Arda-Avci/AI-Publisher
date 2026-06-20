@@ -1,8 +1,8 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # Install Stable Diffusion specific packages
 RUN pip install --no-cache-dir \
-    diffusers>=0.35,<0.36 \
+    "diffusers>=0.35,<0.36" \
     realesrgan \
     gfpgan \
     basicsr \
