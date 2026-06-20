@@ -301,6 +301,12 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - [x] **Hücre 1:** İki aşamalı çalışma modeli eklendi (BUILD CPU / RUN GPU). Tüm adım listesi güncellendi.
 - [x] **Mimari netleştirme:** BUILD (CPU, Kaniko daemonless) ↔ RUN (GPU, Docker daemon + colab_server.py) ayrımı notebook'ta belirginleştirildi.
 
+## 🟢 Tamamlananlar (20 Haziran 2026 — Oturum #15: Colab Runtime Hata Düzeltmeleri)
+
+- [x] **colab_server.py:** `NGROK_URL` env var desteği eklendi. Hücre 7 ngrok URL'ini bulursa, sunucu kendi ngrok'unu açmaya çalışmaz. Çift ngrok çakışması çözüldü.
+- [x] **colab_setup.ipynb Hücre 2:** pip install hata kontrolü eklendi. `capture_output=True` sessiz hata yutma sorunu giderildi. Başarısız paketler görünür, otomatik yeniden dener.
+- [x] **colab_setup.py:** pip install her zaman çalışır (sadece ilk kurulumda değil). Docker zaten kuruluysa `else` branşında da pip install yapılır.
+
 ## 🔜 Kalan Sıradaki Adımlar
 
 1. **Colab CPU Build Test:** colab_setup.ipynb'i CPU runtime'da çalıştır, 16 imajın Drive'a yedeklendiğini doğrula

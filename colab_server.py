@@ -1716,23 +1716,33 @@ def test_models():
 
 # --- STARTUP ---
 if __name__ == "__main__":
-    NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")
-    if not NGROK_TOKEN:
-        try:
-            from google.colab import userdata
-            NGROK_TOKEN = userdata.get('NGROK_TOKEN')
-        except Exception:
-            pass
-
-    if NGROK_TOKEN and len(NGROK_TOKEN.strip()) > 10:
-        from pyngrok import ngrok
-        ngrok.set_auth_token(NGROK_TOKEN)
-        public_url = ngrok.connect(5000)
-        print("\n🔗 NODE.JS PROJENİZE YAPIŞTIRACAĞINIZ URL:\n", public_url.public_url)
+    # Öncelik 1: NGROK_URL env var (Hücre 7'den gelen hazır URL)
+    ngrok_url = os.environ.get("NGROK_URL", "").strip()
+    if ngrok_url:
+        # pyngrok'a gerek yok, doğrudan kullan
         with open("ngrok_url.txt", "w", encoding="utf-8") as f:
-            f.write(public_url.public_url)
+            f.write(ngrok_url)
+        print("\n🔗 Ngrok URL (Hücre 7'den):\n", ngrok_url)
         print("\n" + "-" * 50 + "\n")
     else:
-        print("\n⚠️ NGROK_TOKEN eksik veya geçersiz.")
+        # Öncelik 2: NGROK_TOKEN ile kendi ngrok tünelini aç
+        NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")
+        if not NGROK_TOKEN:
+            try:
+                from google.colab import userdata
+                NGROK_TOKEN = userdata.get('NGROK_TOKEN')
+            except Exception:
+                pass
+
+        if NGROK_TOKEN and len(NGROK_TOKEN.strip()) > 10:
+            from pyngrok import ngrok
+            ngrok.set_auth_token(NGROK_TOKEN)
+            public_url = ngrok.connect(5000)
+            print("\n🔗 NODE.JS PROJENİZE YAPIŞTIRACAĞINIZ URL:\n", public_url.public_url)
+            with open("ngrok_url.txt", "w", encoding="utf-8") as f:
+                f.write(public_url.public_url)
+            print("\n" + "-" * 50 + "\n")
+        else:
+            print("\n⚠️ NGROK_URL ve NGROK_TOKEN bulunamadı. Ngrok tüneli açılamadı.")
 
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True, use_reloader=False)

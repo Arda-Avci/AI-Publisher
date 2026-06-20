@@ -82,6 +82,9 @@ if not shutil.which("docker") or not os.path.exists("/usr/share/keyrings/nvidia-
 else:
     print("[OK] Sistem bağımlılıkları ve Nvidia Toolkit kurulu.")
     
+    # Python host kütüphaneleri (her çalıştırmada kontrol et)
+    run_cmd("pip install -q flask requests pyngrok opencv-python-headless numpy yt-dlp", label="Host Python Kütüphaneleri")
+    
     # Docker Daemon'ın çalışıp çalışmadığını kontrol et ve çalışmıyorsa başlat
     res = subprocess.run(["docker", "info"], capture_output=True)
     if res.returncode != 0:

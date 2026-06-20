@@ -911,6 +911,12 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **Hücre 1:** İki aşamalı çalışma modeli (BUILD CPU / RUN GPU), güncel adım listesi
 - [x] **Notebook geneli:** BUILD (CPU, Kaniko daemonless) ↔ RUN (GPU, Docker daemon) ayrımı netleştirildi
 
+## ✅ Colab Runtime Hata Düzeltmeleri (20 Haziran 2026 — Oturum #15)
+- [x] **colab_server.py:** NGROK_URL env var öncelikli kontrol. Hücre 7'den gelen URL varsa pyngrok başlatılmaz.
+- [x] **colab_setup.ipynb Hücre 2:** pip install hata kontrolü + otomatik yeniden deneme.
+- [x] **colab_setup.py:** pip install her zaman çalışır (else branşında da).
+- [x] **Sebep:** `import requests` ModuleNotFoundError → sessiz hata yutuluyordu. Ngrok çift başlatma çakışması.
+
 ### Güncel Öncelik Matrisi
 
 | # | Görev | Seviye | Durum | Öncelik |
@@ -922,9 +928,11 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 | 5 | State schema ADR-003 | Patch | ✅ Tamamlandı | ⭐ |
 | 6 | Docker mimari fix (notebook lazy-loading) | Patch | ✅ Tamamlandı | ⭐⭐⭐ |
 | 7 | colab_setup.ipynb CPU build final (Hücre 3,5,4,1) | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
-| 8 | **Colab CPU Build Test:** notebook'u CPU runtime çalıştır | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
-| 9 | Node.js notification fix | Patch | ⏳ Yapılacak | ⭐⭐ |
-| 10 | Faz 7 Testleri (16 madde) | Test | ⏳ Yapılacak | ⭐⭐ |
+| 8 | **Colab Runtime Fix:** NGROK_URL env + pip install error handling | Patch | ✅ Tamamlandı | ⭐⭐⭐ |
+| 9 | **Colab CPU Build Test:** notebook'u CPU runtime çalıştır | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
+| 10 | **Colab GPU Run Test:** GPU oturumunda Docker + colab_server.py doğrula | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
+| 11 | Node.js notification fix | Patch | ⏳ Yapılacak | ⭐⭐ |
+| 12 | Faz 7 Testleri (16 madde) | Test | ⏳ Yapılacak | ⭐⭐ |
 
 
 
