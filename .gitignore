@@ -24,7 +24,7 @@ dashboard_output.html
 /*.js
 new_keys.json
 scratch/
-Wav2Lip/
+/Wav2Lip/
 
 # Ignore root-level markdown files (keep crucial ones tracked)
 /*.md
@@ -42,6 +42,7 @@ Wav2Lip/
 *.txt
 !requirements.txt
 *.log
+__pycache__/
 .env*
 **/server*.log
 
