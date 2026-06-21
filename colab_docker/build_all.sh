@@ -24,11 +24,16 @@ fi
 if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
   echo "[INFO] Kaniko binary bulunamadi. Otomatik indiriliyor..."
   mkdir -p /kaniko
+  # Once HTTP diagnostic, then try download
+  echo "  HTTP diagnostic: curl -sI https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64"
+  curl -sI "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64" 2>&1 | head -5
+  echo "  HTTP diagnostic: curl -sI https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64"
+  curl -sI "https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64" 2>&1 | head -5
   for K_URL in \
     "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64" \
     "https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64" \
     "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.21.1/kaniko-linux-amd64"; do
-    echo "  $K_URL"
+    echo "  Trying: $K_URL"
     curl -L --connect-timeout 15 --max-time 120 -o /kaniko/executor "$K_URL" 2>/dev/null
     if [ -f /kaniko/executor ] && [ -s /kaniko/executor ]; then
       chmod +x /kaniko/executor
