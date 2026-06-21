@@ -107,17 +107,28 @@ export const db = {
     const finalSql = isInsert && !hasReturning ? converted + ' RETURNING id' : converted;
 
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
-    const res = await activePool.query(finalSql, params);
-
-    return {
-      lastID: isInsert && res.rows[0] ? res.rows[0].id : undefined,
-      changes: res.rowCount || 0,
-    };
+    try {
+      const res = await activePool.query(finalSql, params);
+      return {
+        lastID: isInsert && res.rows[0] ? res.rows[0].id : undefined,
+        changes: res.rowCount || 0,
+      };
+    } catch (err: any) {
+      const newErr = new Error(`[db.run Error in SQL: ${finalSql.trim().substring(0, 300)}] ${err.message}`);
+      (newErr as any).stack = err.stack;
+      throw newErr;
+    }
   },
 
   async exec(sql: string): Promise<void> {
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
-    await activePool.query(sql);
+    try {
+      await activePool.query(sql);
+    } catch (err: any) {
+      const newErr = new Error(`[db.exec Error in SQL: ${sql.trim().substring(0, 300)}] ${err.message}`);
+      (newErr as any).stack = err.stack;
+      throw newErr;
+    }
   },
 };
 
