@@ -1,10 +1,19 @@
 FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 
+# Set non-interactive frontend and timezone to prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
 # Fix dpkg statoverride messagebus bug
 RUN sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true
 
+# Configure APT to be robust against download hangs and network issues
+RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries && \
+    echo 'Acquire::https::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
+
 # System dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     espeak-ng \
