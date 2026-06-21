@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Lessons Learned (Repeat Offenses)
+
+### never `except Exception: pass`
+Colab notebook'ta `except Exception: pass` kullanma — sessizce hata yutar, token/secret bulamama sebebini gizler. Hep `except Exception as e: print(e)` yap.
+- **Örnek**: `colab_docker_build.ipynb` — `userdata.get("GITHUB_PAT")` başarısız oluyor ama `pass` yüzünden kimse görmüyor. 2 kez düzeltildi.
+
+### Colab Secret Adı Case-Sensitive
+`GITHUB_PAT` != `github_pat` != `Github_Pat`. Kullanıcı hangi isimle kaydettiğini bilmeyebilir. Her zaman 3 varyant dene: `GITHUB_PAT`, `GITHUB_TOKEN`, `GH_TOKEN`.
+
+### Path: Always check file existence before operations
+Before reading/moving/writing files, always verify path exists. Don't assume Docker images, auth files, or temp dirs exist.
+
+### Don't Guess Root Cause — Read Code First
+Error görünce tahmin etme, önce kodu oku. `except Exception: pass` gibi kalıpları ara. "notebook access kapalı" tahmini yanlıştı — asıl sebep sessiz `pass`'ti.
+
 ## Project Overview
 
 AI-Publisher is a Node.js/Express video publishing automation platform that generates AI-powered social media videos (YouTube Shorts, TikTok, X, Meta Reels) using Google Colab GPU, Playwright, RabbitMQ, Redis, PostgreSQL, and FFmpeg. It features a dashboard studio with a glassmorphism/cyberpunk aesthetic, multi-language support (tr/en), premium theme system, and a "Fırsatlar Hunisi" (Opportunity Funnel) for discovering & differentiating viral YouTube videos.
