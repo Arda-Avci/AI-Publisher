@@ -11,6 +11,10 @@ if [ -f "/usr/local/bin/kaniko" ]; then
 elif [ -f "/kaniko/executor" ]; then
   KANIKO_BIN="/kaniko/executor"
 fi
+# Fix permission if binary exists but not executable
+if [ -f "$KANIKO_BIN" ] && [ ! -x "$KANIKO_BIN" ]; then
+  chmod +x "$KANIKO_BIN"
+fi
 
 echo "=========================================="
 echo "🚀 FAZ 1: Base Docker Imajı Insa Ediliyor (Kaniko)"
