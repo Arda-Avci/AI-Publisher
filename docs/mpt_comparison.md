@@ -10,7 +10,7 @@
 
 | Özellik | MoneyPrinterTurbo (MPT) | AI-Publisher (Bizim) |
 |---|---|---|
-| **Mimari** | MVC (Python FastAPI + Streamlit WebUI) | Node.js Express + Google Colab Flask |
+| **Mimari** | MVC (Python FastAPI + Streamlit WebUI) | Node.js Express + Docker Flask (localhost:5001-5016) |
 | **Video Kaynağı** | Pexels/Pixabay stok video API | AI üretim (ModelScope T2V) |
 | **TTS** | Azure/OpenAI/Edge TTS (bulut) | XTTS-v2 (yerel GPU) |
 | **Altyazı** | faster-whisper (Whisper ASR) | FFmpeg burn-in (statik) |
@@ -80,7 +80,7 @@ FFmpeg `drawtext` filter ile statik altyazı yazıyoruz — zaman damgası yok, 
 - Kelime bazlı `.srt` dosyası üretilir
 - FFmpeg burn-in yerine senkron altyazı basılır
 
-**Colab'da kurulum:**
+**Docker container'da kurulum:**
 ```bash
 pip install faster-whisper
 # Model: "small" (238MB) veya "medium" (769MB) — T4'te sorunsuz
@@ -170,7 +170,7 @@ def _sanitize_image_file(image_path: str) -> str:
         cleaned_image.save(sanitized_path)
 ```
 
-**Neden önemli:** Kullanıcı yüklediği görseller (karakter.jpg vb.) bozuk EXIF içerirse Colab'da crash oluyor. Bu basit fonksiyon `generate-media` endpoint'i öncesine eklenebilir.
+**Neden önemli:** Kullanıcı yüklediği görseller (karakter.jpg vb.) bozuk EXIF içerirse Docker container'da crash oluyor. Bu basit fonksiyon `generate-media` endpoint'i öncesine eklenebilir.
 
 ---
 
@@ -201,12 +201,12 @@ def _sanitize_image_file(image_path: str) -> str:
 
 ### Faz 1 — Hemen Uygulanabilir (Düşük Maliyet, Yüksek Etki)
 
-- [ ] **Colab'a faster-whisper ekle** → Otomatik altyazı üretimi
-  - Değiştirilecek dosya: `colab_server.py`
+- [ ] **Docker container'a faster-whisper ekle** → Otomatik altyazı üretimi
+  - Değiştirilecek dosya: `colab_docker/server.py`
   - Beklenen süre: 2 saat
 
 - [ ] **EXIF sanitizasyon** → Kullanıcı görsel yükleme güvenliği
-  - Değiştirilecek dosya: `colab_server.py`
+  - Değiştirilecek dosya: `colab_docker/server.py`
   - Beklenen süre: 30 dakika
 
 - [ ] **FFmpeg codec fallback** → Windows uyumluluğu
@@ -233,7 +233,7 @@ def _sanitize_image_file(image_path: str) -> str:
 
 ## 5. Kod Örneği — faster-whisper ile Altyazı Üretimi
 
-Colab sunucusuna eklenecek fonksiyon:
+Docker sunucusuna eklenecek fonksiyon:
 
 ```python
 def generate_subtitles_whisper(audio_path: str, output_srt: str) -> str:

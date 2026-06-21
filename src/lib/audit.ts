@@ -28,9 +28,7 @@ export type AuditAction =
   | 'differentiate.approve'
   | 'differentiate.cancel'
   | 'settings.save'
-  | 'colab.start'
-  | 'colab.stop'
-  | 'colab.connect'
+
   | 'job.select_cover'
   | 'scene.regenerate';
 

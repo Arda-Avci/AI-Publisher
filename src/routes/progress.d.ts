@@ -1,12 +1,13 @@
 import { Application } from 'express';
 /**
- * SSE progress route: GET /progress/:id.
+ * SSE progress route.
  *
- * Streams real-time job progress events emitted by src/queue.ts via
- * Redis Pub/Sub. S6 hardening: requires an authenticated session
- * and verifies the job belongs to the requesting user (ownership check).
- * Sends a 25s heartbeat to keep the connection alive through proxies
- * that buffer idle responses.
+ * Two URL schemes supported for backward compatibility:
+ *   GET /progress/:id         (legacy SSR pages)
+ *   GET /api/v1/progress/stream?jobId=:id  (React SPA)
+ *
+ * Streams real-time job progress via Redis Pub/Sub.
+ * Requires authenticated session + job ownership.
  */
 export declare function registerProgressRoutes(app: Application): void;
 //# sourceMappingURL=progress.d.ts.map

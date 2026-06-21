@@ -1,5 +1,14 @@
 # Yapılacaklar Listesi (TODO)
 
+## ✅ Colab→Docker Migration (21 Haziran 2026)
+
+- [x] **Dokümantasyon güncellemesi (13 dosya):** ADR'ler, spec'ler, rehberler Colab→Docker terminolojisine taşındı
+- [x] **Client component güncellemesi (6 dosya + yardımcılar):** GalleryPanel, PhotoEditor, StudioPanel, StudioToolsPanel, LandingPage, AdminSystem, App.tsx, TalkShowEditor.tsx + .js derlemeleri güncellendi
+- [x] **Env & config:** `.env` MOCK_COLAB→MOCK_DOCKER, `project_plan.md` COLAB_URL→DOCKER_URL, `KURULUM_VE_GEREKSINIMLER.md` Colab→Docker
+- [x] **API route rename:** `/api/v1/colab/status`→`/api/v1/docker/status`, `/colab-status-stream`→`/docker-status-stream`, `/api/v1/colab/test-models`→`/api/v1/docker/test-models`
+- [x] **SSE events:** `d.colabMessage`→`d.dockerMessage`
+- [ ] Kalan Colab referansları (CLAUDE.md, AGENTS.md, colab_server.py header, skill'ler) sonraki oturumda temizlenecek
+
 ## 📚 2026 Multimodal & Agent Araştırma Fazı (20 Haziran 2026)
 
 - [x] Multimodal LLM durumu (GPT-5.5, Gemini 2.5, Claude 4) araştırıldı.
@@ -50,6 +59,14 @@
 ### FAZ 5: Infinite Canvas ve Gelişmiş Editör Entegrasyonu
 - [ ] Canvas Assistant yardımıyla referans görsellerin, storyboard'ların ve video node'larının çizgilerle birbirine bağlandığında doğru asenkron görev (Task) kuyrukları oluşturduğunun doğrulanması.
 - [ ] Geçmiş projelerin SQLite/PostgreSQL veritabanından taranarak yeni senaryo üretimlerinde RAG (Retrieval-Augmented Generation) desteğinin kararlı çalışması.
+
+### FAZ 6: Hazır Docker Hub Video Motorlarının Entegrasyonu
+- [ ] **SadTalker Konteyner Entegrasyonu**: `wawa9000/sadtalker` veya `checko/sadtalker` imajının Colab/RunPod lazy-loading katmanına (ContainerManager) entegre edilmesi ve talking head üretimi için endpoint oluşturulması.
+- [ ] **DynamiCrafter Konteyner Entegrasyonu**: `maximofn/dynamicrafter:latest` imajının ContainerManager listesine eklenmesi, VRAM optimizasyonu ve görselden videoya (Image-to-Video) fallback akışına bağlanması.
+- [ ] **Zeroscope / ModelScope Konteyner Entegrasyonu**: `modelscope/modelscope` temel imajı kullanılarak veya ComfyUI API container'ı üzerinden Zeroscope v2 modellerinin indirilip mount edilmesi ve metinden video üretim alternatifi olarak sunulması.
+- [ ] **Video-ReTalking Entegrasyonu**: `vinthony/video-retalking:latest` imajının lip-sync pipeline'ına dahil edilmesi.
+- [ ] **GeneFace++ Entegrasyonu**: `wzmsltw/geneface:latest` imajı ile 3D konuşan kafa alternatifi sağlanması.
+- [ ] **Mochi-1 ve Pyramid-Flow Entegrasyonu**: `thufeifeibear/mochi-dev:0.1` ve `camenduru/pyramid-flow-t2v-tost` gibi topluluk imajlarının paralel çıkarım modlarıyla pilot edilip entegre edilmesi.
 
 ## 🚀 Yeni v7.0 Colab-Heavy Kurgu & Kaniko Derleme Fazları (19 Haziran 2026)
 

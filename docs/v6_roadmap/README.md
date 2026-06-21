@@ -7,7 +7,7 @@
 
 ## Genel Bakış
 
-Projenin mevcut güçlü temeli üzerine (multi-agent pipeline, Remotion, Playwright, Colab GPU) rakiplerden ayrışmak için 5 fazlı geliştirme planı. Her faz paralel işlenebilen 3 track içerir.
+Projenin mevcut güçlü temeli üzerine (multi-agent pipeline, Remotion, Playwright, Docker GPU container) rakiplerden ayrışmak için 5 fazlı geliştirme planı. Her faz paralel işlenebilen 3 track içerir.
 
 ## Mimari Kararlar (15 Haziran 2026)
 
@@ -15,9 +15,9 @@ Projenin mevcut güçlü temeli üzerine (multi-agent pipeline, Remotion, Playwr
 |---|---|---|---|
 | **Cloud Platform** | **GCP** | AWS | T4 GPU $0.16/hr (AWS $0.53), Gemini native, TPU opsiyonu, scale-to-zero |
 | **Ödeme** | **Iyzico** | Stripe | Stripe Türkiye'de desteklenmez. Iyzico %2.39+0.25TL, taksit, subscription |
-| **Avatar/Lip-Sync** | **MuseTalk + Wav2Lip** (self-hosted) | HeyGen ($24/ay), Tavus (~$30/ay) | Sıfır maliyet, Colab GPU'da çalışır, Wav2Lip zaten mevcut |
+| **Avatar/Lip-Sync** | **MuseTalk + Wav2Lip** (self-hosted) | HeyGen ($24/ay), Tavus (~$30/ay) | Sıfır maliyet, Docker GPU container'da çalışır, Wav2Lip zaten mevcut |
 | **Video Kişiselleştirme** | **Remotion** (self-hosted) | Tavus | Zaten projede var, ek maliyet yok |
-| **Görsel Kaynak** | **Stable Diffusion / Flux** (Colab) | Pexels (rate limited) | Sıfır API bağımlılığı, sınırsız üretim |
+| **Görsel Kaynak** | **Stable Diffusion / Flux** (Docker container) | Pexels (rate limited) | Sıfır API bağımlılığı, sınırsız üretim |
 | **LLM Fallback** | Anthropic/Minimax M3 | — | Gemini yetersiz kalırsa yedek |
 | **TalkShow Çoklu Karakter** | OpenRouter + ZEN (free modeller) | — | Her karakter farklı model, halüsinasyon önleme |
 | **DeepSeek** | **KALDIRILDI** | — | Kullanılmıyor |

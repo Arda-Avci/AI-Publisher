@@ -37,8 +37,8 @@ export function t(
 export const STAGE_KEYS = {
   DIRECTOR_PLANNING: 'stageDirectorPlanning',
   SCENES_PREPARING: 'stageScenesPreparing',
-  COLAB_STARTING: 'stageColabStarting',
-  COLAB_VERIFYING: 'stageColabProgress',
+  DOCKER_STARTING: 'stageDockerStarting',
+  DOCKER_VERIFYING: 'stageDockerProgress',
   COVER_SYNTHESIS: 'stageCoverSynthesis',
   SCENE_GENERATING: 'stageSceneGenerating',
   AUTO_CUT: 'stageAutoCut',

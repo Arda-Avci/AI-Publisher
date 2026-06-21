@@ -173,7 +173,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
   // ✂️ Remove Background
   const handleRemoveBackground = async () => {
     setIsProcessing(true);
-    setStatusMsg('Arka plan temizleniyor (Colab rembg)...');
+    setStatusMsg('Arka plan temizleniyor (Docker rembg)...');
 
     try {
       const response = await fetch(editorImage);
@@ -210,7 +210,7 @@ export const PhotoEditor: React.FC<PhotoEditorProps> = ({ imageUrl, onSave, onCl
     if (!maskCanvasRef.current) return;
 
     setIsProcessing(true);
-    setStatusMsg('Görsel inpaint ediliyor (Colab SD)...');
+    setStatusMsg('Görsel inpaint ediliyor (Docker SD)...');
 
     try {
       // Get base image blob

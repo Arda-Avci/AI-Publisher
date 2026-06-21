@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { authLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
 import { encryptUsername } from '../lib/crypto.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 /**
  * Auth routes: /login GET/POST and /logout GET.
@@ -15,7 +16,7 @@ export function registerAuthRoutes(app: Application): void {
     res.redirect('/');
   });
 
-  app.post('/login', authLimiter, async (req, res) => {
+  registerRoute(app, 'post', '/login', authLimiter, async (req, res) => {
     const { username, password } = req.body;
     const encryptedUsername = encryptUsername(username);
     const user = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
@@ -59,10 +60,13 @@ export function registerAuthRoutes(app: Application): void {
     });
   });
 
-  app.get('/logout', (req, res) => {
+  const logoutHandler = (req: Request, res: Response) => {
     logAudit({ userId: req.session.userId, action: 'auth.logout', req });
     req.session.destroy(() => {
-      res.redirect('/login');
+      res.json({ success: true });
     });
-  });
+  };
+
+  app.get('/logout', logoutHandler);
+  registerRoute(app, 'post', '/logout', logoutHandler);
 }

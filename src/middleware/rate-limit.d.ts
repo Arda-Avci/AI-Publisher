@@ -6,7 +6,7 @@
 export declare const heavyLimiter: import("express-rate-limit").RateLimitRequestHandler;
 /**
  * Medium operations: settings save, publish trigger, manual queue
- * controls, Colab start/stop. Higher cap than heavy but still rate-limited.
+ * controls. Higher cap than heavy but still rate-limited.
  */
 export declare const mediumLimiter: import("express-rate-limit").RateLimitRequestHandler;
 /**

@@ -40,7 +40,7 @@ export interface VideoJob {
     transcript_cleaned?: string;
     transcript_translated?: string;
     scene_prompts?: string;
-    colab_task_id?: string;
+    task_id?: string;
     tts_provider?: string;
     tts_voice?: string;
     model_type?: string;
@@ -84,6 +84,9 @@ export interface VideoJob {
     viral_hook_enabled?: number;
     broll_enabled?: number;
     emotion_captions?: number;
+    lora_enabled?: number;
+    character_images?: string;
+    multi_character?: number;
 }
 export interface VideoScene {
     id: number;

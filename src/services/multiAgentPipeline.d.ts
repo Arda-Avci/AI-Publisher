@@ -30,8 +30,8 @@ export declare const ProducerWorkflowSchema: z.ZodObject<{
         parallelizableWithPrevious: z.ZodBoolean;
         requiredModels: z.ZodArray<z.ZodEnum<{
             video: "video";
-            sfx: "sfx";
             tts: "tts";
+            sfx: "sfx";
             lipsync: "lipsync";
             cover: "cover";
         }>>;

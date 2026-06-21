@@ -3,8 +3,8 @@ export declare function t(key: string, lang?: 'tr' | 'en', params?: Record<strin
 export declare const STAGE_KEYS: {
     readonly DIRECTOR_PLANNING: "stageDirectorPlanning";
     readonly SCENES_PREPARING: "stageScenesPreparing";
-    readonly COLAB_STARTING: "stageColabStarting";
-    readonly COLAB_VERIFYING: "stageColabProgress";
+    readonly DOCKER_STARTING: "stageDockerStarting";
+    readonly DOCKER_VERIFYING: "stageDockerProgress";
     readonly COVER_SYNTHESIS: "stageCoverSynthesis";
     readonly SCENE_GENERATING: "stageSceneGenerating";
     readonly AUTO_CUT: "stageAutoCut";

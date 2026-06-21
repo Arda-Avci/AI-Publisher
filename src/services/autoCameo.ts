@@ -51,13 +51,13 @@ export async function generateAvatarImages(
 
   for (const char of characters) {
     try {
-      const COLAB_URL = process.env.COLAB_URL;
-      if (!COLAB_URL) {
-        Logger.warn(`[AutoCameo] COLAB_URL not set, skipping avatar for @${char.label}`);
+      const avatarUrl = process.env.DOCKER_HOST || 'http://localhost';
+      if (!avatarUrl) {
+        Logger.warn(`[AutoCameo] DOCKER_HOST not set, skipping avatar for @${char.label}`);
         results.push(char);
         continue;
       }
-      const response = await axios.post(`${COLAB_URL}/generate-avatar`, {
+      const response = await axios.post(`${avatarUrl}/generate-avatar`, {
         character_label: char.label,
         source_image_base64: char.imageBase64 || undefined,
         style: 'pixar',

@@ -7,7 +7,7 @@ import { Request } from 'express';
  * table. The logging function is intentionally non-throwing: an
  * audit-write failure MUST NOT break the parent request.
  */
-export type AuditAction = 'auth.login.success' | 'auth.login.failed' | 'auth.logout' | 'job.create' | 'job.cancel' | 'job.delete' | 'job.retry' | 'job.start' | 'publish.youtube' | 'publish.tiktok' | 'publish.x' | 'publish.meta' | 'differentiate.create' | 'differentiate.approve' | 'differentiate.cancel' | 'settings.save' | 'colab.start' | 'colab.stop' | 'colab.connect' | 'job.select_cover' | 'scene.regenerate';
+export type AuditAction = 'auth.login.success' | 'auth.login.failed' | 'auth.logout' | 'job.create' | 'job.cancel' | 'job.delete' | 'job.retry' | 'job.start' | 'publish.youtube' | 'publish.tiktok' | 'publish.x' | 'publish.meta' | 'differentiate.create' | 'differentiate.approve' | 'differentiate.cancel' | 'settings.save' | 'job.select_cover' | 'scene.regenerate';
 export interface AuditEntry {
     userId: number | null | undefined;
     action: AuditAction;

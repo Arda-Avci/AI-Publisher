@@ -1,7 +1,7 @@
 /**
  * Video Inpainting Service
  *
- * Removes unwanted objects from videos by calling the Colab `/api/v1/inpaint` endpoint.
+ * Removes unwanted objects from videos by calling the Docker `/api/v1/inpaint` endpoint.
  * Uses mask regions to specify areas to be inpainted and replaced with generated content.
  *
  * @module services/inpainting
@@ -10,7 +10,7 @@
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
 
 /**
@@ -68,17 +68,6 @@ export async function inpaintObjects(
   maskRegions: MaskRegion[],
   outputPath: string,
 ): Promise<InpaintResult> {
-  const state = colab.getState();
-
-  if (state.status !== 'running' || !state.ngrokUrl) {
-    Logger.warn('[inpaint] Colab not running, using fallback', { status: state.status });
-    return {
-      outputVideoPath: videoPath,
-      usedFallback: true,
-      error: 'Colab not available',
-    };
-  }
-
   if (maskRegions.length === 0) {
     Logger.warn('[inpaint] No mask regions provided, copying original');
     await fs.copy(videoPath, outputPath);
@@ -89,22 +78,17 @@ export async function inpaintObjects(
     };
   }
 
-  const colabUrl = state.ngrokUrl;
+  const sdUrl = dockerHost.getUrl('stablediffusion');
 
   try {
-    Logger.info('[inpaint] Sending inpaint request to Colab', {
+    Logger.info('[inpaint] Sending inpaint request to Docker', {
       videoPath,
       outputPath,
       regionCount: maskRegions.length,
     });
 
-    // Note: Colab has `/inpaint-image` for image inpainting only (colab_server.py:1244).
-    // Video inpainting endpoint `/api/v1/inpaint` is future work.
-    // Payload: { video_path, mask_regions, output_path, strength? }
-    // Response: { status, output_path }
-
     const response = await axios.post(
-      `${colabUrl}/api/v1/inpaint`,
+      `${sdUrl}/api/v1/inpaint`,
       {
         video_path: videoPath,
         mask_regions: maskRegions,
@@ -112,8 +96,7 @@ export async function inpaintObjects(
         strength: 0.8,
       },
       {
-        timeout: 600000, // 10 min
-        headers: { 'ngrok-skip-browser-warning': 'true' },
+        timeout: 600000,
       },
     );
 
@@ -129,9 +112,9 @@ export async function inpaintObjects(
       }
     }
 
-    throw new Error(`Unexpected Colab response: ${JSON.stringify(response.data)}`);
+    throw new Error(`Unexpected Docker response: ${JSON.stringify(response.data)}`);
   } catch (err: any) {
-    Logger.warn('[inpaint] Colab call failed, copying original to output', {
+    Logger.warn('[inpaint] Docker call failed, copying original to output', {
       error: err.message,
     });
 

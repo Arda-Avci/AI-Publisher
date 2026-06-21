@@ -500,7 +500,7 @@ function VideoPreview({
               lineHeight: '1.6',
             }}
           >
-            Prodüksiyon talebiniz kuyruğa alındı. Google Colab GPU hazır olduğunda otonom video
+            Prodüksiyon talebiniz kuyruğa alındı. Docker GPU container hazır olduğunda otonom video
             üretim süreci otomatik olarak başlayacaktır.
           </p>
         </div>

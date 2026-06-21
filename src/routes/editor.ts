@@ -1,6 +1,6 @@
 import express, { Application, Request, Response } from 'express';
 import path from 'path';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
@@ -8,7 +8,7 @@ import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 
 export function registerEditorRoutes(app: Application): void {
-  // ─── 1. Arka Planı Kaldır (Proxy to Colab) ──────────────────────────────────
+  // ─── 1. Arka Planı Kaldır (Proxy to Docker) ──────────────────────────────────
   app.post(
     '/api/v1/editor/remove-background',
     mediumLimiter,
@@ -19,19 +19,11 @@ export function registerEditorRoutes(app: Application): void {
         return res.status(400).json({ success: false, error: 'Lütfen bir görsel seçin.' });
       }
 
-      const colabState = colab.getState();
-      if (!colabState.ngrokUrl) {
-        return res
-          .status(503)
-          .json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
-      }
-
       try {
         Logger.info(
-          `✂️ [remove-background] Colab sunucusuna gönderiliyor... Dosya: ${req.file.path}`,
+          `✂️ [remove-background] Docker sunucusuna gönderiliyor... Dosya: ${req.file.path}`,
         );
 
-        // Native FormData & fetch
         const fs = await import('fs-extra');
         const fileBuffer = await fs.readFile(req.file.path);
         const blob = new Blob([fileBuffer], { type: req.file.mimetype });
@@ -39,21 +31,15 @@ export function registerEditorRoutes(app: Application): void {
         const formData = new FormData();
         formData.append('image', blob, req.file.originalname);
 
-        const bypassHeaders = {
-          'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true',
-        };
-
-        const response = await fetch(`${colabState.ngrokUrl}/remove-background`, {
+        const response = await fetch(dockerHost.getServiceUrl('stablediffusion', '/remove-background'), {
           method: 'POST',
           body: formData,
-          headers: bypassHeaders,
         });
 
         if (!response.ok) {
           const errMsg = await response.text();
-          Logger.error(`❌ Colab remove-background başarısız: ${errMsg}`);
-          return res.status(response.status).json({ success: false, error: 'Colab işlem hatası' });
+          Logger.error(`❌ Docker remove-background başarısız: ${errMsg}`);
+          return res.status(response.status).json({ success: false, error: 'Docker işlem hatası' });
         }
 
         // Şeffaf resmi al ve Node diskine kaydet (uploads klasörü)
@@ -82,7 +68,7 @@ export function registerEditorRoutes(app: Application): void {
     },
   );
 
-  // ─── 2. Inpaint (Proxy to Colab) ───────────────────────────────────────────
+  // ─── 2. Inpaint (Proxy to Docker) ───────────────────────────────────────────
   app.post(
     '/api/v1/editor/inpaint',
     mediumLimiter,
@@ -103,15 +89,8 @@ export function registerEditorRoutes(app: Application): void {
           .json({ success: false, error: 'Görsel, maske ve prompt zorunludur.' });
       }
 
-      const colabState = colab.getState();
-      if (!colabState.ngrokUrl) {
-        return res
-          .status(503)
-          .json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
-      }
-
       try {
-        Logger.info(`🎨 [inpaint] Colab sunucusuna gönderiliyor... Prompt: ${prompt}`);
+        Logger.info(`🎨 [inpaint] Docker sunucusuna gönderiliyor... Prompt: ${prompt}`);
 
         const fs = await import('fs-extra');
 
@@ -126,21 +105,15 @@ export function registerEditorRoutes(app: Application): void {
         formData.append('mask', maskBlob, maskFile.originalname);
         formData.append('prompt', prompt);
 
-        const bypassHeaders = {
-          'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true',
-        };
-
-        const response = await fetch(`${colabState.ngrokUrl}/inpaint-image`, {
+        const response = await fetch(dockerHost.getServiceUrl('stablediffusion', '/inpaint-image'), {
           method: 'POST',
           body: formData,
-          headers: bypassHeaders,
         });
 
         if (!response.ok) {
           const errMsg = await response.text();
-          Logger.error(`❌ Colab inpaint başarısız: ${errMsg}`);
-          return res.status(response.status).json({ success: false, error: 'Colab işlem hatası' });
+          Logger.error(`❌ Docker inpaint başarısız: ${errMsg}`);
+          return res.status(response.status).json({ success: false, error: 'Docker işlem hatası' });
         }
 
         const arrayBuffer = await response.arrayBuffer();
@@ -169,7 +142,7 @@ export function registerEditorRoutes(app: Application): void {
     },
   );
 
-  // ─── 3. Görsel Üret (Proxy to Colab) ───────────────────────────────────────
+  // ─── 3. Görsel Üret (Proxy to Docker) ───────────────────────────────────────
   app.post(
     '/api/v1/editor/generate-image',
     mediumLimiter,
@@ -180,32 +153,19 @@ export function registerEditorRoutes(app: Application): void {
         return res.status(400).json({ success: false, error: 'Prompt parametresi zorunludur.' });
       }
 
-      const colabState = colab.getState();
-      if (!colabState.ngrokUrl) {
-        return res
-          .status(503)
-          .json({ success: false, error: 'Google Colab GPU sunucusu bağlı değil.' });
-      }
-
       try {
-        Logger.info(`🎨 [generate-image] Colab sunucusuna istek atılıyor... Prompt: ${prompt}`);
+        Logger.info(`🎨 [generate-image] Docker sunucusuna istek atılıyor... Prompt: ${prompt}`);
 
-        const bypassHeaders = {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true',
-        };
-
-        const response = await fetch(`${colabState.ngrokUrl}/generate-image`, {
+        const response = await fetch(dockerHost.getServiceUrl('stablediffusion', '/generate-image'), {
           method: 'POST',
-          headers: bypassHeaders,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, model_type: model_type || 'dreamshaper' }),
         });
 
         if (!response.ok) {
           const errMsg = await response.text();
-          Logger.error(`❌ Colab generate-image başarısız: ${errMsg}`);
-          return res.status(response.status).json({ success: false, error: 'Colab işlem hatası' });
+          Logger.error(`❌ Docker generate-image başarısız: ${errMsg}`);
+          return res.status(response.status).json({ success: false, error: 'Docker işlem hatası' });
         }
 
         const arrayBuffer = await response.arrayBuffer();

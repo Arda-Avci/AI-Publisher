@@ -5,7 +5,7 @@
 import type { SportotoDiscussion } from './discussionSource.js';
 /**
  * Talk show video üretir:
- * 1. Her utterance için Colab TTS ile ses sentezle
+ * 1. Her utterance için Docker TTS ile ses sentezle
  * 2. Her utterance için görsel bir scene oluştur (speaker adı + metin)
  * 3. Tüm scene'leri birleştir
  */

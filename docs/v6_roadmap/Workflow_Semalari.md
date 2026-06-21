@@ -34,7 +34,7 @@ Kullanıcı "Bir uzay belgeseli yap" yazar
        │          │          │
        ▼          ▼          ▼
 ┌──────────┐ ┌──────────┐ ┌──────────┐
-│ Colab    │ │ XTTS/    │ │ Colab    │
+│ Docker   │ │ XTTS/    │ │ Docker   │
 │ CogVideo │ │ Edge TTS │ │ AudioLDM2│
 │ Wan 2.1  │ │ Kokoro   │ │ (SFX)    │
 │ Hunyuan  │ │ (ses)    │ │ Flux/SD  │
@@ -187,7 +187,7 @@ Kullanıcı "Bir uzay belgeseli yap" yazar
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Phase 1: Colab'da yt-dlp ile video indirme                  │
+│  Phase 1: Docker'da yt-dlp ile video indirme                  │
 │  → OpenCV time-based frame kesme                             │
 │  → Whisper transkript çıkarma                                │
 │  → Gemini ile farklılaştırma metni üretme                    │
@@ -205,7 +205,7 @@ Kullanıcı "Bir uzay belgeseli yap" yazar
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Phase 3: Colab video model lazy load (CogVideoX/Wan/Hunyuan)│
+│  Phase 3: Docker video model lazy load (CogVideoX/Wan/Hunyuan)│
 │  → Image-to-Video (ilk frame → init_image)                   │
 │  → Sahneler arası dynamic crossfade                          │
 │  → %90 foreground + boxblurred background + vignette         │

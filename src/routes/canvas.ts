@@ -19,8 +19,9 @@ router.use(requireAuth);
  */
 router.get('/', async (req, res) => {
   try {
-    // For now, return empty array - will be populated from DB
-    res.json({ canvases: [] });
+    const userId = req.session.userId!;
+    const list = await infiniteCanvas.listByUser(userId);
+    res.json({ canvases: list });
   } catch (error) {
     Logger.error('Failed to list canvases:', error);
     res.status(500).json({ error: 'Failed to list canvases' });
@@ -70,7 +71,17 @@ router.get('/:id', async (req, res) => {
  */
 router.delete('/:id', async (req, res) => {
   try {
-    // For now, just return success
+    const canvas = await infiniteCanvas.getCanvas(req.params.id);
+    if (!canvas) {
+      return res.status(404).json({ error: 'Canvas not found' });
+    }
+    if (canvas.userId !== req.session.userId) {
+      return res.status(403).json({ error: 'Bu canvas size ait değil' });
+    }
+    const success = await infiniteCanvas.deleteCanvas(req.params.id);
+    if (!success) {
+      return res.status(404).json({ error: 'Canvas not found' });
+    }
     res.json({ success: true });
   } catch (error) {
     Logger.error('Failed to delete canvas:', error);

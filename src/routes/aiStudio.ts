@@ -35,7 +35,7 @@ router.post('/enhance-audio', mediumLimiter, requireAuth, async (req, res) => {
     res.json({
       success: true,
       outputPath: result.outputPath,
-      usedColab: result.usedColab,
+      dockerUsed: result.dockerUsed,
       durationMs: result.durationMs,
     });
   } catch (err: any) {
@@ -58,7 +58,7 @@ router.post('/smart-reframe', mediumLimiter, requireAuth, async (req, res) => {
     res.json({
       success: true,
       outputPath: result.outputPath,
-      usedColab: result.usedColab,
+      dockerUsed: result.dockerUsed,
       durationMs: result.durationMs,
     });
   } catch (err: any) {
@@ -85,7 +85,7 @@ router.post(
       res.json({
         success: true,
         url: `/uploads/${path.basename(outPath)}`,
-        usedColab: result.usedColab,
+        dockerUsed: result.dockerUsed,
         durationMs: result.durationMs,
       });
     } catch (err: any) {
@@ -107,7 +107,7 @@ router.post('/generate-image', mediumLimiter, requireAuth, async (req, res) => {
     res.json({
       success: true,
       url: `/uploads/${path.basename(outPath)}`,
-      usedColab: result.usedColab,
+      dockerUsed: result.dockerUsed,
       durationMs: result.durationMs,
     });
   } catch (err: any) {
@@ -143,7 +143,7 @@ router.post(
       res.json({
         success: true,
         url: `/uploads/${path.basename(outPath)}`,
-        usedColab: result.usedColab,
+        dockerUsed: result.dockerUsed,
         durationMs: result.durationMs,
       });
     } catch (err: any) {
@@ -167,7 +167,7 @@ router.post('/gaze-fix', mediumLimiter, requireAuth, async (req, res) => {
     res.json({
       success: true,
       outputPath: result.outputPath,
-      usedColab: result.usedColab,
+      dockerUsed: result.dockerUsed,
       durationMs: result.durationMs,
     });
   } catch (err: any) {
@@ -190,7 +190,7 @@ router.post('/enhance-audio-only', mediumLimiter, requireAuth, async (req, res) 
     res.json({
       success: true,
       outputPath: result.outputPath,
-      usedColab: result.usedColab,
+      dockerUsed: result.dockerUsed,
       durationMs: result.durationMs,
     });
   } catch (err: any) {

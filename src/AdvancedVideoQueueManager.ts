@@ -8,6 +8,7 @@ import { generateObject } from 'ai';
 import { transcribeVideoAudio } from './lib/audio-transcriber.js';
 import { z } from 'zod';
 import { Logger } from './lib/logger.js';
+import { dockerHost } from './lib/docker-host.js';
 
 export interface ProjectTask {
   id: string;
@@ -42,10 +43,7 @@ const ScenarioSchema = z.object({
 });
 
 export class AdvancedVideoQueueManager {
-  private colabNgrokUrl: string;
-
-  constructor(colabNgrokUrl: string) {
-    this.colabNgrokUrl = colabNgrokUrl;
+  constructor() {
   }
 
   /**
@@ -129,9 +127,9 @@ Output JSON format:
   }
 
   /**
-   * FAZ 4: MİKRO-PARÇA RENDER LOOP (COLAB İLETİŞİMİ)
+   * FAZ 4: MİKRO-PARÇA RENDER LOOP (DOCKER İLETİŞİMİ)
    */
-  public async runColabRenderLoop(projectId: string, scenes: any[]) {
+  public async runDockerRenderLoop(projectId: string, scenes: any[]) {
     let lastFrameBase64: string | null = null;
     const totalChunks = scenes.length;
 
@@ -158,7 +156,7 @@ Output JSON format:
       };
 
       try {
-        const renderResult = await this.postToColabNgrok(payload);
+        const renderResult = await this.postToDocker(payload);
         lastFrameBase64 = await this.extractLastFrameAsBase64(renderResult.videoPath);
       } catch (renderError: any) {
         Logger.error(`Chunk ${currentChunkIndex} failed: ${renderError.message}`);
@@ -361,12 +359,10 @@ Output JSON format:
     Logger.info(`Project: ${id} -> ${JSON.stringify(data)}`);
   }
 
-  private async postToColabNgrok(payload: any): Promise<{ videoPath: string }> {
-    if (!this.colabNgrokUrl) {
-      throw new Error('Colab ngrok URL not configured. Cannot post to Colab.');
-    }
+  private async postToDocker(payload: any): Promise<{ videoPath: string }> {
+    const endpoint = dockerHost.resolveEndpoint('/generate-media');
 
-    const response = await axios.post(`${this.colabNgrokUrl}/generate-media`, payload, {
+    const response = await axios.post(endpoint, payload, {
       timeout: 300000,
     });
 

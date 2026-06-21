@@ -1,8 +1,9 @@
 import { Logger } from '../lib/logger.js';
 import axios from 'axios';
 import { db } from '../db.js';
+import { dockerHost } from '../lib/docker-host.js';
 
-const COLAB_URL = process.env.COLAB_URL || 'http://localhost:5016';
+const LORA_URL = dockerHost.getUrl('lora-trainer');
 
 export interface LoraTrainingResult {
   success: boolean;
@@ -30,13 +31,13 @@ export interface PretrainedLora {
 }
 
 /**
- * Get pre-trained LoRA list from colab + local DB.
+ * Get pre-trained LoRA list from docker + local DB.
  */
 export async function getPretrainedLoras(): Promise<PretrainedLora[]> {
   const result: PretrainedLora[] = [];
 
   try {
-    const resp = await axios.get(`${COLAB_URL}/pretrained`, { timeout: 5000 });
+    const resp = await axios.get(`${LORA_URL}/pretrained`, { timeout: 5000 });
     if (resp.data?.pretrained) {
       for (const item of resp.data.pretrained) {
         result.push({ id: item.id, name: item.name, source: item.source, repo: item.repo, description: item.description, type: item.type });
@@ -48,7 +49,7 @@ export async function getPretrainedLoras(): Promise<PretrainedLora[]> {
       }
     }
   } catch {
-    /* colab not available */
+    /* lora-trainer not available */
   }
 
   return result;
@@ -59,7 +60,7 @@ export async function getPretrainedLoras(): Promise<PretrainedLora[]> {
  */
 export async function loadPretrainedLora(hfRepo: string): Promise<string | null> {
   try {
-    const resp = await axios.post(`${COLAB_URL}/pretrained/load`, { hf_repo: hfRepo }, { timeout: 120000 });
+    const resp = await axios.post(`${LORA_URL}/pretrained/load`, { hf_repo: hfRepo }, { timeout: 120000 });
     if (resp.data?.status === 'success') {
       return resp.data.weights_path;
     }
@@ -80,7 +81,7 @@ export async function trainLoRA(
   callbackUrl?: string,
 ): Promise<LoraTrainingResult> {
   try {
-    const response = await axios.post(`${COLAB_URL}/train`, {
+    const response = await axios.post(`${LORA_URL}/train`, {
       job_id: jobId,
       character_name: characterName,
       image_paths: imagePaths,
@@ -118,7 +119,7 @@ export async function trainLoRA(
  */
 export async function findDriveWeights(characterName: string): Promise<string | null> {
   try {
-    const resp = await axios.get(`${COLAB_URL}/pretrained`, { timeout: 5000 });
+    const resp = await axios.get(`${LORA_URL}/pretrained`, { timeout: 5000 });
     const drive = resp.data?.drive || [];
     const match = drive.find((d: any) => d.name === characterName);
     return match?.path || null;
@@ -136,7 +137,7 @@ export async function inferWithLoRA(
   outputPath: string,
 ): Promise<LoraInferResult> {
   try {
-    const response = await axios.post(`${COLAB_URL}/infer`, {
+    const response = await axios.post(`${LORA_URL}/infer`, {
       weights_path: weightsPath,
       prompt,
       output_path: outputPath,
@@ -158,7 +159,7 @@ export async function inferWithLoRA(
  */
 export async function getTrainingProgress(jobId: number): Promise<{ percent: number; status: string }> {
   try {
-    const resp = await axios.get(`${COLAB_URL}/progress/${jobId}`, { timeout: 5000 });
+    const resp = await axios.get(`${LORA_URL}/progress/${jobId}`, { timeout: 5000 });
     return resp.data;
   } catch {
     return { percent: 0, status: 'unknown' };

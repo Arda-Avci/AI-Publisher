@@ -80,7 +80,7 @@ Video üretim süreçlerini ve sosyal medya yayınlama durumlarını saklar:
 
 ### Mesaj Kuyruğu (RabbitMQ)
 İşler backend üzerinden oluşturulduğunda RabbitMQ kuyruğuna push edilir. `src/queue.ts` içerisindeki consumer bu işleri sırayla tüketir.
-- **Kilit Mekanizması**: Aynı anda sadece tek bir işin Colab GPU'suna gitmesi için SQL düzeyinde atomik kilitler ve Redis kilitleri kullanılır.
+- **Kilit Mekanizması**: Aynı anda sadece tek bir işin Docker GPU container'ına gitmesi için SQL düzeyinde atomik kilitler ve Redis kilitleri kullanılır.
 
 ### FFmpeg Coworker Pool (`src/workers/`)
 FFmpeg video montajı, altyazı kalıcı gömme (`drawtext` veya `subtitles` filtresi) ve ses birleştirme işlemleri ana Node.js event loop'unu bloklamamak için `worker_threads` (işçi parçacıkları) üzerinden çalıştırılır.
@@ -96,5 +96,5 @@ Windows sistemlerinde FFmpeg altyazı basarken font bulamazsa çökebilir. `src/
 ### 2. SQLite / PostgreSQL lastID Hatası
 sqlite3 kütüphanesi insert işlemlerinde `lastID` dönerken, pg (PostgreSQL) sürücüsü `rows[0]` üzerinden veri döner. Projedeki `db.ts` bu farkı otomatik sarmalayarak uyumluluk sağlar.
 
-### 3. Ngrok / Localtunnel SSE Kesintileri
-Ngrok ücretsiz tünellerinde SSE akışlarında zaman zaman "Gateway Timeout" oluşabilir. İstemci tarafında (`useLanguage` ve Progress SSE kısımlarında) tünel kopmalarına karşı otomatik yeniden bağlanma (`onerror`) ve bypass header'ları eklenmiştir.
+### 3. Docker Container SSE Kesintileri
+Docker container yeniden başlatmalarında SSE akışlarında zaman zaman kesinti oluşabilir. İstemci tarafında (`useLanguage` ve Progress SSE kısımlarında) kesintilere karşı otomatik yeniden bağlanma (`onerror`) eklenmiştir.

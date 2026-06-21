@@ -265,12 +265,12 @@ export default function App() {
 
   const setupProgressStream = (jobId: number) => {
     closeProgressStream();
-    const es = new EventSource(`/api/v1/progress/stream?jobId=${jobId}`);
+    const es = new EventSource(`/api/v1/progress/stream?jobId=${jobId}`, { withCredentials: true });
     es.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data);
         if (d.stageKey) {
-          setProgressMsg(d.colabMessage || d.stageKey);
+          setProgressMsg(d.dockerMessage || d.stageKey);
           setProgressPercent(d.percent || 0);
           if (d.etaSeconds !== undefined) setEtaSeconds(d.etaSeconds);
         }
@@ -279,9 +279,12 @@ export default function App() {
           fetchScenes(jobId);
           closeProgressStream();
         }
-      } catch {}
+      } catch (e) {
+        console.error('[SSE] parse error', e, e.data);
+      }
     };
-    es.onerror = () => {
+    es.onerror = (evt) => {
+      console.error('[SSE] connection error for job', jobId, evt);
       setTimeout(() => {
         if (selectedJob && selectedJob.id === jobId && selectedJob.status === 'processing')
           setupProgressStream(jobId);
@@ -571,7 +574,7 @@ export default function App() {
 
   const handleAnalyzeViralScore = async (jobId: number) => {
     try {
-      const r = await fetch(`/api/v1/viral-score/${jobId}`, {
+      const r = await fetch(`/api/v1/jobs/${jobId}/viral-score`, {
         method: 'POST',
         headers: { 'x-csrf-token': csrfToken },
       });

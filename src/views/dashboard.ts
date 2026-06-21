@@ -49,7 +49,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
       titleTr: 'Genel Bakış',
       titleEn: 'Overview',
       contentTr: `<h3>Platformumuza Hoş Geldiniz!</h3>
-        <p>AI Publisher, Google Colab GPU gücü ve gelişmiş Node.js otomasyon kütüphanelerini (Playwright, FFmpeg) bir araya getirerek dakikalar içinde SEO uyumlu, viral sosyal medya videoları üretmenizi sağlar.</p>
+        <p>AI Publisher, Docker konteyner GPU gücü ve gelişmiş Node.js otomasyon kütüphanelerini (Playwright, FFmpeg) bir araya getirerek dakikalar içinde SEO uyumlu, viral sosyal medya videoları üretmenizi sağlar.</p>
         <p><strong>Temel Özellikler:</strong></p>
         <ul>
           <li>Ardışık Akıllı Sahne Sürekliliği (Autoregressive Chaining)</li>
@@ -58,7 +58,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
           <li>Playwright ile YouTube, TikTok, X ve Meta üzerinde tam otomatik yayınlama</li>
         </ul>`,
       contentEn: `<h3>Welcome to our Platform!</h3>
-        <p>AI Publisher combines Google Colab GPU power and advanced Node.js automation libraries (Playwright, FFmpeg) to let you produce SEO-friendly, viral social media videos in minutes.</p>
+        <p>AI Publisher combines Docker container GPU power and advanced Node.js automation libraries (Playwright, FFmpeg) to let you produce SEO-friendly, viral social media videos in minutes.</p>
         <p><strong>Key Features:</strong></p>
         <ul>
           <li>Autoregressive Chaining for Scene Continuity</li>
@@ -1071,28 +1071,11 @@ export function buildDashboardHTML(params: DashboardParams): string {
             🪙 <span id="headerCredits">${user?.credits !== undefined ? user.credits : 0}</span> / ${user?.monthly_credit_limit || 100} Kredi
           </div>
           <div class="header-divider"></div>
-          <div class="colab-status-wrap" id="colabStatusWrap">
-            <button class="colab-badge colab-stopped" id="colabBadge" onclick="toggleColabPopover(event)" title="Colab GPU">
-              <span class="colab-dot" id="colabDot"></span>
-              <span class="colab-label" id="colabLabel">Colab</span>
-            </button>
-            <div class="colab-popover" id="colabPopover" style="display:none;">
-              <div class="colab-popover-header">
-                <strong>${t.colabgpustatus129}</strong>
-                <button class="colab-popover-close" onclick="closeColabPopover()">×</button>
-              </div>
-              <div class="colab-popover-body" id="colabPopoverBody">
-                <div class="colab-status-row"><span>${t.status130}:</span><b id="colabPopStatus">—</b></div>
-                <div class="colab-status-row"><span>URL:</span><b id="colabPopUrl" style="font-size:0.7rem; word-break:break-all;">—</b></div>
-                <div class="colab-status-row"><span>${t.gpumemory131}:</span><b id="colabPopGpu">—</b></div>
-                <div class="colab-status-row"><span>${t.uptime132}:</span><b id="colabPopUptime">—</b></div>
-                <div class="colab-status-row" id="colabPopErrRow" style="display:none;"><span>${t.error133}:</span><b id="colabPopErr" style="color: hsl(0,70%,60%); font-size:0.7rem;">—</b></div>
-                <div class="colab-popover-actions">
-                  <button class="colab-action-btn colab-action-start" onclick="manualColabStart()">▶ ${t.start134}</button>
-                  <button class="colab-action-btn colab-action-stop" onclick="manualColabStop()">⏹ ${t.stop135}</button>
-                </div>
-              </div>
-            </div>
+          <div class="docker-status-wrap" id="dockerStatusWrap">
+            <span class="docker-badge" id="dockerBadge" title="Docker Servisleri">
+              <span class="docker-dot" id="dockerDot"></span>
+              <span class="docker-label" id="dockerLabel">Docker</span>
+            </span>
           </div>
           <div class="header-divider"></div>
           <button class="icon-btn" onclick="openModal('opportunityModal')" title="${t.oppTitle}">

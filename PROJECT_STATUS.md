@@ -11,6 +11,19 @@
   - **Veo 3.1 native audio** → TTS+SFX pipeline'ı basitleştirir (opsiyonel, premium).
 - **Önerilen v7.1 patch listesi:** Gemini Flash default, MCP Server POC, Deep Think opsiyonel parametre, Pino logger.
 
+## 🎯 Colab Runtime → Docker Native Migration (21 Haziran 2026)
+
+- **colab-manager.ts** silindi → yerine `docker-host.ts` (service registry, port mapping 5001-5016)
+- **colab.ts, colabStatus.ts, ngrok-tunnel.ts** silindi → Docker route'ları docker-host üzerinden
+- **queue.ts**: Colab lifecycle (start/stop/verify) → Docker health check + direct container calls
+- **server.ts**: CSP'den ngrok domain'leri temizlendi, ngrok tunnel başlatma kaldırıldı
+- Tüm servisler (`aiBroll`, `aiStudio`, `autoDubbing`, `autoCameo`) Docker URL'e çevrildi
+- Tüm route proxy'leri (`editor.ts`, `bRoll.ts`, `characters.ts`) Docker container URL'lerine yönlendirildi
+- 4 video Dockerfile'da codec fix: `imageio.mimwrite(quality=8)` → `codec='libx264', pixelformat='yuv420p'`
+- 16+ doküman, 19+ client bileşen güncellendi
+- Python colab dosyaları (`colab_server.py`, `colab_setup.py`, `colab_sound.py`) silindi
+- Colab artık **sadece Docker imajı build** için kullanılıyor
+
 ## 🚀 Yeni v7.0 Colab-Heavy Kurgu & Kaniko Derleme Fazı Durumu (19 Haziran 2026)
 
 - **Faz 1: Colab Sunucusu & FFmpeg Kurgu:** ✅ Tamamlandı (Müzik/logo indirme ve tek geçişli FFmpeg miksleme Colab sunucusuna taşındı).
@@ -108,10 +121,11 @@
 - Storyboard agent: 3 endpoint
 - Edit Queue: 4 endpoint
 - MuseTalk: 2 endpoint
-- Colab endpoint: 9+
+- Docker container endpoint: 14+
 - Graph node: 5 (Director, Screenwriter, Producer, Quality, Revisor)
 - Frontend component: ~25+ (StudioPanel, Timeline, DynamicCaptions, PhotoEditor, MuseTalkPanel, EditQueuePanel, AdminHelpVideos, AdminSystem, StudioToolsPanel, vb.)
 - Build: `tsc --noEmit` 0 hata, `vite build` ~1.2s
+- Colab→Docker: 19 dosya güncellendi (dokümantasyon + client), env keys renamed
 
 ## 📁 Proje Yapısı (Önemli Dosyalar)
 
@@ -136,7 +150,7 @@ src/
   queue.ts                     # Dubbing + edit + storyboard integration
   db.ts                        # 16 migration kolonu
 server.ts                      # Router kayıtları
-colab_server.py                # MuseTalk + AI Studio + STT endpoints
+colab_server.py                # Docker Supervisor & Gateway (MuseTalk + AI Studio + STT)
 client/src/components/
     StudioPanel.tsx            # Ana panel (VideoPreview + Timeline + MuseTalk + EditQueue)
     Timeline.tsx               # Profesyonel multi-track timeline editor
@@ -309,7 +323,9 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 
 ## 🔜 Kalan Sıradaki Adımlar
 
-1. **Colab CPU Build Test:** colab_setup.ipynb'i CPU runtime'da çalıştır, 16 imajın Drive'a yedeklendiğini doğrula
+1. **Docker GPU Build Test:** colab_setup.ipynb'i CPU runtime'da çalıştır, 16 imajın Drive'a yedeklendiğini doğrula
 2. **Faz 7 Testleri:** 16 kalan test maddesi (E2E Playwright, entegrasyon, CI altyapısı)
 3. **Node.js notification fix** (Sprint sonu)
 4. **GPU Runtime Setup:** Docker daemon + NVIDIA Container Toolkit ayrı bir GPU oturumunda kurulur, imajlar Drive'dan yüklenir, colab_server.py başlatılır
+5. **Docker Hub Video Motorları Entegrasyonu (FAZ 6):** Zeroscope, SadTalker, DynamiCrafter, Video-ReTalking, GeneFace++, Mochi-1 ve Pyramid-Flow modellerinin (proje dışı hazır imajlar) pipeline'a dahil edilmesi.
+6. **Colab referanslarının temizlenmesi:** Kalan dosyalarda (CLAUDE.md, AGENTS.md, skill dosyaları) Colab→Docker güncellemesi yapılacak.

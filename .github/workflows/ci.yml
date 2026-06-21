@@ -43,7 +43,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_publisher_test
       REDIS_URL: redis://localhost:6379
       RABBITMQ_URL: amqp://guest:guest@localhost:5672
-      COLAB_URL: https://flock-suffocate-harpist.ngrok-free.dev
+      DOCKER_HOST: http://localhost
       CALLBACK_TOKEN: test-callback-token-ci
       SESSION_SECRET: test-session-secret-ci
       MINIMAX_API_KEY: ""

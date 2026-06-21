@@ -10,7 +10,7 @@
 |---|---|---|---|
 | **SwiftClip (32 template)** (1A) | `RemotionVideo.tsx` (1 kompozisyon) | ❌ YOK | Yanına yeni `.tsx` dosyaları |
 | **Niche Profile** (1B) | Mevcut prompt mühendisliği | ❌ YOK | Üstüne konfigürasyon katmanı |
-| **SD/Flux Görsel Motor** (1C) | `src/routes/bRoll.ts` (Pexels) | ❌ YOK | Colab SD genişletilir, API bağımlılığı kalkar |
+| **SD/Flux Görsel Motor** (1C) | `src/routes/bRoll.ts` (Pexels) | ❌ YOK | Docker SD genişletilir, API bağımlılığı kalkar |
 | **LangGraph grafiği** (2A) | `multiAgentPipeline.ts` | ❌ YOK | Alternatif pipeline, mevcut değişmez |
 | **Edit Agent + Undo** (2B) | `chatToEdit.ts` | ❌ YOK | Mevcut servisi genişletir |
 | **Storyboard Agent** (2C) | `mllmValidator.ts`, `ragScriptGenerator.ts` | ❌ YOK | Yeni servis, mevcutları kullanır |
@@ -19,7 +19,7 @@
 | **Cut & Color** (3C = Job-4) | `colorGrader.ts` (mevcut) | ❌ YOK | Sessizlik kesici + NL renk + LUT |
 | **Smart Dubbing** (4A = Job-3) | `beatSyncEditor.ts`, `transcriptEditor.ts`, `autoDubbing.ts` | ❌ YOK | 3 servis de mevcut, queue bağlanacak |
 | **Dynamic Subtitles** (4B = Job-5) | `DynamicCaptions.tsx`, `subtitleRenderer.ts` | ❌ YOK | V2 animasyon + faster-whisper + ASS fix |
-| **AI Studio** (4C = Job-6) | Colab eye-contact/inpaint endpoint'leri | ❌ YOK | Eye contact, studio sound, reframe, inpaint |
+| **AI Studio** (4C = Job-6) | Docker eye-contact/inpaint endpoint'leri | ❌ YOK | Eye contact, studio sound, reframe, inpaint |
 | **Viral Engine** (5A = Job-7) | `aiBroll.ts`, `viralHookGenerator.ts` | ❌ YOK | B-Roll + hook + duygu + hashtag |
 | **Multi-Brand Theming** (5B) | UI tema sistemi | ❌ YOK | Farklı domain (UI vs video teması) |
 | **MCP Tools v2** (5B) | `mcpServer.ts` (5 tool) | ❌ YOK | 10 yeni tool eklenir |
@@ -36,8 +36,8 @@
 
 ### Hiç Dokunulmayacak Dosyalar
 ```
-colab_server.py             (Colab katmanı — minor genişleme: Flux/MuseTalk endpoint)
-colab_setup.py              (Colab kurulum — değişmez)
+colab_docker/server.py      (Docker container — minor genişleme: Flux/MuseTalk endpoint)
+colab_docker/setup.py       (Docker kurulum — değişmez)
 src/publisher.ts            (Playwright — değişmez)
 src/server.ts               (Express giriş — route mount eklenir)
 src/db.ts                   (Veritabanı şeması — minor genişleme)
@@ -75,7 +75,7 @@ src/db.ts                   (Veritabanı şeması — minor genişleme)
 Grup 1 (Anında — 6 track):
   ├── 1A (Templates)      → yeni .tsx dosyaları
   ├── 1B (Niche Profile)  → yeni servis
-  ├── 1C (SD/Flux)        → Colab endpoint + yeni servis
+  ├── 1C (SD/Flux)        → Docker endpoint + yeni servis
   ├── 3B (Split/Job-2)    → yeni servis
   ├── 3C (Cut&Color/Job-4) → mevcut + yeni servis
   └── 4B (Altyazı/Job-5)  → mevcut + yeni servis
@@ -86,7 +86,7 @@ Grup 2 (Grup 1 ile paralel — 5 track):
   ├── 2B (Edit Agent)     → mevcut servisi genişletir
   ├── 2C (Storyboard)     → yeni servis
   ├── 4A (Dublaj/Job-3)   → mevcut 3 servisi queue'ya bağla
-  └── 4C (AI Studio/Job-6)→ mevcut Colab endpoint'leri + yeni servis
+  └── 4C (AI Studio/Job-6)→ mevcut Docker endpoint'leri + yeni servis
 
 Grup 3 (Grup 2 sonrası — 2 track):
   ├── 3A (State Machine)  → queue genişletme
@@ -107,7 +107,7 @@ Faz 7 tüm mevcut dosyaları **okur** ama hiçbirini **değiştirmez**. Sadece `
 | **7B** | `tests/unit/faz1/`, `faz2/`, `faz3/`, `faz4/`, `faz5/`, `core/` | ❌ Yok |
 | **7C** | `tests/integration/full-pipeline.test.ts` | ❌ Yok |
 | **7D** | `tests/e2e/user-flows.spec.ts` | ❌ Yok |
-| **7E** | `tests/factories/jobFactory.ts`, `tests/mocks/colabServer.ts`, `.github/workflows/test.yml` | ❌ Yok (vitest.config.ts minor genişleme) |
+| **7E** | `tests/factories/jobFactory.ts`, `tests/mocks/dockerServer.ts`, `.github/workflows/test.yml` | ❌ Yok (vitest.config.ts minor genişleme) |
 
 **Çakışma:** Yok. Tüm Faz 7 track'leri sadece `tests/` ve `scripts/` dizinlerine yazar. Faz 1-6 ile aynı anda paralel çalıştırılabilir.
 

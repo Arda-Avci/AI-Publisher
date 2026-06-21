@@ -1,7 +1,7 @@
 /**
  * Eye Contact Correction Service
  *
- * Calls Colab endpoint `/api/v1/eye-contact` to correct eye contact in videos.
+ * Calls Docker endpoint `/api/v1/eye-contact` to correct eye contact in videos.
  * Falls back to returning the original video path on error.
  *
  * @module services/eyeContact
@@ -29,7 +29,7 @@ export interface EyeContactResult {
     error?: string;
 }
 /**
- * Corrects eye contact in a video using Colab AI processing.
+ * Corrects eye contact in a video using Docker AI processing.
  *
  * @param videoPath - Absolute path to the input video
  * @param outputPath - Absolute path for the output video

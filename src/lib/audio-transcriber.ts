@@ -3,6 +3,7 @@ import util from 'util';
 import fs from 'fs';
 import path from 'path';
 import { Logger } from './logger.js';
+import { dockerHost } from './docker-host.js';
 
 const execFileAsync = util.promisify(execFile);
 
@@ -26,8 +27,8 @@ export interface TranscriptionResult {
 
 /**
  * Zaman damgalı deşifre motoru.
- * Öncelikli olarak Google Colab sunucusundaki /transcribe endpoint'ini kullanır (faster-whisper & whisper fallback).
- * Colab kapalı ise Gemini 2.5 Flash structured JSON fallback altyapısını tetikler.
+ * Öncelikli olarak Docker Whisper servisindeki /transcribe endpoint'ini kullanır.
+ * Docker kapalı ise Gemini 2.5 Flash structured JSON fallback altyapısını tetikler.
  */
 export async function transcribeVideoAudioWithTimestamps(
   videoPath: string,
@@ -53,53 +54,47 @@ export async function transcribeVideoAudioWithTimestamps(
       audioPath,
     ]);
 
-    // 2. Colab sunucusunu çağır (eklenti tanımlıysa)
-    const colabUrl = process.env.COLAB_URL;
-    if (colabUrl && colabUrl !== 'https://ngrok-free.app') {
-      try {
-        Logger.info(`Colab üzerinden deşifre başlatılıyor: ${colabUrl}/transcribe`);
-        const fileBuffer = fs.readFileSync(audioPath);
-        const formData = new FormData();
-        const blob = new Blob([fileBuffer], { type: 'audio/mp3' });
-        formData.append('file', blob, path.basename(audioPath));
-        formData.append('language', language);
-        formData.append('model_size', 'small');
+    // 2. Docker Whisper servisini çağır
+    const transcribeUrl = dockerHost.getUrl('whisper');
+    try {
+      Logger.info(`Docker Whisper üzerinden deşifre başlatılıyor: ${transcribeUrl}/transcribe`);
+      const fileBuffer = fs.readFileSync(audioPath);
+      const formData = new FormData();
+      const blob = new Blob([fileBuffer], { type: 'audio/mp3' });
+      formData.append('file', blob, path.basename(audioPath));
+      formData.append('language', language);
+      formData.append('model_size', 'small');
 
-        const response = await fetch(`${colabUrl}/transcribe`, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'ngrok-skip-browser-warning': 'any-value',
-            'bypass-tunnel-reminder': 'true',
-          },
-        });
+      const response = await fetch(`${transcribeUrl}/transcribe`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (response.ok) {
-          const resData = (await response.json()) as any;
-          if (resData && resData.status === 'success') {
-            Logger.info(
-              `Colab deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`,
-            );
-            const segments = (resData.segments || []).map((s: any) => ({
-              start: s.start,
-              end: s.end,
-              text: s.text,
-              words: s.words || undefined,
-            }));
-            return {
-              text: resData.text,
-              segments,
-              language: resData.language || language,
-            };
-          }
-        } else {
-          Logger.warn(`Colab deşifre API yanıtı başarısız: ${response.status}`);
+      if (response.ok) {
+        const resData = (await response.json()) as any;
+        if (resData && resData.status === 'success') {
+          Logger.info(
+            `Docker Whisper deşifresi başarıyla tamamlandı. Segment sayısı: ${resData.segments?.length}`,
+          );
+          const segments = (resData.segments || []).map((s: any) => ({
+            start: s.start,
+            end: s.end,
+            text: s.text,
+            words: s.words || undefined,
+          }));
+          return {
+            text: resData.text,
+            segments,
+            language: resData.language || language,
+          };
         }
-      } catch (colabErr: any) {
-        Logger.warn(
-          `Colab deşifre çağrısı başarısız oldu, Gemini fallback'e geçiliyor: ${colabErr.message}`,
-        );
+      } else {
+        Logger.warn(`Docker Whisper API yanıtı başarısız: ${response.status}`);
       }
+    } catch (whisperErr: any) {
+      Logger.warn(
+        `Docker Whisper çağrısı başarısız oldu, Gemini fallback'e geçiliyor: ${whisperErr.message}`,
+      );
     }
 
     // 3. GEMINI 2.5 FLASH FALLBACK (Structured JSON)

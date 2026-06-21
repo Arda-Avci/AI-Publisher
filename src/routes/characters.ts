@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { CharacterService } from '../services/characterService.js';
 import { Logger } from '../lib/logger.js';
+import { dockerHost } from '../lib/docker-host.js';
 
 export const charactersRouter = Router();
 const characterService = new CharacterService();
@@ -179,23 +180,17 @@ charactersRouter.post(
   mediumLimiter,
   async (req: Request, res: Response) => {
     const { name, description, avatar_style } = req.body;
-    const COLAB_URL = process.env.COLAB_URL;
 
     if (!description) {
       res.status(400).json({ error: 'Karakter tasviri zorunludur.' });
       return;
     }
 
-    if (!COLAB_URL) {
-      res.status(503).json({ error: 'Colab bağlantısı yapılandırılmamış.' });
-      return;
-    }
-
     try {
-      Logger.info('Generating character avatar via Colab', { name, description, avatar_style });
+      Logger.info('Generating character avatar via Docker MuseTalk', { name, description, avatar_style });
 
       const response = await axios.post(
-        `${COLAB_URL}/generate-avatar`,
+        dockerHost.getServiceUrl('musetalk', '/generate-avatar'),
         {
           avatar_prompt: description,
           style: avatar_style || 'realistic',
@@ -208,7 +203,7 @@ charactersRouter.post(
       } else {
         res
           .status(500)
-          .json({ error: 'Colab avatar üretimi başarısız oldu.', details: response.data });
+          .json({ error: 'Docker avatar üretimi başarısız oldu.', details: response.data });
       }
     } catch (error: any) {
       Logger.error('Generate avatar error:', error.message);

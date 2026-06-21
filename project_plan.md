@@ -38,7 +38,7 @@ Yerel makineniz bir orkestratör (beyin) olarak çalışır.
 ### 1. Ayar Dosyaları ve Çevre Değişkenleri (`.env`)
 ```env
 GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyYourGeminiKey
-COLAB_URL=https://ngrok-free.app
+DOCKER_URL=http://localhost:5001
 MOCK_COLAB=false
 B2_ENDPOINT_URL=https://s3.us-west-004.backblazeb2.com
 B2_KEY_ID=your_key_id

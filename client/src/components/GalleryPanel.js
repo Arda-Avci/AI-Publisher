@@ -86,7 +86,7 @@ export function GalleryPanel({ jobs, selectedJob, metaYtTitle, metaYtDesc, metaY
             width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
-        }, children: [_jsxs("div", { style: { padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }, children: [_jsx(ColabStatusPanel, {}), userCredits && (_jsx(CreditsBadge, { credits: userCredits.credits, limit: userCredits.limit, resetDate: userCredits.resetDate })), isProcessing && (_jsx(ProgressTracker, { progressMsg: progressMsg, progressPercent: progressPercent, onCancel: () => onCancelJob(selectedJob.id) })), showMeta && (_jsx(MetaEditor, { job: selectedJob, ytTitle: metaYtTitle, ytDesc: metaYtDesc, ytTags: metaYtTags, isSaving: isMetaSaving, onSetYtTitle: onSetMetaYtTitle, onSetYtDesc: onSetMetaYtDesc, onSetYtTags: onSetMetaYtTags, onSave: onSaveMetaAndPublish, onAnalyzeViralScore: onAnalyzeViralScore, onSelectCover: onSelectCover, onRefreshJobs: onRefreshJobs }))] }), selectedJob ? (_jsxs(_Fragment, { children: [_jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginTop: '12px' }, children: [_jsxs("div", { style: {
+        }, children: [_jsxs("div", { style: { padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }, children: [_jsx(DockerStatusPanel, {}), userCredits && (_jsx(CreditsBadge, { credits: userCredits.credits, limit: userCredits.limit, resetDate: userCredits.resetDate })), isProcessing && (_jsx(ProgressTracker, { progressMsg: progressMsg, progressPercent: progressPercent, onCancel: () => onCancelJob(selectedJob.id) })), showMeta && (_jsx(MetaEditor, { job: selectedJob, ytTitle: metaYtTitle, ytDesc: metaYtDesc, ytTags: metaYtTags, isSaving: isMetaSaving, onSetYtTitle: onSetMetaYtTitle, onSetYtDesc: onSetMetaYtDesc, onSetYtTags: onSetMetaYtTags, onSave: onSaveMetaAndPublish, onAnalyzeViralScore: onAnalyzeViralScore, onSelectCover: onSelectCover, onRefreshJobs: onRefreshJobs }))] }), selectedJob ? (_jsxs(_Fragment, { children: [_jsxs("div", { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginTop: '12px' }, children: [_jsxs("div", { style: {
                                     padding: '12px 16px', borderBottom: '1px solid var(--border)',
                                     display: 'flex', alignItems: 'center', gap: '8px',
                                     background: 'rgba(24,24,27,0.5)',
@@ -398,14 +398,14 @@ function MetaEditor({ job, ytTitle, ytDesc, ytTags, isSaving, onSetYtTitle, onSe
 function MetaField({ label, children }) {
     return (_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '4px' }, children: [_jsx("label", { style: { fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }, children: label }), children] }));
 }
-function ColabStatusPanel() {
+function DockerStatusPanel() {
     const [data, setData] = useState(null);
     const [testResults, setTestResults] = useState(null);
     const [testLoading, setTestLoading] = useState(false);
     const [testOpen, setTestOpen] = useState(false);
     const fetchStatus = async () => {
         try {
-            const res = await fetch('/api/v1/colab/status');
+            const res = await fetch('/api/v1/docker/status');
             if (res.ok) {
                 const json = await res.json();
                 setData(json);
@@ -422,7 +422,7 @@ function ColabStatusPanel() {
         setTestLoading(true);
         setTestOpen(true);
         try {
-            const res = await fetch('/api/v1/colab/test-models');
+            const res = await fetch('/api/v1/docker/test-models');
             const json = await res.json();
             setTestResults(Array.isArray(json) ? json : json.results ?? []);
         }
@@ -441,7 +441,7 @@ function ColabStatusPanel() {
     return (_jsxs("div", { className: "glass", style: {
             padding: '14px', borderRadius: '10px', border: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column', gap: '10px',
-        }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx(Cpu, { size: 14, style: { color: 'var(--accent)' } }), _jsx("span", { style: { fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)', flex: 1 }, children: "Colab GPU" }), _jsx("span", { style: {
+        }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx(Cpu, { size: 14, style: { color: 'var(--accent)' } }), _jsx("span", { style: { fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)', flex: 1 }, children: "Docker GPU" }), _jsx("span", { style: {
                             width: 8, height: 8, borderRadius: '50%',
                             background: isRunning ? '#22c55e' : '#ef4444',
                             display: 'inline-block',

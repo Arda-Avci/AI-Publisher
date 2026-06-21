@@ -196,7 +196,7 @@ export async function initDatabase() {
       transcript_cleaned TEXT,
       transcript_translated TEXT,
       scene_prompts TEXT,
-      colab_task_id TEXT,
+
       production_template TEXT DEFAULT 'cinematic'
     );
 
@@ -248,7 +248,6 @@ export async function initDatabase() {
   }
 
   // Schema migrations
-  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS colab_task_id TEXT;');
   await db.exec(
     "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS differentiation_duration_mode TEXT DEFAULT 'same';",
   );
@@ -654,5 +653,30 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_scripts_show_id ON scripts(show_id);
     CREATE INDEX IF NOT EXISTS idx_scripts_user_status ON scripts(user_id, status);
     CREATE INDEX IF NOT EXISTS idx_script_segments_script_order ON script_segments(script_id, order_index);
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS publish_schedules (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      video_id INTEGER NOT NULL REFERENCES video_jobs(id) ON DELETE CASCADE,
+      platforms TEXT NOT NULL DEFAULT '[]',
+      scheduled_time TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'awaiting',
+      error_message TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS canvases (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      nodes_data TEXT NOT NULL DEFAULT '[]',
+      connections_data TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }

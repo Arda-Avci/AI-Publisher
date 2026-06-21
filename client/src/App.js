@@ -181,7 +181,7 @@ export default function App() {
         es.onmessage = (e) => { try {
             const d = JSON.parse(e.data);
             if (d.stageKey) {
-                setProgressMsg(d.colabMessage || d.stageKey);
+                setProgressMsg(d.dockerMessage || d.stageKey);
                 setProgressPercent(d.percent || 0);
                 if (d.etaSeconds !== undefined)
                     setEtaSeconds(d.etaSeconds);

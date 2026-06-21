@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
 
 export interface MuseTalkOptions {
@@ -19,10 +19,7 @@ export async function generateTalkingHead(
   options: MuseTalkOptions,
   outputVideo?: string,
 ): Promise<MuseTalkResult> {
-  const colabUrl = colab.getState().ngrokUrl;
-  if (!colabUrl) {
-    throw new Error('MuseTalk için Colab bağlantısı gerekli');
-  }
+  const museUrl = dockerHost.getUrl('musetalk');
 
   const facePath = options.faceImagePath;
   const audioPath = options.audioPath;
@@ -53,11 +50,7 @@ export async function generateTalkingHead(
   Logger.info('[MuseTalk] Generating talking head video...', { facePath, audioPath });
 
   try {
-    const response = await axios.post(`${colabUrl}/api/v1/musetalk`, formData, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-        'bypass-tunnel-reminder': 'true',
-      },
+    const response = await axios.post(`${museUrl}/api/v1/musetalk`, formData, {
       responseType: 'arraybuffer',
       timeout: 600000,
     });
@@ -73,17 +66,13 @@ export async function generateTalkingHead(
 }
 
 export async function preloadModel(): Promise<boolean> {
-  const colabUrl = colab.getState().ngrokUrl;
-  if (!colabUrl) return false;
+  const museUrl = dockerHost.getUrl('musetalk');
 
   try {
     const response = await axios.post(
-      `${colabUrl}/api/v1/musetalk/preload`,
+      `${museUrl}/api/v1/musetalk/preload`,
       {},
-      {
-        headers: { 'ngrok-skip-browser-warning': 'true' },
-        timeout: 300000,
-      },
+      { timeout: 300000 },
     );
     return response.data?.status === 'success';
   } catch (err) {
@@ -102,10 +91,7 @@ export async function generateComboLipSync(
   audioPath: string,
   outputVideo?: string,
 ): Promise<ComboLipSyncResult> {
-  const colabUrl = colab.getState().ngrokUrl;
-  if (!colabUrl) {
-    throw new Error('Combo lip-sync icin Colab baglantisi gerekli');
-  }
+  const museUrl = dockerHost.getUrl('musetalk');
 
   const vPath = videoPath;
   const aPath = audioPath;
@@ -133,11 +119,7 @@ export async function generateComboLipSync(
   });
 
   try {
-    const response = await axios.post(`${colabUrl}/api/v1/lipsync/combo`, formData, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-        'bypass-tunnel-reminder': 'true',
-      },
+    const response = await axios.post(`${museUrl}/api/v1/lipsync/combo`, formData, {
       responseType: 'arraybuffer',
       timeout: 600000,
     });

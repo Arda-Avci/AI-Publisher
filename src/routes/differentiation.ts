@@ -13,6 +13,7 @@ import {
   type DurationMode,
 } from '../lib/differentiate.js';
 import { Logger } from '../lib/logger.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 /**
  * Differentiation routes for the opportunity funnel:
@@ -31,7 +32,7 @@ export function registerDifferentiationRoutes(app: Application): void {
   // the pending row. The slow work (transcript fetch + 2x Gemini calls)
   // runs in the background via setImmediate(). Frontend polls
   // GET /differentiate-status/:jobId every 3s.
-  app.post('/differentiate-video', heavyLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/differentiate-video', heavyLimiter, requireAuth, async (req, res) => {
     const { videoId, sourceMeta, targetLang, durationMode } = req.body || {};
     const userId = req.session.userId;
 
@@ -90,7 +91,7 @@ export function registerDifferentiationRoutes(app: Application): void {
   // Polled by the frontend every 3s. Returns the current state of a
   // differentiation job so the modal can show progress, completion, or
   // error.
-  app.get('/differentiate-status/:jobId', requireAuth, async (req, res) => {
+  registerRoute(app, 'get', '/differentiate-status/:jobId', requireAuth, async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
     const userId = req.session.userId;
 
@@ -147,7 +148,7 @@ export function registerDifferentiationRoutes(app: Application): void {
 
   // POST /differentiate-cancel/:jobId
   // Onay bekleyen bir differentiation job'ını siler.
-  app.post('/differentiate-cancel/:jobId', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/differentiate-cancel/:jobId', mediumLimiter, requireAuth, async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
     const userId = req.session.userId;
 
@@ -195,7 +196,7 @@ export function registerDifferentiationRoutes(app: Application): void {
 
   // POST /approve-translation/:jobId
   // Phase 2: User approves/edits the translation, and we generate the scene prompts
-  app.post('/approve-translation/:jobId', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/approve-translation/:jobId', mediumLimiter, requireAuth, async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
     const userId = req.session.userId;
     const { editedTranslation } = req.body || {};

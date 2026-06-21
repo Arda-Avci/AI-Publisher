@@ -10,13 +10,13 @@
 
  *   2. Translate transcript text (Gemini/Zen fallback chain)
 
- *   3. Synthesize dubbed audio with XTTS-v2 (Colab endpoint)
+ *   3. Synthesize dubbed audio with XTTS-v2 (Docker endpoint)
 
  *   4. Stretch audio to match original duration (rubberband)
 
  *   5. Replace audio track in video
 
- *   6. Optional lip-sync with Wav2Lip (Colab endpoint)
+ *   6. Optional lip-sync with Wav2Lip (Docker endpoint)
 
  *
 
@@ -45,7 +45,7 @@ import { generateObject } from 'ai';
 
 import { z } from 'zod';
 
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 
 import { Logger } from '../lib/logger.js';
 
@@ -174,7 +174,7 @@ Text: ${text}`,
 
 /**
 
- * Synthesize dubbed audio using Colab XTTS-v2 endpoint.
+ * Synthesize dubbed audio using Docker XTTS-v2 endpoint.
 
  *
 
@@ -197,15 +197,11 @@ export async function synthesizeDubbingAudio(
 
   targetLang: string,
 ): Promise<void> {
-  const colabUrl = process.env.COLAB_URL;
-
-  if (!colabUrl || colabUrl === 'https://ngrok-free.app') {
-    throw new Error('Colab sunucusu aktif değil. XTTS sesi sentezlenemez.');
-  }
+  const xttsUrl = dockerHost.getUrl('xtts');
 
   try {
     const response = await axios.post(
-      `${colabUrl}/generate-media`,
+      `${xttsUrl}/generate-media`,
       {
         mode: 'xtts',
 
@@ -221,8 +217,6 @@ export async function synthesizeDubbingAudio(
     );
 
     if (response.data?.task_id) {
-      // Poll for completion
-
       const taskId = response.data.task_id;
 
       let status = 'processing';
@@ -230,9 +224,7 @@ export async function synthesizeDubbingAudio(
       while (status === 'processing' || status === 'accepted') {
         await new Promise((r) => setTimeout(r, 5000));
 
-        const statusRes = await axios.get(`${colabUrl}/status/${taskId}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
-
+        const statusRes = await axios.get(`${xttsUrl}/status/${taskId}`, {
           timeout: 10000,
         });
 
@@ -242,12 +234,10 @@ export async function synthesizeDubbingAudio(
       }
 
       if (status === 'success') {
-        // Download the generated audio
-
         const audioRes = await axios({
           method: 'GET',
 
-          url: `${colabUrl}/download/speech`,
+          url: `${xttsUrl}/download/speech`,
 
           responseType: 'stream',
 
@@ -404,7 +394,7 @@ export async function replaceAudioTrack(
 
 /**
 
- * Apply lip-sync to video using Colab Wav2Lip endpoint.
+ * Apply lip-sync to video using Docker Wav2Lip endpoint.
 
  *
 
@@ -423,15 +413,9 @@ export async function lipSyncDubbing(
 
   outputPath: string,
 ): Promise<void> {
-  const colabUrl = process.env.COLAB_URL;
-
-  if (!colabUrl || colabUrl === 'https://ngrok-free.app') {
-    throw new Error('Colab sunucusu aktif değil. Lip-sync uygulanamaz.');
-  }
+  const wav2lipUrl = dockerHost.getUrl('wav2lip');
 
   try {
-    // Upload video and audio to Colab
-
     const videoBuffer = await fs.readFile(videoPath);
 
     const audioBuffer = await fs.readFile(dubAudioPath);
@@ -446,13 +430,7 @@ export async function lipSyncDubbing(
 
     formData.append('audio', audioBlob, path.basename(dubAudioPath));
 
-    const response = await axios.post(`${colabUrl}/lip-sync`, formData, {
-      headers: {
-        'ngrok-skip-browser-warning': 'any-value',
-
-        'bypass-tunnel-reminder': 'true',
-      },
-
+    const response = await axios.post(`${wav2lipUrl}/lip-sync`, formData, {
       timeout: 600000,
     });
 
@@ -464,9 +442,7 @@ export async function lipSyncDubbing(
       while (status === 'processing' || status === 'accepted') {
         await new Promise((r) => setTimeout(r, 5000));
 
-        const statusRes = await axios.get(`${colabUrl}/status/${taskId}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
-
+        const statusRes = await axios.get(`${wav2lipUrl}/status/${taskId}`, {
           timeout: 10000,
         });
 
@@ -476,12 +452,10 @@ export async function lipSyncDubbing(
       }
 
       if (status === 'success') {
-        // Download lip-synced video
-
         const videoRes = await axios({
           method: 'GET',
 
-          url: `${colabUrl}/download/video`,
+          url: `${wav2lipUrl}/download/video`,
 
           responseType: 'stream',
 
@@ -595,14 +569,14 @@ export async function autoDub(
 
     await replaceAudioTrack(videoPath, stretchedAudioPath, videoWithAudioPath);
 
-    // Step 6: Lip-sync (optional, try Colab endpoint)
+    // Step 6: Lip-sync (optional, try Docker endpoint)
 
     let lipSyncApplied = false;
 
     let finalOutputPath = videoWithAudioPath;
 
     try {
-      if (colab.isHealthy()) {
+      if (await dockerHost.isServiceHealthy('wav2lip')) {
         Logger.info('[autoDubbing] Step 6: Applying lip-sync...');
 
         const lipSyncedPath = path.join(tempAudioDir, 'lipsynced_video.mp4');

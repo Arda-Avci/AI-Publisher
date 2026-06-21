@@ -389,7 +389,7 @@ export function LandingPage({ onLogin, authError, setAuthError, language, setLan
                             } }), _jsxs("h2", { style: { fontSize: '36px', fontWeight: 800, margin: 0 }, children: ["Hemen ", _jsx("span", { className: "gradient-text", children: "\u00DCcretsiz Ba\u015Flay\u0131n" })] }), _jsx("p", { style: {
                                 color: 'var(--text-muted)', fontSize: '15px', marginTop: '12px',
                                 maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto'
-                            }, children: "Kredi kart\u0131 gerekmez. Colab GPU'su ile hemen video \u00FCretmeye ba\u015Flay\u0131n." }), _jsxs("button", { onClick: () => setIsLoginOpen(true), className: "btn btn-primary", style: {
+                            }, children: "Kredi kart\u0131 gerekmez. GPU ile hemen video \u00FCretmeye ba\u015Flay\u0131n." }), _jsxs("button", { onClick: () => setIsLoginOpen(true), className: "btn btn-primary", style: {
                                 marginTop: '24px', padding: '16px 36px', fontSize: '15px',
                                 fontWeight: 'bold', borderRadius: '12px',
                                 display: 'inline-flex', alignItems: 'center', gap: '10px'

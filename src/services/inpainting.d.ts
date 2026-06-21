@@ -1,7 +1,7 @@
 /**
  * Video Inpainting Service
  *
- * Removes unwanted objects from videos by calling the Colab `/api/v1/inpaint` endpoint.
+ * Removes unwanted objects from videos by calling the Docker `/api/v1/inpaint` endpoint.
  * Uses mask regions to specify areas to be inpainted and replaced with generated content.
  *
  * @module services/inpainting

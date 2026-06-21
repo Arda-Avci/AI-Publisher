@@ -238,7 +238,7 @@ export function TalkShowEditor() {
                 if (d.percent !== undefined)
                     setProgressPercent(d.percent);
                 if (d.stageKey)
-                    setProgressMsg(d.colabMessage || d.stageKey);
+                    setProgressMsg(d.dockerMessage || d.stageKey);
                 if (d.stageKey === 'stageCompleted') {
                     setJobStatus('completed');
                     es.close();

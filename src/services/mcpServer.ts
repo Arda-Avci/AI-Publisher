@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { checkQueue } from '../queue.js';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { generateText } from 'ai';
@@ -43,8 +43,8 @@ const MCP_TOOLS: MCPTool[] = [
     },
   },
   {
-    name: 'get_colab_status',
-    description: 'Check the current Colab server status',
+    name: 'get_docker_status',
+    description: 'Check the current Docker service status',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -133,10 +133,10 @@ async function executeTool(name: string, args: any): Promise<any> {
       return { success: true, data: job };
     }
 
-    case 'get_colab_status': {
+    case 'get_docker_status': {
       try {
-        const state = colab.getState();
-        return { success: true, data: { state, url: process.env.COLAB_URL || 'N/A' } };
+        const state = dockerHost.getState();
+        return { success: true, data: { state, host: process.env.DOCKER_HOST || 'http://localhost' } };
       } catch (err: any) {
         return { success: false, error: err.message };
       }

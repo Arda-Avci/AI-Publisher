@@ -65,7 +65,7 @@ describe('Clipper & Whisper Integration Tests', () => {
     try { require('fs').unlinkSync(videoWithAudio); } catch {}
   });
 
-  it('1. Colab /transcribe endpointi basariyla cagrildiginda segmentleri donmeli', async () => {
+  it('1. Docker Whisper /transcribe endpointi basariyla cagrildiginda segmentleri donmeli', async () => {
     // Use video with audio track for whisper
     const result = await transcribeVideoAudioWithTimestamps(videoWithAudio);
 
@@ -74,7 +74,7 @@ describe('Clipper & Whisper Integration Tests', () => {
     expect(Array.isArray(result.segments)).toBe(true);
   }, 60000);
 
-  it('2. Colab hata verdiginde Gemini fallback mekanizmasi structured JSON olarak segmentleri cikarmali', async () => {
+  it('2. Docker Whisper hata verdiginde Gemini fallback mekanizmasi structured JSON olarak segmentleri cikarmali', async () => {
     // Use video with audio track
     const result = await transcribeVideoAudioWithTimestamps(videoWithAudio);
 

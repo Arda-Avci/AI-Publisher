@@ -40,7 +40,7 @@
   transcript_cleaned?: string;
   transcript_translated?: string;
   scene_prompts?: string;
-  colab_task_id?: string;
+  task_id?: string;
   tts_provider?: string;
   tts_voice?: string;
   model_type?: string;

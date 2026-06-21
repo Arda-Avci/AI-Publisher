@@ -1,7 +1,7 @@
 /**
  * Eye Contact Correction Service
  *
- * Calls Colab endpoint `/api/v1/eye-contact` to correct eye contact in videos.
+ * Calls Docker endpoint `/api/v1/eye-contact` to correct eye contact in videos.
  * Falls back to returning the original video path on error.
  *
  * @module services/eyeContact
@@ -10,7 +10,7 @@
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
 
 /**
@@ -38,7 +38,7 @@ export interface EyeContactResult {
 }
 
 /**
- * Corrects eye contact in a video using Colab AI processing.
+ * Corrects eye contact in a video using Docker AI processing.
  *
  * @param videoPath - Absolute path to the input video
  * @param outputPath - Absolute path for the output video
@@ -48,24 +48,13 @@ export async function correctEyeContact(
   videoPath: string,
   outputPath: string,
 ): Promise<EyeContactResult> {
-  const state = colab.getState();
-
-  if (state.status !== 'running' || !state.ngrokUrl) {
-    Logger.warn('[eyeContact] Colab not running, using fallback', { status: state.status });
-    return {
-      processedVideoPath: videoPath,
-      usedFallback: true,
-      error: 'Colab not available',
-    };
-  }
-
-  const colabUrl = state.ngrokUrl;
+  const sdUrl = dockerHost.getUrl('stablediffusion');
 
   try {
-    Logger.info('[eyeContact] Sending request to Colab', { videoPath, outputPath });
+    Logger.info('[eyeContact] Sending request to Docker', { videoPath, outputPath });
 
     Logger.warn(
-      '[eyeContact] `/api/v1/eye-contact` not implemented on Colab side — future feature',
+      '[eyeContact] `/api/v1/eye-contact` not implemented on Docker side — future feature',
       {
         videoPath,
         outputPath,
@@ -73,19 +62,17 @@ export async function correctEyeContact(
     );
 
     const response = await axios.post(
-      `${colabUrl}/api/v1/eye-contact`,
+      `${sdUrl}/api/v1/eye-contact`,
       {
         video_path: videoPath,
         output_path: outputPath,
       },
       {
-        timeout: 300000, // 5 min
-        headers: { 'ngrok-skip-browser-warning': 'true' },
+        timeout: 300000,
       },
     );
 
     if (response.data?.status === 'success' && response.data?.output_path) {
-      // Verify output file exists
       if (await fs.pathExists(response.data.output_path)) {
         Logger.info('[eyeContact] Eye contact correction succeeded', {
           outputPath: response.data.output_path,
@@ -97,9 +84,9 @@ export async function correctEyeContact(
       }
     }
 
-    throw new Error(`Unexpected Colab response: ${JSON.stringify(response.data)}`);
+    throw new Error(`Unexpected Docker response: ${JSON.stringify(response.data)}`);
   } catch (err: any) {
-    Logger.warn('[eyeContact] Colab call failed, using fallback', {
+    Logger.warn('[eyeContact] Docker call failed, using fallback', {
       error: err.message,
     });
     return {

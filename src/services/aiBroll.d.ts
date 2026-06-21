@@ -31,9 +31,9 @@ export interface GenerateBrollResult {
     error?: string;
 }
 /**
- * Generates a keyword-based 3-4 second B-Roll clip using CogVideoX via Colab.
+ * Generates a keyword-based 3-4 second B-Roll clip using CogVideoX via Docker.
  *
- * Calls Colab endpoint: /generate-media?mode=cogvideo_broll&prompt={keyword}&duration={duration}
+ * Calls Docker endpoint: /generate-media?mode=cogvideo_broll&prompt={keyword}&duration={duration}
  *
  * @param keyword     - Single keyword or short phrase describing the B-Roll
  * @param duration    - Duration in seconds (3-4 typical)
@@ -42,7 +42,7 @@ export interface GenerateBrollResult {
  */
 export declare function generateCogVideoXBroll(keyword: string, duration: number, outputPath: string): Promise<string>;
 /**
- * Generates a B-Roll clip using CogVideoX via Colab.
+ * Generates a B-Roll clip using CogVideoX via Docker.
  *
  * @param keywords     - Keywords describing the B-Roll content
  * @param duration     - Duration in seconds (3-4 typical)

@@ -141,7 +141,7 @@ export function getDashboardStyles(themeStyles: string): string {
         color: hsl(var(--muted-foreground));
       }
       /* Tabular numerals globally for data consistency */
-      .font-mono, .job-id, .progress-meta, .colab-badge, .status-badge, .btn-sm, .modal-tab {
+      .font-mono, .job-id, .progress-meta, .status-badge, .btn-sm, .modal-tab {
         font-variant-numeric: tabular-nums;
       }
       /* ========================================
@@ -2024,10 +2024,10 @@ export function getDashboardStyles(themeStyles: string): string {
       .mt-2 { margin-top: 1.5rem; }
       .text-center { text-align: center; }
       /* ========================================
-         COLAB STATUS BADGE (S3)
-         ======================================== */
-      .colab-status-wrap { position: relative; }
-      .colab-badge {
+          DOCKER STATUS BADGE
+          ======================================== */
+      .docker-status-wrap { position: relative; }
+      .docker-badge {
         display: inline-flex;
         align-items: center;
         gap: 0.45rem;
@@ -2040,120 +2040,19 @@ export function getDashboardStyles(themeStyles: string): string {
         font-size: 0.7rem;
         font-weight: 700;
         letter-spacing: 0.05em;
-        cursor: pointer;
         transition: all 0.2s;
         backdrop-filter: blur(10px);
       }
-      .colab-badge:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-      .colab-dot {
+      .docker-dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: hsl(220, 10%, 50%);
+        background: hsl(142, 70%, 50%);
+        box-shadow: 0 0 8px hsla(142, 70%, 50%, 0.7);
         flex-shrink: 0;
         transition: background 0.25s, box-shadow 0.25s;
       }
-      .colab-stopped .colab-dot { background: hsl(220, 10%, 50%); }
-      .colab-starting .colab-dot { background: hsl(45, 100%, 55%); box-shadow: 0 0 8px hsla(45, 100%, 55%, 0.7); animation: colabPulse 1s ease-in-out infinite; }
-      .colab-stopping .colab-dot { background: hsl(45, 100%, 55%); animation: colabPulse 1s ease-in-out infinite; }
-      .colab-running .colab-dot { background: hsl(142, 70%, 50%); box-shadow: 0 0 8px hsla(142, 70%, 50%, 0.7); }
-      .colab-error .colab-dot { background: hsl(0, 70%, 55%); box-shadow: 0 0 8px hsla(0, 70%, 55%, 0.7); }
-      .colab-stopped { opacity: 0.7; }
-      .colab-error { border-color: hsla(0, 70%, 55%, 0.4); color: hsl(0, 70%, 65%); }
-      .colab-running { border-color: hsla(142, 70%, 50%, 0.4); color: hsl(142, 70%, 60%); }
-      .colab-starting, .colab-stopping { border-color: hsla(45, 100%, 55%, 0.4); color: hsl(45, 100%, 60%); }
-      @keyframes colabPulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.25); opacity: 0.65; }
-      }
-      .colab-label { white-space: nowrap; }
-      .colab-popover {
-        position: absolute;
-        top: calc(100% + 0.5rem);
-        right: 0;
-        width: 320px;
-        background: hsla(220, 30%, 9%, 0.97);
-        backdrop-filter: blur(30px) saturate(180%);
-        border: 1px solid hsla(var(--primary), 0.3);
-        border-radius: 0.85rem;
-        box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 24px hsla(var(--primary), 0.1);
-        z-index: 1000;
-        animation: colabPopoverIn 0.18s ease;
-      }
-      @keyframes colabPopoverIn {
-        from { opacity: 0; transform: translateY(-4px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .colab-popover-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.7rem 0.95rem;
-        border-bottom: 1px solid hsla(var(--border), 0.4);
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: hsl(var(--foreground));
-      }
-      .colab-popover-close {
-        background: transparent;
-        border: none;
-        color: hsl(var(--muted-foreground));
-        cursor: pointer;
-        font-size: 1.1rem;
-        line-height: 1;
-        padding: 0;
-      }
-      .colab-popover-close:hover { color: hsl(var(--destructive)); }
-      .colab-popover-body { padding: 0.7rem 0.95rem; }
-      .colab-status-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.35rem 0;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.7rem;
-        color: hsl(var(--muted-foreground));
-        border-bottom: 1px dashed hsla(var(--border), 0.3);
-      }
-      .colab-status-row:last-of-type { border-bottom: none; }
-      .colab-status-row b {
-        color: hsl(var(--foreground));
-        font-weight: 600;
-        text-align: right;
-        max-width: 60%;
-      }
-      .colab-popover-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 0.65rem;
-      }
-      .colab-action-btn {
-        flex: 1;
-        padding: 0.5rem 0.7rem;
-        border-radius: 0.5rem;
-        border: 1px solid hsla(var(--border), 0.6);
-        background: hsla(var(--secondary), 0.3);
-        color: hsl(var(--muted-foreground));
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.65rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        cursor: pointer;
-        transition: all 0.18s;
-      }
-      .colab-action-btn:hover { color: hsl(var(--foreground)); border-color: hsl(var(--primary)); }
-      .colab-action-start:hover {
-        background: hsla(142, 70%, 50%, 0.15);
-        color: hsl(142, 70%, 60%);
-        border-color: hsl(142, 70%, 50%);
-      }
-      .colab-action-stop:hover {
-        background: hsla(0, 70%, 55%, 0.15);
-        color: hsl(0, 70%, 65%);
-        border-color: hsl(0, 70%, 55%);
-      }
-      .colab-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .docker-label { white-space: nowrap; }
 
       /* ========================================
          SCROLLBAR

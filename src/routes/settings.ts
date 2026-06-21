@@ -6,13 +6,14 @@ import { logAudit } from '../lib/audit.js';
 import bcrypt from 'bcrypt';
 import { decryptUsername } from '../lib/crypto.js';
 import { Logger } from '../lib/logger.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 /**
  * Settings routes: /settings GET and /save-settings POST.
  */
 export function registerSettingsRoutes(app: Application): void {
   // Ayarlar Sayfası Rotaları
-  app.get('/settings', requireAuth, async (req, res) => {
+  registerRoute(app, 'get', '/settings', requireAuth, async (req, res) => {
     const user = await db.get('SELECT * FROM users WHERE id = ?', [req.session.userId]);
     if (user && user.username) {
       user.username = decryptUsername(user.username);
@@ -33,7 +34,7 @@ export function registerSettingsRoutes(app: Application): void {
     }
   });
 
-  app.post('/save-settings', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/save-settings', mediumLimiter, requireAuth, async (req, res) => {
     try {
       // Mevcut kullanıcıyı çek
       const current = await db.get('SELECT * FROM users WHERE id = ?', [req.session.userId]);

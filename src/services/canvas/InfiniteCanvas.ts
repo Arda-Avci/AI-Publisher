@@ -26,7 +26,35 @@ export class InfiniteCanvas {
     };
 
     this.canvases.set(canvas.id, canvas);
+    this.saveCanvas(canvas);
     return canvas;
+  }
+
+  /**
+   * List canvases by user ID
+   */
+  async listByUser(userId: number): Promise<Canvas[]> {
+    const memory = Array.from(this.canvases.values()).filter((c) => c.userId === userId);
+    if (memory.length > 0) return memory;
+    const fromDb = await this.loadUserCanvasesFromDb(userId);
+    return fromDb;
+  }
+
+  /**
+   * Delete canvas by ID
+   */
+  async deleteCanvas(canvasId: string): Promise<boolean> {
+    const canvas = this.canvases.get(canvasId);
+    if (!canvas) {
+      const fromDb = await this.loadCanvasFromDb(canvasId);
+      if (!fromDb) return false;
+    }
+    this.canvases.delete(canvasId);
+    smartCache.invalidate(canvasId);
+    try {
+      await db.run('DELETE FROM canvases WHERE id = ?', [canvasId]);
+    } catch { /* in-memory delete succeeded */ }
+    return true;
   }
 
   /**
@@ -107,6 +135,8 @@ export class InfiniteCanvas {
     // Invalidate cache
     smartCache.invalidate(canvasId);
 
+    this.saveCanvas(canvas);
+
     return node;
   }
 
@@ -133,6 +163,8 @@ export class InfiniteCanvas {
 
     // Invalidate cache
     smartCache.invalidate(canvasId);
+
+    this.saveCanvas(canvas);
 
     return node;
   }
@@ -161,6 +193,8 @@ export class InfiniteCanvas {
 
     // Invalidate cache
     smartCache.invalidate(canvasId);
+
+    this.saveCanvas(canvas);
 
     return true;
   }
@@ -208,6 +242,8 @@ export class InfiniteCanvas {
     // Invalidate cache
     smartCache.invalidate(canvasId);
 
+    this.saveCanvas(canvas);
+
     return connection;
   }
 
@@ -232,6 +268,8 @@ export class InfiniteCanvas {
 
     // Invalidate cache
     smartCache.invalidate(canvasId);
+
+    this.saveCanvas(canvas);
 
     return true;
   }
@@ -269,19 +307,73 @@ export class InfiniteCanvas {
 
   /**
    * Load canvas from database
-   * Note: Database integration will be added in a future sprint
    */
-  private async loadCanvasFromDb(_canvasId: string): Promise<Canvas | null> {
-    // Placeholder - DB integration pending
-    return null;
+  private async loadCanvasFromDb(canvasId: string): Promise<Canvas | null> {
+    try {
+      const row: any = await db.get('SELECT * FROM canvases WHERE id = ?', [canvasId]);
+      if (!row) return null;
+      return {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        nodes: JSON.parse(row.nodes_data || '[]'),
+        connections: JSON.parse(row.connections_data || '[]'),
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+      };
+    } catch (err) {
+      return null;
+    }
   }
 
   /**
-   * Save canvas to database
-   * Note: Database integration will be added in a future sprint
+   * Save canvas to database (insert or update)
    */
-  async saveCanvas(_canvas: Canvas): Promise<void> {
-    // Placeholder - DB integration pending
+  async saveCanvas(canvas: Canvas): Promise<void> {
+    try {
+      const existing = await db.get('SELECT id FROM canvases WHERE id = ?', [canvas.id]);
+      const nodesJson = JSON.stringify(canvas.nodes);
+      const connJson = JSON.stringify(canvas.connections);
+      if (existing) {
+        await db.run(
+          `UPDATE canvases SET name = ?, nodes_data = ?, connections_data = ?, updated_at = datetime('now') WHERE id = ?`,
+          [canvas.name, nodesJson, connJson, canvas.id],
+        );
+      } else {
+        await db.run(
+          `INSERT INTO canvases (id, user_id, name, nodes_data, connections_data) VALUES (?, ?, ?, ?, ?)`,
+          [canvas.id, canvas.userId, canvas.name, nodesJson, connJson],
+        );
+      }
+    } catch (err) {
+      // in-memory copy still works; log and continue
+    }
+  }
+
+  /**
+   * Load all canvases from DB for a user into memory
+   */
+  private async loadUserCanvasesFromDb(userId: number): Promise<Canvas[]> {
+    try {
+      const rows: any[] = await db.all('SELECT * FROM canvases WHERE user_id = ?', [userId]);
+      const loaded: Canvas[] = [];
+      for (const row of rows) {
+        const canvas: Canvas = {
+          id: row.id,
+          userId: row.user_id,
+          name: row.name,
+          nodes: JSON.parse(row.nodes_data || '[]'),
+          connections: JSON.parse(row.connections_data || '[]'),
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at),
+        };
+        this.canvases.set(canvas.id, canvas);
+        loaded.push(canvas);
+      }
+      return loaded;
+    } catch {
+      return [];
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import yts from 'yt-search';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 /**
  * Opportunity funnel route: /opportunity-videos.
@@ -259,7 +260,7 @@ async function fetchFromFallback(rawQ: string, _langs: string[]): Promise<FetchR
 }
 
 export function registerOpportunityRoutes(app: Application): void {
-  app.get('/opportunity-videos', requireAuth, async (req: Request, res: Response) => {
+  registerRoute(app, 'get', '/opportunity-videos', requireAuth, async (req: Request, res: Response) => {
     const user = await db.get('SELECT youtube_api_key FROM users WHERE id = ?', [
       req.session.userId,
     ]);

@@ -22,12 +22,12 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execFile } from 'child_process';
 import { db } from './db.js';
-import { colab } from './lib/colab-manager.js';
+import { dockerHost } from './lib/docker-host.js';
 import { RedisMutex } from './lib/redis-mutex.js';
 import { runDifferentiationPipeline } from './lib/differentiate.js';
 import { Logger } from './lib/logger.js';
 
-const colabMutex = new RedisMutex('colab_gpu_lock', 600000);
+const dockerMutex = new RedisMutex('docker_gpu_lock', 600000);
 
 import { broadcastProgress } from './lib/redis.js';
 import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/viralHook.js';
@@ -103,9 +103,9 @@ async function startProduction(job: VideoJob) {
     Logger.warn('Zen health check during job start failed:', err);
   });
 
-  const COLAB_URL = process.env.COLAB_URL;
+  const COG_URL = dockerHost.getUrl('cogvideox');
   Logger.info('═══════════════════════════════════════════════════════════════');
-  Logger.info('startProduction BAŞLADI', { jobId: job.id, COLAB_URL });
+  Logger.info('startProduction BAŞLADI', { jobId: job.id, COG_URL });
   Logger.info('Job detay:', {
     master_prompt: job.master_prompt?.substring(0, 100),
     production_notes: job.production_notes?.substring(0, 100),
@@ -364,77 +364,21 @@ async function startProduction(job: VideoJob) {
     });
 
     // ── KAPAK SENTEZİ ──
-    Logger.info('[PRODUCTION] Stage 2: Colab connection and cover synthesis starting...');
-    await colabMutex.acquire();
+    Logger.info('[PRODUCTION] Stage 2: Docker service check and cover synthesis starting...');
+    await dockerMutex.acquire();
     try {
-      // ── Colab auto-start: ensure Colab is up before processing ──
-      const colabState = colab.getState();
-      Logger.info('Colab durumu:', colabState);
-
-      if (colabState.status === 'stopped' || colabState.status === 'error') {
-        try {
-          Logger.info('[PRODUCTION] Starting Colab server...');
-          await db.run('UPDATE video_jobs SET current_stage = ? WHERE id = ?', [
-            STAGE_KEYS.COLAB_STARTING,
-            job.id,
-          ]);
-          broadcast(job.id, { stageKey: 'stageColabStarting', percent: 11 });
-
-          await colab.start();
-          Logger.info('[PRODUCTION] Colab started successfully', {
-            ngrokUrl: colab.getState().ngrokUrl,
-          });
-        } catch (colabErr: any) {
-          Logger.error('[PRODUCTION] Colab failed to start', colabErr);
-          const errorMsg =
-            "Colab Sunucusu Hazır Değil. Lütfen Google Colab notebook'unuzu çalıştırın ve oluşturulan Ngrok URL'sini Ayarlar panelinden güncelleyin.";
-          await db.run(
-            "UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?",
-            [errorMsg, job.id],
-          );
-          broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
-          throw new Error('COLAB_NOT_READY');
-        }
-      } else {
-        Logger.info('[PRODUCTION] Colab already running', { ngrokUrl: colabState.ngrokUrl });
-      }
-      colab.cancelIdleStop();
-
-      // ── Dry-Run: Colab Kütüphane ve Bağımlılık Doğrulaması ──
-      Logger.info('[PRODUCTION] Verifying Colab libraries...');
-      await db.run('UPDATE video_jobs SET current_stage = ?, progress_percent = 11 WHERE id = ?', [
-        STAGE_KEYS.COLAB_VERIFYING,
-        job.id,
-      ]);
-      broadcast(job.id, {
-        stageKey: 'stageColabProgress',
-        colabStage: 'verification',
-        colabMessage: 'Kütüphaneler doğrulanıyor...',
-        colabPercent: 50,
-        percent: 11,
-      });
-
-      const libCheck = await colab.verifyLibraries();
-      if (!libCheck.success) {
-        Logger.error('Colab kütüphane doğrulaması başarısız:', new Error(libCheck.error));
-        let errorMsg = `Colab kütüphane doğrulaması başarısız. Lütfen Colab bağımlılıklarının doğru yüklendiğinden emin olun.`;
-        if (libCheck.report) {
-          const failedLibs = Object.entries(libCheck.report)
-            .filter(([_, status]: any) => status.status === 'error')
-            .map(([lib, status]: any) => `${lib} (${status.message})`)
-            .join(', ');
-          if (failedLibs) {
-            errorMsg = `Eksik/Hatalı Colab Kütüphaneleri: ${failedLibs}`;
-          }
-        }
+      // ── Docker service health check ──
+      const cogHealthy = await dockerHost.isServiceHealthy('cogvideox');
+      if (!cogHealthy) {
+        Logger.error('[PRODUCTION] Docker CogVideoX service not healthy');
         await db.run(
           "UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?",
-          [errorMsg, job.id],
+          ['Docker CogVideoX servisi hazır değil.', job.id],
         );
-        broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
-        throw new Error('COLAB_LIBRARIES_FAILED');
+        broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: 'Docker servisi hazır değil.' });
+        throw new Error('DOCKER_NOT_READY');
       }
-      Logger.info('[PRODUCTION] Colab libraries verified successfully.');
+      Logger.info('[PRODUCTION] Docker CogVideoX service is healthy');
 
       try {
         Logger.info('[PRODUCTION] Starting cover image synthesis...');
@@ -462,7 +406,7 @@ async function startProduction(job: VideoJob) {
           const coverPrompt = `High quality cinematic poster, neon cyan colors, ${object.marketing.ytTitle}, ${job.character_features}`;
           Logger.info('Cover prompt:', { prompt: coverPrompt.substring(0, 100) });
 
-          const coverResponse = await axios.post(`${COLAB_URL}/generate-covers`, {
+          const coverResponse = await axios.post(dockerHost.resolveEndpoint('/generate-covers'), {
             cover_prompt: coverPrompt,
             job_id: job.id,
             callback_url: process.env.PUBLIC_URL
@@ -485,13 +429,13 @@ async function startProduction(job: VideoJob) {
               continue;
             }
             Logger.info(`Kapak ${i} indiriliyor...`, {
-              url: `${COLAB_URL}/download/cover/${i}`,
+              url: dockerHost.resolveEndpoint(`/download/cover/${i}`),
               dest: coverDest,
             });
             try {
               const resCover = await axios({
                 method: 'GET',
-                url: `${COLAB_URL}/download/cover/${i}`,
+                url: dockerHost.resolveEndpoint(`/download/cover/${i}`),
                 responseType: 'stream',
               });
               const wCover = fs.createWriteStream(coverDest);
@@ -584,7 +528,7 @@ async function startProduction(job: VideoJob) {
 
       // 1C: SD/Flux cover image generation (pre-scene)
       if (job.sd_flux_enabled === 1) {
-        Logger.info('[SD/FLUX] Generating cover image via Colab...');
+        Logger.info('[SD/FLUX] Generating cover image via Docker...');
         const sdPrompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
         let generatedPath = '';
         if (process.env.MOCK_COLAB === 'true') {
@@ -599,7 +543,7 @@ async function startProduction(job: VideoJob) {
         } else {
           try {
             const resp = await axios.post(
-              `${COLAB_URL}/generate-image`,
+              dockerHost.resolveEndpoint('/generate-image'),
               {
                 prompt: sdPrompt,
                 model_type: job.model_type === 'flux' ? 'flux' : 'dreamshaper',
@@ -860,7 +804,7 @@ async function startProduction(job: VideoJob) {
             : `http://localhost:${process.env.PORT || 4000}/uploads/${baseName}`;
         }
 
-        Logger.info("Colab'a sahne gönderiliyor", {
+        Logger.info("Docker'a sahne gönderiliyor", {
           sceneNumber: scene.scene_number,
           apply_lipsync: applyLipsync,
           videoPrompt: finalPrompt?.substring(0, 80),
@@ -880,7 +824,7 @@ async function startProduction(job: VideoJob) {
           taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
         } else {
           const response = await axios.post(
-            `${COLAB_URL}/generate-media`,
+            `${COG_URL}/generate-media`,
             {
               scene_number: scene.scene_number,
               video_prompt: finalPrompt,
@@ -922,11 +866,11 @@ async function startProduction(job: VideoJob) {
 
           const receivedId = response.data?.task_id;
           if (!receivedId) {
-            Logger.error('Colab task_id DÖNMEDİ', response.data);
-            throw new Error('Colab task_id dönmedi.');
+            Logger.error('Docker task_id DÖNMEDİ', response.data);
+            throw new Error('Docker task_id dönmedi.');
           }
           taskId = receivedId;
-          Logger.info('[PRODUCTION] Colab task started', { taskId, status: response.data?.status });
+          Logger.info('[PRODUCTION] Docker task started', { taskId, status: response.data?.status });
         }
 
         const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.scene_number}.mp4`);
@@ -938,8 +882,7 @@ async function startProduction(job: VideoJob) {
           `srt_${job.id}_${scene.scene_number}.srt`,
         );
 
-        // Colab task durumunu logla
-        await db.run('UPDATE video_jobs SET colab_task_id = ? WHERE id = ?', [taskId, job.id]);
+        await db.run('UPDATE video_jobs SET task_id = ? WHERE id = ?', [taskId, job.id]);
 
         let attempt = 0;
         const taskStartTime = Date.now();
@@ -970,15 +913,15 @@ async function startProduction(job: VideoJob) {
             Logger.warn('[PRODUCTION] Early polling exit check error:', checkErr);
           }
 
-          // Colab kilitlenme/timeout önlemi (Dinamik zaman aşımı)
+          // Docker kilitlenme/timeout önlemi (Dinamik zaman aşımı)
           const totalElapsedMs = Date.now() - taskStartTime;
           if (totalElapsedMs > dynamicTimeoutMs) {
             Logger.error(
-              `Colab render işlemi zaman aşımına uğradı (${Math.round(dynamicTimeoutMs / 1000)} sn)`,
+              `Docker render işlemi zaman aşımına uğradı (${Math.round(dynamicTimeoutMs / 1000)} sn)`,
               new Error('COLAB_RENDER_TIMEOUT'),
             );
             throw new Error(
-              `Colab video üretimi zaman aşımı sınırını (${Math.round(dynamicTimeoutMs / 1000)} sn) aştı.`,
+              `Docker video üretimi zaman aşımı sınırını (${Math.round(dynamicTimeoutMs / 1000)} sn) aştı.`,
             );
           }
 
@@ -993,14 +936,13 @@ async function startProduction(job: VideoJob) {
           }
 
           try {
-            const statusRes = await axios.get(`${COLAB_URL}/status/${taskId}`, {
-              headers: { 'ngrok-skip-browser-warning': 'true' },
+            const statusRes = await axios.get(`${COG_URL}/status/${taskId}`, {
               timeout: 10000,
             });
             taskData = statusRes.data;
             taskStatus = taskData.status || 'processing';
 
-            Logger.info(`Colab polling #${attempt}`, {
+            Logger.info(`Docker polling #${attempt}`, {
               taskId,
               taskStatus,
               stage: taskData?.stage,
@@ -1013,11 +955,11 @@ async function startProduction(job: VideoJob) {
             if (taskData && typeof taskData.etaSeconds === 'number') {
               dynamicTimeoutMs = totalElapsedMs + taskData.etaSeconds * 1000 + 180000; // geçen süre + kalan süre + 3 dk güvenlik payı
               Logger.info(
-                `Watchdog zaman aşımı güncellendi: ${Math.round(dynamicTimeoutMs / 1000)} sn (Colab ETA: ${taskData.etaSeconds} sn)`,
+                `Watchdog zaman aşımı güncellendi: ${Math.round(dynamicTimeoutMs / 1000)} sn (Docker ETA: ${taskData.etaSeconds} sn)`,
               );
             }
 
-            // S7: Colab sub-stage bilgisini SSE'ye yayınla
+            // S7: Docker sub-stage bilgisini SSE'ye yayınla
             if (taskData?.stage) {
               let etaSeconds: number | null = null;
               if (taskData && typeof taskData.etaSeconds === 'number') {
@@ -1029,30 +971,30 @@ async function startProduction(job: VideoJob) {
                 );
               }
               broadcast(job.id, {
-                stageKey: 'stageColabProgress',
-                colabStage: taskData.stage,
-                colabMessage: taskData.message || '',
-                colabPercent: taskData.stagePercent || 0,
+                stageKey: 'stageDockerProgress',
+                dockerStage: taskData.stage,
+                dockerMessage: taskData.message || '',
+                dockerPercent: taskData.stagePercent || 0,
                 percent: pct,
                 etaSeconds,
               });
             }
           } catch (statusErr: any) {
-            Logger.warn(`Colab status check hatası (tekrar denenecek)`, {
+            Logger.warn(`Docker status check hatası (tekrar denenecek)`, {
               attempt,
               error: statusErr.message,
             });
             if (attempt > 60) {
-              Logger.error('Colab timeout (3 dk)', statusErr);
-              throw new Error(`Colab sunucusuna erişilemiyor (timeout): ${statusErr.message}`);
+              Logger.error('Docker timeout (3 dk)', statusErr);
+              throw new Error(`Docker sunucusuna erişilemiyor (timeout): ${statusErr.message}`);
             }
           }
         }
 
-        Logger.info('Colab görev durumu:', { taskStatus, taskData });
+        Logger.info('Docker görev durumu:', { taskStatus, taskData });
         if (taskStatus === 'error' || taskStatus === 'failed') {
-          Logger.error('[PRODUCTION] Colab processing error', { message: taskData?.message });
-          throw new Error(`Colab işleme hatası: ${taskData?.message || 'Bilinmeyen hata'}`);
+          Logger.error('[PRODUCTION] Docker processing error', { message: taskData?.message });
+          throw new Error(`Docker işleme hatası: ${taskData?.message || 'Bilinmeyen hata'}`);
         }
 
         const hasSubtitle = taskData?.has_subtitle || false;
@@ -1083,9 +1025,9 @@ async function startProduction(job: VideoJob) {
         } else {
           if (!(await fs.pathExists(tV))) {
             Logger.info('[PRODUCTION] Downloading video...', {
-              url: `${COLAB_URL}/download/video`,
+              url: dockerHost.resolveEndpoint('/download/video'),
             });
-            await dl(`${COLAB_URL}/download/video`, tV);
+            await dl(dockerHost.resolveEndpoint('/download/video'), tV);
           } else {
             Logger.info(
               '[PRODUCTION] Video already local (pushed via callback), skipping download.',
@@ -1095,9 +1037,9 @@ async function startProduction(job: VideoJob) {
 
           if (!(await fs.pathExists(tS))) {
             Logger.info('[PRODUCTION] Downloading speech...', {
-              url: `${COLAB_URL}/download/speech`,
+              url: dockerHost.resolveEndpoint('/download/speech'),
             });
-            await dl(`${COLAB_URL}/download/speech`, tS);
+            await dl(dockerHost.resolveEndpoint('/download/speech'), tS);
           } else {
             Logger.info(
               '[PRODUCTION] Speech already local (pushed via callback), skipping download.',
@@ -1106,8 +1048,8 @@ async function startProduction(job: VideoJob) {
           }
 
           if (!(await fs.pathExists(tE))) {
-            Logger.info('[PRODUCTION] Downloading SFX...', { url: `${COLAB_URL}/download/sfx` });
-            await dl(`${COLAB_URL}/download/sfx`, tE);
+            Logger.info('[PRODUCTION] Downloading SFX...', { url: dockerHost.resolveEndpoint('/download/sfx') });
+            await dl(dockerHost.resolveEndpoint('/download/sfx'), tE);
           } else {
             Logger.info(
               '[PRODUCTION] SFX already local (pushed via callback), skipping download.',
@@ -1132,9 +1074,9 @@ async function startProduction(job: VideoJob) {
           } else {
             try {
               Logger.info('[PRODUCTION] Downloading subtitle...', {
-                url: `${COLAB_URL}/download/subtitle`,
+                url: dockerHost.resolveEndpoint('/download/subtitle'),
               });
-              await dl(`${COLAB_URL}/download/subtitle`, tSRT);
+              await dl(dockerHost.resolveEndpoint('/download/subtitle'), tSRT);
               srtFile = tSRT;
             } catch (srtErr) {
               Logger.warn('[PRODUCTION] Subtitle download failed:', srtErr);
@@ -1180,13 +1122,13 @@ async function startProduction(job: VideoJob) {
         let tempLogoFile = '';
         try {
           if (process.env.MOCK_COLAB === 'false') {
-            Logger.info('[PRODUCTION] Skipping local FFmpeg mix, using pre-mixed Colab video.', {
+            Logger.info('[PRODUCTION] Skipping local FFmpeg mix, using pre-mixed Docker video.', {
               mS,
             });
             if (await fs.pathExists(tV)) {
               await fs.copy(tV, mS, { overwrite: true });
             } else {
-              throw new Error(`Colab mixed video dosyası bulunamadı: ${tV}`);
+              throw new Error(`Docker mixed video dosyası bulunamadı: ${tV}`);
             }
           } else {
             const filterComplexParts: string[] = [];
@@ -1467,7 +1409,7 @@ async function startProduction(job: VideoJob) {
         }
       }
     } finally {
-      colabMutex.release();
+      dockerMutex.release();
     }
 
     // S6: After the scene loop, re-check cancellation.
@@ -2255,7 +2197,7 @@ async function startProduction(job: VideoJob) {
       return;
     }
 
-    // --- Retry logic for transient Colab errors ---
+    // --- Retry logic for transient Docker errors ---
     const errMsg = (error as any)?.message || '';
     const transientPatterns = [
       'COLAB_NOT_READY',
@@ -2311,18 +2253,17 @@ async function startProduction(job: VideoJob) {
       }
     }
 
-    // Check if any jobs remain in queue. If not, stop Colab immediately.
+    // Check if any jobs remain in queue. If not, stop Docker immediately.
     try {
       const remaining = await db.get(
         "SELECT COUNT(*) as cnt FROM video_jobs WHERE status = 'pending' OR status = 'processing'",
       );
       const remainingCount = remaining?.cnt || 0;
       if (remainingCount === 0) {
-        Logger.info('Kuyruk tamamen boşaldı — Colab sunucusu kapatılıyor.');
-        await colab.stop();
+        Logger.info('Kuyruk tamamen boşaldı — tüm işler tamamlandı.');
       }
     } catch (err) {
-      Logger.error('Could not check queue for colab.stop()', err);
+      Logger.error('Could not check queue for empty', err);
     }
   }
 }

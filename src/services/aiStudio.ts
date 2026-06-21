@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
 
 export interface StudioSoundOptions {
@@ -22,23 +22,23 @@ export interface SmartReframeOptions {
 
 export interface StudioResult {
   outputPath: string;
-  usedColab: boolean;
+  dockerUsed: boolean;
   durationMs: number;
 }
 
 type ProgressCallback = (percent: number, message: string) => void;
 
-async function tryColab<T>(
+async function tryDocker<T>(
   action: string,
   fn: () => Promise<T>,
 ): Promise<{ ok: true; value: T } | { ok: false }> {
   try {
-    if (colab.isHealthy()) {
+    if (await dockerHost.isServiceHealthy('stablediffusion')) {
       const result = await fn();
       return { ok: true, value: result };
     }
   } catch (err) {
-    Logger.warn(`[aiStudio] Colab ${action} failed, will fallback:`, err);
+    Logger.warn(`[aiStudio] Docker ${action} failed, will fallback:`, err);
   }
   return { ok: false };
 }
@@ -54,9 +54,8 @@ export async function enhanceAudio(
 
   onProgress?.(10, 'Ses iyileştirme başlıyor...');
 
-  const colabResult = await tryColab('studio-sound', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('studio-sound', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const videoBuffer = await fs.readFile(inputVideo);
     const formData = new FormData();
@@ -67,24 +66,23 @@ export async function enhanceAudio(
     );
     formData.append('options', JSON.stringify(opts));
 
-    const response = await axios.post(`${colabUrl}/api/v1/studio/studio-sound`, formData, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+    const response = await axios.post(`${sdUrl}/api/v1/studio/studio-sound`, formData, {
       responseType: 'arraybuffer',
       timeout: 300000,
     });
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
-    return { outputPath: outputVideo, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputVideo, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) return colabResult.value;
+  if (dockerResult.ok) return dockerResult.value;
 
   onProgress?.(30, 'Yerel FFmpeg ile ses iyileştirme...');
   const { enhanceAudio: localEnhance } = await import('./studioSound.js');
   await localEnhance(inputVideo, outputVideo, opts);
   onProgress?.(100, 'Ses iyileştirme tamamlandı');
 
-  return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+  return { outputPath: outputVideo, dockerUsed: false, durationMs: Date.now() - startTime };
 }
 
 export async function enhanceVideoAudio(
@@ -98,9 +96,8 @@ export async function enhanceVideoAudio(
 
   onProgress?.(10, 'Video+Ses iyileştirme başlıyor...');
 
-  const colabResult = await tryColab('studio-sound-video', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('studio-sound-video', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const videoBuffer = await fs.readFile(inputVideo);
     const formData = new FormData();
@@ -111,24 +108,23 @@ export async function enhanceVideoAudio(
     );
     formData.append('options', JSON.stringify(opts));
 
-    const response = await axios.post(`${colabUrl}/api/v1/studio/studio-sound`, formData, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+    const response = await axios.post(`${sdUrl}/api/v1/studio/studio-sound`, formData, {
       responseType: 'arraybuffer',
       timeout: 300000,
     });
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
-    return { outputPath: outputVideo, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputVideo, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) return colabResult.value;
+  if (dockerResult.ok) return dockerResult.value;
 
   onProgress?.(30, 'Yerel FFmpeg ile video+sess iyileştirme...');
   const { enhanceVideoAudio: localEnhance } = await import('./studioSound.js');
   await localEnhance(inputVideo, outputVideo, opts);
   onProgress?.(100, 'Video+Ses iyileştirme tamamlandı');
 
-  return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+  return { outputPath: outputVideo, dockerUsed: false, durationMs: Date.now() - startTime };
 }
 
 export async function smartReframe(
@@ -149,9 +145,8 @@ export async function smartReframe(
 
   onProgress?.(10, 'Akıllı yeniden çerçeveleme başlıyor...');
 
-  const colabResult = await tryColab('smart-reframe', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('smart-reframe', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const videoBuffer = await fs.readFile(inputVideo);
     const formData = new FormData();
@@ -162,17 +157,16 @@ export async function smartReframe(
     );
     formData.append('options', JSON.stringify(opts));
 
-    const response = await axios.post(`${colabUrl}/api/v1/studio/smart-reframe`, formData, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+    const response = await axios.post(`${sdUrl}/api/v1/studio/smart-reframe`, formData, {
       responseType: 'arraybuffer',
       timeout: 600000,
     });
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
-    return { outputPath: outputVideo, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputVideo, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) return colabResult.value;
+  if (dockerResult.ok) return dockerResult.value;
 
   onProgress?.(30, 'Yerel yüz takibi ile yeniden çerçeveleme...');
   if (opts.useFaceTracking) {
@@ -197,7 +191,7 @@ export async function smartReframe(
   }
   onProgress?.(100, 'Yeniden çerçeveleme tamamlandı');
 
-  return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+  return { outputPath: outputVideo, dockerUsed: false, durationMs: Date.now() - startTime };
 }
 
 export async function removeBackground(
@@ -208,9 +202,8 @@ export async function removeBackground(
   const startTime = Date.now();
   onProgress?.(10, 'Arka plan kaldırma başlıyor...');
 
-  const colabResult = await tryColab('remove-background', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('remove-background', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const imgBuffer = await fs.readFile(inputImage);
     const formData = new FormData();
@@ -220,22 +213,21 @@ export async function removeBackground(
       path.basename(inputImage),
     );
 
-    const response = await axios.post(`${colabUrl}/remove-background`, formData, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+    const response = await axios.post(`${sdUrl}/remove-background`, formData, {
       responseType: 'arraybuffer',
       timeout: 120000,
     });
 
     await fs.writeFile(outputImage, Buffer.from(response.data));
-    return { outputPath: outputImage, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputImage, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) {
+  if (dockerResult.ok) {
     onProgress?.(100, 'Arka plan kaldırma tamamlandı');
-    return colabResult.value;
+    return dockerResult.value;
   }
 
-  throw new Error('Arka plan kaldırma için Colab bağlantısı gerekli');
+  throw new Error('Arka plan kaldırma için Docker bağlantısı gerekli');
 }
 
 export async function generateImage(
@@ -247,30 +239,29 @@ export async function generateImage(
   const startTime = Date.now();
   onProgress?.(10, 'Görsel üretiliyor...');
 
-  const colabResult = await tryColab('generate-image', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('generate-image', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const response = await axios.post(
-      `${colabUrl}/generate-image`,
+      `${sdUrl}/generate-image`,
       { prompt, model_type: modelType },
       {
-        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+        headers: { 'Content-Type': 'application/json' },
         responseType: 'arraybuffer',
         timeout: 120000,
       },
     );
 
     await fs.writeFile(outputImage, Buffer.from(response.data));
-    return { outputPath: outputImage, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputImage, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) {
+  if (dockerResult.ok) {
     onProgress?.(100, 'Görsel üretildi');
-    return colabResult.value;
+    return dockerResult.value;
   }
 
-  throw new Error('Görsel üretimi için Colab bağlantısı gerekli');
+  throw new Error('Görsel üretimi için Docker bağlantısı gerekli');
 }
 
 export async function inpaintImage(
@@ -283,9 +274,8 @@ export async function inpaintImage(
   const startTime = Date.now();
   onProgress?.(10, 'Inpaint başlıyor...');
 
-  const colabResult = await tryColab('inpaint', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('inpaint', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const imgBuffer = await fs.readFile(inputImage);
     const maskBuffer = await fs.readFile(maskImage);
@@ -294,22 +284,21 @@ export async function inpaintImage(
     formData.append('mask', new Blob([maskBuffer], { type: 'image/png' }), 'mask.png');
     formData.append('prompt', prompt);
 
-    const response = await axios.post(`${colabUrl}/inpaint-image`, formData, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
+    const response = await axios.post(`${sdUrl}/inpaint-image`, formData, {
       responseType: 'arraybuffer',
       timeout: 120000,
     });
 
     await fs.writeFile(outputImage, Buffer.from(response.data));
-    return { outputPath: outputImage, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputImage, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) {
+  if (dockerResult.ok) {
     onProgress?.(100, 'Inpaint tamamlandı');
-    return colabResult.value;
+    return dockerResult.value;
   }
 
-  throw new Error('Inpaint için Colab bağlantısı gerekli');
+  throw new Error('Inpaint için Docker bağlantısı gerekli');
 }
 
 export async function correctGaze(
@@ -321,30 +310,25 @@ export async function correctGaze(
   const startTime = Date.now();
   onProgress?.(10, 'Göz teması düzeltiliyor...');
 
-  const colabResult = await tryColab('eye-contact', async () => {
-    const colabUrl = colab.getState().ngrokUrl;
-    if (!colabUrl) throw new Error('Colab not connected');
+  const dockerResult = await tryDocker('eye-contact', async () => {
+    const sdUrl = dockerHost.getUrl('stablediffusion');
 
     const response = await axios.post(
-      `${colabUrl}/api/v1/eye-contact`,
+      `${sdUrl}/api/v1/eye-contact`,
       { video_path: inputVideo, output_path: outputVideo, smooth },
       {
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-          'bypass-tunnel-reminder': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         timeout: 300000,
       },
     );
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
-    return { outputPath: outputVideo, usedColab: true, durationMs: Date.now() - startTime };
+    return { outputPath: outputVideo, dockerUsed: true, durationMs: Date.now() - startTime };
   });
 
-  if (colabResult.ok) {
+  if (dockerResult.ok) {
     onProgress?.(100, 'Göz teması düzeltildi');
-    return colabResult.value;
+    return dockerResult.value;
   }
 
   onProgress?.(50, 'Yerel göz teması düzeltme...');
@@ -354,7 +338,7 @@ export async function correctGaze(
 
   return {
     outputPath: result.processedVideoPath,
-    usedColab: false,
+    dockerUsed: false,
     durationMs: Date.now() - startTime,
   };
 }
@@ -371,7 +355,7 @@ export async function removeBackgroundNoise(
     const { removeBackgroundNoise: localDenoise } = await import('./studioSound.js');
     await localDenoise(inputVideo, outputVideo);
     onProgress?.(100, 'Arka plan gürültüsü temizlendi');
-    return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+    return { outputPath: outputVideo, dockerUsed: false, durationMs: Date.now() - startTime };
   } catch (err: any) {
     Logger.error('[aiStudio] removeBackgroundNoise failed', err);
     throw err;
@@ -390,7 +374,7 @@ export async function removeReverb(
     const { removeReverb: localDereverb } = await import('./studioSound.js');
     await localDereverb(inputVideo, outputVideo);
     onProgress?.(100, 'Yankı temizlendi');
-    return { outputPath: outputVideo, usedColab: false, durationMs: Date.now() - startTime };
+    return { outputPath: outputVideo, dockerUsed: false, durationMs: Date.now() - startTime };
   } catch (err: any) {
     Logger.error('[aiStudio] removeReverb failed', err);
     throw err;

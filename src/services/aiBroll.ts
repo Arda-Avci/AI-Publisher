@@ -10,7 +10,7 @@
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import { runFFmpeg, runFFmpegWithFallback, FFmpegCommand } from './videoService.js';
 import { Logger } from '../lib/logger.js';
 
@@ -41,9 +41,9 @@ export interface GenerateBrollResult {
 }
 
 /**
- * Generates a keyword-based 3-4 second B-Roll clip using CogVideoX via Colab.
+ * Generates a keyword-based 3-4 second B-Roll clip using CogVideoX via Docker.
  *
- * Calls Colab endpoint: /generate-media?mode=cogvideo_broll&prompt={keyword}&duration={duration}
+ * Calls Docker endpoint: /generate-media?mode=cogvideo_broll&prompt={keyword}&duration={duration}
  *
  * @param keyword     - Single keyword or short phrase describing the B-Roll
  * @param duration    - Duration in seconds (3-4 typical)
@@ -55,25 +55,16 @@ export async function generateCogVideoXBroll(
   duration: number,
   outputPath: string,
 ): Promise<string> {
-  const state = colab.getState();
-
-  if (state.status !== 'running' || !state.ngrokUrl) {
-    Logger.warn('[aiBroll] Colab not running for CogVideoX B-Roll', { status: state.status });
-    throw new Error('Colab not available');
-  }
-
-  const colabUrl = state.ngrokUrl;
+  const cogUrl = dockerHost.getUrl('cogvideox');
+  Logger.info('[aiBroll] Generating CogVideoX B-Roll', { keyword, duration, outputPath });
 
   try {
-    Logger.info('[aiBroll] Generating CogVideoX B-Roll', { keyword, duration, outputPath });
-
-    const response = await axios.get(`${colabUrl}/generate-media`, {
+    const response = await axios.get(`${cogUrl}/generate-media`, {
       params: {
         mode: 'cogvideo_broll',
         prompt: keyword,
         duration,
       },
-      headers: { 'ngrok-skip-browser-warning': 'true' },
       timeout: 600000,
     });
 
@@ -82,12 +73,10 @@ export async function generateCogVideoXBroll(
       throw new Error(`No output_path in response: ${JSON.stringify(response.data)}`);
     }
 
-    // Download from Colab if result is a URL
     if (resultPath.startsWith('http')) {
       const writer = fs.createWriteStream(outputPath);
       const axiosStream = await axios.get(resultPath, {
         responseType: 'stream',
-        headers: { 'ngrok-skip-browser-warning': 'true' },
         timeout: 300000,
       });
       axiosStream.data.pipe(writer);
@@ -96,7 +85,6 @@ export async function generateCogVideoXBroll(
         writer.on('error', rej);
       });
     } else {
-      // Assume it's a local Colab path, copy from Colab
       await fs.copy(resultPath, outputPath);
     }
 
@@ -113,7 +101,7 @@ export async function generateCogVideoXBroll(
 }
 
 /**
- * Generates a B-Roll clip using CogVideoX via Colab.
+ * Generates a B-Roll clip using CogVideoX via Docker.
  *
  * @param keywords     - Keywords describing the B-Roll content
  * @param duration     - Duration in seconds (3-4 typical)
@@ -125,29 +113,18 @@ export async function generateBroll(
   duration: number,
   outputPath: string,
 ): Promise<GenerateBrollResult> {
-  const state = colab.getState();
-
-  if (state.status !== 'running' || !state.ngrokUrl) {
-    Logger.warn('[aiBroll] Colab not running', { status: state.status });
-    return { outputPath, success: false, error: 'Colab not available' };
-  }
-
-  const colabUrl = state.ngrokUrl;
+  const cogUrl = dockerHost.getUrl('cogvideox');
   const keywordStr = keywords.join(', ');
 
   try {
-    Logger.info('[aiBroll] Generating B-Roll via Colab', {
+    Logger.info('[aiBroll] Generating B-Roll via Docker CogVideoX', {
       keywords: keywordStr,
       duration,
       outputPath,
     });
 
-    // Endpoint `/generate-broll` implemented in colab_server.py (line 1679)
-    // Payload: { keywords, duration, output_path, model? }
-    // Response: { status, output_path, task_id }
-
     const response = await axios.post(
-      `${colabUrl}/generate-broll`,
+      `${cogUrl}/generate-broll`,
       {
         keywords,
         duration,
@@ -155,8 +132,7 @@ export async function generateBroll(
         model: 'CogVideoX-2b',
       },
       {
-        timeout: 600000, // 10 min generation
-        headers: { 'ngrok-skip-browser-warning': 'true' },
+        timeout: 600000,
       },
     );
 
@@ -186,8 +162,7 @@ export async function generateBroll(
       }
 
       try {
-        const statusRes = await axios.get(`${colabUrl}/status/${taskId}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
+        const statusRes = await axios.get(`${cogUrl}/status/${taskId}`, {
           timeout: 10000,
         });
         taskStatus = statusRes.data?.status || 'processing';

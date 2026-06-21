@@ -39,7 +39,7 @@ export const heavyLimiter = rateLimit({
 
 /**
  * Medium operations: settings save, publish trigger, manual queue
- * controls, Colab start/stop. Higher cap than heavy but still rate-limited.
+ * controls. Higher cap than heavy but still rate-limited.
  */
 export const mediumLimiter = rateLimit({
   windowMs: 60 * 1000,

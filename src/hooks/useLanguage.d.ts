@@ -244,10 +244,10 @@ export declare function useLanguage(): {
         cancelled141: string;
         stageDirectorPlanning: string;
         stageScenesPreparing: string;
-        stageColabStarting: string;
+        stageDockerStarting: string;
         stageCoverSynthesis: string;
         stageSceneGenerating: string;
-        stageColabProgress: string;
+        stageDockerProgress: string;
         stageShortsConversion: string;
         stageCompleted: string;
         stageCancelled: string;
@@ -348,6 +348,21 @@ export declare function useLanguage(): {
         loginServerError: string;
         loginSubtitle: string;
         languageToggleEN: string;
+        loraEnabled: string;
+        loraEnabledHint: string;
+        characterImages: string;
+        characterImagesHint: string;
+        loraTraining: string;
+        loraTrainingProgress: string;
+        pretrainedLora: string;
+        pretrainedLoraHint: string;
+        pretrainedLoraNone: string;
+        pretrainedLoraLoad: string;
+        multiCharacter: string;
+        multiCharacterHint: string;
+        loraTrainingComplete: string;
+        loraTrainingFailed: string;
+        loraDriveCached: string;
     };
 };
 //# sourceMappingURL=useLanguage.d.ts.map

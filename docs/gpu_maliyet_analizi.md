@@ -1,8 +1,10 @@
 # GPU Sunucu Maliyet Analizi
 
-## Mevcut Durum: Google Colab
+## Mevcut Durum: Google Colab (Sadece Docker İmaj Build)
 
-### Colab Kullanım Maliyeti
+> **Güncelleme (Haziran 2026):** Colartık runtime için kullanılmıyor. Colab sadece Docker imajlarını build etmek için kullanılır. Modeller `docker-compose` ile `localhost:5001-5016` portlarında çalışır.
+
+### Colab Kullanım Maliyeti (Build Amaçlı)
 
 | Plan | Aylık Ücret | GPU | VRAM | Limitlemeler |
 |------|------------|-----|------|-------------|
@@ -138,7 +140,7 @@
 | **A100 40GB** | 40 GB | ✅ | ✅ | ✅ | ✅ |
 | **A100 80GB** | 80 GB | ✅ | ✅ | ✅ | ✅ (paralel) |
 
-> **Not:** Tüm modeller aynı anda GPU'da tutulamaz. Mevcut Colab mimarisi sıralı yükleme/kaldırma (lazy loading) kullanır. **24 GB VRAM yeterlidir** — CogVideoX-5b render alırken diğer modeller CPU'ya offload edilir.
+> **Not:** Tüm modeller aynı anda GPU'da tutulamaz. Mevcut Docker mimarisi sıralı yükleme/kaldırma (lazy loading) kullanır. **24 GB VRAM yeterlidir** — CogVideoX-5b render alırken diğer modeller CPU'ya offload edilir.
 
 ---
 
@@ -192,27 +194,27 @@
 
 ---
 
-## Colab'a Devam mı?
+## Colab Build + Docker Runtime'a Geçiş
 
-### Colab Kalınması Durumu (Kısa Vade)
+### Docker Runtime Durumu
 
 | Faktör | Değerlendirme |
 |--------|--------------|
-| **Mevcut durum** | Çalışıyor, test edilmiş |
-| **Aylık maliyet** | $55 (Pro+) |
-| **Ölçeklenebilirlik** | Sınırlı (12 saat oturum) |
-| **Kullanıcı başı maliyet** | 1-2 kullanıcı için uygun |
-| **Kurulum süresi** | 0 |
+| **Mevcut durum** | Docker container'lar localhost:5001-5016 |
+| **Aylık maliyet** | GPU sunucu kirası ~$40-100 |
+| **Ölçeklenebilirlik** | Yüksek (7/24 çalışma) |
+| **Kullanıcı başı maliyet** | Çoklu kullanıcı için uygun |
+| **Kurulum süresi** | 1 saat (Docker compose) |
 
-### Geçiş Karar Matrisi
+### Geçiş Karar Matrisi (Colab Build + Docker Runtime)
 
-| Kriter | Colab Pro+ | Vast.ai 8/5 | Contabo | Fiziksel |
+| Kriter | Docker (Local GPU) | Vast.ai 8/5 | Contabo | Fiziksel |
 |--------|-----------|------------|---------|---------|
-| **Aylık maliyet** | $55 | $60 | ~$98 | ~$60* |
-| **Kurulum süresi** | 0 | 1 saat | 2 saat | 1 gün |
-| **7/24 çalışma** | ❌ (12 saat) | ✅ (spot riski) | ✅ | ✅ |
-| **Model önbelleği** | ❌ (her sefer) | ❌ | ✅ | ✅ |
-| **Ölçeklenebilirlik** | Düşük | Yüksek | Orta | Düşük |
+| **Aylık maliyet** | $40-100 | $60 | ~$98 | ~$60* |
+| **Kurulum süresi** | 1 saat | 1 saat | 2 saat | 1 gün |
+| **7/24 çalışma** | ✅ | ✅ (spot riski) | ✅ | ✅ |
+| **Model önbelleği** | ✅ (kalıcı) | ❌ | ✅ | ✅ |
+| **Ölçeklenebilirlik** | Yüksek | Yüksek | Orta | Düşük |
 | **Veri güvenliği** | ❌ | ⚠️ | ✅ | ✅ |
 | **Bant genişliği** | Sınırsız | Sınırsız | 400 Mbps | Sınırsız |
 | **Kullanıcı sayısı** | 1-2 | 1-5 | 1-5 | 1-3 |
@@ -223,10 +225,11 @@
 
 ## Eylem Planı (Tavsiye)
 
-### Aşama 1: Hemen (0-3 ay) — Mevcut Colab + Vast.ai Yedek
-- Colab Pro+ ile devam ($55/ay)
-- Vast.ai'de RTX 3090 spot instance hazır tut ($0.30/saat — sadece ihtiyaç anında)
-- **Tahmini aylık: $55-80**
+### Aşama 1: Hemen (0-3 ay) — Docker Runtime + Vast.ai Yedek
+- Docker container'lar local GPU'da çalışır
+- Vast.ai'de RTX 3090 spot instance yedek ($0.30/saat)
+- Colab sadece Docker imaj build için kullanılır
+- **Tahmini aylık: $40-100**
 
 ### Aşama 2: Kısa Vade (3-6 ay) — Contabo'ya Geçiş
 - Contabo RTX 3090 ($98/ay)

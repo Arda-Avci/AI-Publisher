@@ -15,6 +15,7 @@ import {
 } from '../publisher.js';
 import { broadcastProgress } from '../lib/redis.js';
 import { Logger } from '../lib/logger.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 /**
  * Publish route: POST /publish/:id/:platform.
@@ -52,7 +53,7 @@ function isPlatform(value: string | string[] | undefined): value is Platform {
 }
 
 export function registerPublishRoutes(app: Application): void {
-  app.post(
+  registerRoute(app, 'post',
     '/publish/:id/:platform',
     mediumLimiter,
     requireAuth,
@@ -158,7 +159,7 @@ export function registerPublishRoutes(app: Application): void {
     },
   );
 
-  app.post(
+  registerRoute(app, 'post',
     '/cancel-publish/:id/:platform',
     mediumLimiter,
     requireAuth,
@@ -236,7 +237,7 @@ export function registerPublishRoutes(app: Application): void {
     },
   );
 
-  app.post('/publish-all/:id', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
+  registerRoute(app, 'post', '/publish-all/:id', mediumLimiter, requireAuth, async (req: Request, res: Response) => {
     const { id } = req.params;
     const userId = req.session.userId;
 

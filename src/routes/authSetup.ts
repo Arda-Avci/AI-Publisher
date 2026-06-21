@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import { chromium, Browser } from 'playwright';
 import { Logger } from '../lib/logger.js';
 import { loadServerTranslations, t } from '../lib/server-i18n.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 export const AUTH_FILE_MAP = {
   youtube: 'auth_youtube.json',
@@ -258,15 +259,15 @@ export function registerAuthSetupRoutes(app: Application): void {
   // Ensure translations are loaded on first request
   loadServerTranslations();
 
-  app.get('/auth-status/:platform', async (req: Request, res: Response) => {
+  registerRoute(app, 'get', '/auth-status/:platform', async (req: Request, res: Response) => {
     await handleAuthStatus(req, res);
   });
 
-  app.post('/auth-setup/:platform', async (req: Request, res: Response) => {
+  registerRoute(app, 'post', '/auth-setup/:platform', async (req: Request, res: Response) => {
     await handleAuthSetup(req, res);
   });
 
-  app.delete('/auth-setup/:platform', async (req: Request, res: Response) => {
+  registerRoute(app, 'delete', '/auth-setup/:platform', async (req: Request, res: Response) => {
     await handleAuthRemove(req, res);
   });
 }

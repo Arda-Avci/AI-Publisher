@@ -1,6 +1,6 @@
 # 2026-06-12 React + Vite Portal, Remotion Timeline Editörü ve Gelişmiş Görsel Stüdyo Mimarisi (Spec)
 
-Bu tasarım dokümanı, platformun kullanıcı arayüzünü **React + Vite + Tailwind CSS** modern mimarisine taşımak, `@remotion/player` tabanlı profesyonel bir timeline editör yerleşimi kurmak ve Google Colab GPU katmanını **FP8 düzeyinde yeni nesil video/imaj modelleri (Wan 2.1, LTX 2, Hunyuan, Flux)** ve **Edge-TTS** ile hızlandırmak için gerekli olan mimariyi ve Odysseus esintili gelişmiş fotoğraf editörü (Background Removal, Inpainting Mask) yeteneklerini tanımlar.
+Bu tasarım dokümanı, platformun kullanıcı arayüzünü **React + Vite + Tailwind CSS** modern mimarisine taşımak, `@remotion/player` tabanlı profesyonel bir timeline editör yerleşimi kurmak ve Docker GPU container katmanını **FP8 düzeyinde yeni nesil video/imaj modelleri (Wan 2.1, LTX 2, Hunyuan, Flux)** ve **Edge-TTS** ile hızlandırmak için gerekli olan mimariyi ve Odysseus esintili gelişmiş fotoğraf editörü (Background Removal, Inpainting Mask) yeteneklerini tanımlar.
 
 ---
 
@@ -10,14 +10,14 @@ Mevcut Express SSR (sunucu taraflı şablon) mimarisi, zengin etkileşim gerekti
 *   Arayüz, CapCut/Premiere kalitesinde, katmanlı (video ve ses kanalları ayrışmış) ve **Neon Cyan** koyu tema uyumlu bir React uygulamasına dönüştürülecektir.
 *   **Port Kısıtı:** Frontend geliştirme sunucusu (Vite) kesinlikle **4000** portunda çalışacaktır. Backend Express API ise mevcut **3016** portunda kalacak ve Vite dev tünelinden proxy edilecektir. Yeni port ihtiyacında kullanıcıya mutlaka sorulacaktır.
 *   **Remotion Timeline:** Kullanıcılar sahnelerin yerini sürükle-bırak ile değiştirebilecek, araya yeni sahne ekleyip silebilecek ve sadece seçilen sahneyi tekrar üretebilecektir (Regenerate).
-*   **Colab Yeni Nesil FP8 & Edge-TTS:** Kurulumu 10+ dakika süren coqui-tts tamamen kaldırılacak; seslendirmede Edge-TTS ve OpenAI TTS kullanılacaktır. Video üretiminde VRAM dostu, FP8 hassasiyetinde **Wan 2.1**, **LTX 2** veya **Hunyuan Video** Hugging Face Diffusers lazy-load mimarisi entegre edilecektir. Karakter tutarlılığı için ilk kare **Flux (FP8)** ile üretilip canlandırılacaktır (Image Anchored Synthesis).
-*   **Fotoğraf Editörü & Arka Plan Temizleme:** Odysseus projesindekine benzer şekilde, yüklenen materyaller için tarayıcıda Canvas tabanlı fırça ile maske çizilip Colab'a inpainting isteği yollanabilecek ve tek tıkla `rembg` (Colab tarafında çalışan) aracılığıyla arka plan temizlenebilecektir.
+*   **Docker Yeni Nesil FP8 & Edge-TTS:** Kurulumu 10+ dakika süren coqui-tts tamamen kaldırılacak; seslendirmede Edge-TTS ve OpenAI TTS kullanılacaktır. Video üretiminde VRAM dostu, FP8 hassasiyetinde **Wan 2.1**, **LTX 2** veya **Hunyuan Video** Hugging Face Diffusers lazy-load mimarisi entegre edilecektir. Karakter tutarlılığı için ilk kare **Flux (FP8)** ile üretilip canlandırılacaktır (Image Anchored Synthesis).
+*   **Fotoğraf Editörü & Arka Plan Temizleme:** Odysseus projesindekine benzer şekilde, yüklenen materyaller için tarayıcıda Canvas tabanlı fırça ile maske çizilip Docker container'a inpainting isteği yollanabilecek ve tek tıkla `rembg` (Docker container'da çalışan) aracılığıyla arka plan temizlenebilecektir.
 
 ---
 
 ## 2. Teknik Mimari ve Model Seçimleri
 
-### 2.1. Google Colab GPU Katmanı (`colab_server.py` ve `colab_setup.py`)
+### 2.1. Docker GPU Container Katmanı (`colab_docker/`)
 *   **Ağır kütüphanelerin tasfiyesi:** `coqui-tts` ve tüm bağımlılıkları (`espeak-ng`, `TTS` vb.) kaldırılacak. Yerine sadece hafif `edge-tts` kurulacaktır.
 *   **FP8 Video Modelleri (Lazy Load):**
     *   **Wan 2.1 (FP8):** `Wan2_1-I2V-14B-480P-quantized` veya `Wan2_1-T2V-1.3B-quantized`.
@@ -28,7 +28,7 @@ Mevcut Express SSR (sunucu taraflı şablon) mimarisi, zengin etkileşim gerekti
     *   **Flux.1-schnell (FP8):** Karakter sabitliği için ilk referans görselin (Anchor Frame) üretilmesinde kullanılacaktır.
     *   **Stable Diffusion XL Inpaint (FP8) veya Flux Inpaint:** Canvas maskesi ile gelen görsellerin inpaint edilmesi için kullanılacaktır.
 *   **Arka Plan Temizleme (Rembg):**
-    *   Colab sunucusuna `rembg[gpu]` paketi kurulacaktır.
+    *   Docker container'a `rembg[gpu]` paketi kurulacaktır.
     *   `/remove-background` rotası, gönderilen resmi `rembg.remove` fonksiyonu ile işleyip arka planı temizlenmiş şeffaf PNG olarak geri döndürecektir.
 *   **Dudak Senkronizasyonu (Lip-Sync):**
     *   OpenCV tabanlı esnek genlik esnetme algoritması korunacak, ancak ağır XTTS yerine Edge-TTS ses dosyaları ile beslenecektir.
@@ -39,9 +39,9 @@ Mevcut Express SSR (sunucu taraflı şablon) mimarisi, zengin etkileşim gerekti
     *   `POST /api/v1/jobs/create`: Yeni proje oluşturma (Zod validator devrede).
     *   `GET /api/v1/jobs/:id`: İş detayları (sahneler ve pazarlama metinleri).
     *   `POST /api/v1/jobs/:id/update-scenes`: Sahnelerin sırasını/içeriğini güncelleme (Remotion Timeline'daki değişikliklerin DB'ye kaydedilmesi).
-    *   `POST /api/v1/jobs/:id/regenerate-scene`: Sadece belirli bir sahneyi Colab'a tekrar ürettirme.
-    *   `POST /api/v1/editor/remove-background`: Görseli alıp Colab'a iletir, temizlenen şeffaf görseli kaydeder.
-    *   `POST /api/v1/editor/inpaint`: Görsel + Maske verisini alıp Colab'a iletir, düzenlenen görseli kaydeder.
+     *   `POST /api/v1/jobs/:id/regenerate-scene`: Sadece belirli bir sahneyi Docker container'a tekrar ürettirme.
+     *   `POST /api/v1/editor/remove-background`: Görseli alıp Docker container'a iletir, temizlenen şeffaf görseli kaydeder.
+     *   `POST /api/v1/editor/inpaint`: Görsel + Maske verisini alıp Docker container'a iletir, düzenlenen görseli kaydeder.
 
 ### 2.3. React + Vite Frontend Katmanı (`client/` - Port 4000)
 *   **Teknoloji Yığını:** React 19, Vite, Tailwind CSS, Lucide React (ikonlar), `@remotion/player` (video timeline önizleme).
@@ -85,7 +85,7 @@ graph TD
         Worker[Queue Worker & FFmpeg Assembler]
     end
 
-    subgraph GPU Server [Google Colab - Ngrok/Localtunnel]
+    subgraph GPU Server [Docker Container - localhost:5001-5016]
         Flask[Flask API Server]
         Wan[Wan 2.1 / LTX 2 / Hunyuan Video]
         Flux[Flux.1 Schnell & SD Inpaint]

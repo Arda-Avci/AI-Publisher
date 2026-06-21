@@ -23,7 +23,7 @@ interface SystemHealth {
   queuedJobs: number;
   completedJobs: number;
   failedJobs: number;
-  colabConnected: boolean;
+  dockerConnected: boolean;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -221,19 +221,19 @@ export default function AdminSystem() {
               </div>
             </div>
 
-            {/* Colab */}
+            {/* Docker */}
             <div className="p-4 bg-gray-800/30 border border-gray-700/50 rounded-xl">
               <div className="flex items-center gap-2 mb-3">
                 <Globe size={16} className="text-amber-400" />
-                <h3 className="text-sm font-semibold text-gray-200">Colab Server</h3>
+                <h3 className="text-sm font-semibold text-gray-200">Docker GPU</h3>
               </div>
               <div className="text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500">Status</span>
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${health.colabConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${health.dockerConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}
                   >
-                    {health.colabConnected ? 'Connected' : 'Disconnected'}
+                    {health.dockerConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
               </div>

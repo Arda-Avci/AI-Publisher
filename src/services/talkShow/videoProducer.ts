@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../../lib/logger.js';
 import { runFFmpeg, getVideoDuration } from '../videoService.js';
+import { dockerHost } from '../../lib/docker-host.js';
 import type { SportotoDiscussion } from './discussionSource.js';
 
 const SPEAKER_COLORS: Record<string, string> = {
@@ -19,7 +20,7 @@ const SPEAKER_COLORS: Record<string, string> = {
 
 /**
  * Talk show video üretir:
- * 1. Her utterance için Colab TTS ile ses sentezle
+ * 1. Her utterance için Docker TTS ile ses sentezle
  * 2. Her utterance için görsel bir scene oluştur (speaker adı + metin)
  * 3. Tüm scene'leri birleştir
  */
@@ -40,7 +41,7 @@ export async function produceTalkShowVideo(
   );
 
   const scenePaths: string[] = [];
-  const COLAB_URL = process.env.COLAB_URL;
+  const xttsUrl = dockerHost.getUrl('xtts');
 
   for (let i = 0; i < discussion.utterances.length; i++) {
     const u = discussion.utterances[i];
@@ -50,15 +51,10 @@ export async function produceTalkShowVideo(
     const speakerColor = SPEAKER_COLORS[u.speaker] || '#FFFFFF';
 
     try {
-      // 1. TTS ile ses sentezle (Colab XTTS veya Edge-TTS)
-      const colabUrl = `${COLAB_URL}/generate-media`;
-      const ttsResponse = await fetch(colabUrl, {
+      // 1. TTS ile ses sentezle (Docker XTTS)
+      const ttsResponse = await fetch(`${xttsUrl}/generate-media`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'any-value',
-          'bypass-tunnel-reminder': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'xtts',
           text: u.text,
@@ -74,12 +70,8 @@ export async function produceTalkShowVideo(
       if (ttsResponse.ok) {
         const ttsResult = await ttsResponse.json();
         if (ttsResult.status === 'accepted' && ttsResult.task_id) {
-          // Colab async task - poll for completion
-          await pollColabTask(ttsResult.task_id);
-          // Download the generated speech
-          const speechResp = await fetch(`${COLAB_URL}/download/speech`, {
-            headers: { 'ngrok-skip-browser-warning': 'any-value' },
-          });
+          await pollDockerTask(ttsResult.task_id);
+          const speechResp = await fetch(`${xttsUrl}/download/speech`);
           if (speechResp.ok) {
             const audioBuffer = Buffer.from(await speechResp.arrayBuffer());
             await fs.writeFile(audioPath, audioBuffer);
@@ -87,7 +79,7 @@ export async function produceTalkShowVideo(
         }
       }
 
-      // Fallback: if Colab TTS failed, use FFmpeg silent audio with correct duration
+      // Fallback: if TTS failed, use FFmpeg silent audio with correct duration
       if (!(await fs.pathExists(audioPath))) {
         const wordCount = u.text.split(/\s+/).length;
         const duration = Math.max(2, Math.ceil((wordCount / 150) * 60));
@@ -194,17 +186,15 @@ function escapeDrawtext(text: string): string {
     .substring(0, 280);
 }
 
-async function pollColabTask(taskId: string, maxAttempts = 30): Promise<void> {
-  const COLAB_URL = process.env.COLAB_URL;
+async function pollDockerTask(taskId: string, maxAttempts = 30): Promise<void> {
+  const xttsUrl = dockerHost.getUrl('xtts');
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const resp = await fetch(`${COLAB_URL}/status/${taskId}`, {
-        headers: { 'ngrok-skip-browser-warning': 'any-value' },
-      });
+      const resp = await fetch(`${xttsUrl}/status/${taskId}`);
       const data = await resp.json();
       if (data.status === 'success' || data.stage === 'done') return;
     } catch {}
     await new Promise((r) => setTimeout(r, 2000));
   }
-  Logger.warn(`[TalkShowProducer] Colab task ${taskId} timed out`);
+  Logger.warn(`[TalkShowProducer] Docker task ${taskId} timed out`);
 }

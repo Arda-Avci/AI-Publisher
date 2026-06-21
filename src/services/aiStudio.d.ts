@@ -14,7 +14,7 @@ export interface SmartReframeOptions {
 }
 export interface StudioResult {
     outputPath: string;
-    usedColab: boolean;
+    dockerUsed: boolean;
     durationMs: number;
 }
 type ProgressCallback = (percent: number, message: string) => void;

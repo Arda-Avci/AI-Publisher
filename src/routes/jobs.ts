@@ -11,6 +11,7 @@ import { logAudit } from '../lib/audit.js';
 import { validateCreateJob, validateSaveMeta } from '../lib/validation.js';
 import { CreditService } from '../services/creditService.js';
 import { Logger } from '../lib/logger.js';
+import { registerRoute } from '../lib/routeAlias.js';
 
 /**
  * Job lifecycle routes:
@@ -27,8 +28,7 @@ import { Logger } from '../lib/logger.js';
  */
 export function registerJobRoutes(app: Application): void {
   // Is Ekleme
-  app.post(
-    '/create-job',
+  registerRoute(app, 'post', '/create-job',
     heavyLimiter,
     requireAuth,
     upload.fields([
@@ -140,7 +140,7 @@ export function registerJobRoutes(app: Application): void {
   );
 
   // Meta veri guncelleme rotasi
-  app.post('/save-meta/:id', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/save-meta/:id', mediumLimiter, requireAuth, async (req, res) => {
     const validation = validateSaveMeta(req.body);
     if (!validation.valid) {
       return res.status(400).json({ success: false, errors: validation.errors });
@@ -175,7 +175,7 @@ export function registerJobRoutes(app: Application): void {
   });
 
   // Proje Silme Rotasi
-  app.post('/delete-job/:id', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/delete-job/:id', mediumLimiter, requireAuth, async (req, res) => {
     const { id } = req.params;
     const userId = req.session.userId;
     try {
@@ -234,7 +234,7 @@ export function registerJobRoutes(app: Application): void {
     }
   });
 
-  app.post('/retry-job/:id', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/retry-job/:id', mediumLimiter, requireAuth, async (req, res) => {
     const { id } = req.params;
     const userId = req.session.userId;
     try {
@@ -270,7 +270,7 @@ export function registerJobRoutes(app: Application): void {
 
   // POST /start-job/:jobId
   // Manuel kuyruga alma. Sadece status='pending' joblar baslatilabilir.
-  app.post('/start-job/:jobId', mediumLimiter, requireAuth, express.json(), async (req, res) => {
+  registerRoute(app, 'post', '/start-job/:jobId', mediumLimiter, requireAuth, express.json(), async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
     const userId = req.session.userId;
 
@@ -353,7 +353,7 @@ export function registerJobRoutes(app: Application): void {
   // iptal edilebilir. Queue'daki checkQueue() 'pending' joblari
   // filtreledigi icin cancelled job otomatik olarak alinmaz; aktif
   // job'lar ise scene boundary'de kontrol edilip durdurulur.
-  app.post('/cancel-job/:id', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/cancel-job/:id', mediumLimiter, requireAuth, async (req, res) => {
     const jobId = parseInt(String(req.params.id), 10);
     const userId = req.session.userId;
 
@@ -422,7 +422,7 @@ export function registerJobRoutes(app: Application): void {
   });
 
   // POST /select-cover
-  app.post('/select-cover', mediumLimiter, requireAuth, async (req, res) => {
+  registerRoute(app, 'post', '/select-cover', mediumLimiter, requireAuth, async (req, res) => {
     const { jobId, coverIndex } = req.body;
     const userId = req.session.userId;
 

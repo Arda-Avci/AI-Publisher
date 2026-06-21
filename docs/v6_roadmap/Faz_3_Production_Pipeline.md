@@ -44,7 +44,7 @@ src/services/taskManager/
 
 ### Yapılacaklar
 - [ ] **FFmpeg vstack:** Üstte AI video + altta Minecraft/ASMR layout (Job-2.1)
-- [ ] **MuseTalk avatar bindirme:** HeyGen/Tavus yerine Colab'da self-hosted MuseTalk (Job-2.2)
+- [ ] **MuseTalk avatar bindirme:** HeyGen/Tavus yerine Docker container'da self-hosted MuseTalk (Job-2.2)
 - [ ] Mevcut Wav2Lip + MuseTalk kombinasyonu lip-sync
 - [ ] **Seçilebilir split oranları:** 70/30, 50/50, 60/40 (Job-2.3)
 - [ ] **Dashboard preview:** Split config UI (Job-2.4)
@@ -55,7 +55,7 @@ src/services/taskManager/
 | Bileşen | Durum | İhtiyaç |
 |---|---|---|
 | FFmpeg vstack | ❌ Yeni | Sıfırdan yazılacak |
-| MuseTalk Colab | ❌ Yeni | Pipeline kurulumu |
+| MuseTalk Docker | ❌ Yeni | Pipeline kurulumu |
 | Wav2Lip | ✅ Mevcut | Zaten entegre |
 | Split oranları UI | ❌ Yeni | Frontend |
 | Dashboard preview | ❌ Yeni | Frontend |
@@ -67,7 +67,7 @@ src/services/splitScreen/
 ├── avatarInjector.ts        (MuseTalk overlay)
 ├── silenceRemover.ts        (boşluk kırpma)
 └── types.ts
-colab_server.py              (MuseTalk lazy-load endpoint)
+docker_server.py              (MuseTalk lazy-load endpoint)
 ```
 
 ### Mevcut Dosyalar
@@ -95,7 +95,7 @@ colab_server.py              (MuseTalk lazy-load endpoint)
 | `colorGrader.ts` | ✅ Mevcut | Queue/UI bağla |
 | `chatToEdit.ts` | ✅ Mevcut | 14 opsiyon var |
 | FFmpeg eq/colorbalance | ✅ Mevcut | Queue wrapper |
-| LUT .cube yükleme | ❌ Yeni | Colab endpoint |
+| LUT .cube yükleme | ❌ Yeni | Docker endpoint |
 | Renk önizleme UI | ❌ Yeni | Frontend |
 
 ### Yeni Dosyalar

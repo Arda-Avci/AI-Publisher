@@ -5,7 +5,7 @@
  */
 
 import axios from 'axios';
-import { colab } from '../lib/colab-manager.js';
+import { dockerHost } from '../lib/docker-host.js';
 import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
@@ -141,53 +141,41 @@ export async function generateBlockAssets(
 ): Promise<{ imageUrl?: string; audioUrl?: string; subtitleUrl?: string }> {
   Logger.info(`Generating assets for block ${block.id}`);
 
-  // Placeholder - actual asset generation will connect to Colab/media services
+  // Placeholder - actual asset generation will connect to Docker/media services
   const result: { imageUrl?: string; audioUrl?: string; subtitleUrl?: string } = {};
 
   if (block.visualPrompt) {
-    const state = colab.getState();
-    if (state.status === 'running' && state.ngrokUrl) {
-      try {
-        const resp = await axios.post(
-          `${state.ngrokUrl}/generate-image`,
-          {
-            prompt: block.visualPrompt,
-            output_path: path.join(process.cwd(), 'videolar', `image-${block.id}.png`),
-          },
-          { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } },
-        );
-        result.imageUrl = resp.data?.output_path || `generated://image-${block.id}.png`;
-      } catch (err: any) {
-        Logger.warn('[pictureNarration] Image generation via Colab failed', { error: err.message });
-        result.imageUrl = `generated://image-${block.id}.png`;
-      }
-    } else {
-      Logger.warn('[pictureNarration] Colab unavailable for image generation', {
-        status: state.status,
-      });
+    const sdUrl = dockerHost.getUrl('stablediffusion');
+    try {
+      const resp = await axios.post(
+        `${sdUrl}/generate-image`,
+        {
+          prompt: block.visualPrompt,
+          output_path: path.join(process.cwd(), 'videolar', `image-${block.id}.png`),
+        },
+        { timeout: 120000 },
+      );
+      result.imageUrl = resp.data?.output_path || `generated://image-${block.id}.png`;
+    } catch (err: any) {
+      Logger.warn('[pictureNarration] Image generation via Docker failed', { error: err.message });
       result.imageUrl = `generated://image-${block.id}.png`;
     }
   }
 
   if (block.text) {
-    const state = colab.getState();
-    if (state.status === 'running' && state.ngrokUrl) {
-      try {
-        const resp = await axios.post(
-          `${state.ngrokUrl}/tts`,
-          {
-            text: block.text,
-            output_path: path.join(process.cwd(), 'videolar', `audio-${block.id}.mp3`),
-          },
-          { timeout: 120000, headers: { 'ngrok-skip-browser-warning': 'true' } },
-        );
-        result.audioUrl = resp.data?.output_path || `generated://audio-${block.id}.mp3`;
-      } catch (err: any) {
-        Logger.warn('[pictureNarration] TTS via Colab failed', { error: err.message });
-        result.audioUrl = `generated://audio-${block.id}.mp3`;
-      }
-    } else {
-      Logger.warn('[pictureNarration] Colab unavailable for TTS', { status: state.status });
+    const xttsUrl = dockerHost.getUrl('xtts');
+    try {
+      const resp = await axios.post(
+        `${xttsUrl}/tts`,
+        {
+          text: block.text,
+          output_path: path.join(process.cwd(), 'videolar', `audio-${block.id}.mp3`),
+        },
+        { timeout: 120000 },
+      );
+      result.audioUrl = resp.data?.output_path || `generated://audio-${block.id}.mp3`;
+    } catch (err: any) {
+      Logger.warn('[pictureNarration] TTS via Docker failed', { error: err.message });
       result.audioUrl = `generated://audio-${block.id}.mp3`;
     }
   }

@@ -10,8 +10,7 @@ export interface ProjectTask {
     logoBase64?: string;
 }
 export declare class AdvancedVideoQueueManager {
-    private colabNgrokUrl;
-    constructor(colabNgrokUrl: string);
+    constructor();
     /**
      * FAZ 2: OTONOM TRANSKRİPT FALLBACK ZİNCİRİ (VİDEOYU İNDİRMEDEN)
      */
@@ -21,14 +20,14 @@ export declare class AdvancedVideoQueueManager {
      */
     generateScenariosWithFallback(task: ProjectTask, targetLang: string): Promise<any>;
     /**
-     * FAZ 4: MİKRO-PARÇA RENDER LOOP (COLAB İLETİŞİMİ)
+     * FAZ 4: MİKRO-PARÇA RENDER LOOP (DOCKER İLETİŞİMİ)
      */
-    runColabRenderLoop(projectId: string, scenes: any[]): Promise<void>;
+    runDockerRenderLoop(projectId: string, scenes: any[]): Promise<void>;
     private callLLM;
     private getResmiYouTubeCaption;
     private transcribeAudioWithGeminiFlash;
     private emitSSEProgress;
-    private postToColabNgrok;
+    private postToDocker;
     private extractLastFrameAsBase64;
 }
 //# sourceMappingURL=AdvancedVideoQueueManager.d.ts.map

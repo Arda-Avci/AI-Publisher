@@ -10,13 +10,13 @@
 
  *   2. Translate transcript text (Gemini/Zen fallback chain)
 
- *   3. Synthesize dubbed audio with XTTS-v2 (Colab endpoint)
+ *   3. Synthesize dubbed audio with XTTS-v2 (Docker endpoint)
 
  *   4. Stretch audio to match original duration (rubberband)
 
  *   5. Replace audio track in video
 
- *   6. Optional lip-sync with Wav2Lip (Colab endpoint)
+ *   6. Optional lip-sync with Wav2Lip (Docker endpoint)
 
  *
 
@@ -70,7 +70,7 @@ export declare function transcribeWithWhisper(videoPath: string, targetLang: str
 export declare function translateTranscript(text: string, sourceLang: string, targetLang: string): Promise<string>;
 /**
 
- * Synthesize dubbed audio using Colab XTTS-v2 endpoint.
+ * Synthesize dubbed audio using Docker XTTS-v2 endpoint.
 
  *
 
@@ -114,7 +114,7 @@ export declare function stretchAudioToDuration(audioPath: string, targetDuration
 export declare function replaceAudioTrack(videoPath: string, newAudioPath: string, outputPath: string): Promise<void>;
 /**
 
- * Apply lip-sync to video using Colab Wav2Lip endpoint.
+ * Apply lip-sync to video using Docker Wav2Lip endpoint.
 
  *
 

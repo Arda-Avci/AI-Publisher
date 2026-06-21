@@ -10,6 +10,14 @@ export declare class InfiniteCanvas {
      */
     createCanvas(userId: number, name: string): Promise<Canvas>;
     /**
+     * List canvases by user ID
+     */
+    listByUser(userId: number): Promise<Canvas[]>;
+    /**
+     * Delete canvas by ID
+     */
+    deleteCanvas(canvasId: string): Promise<boolean>;
+    /**
      * Get canvas by ID
      */
     getCanvas(canvasId: string): Promise<Canvas | null>;
@@ -50,14 +58,16 @@ export declare class InfiniteCanvas {
     private reconstructFromSnapshot;
     /**
      * Load canvas from database
-     * Note: Database integration will be added in a future sprint
      */
     private loadCanvasFromDb;
     /**
-     * Save canvas to database
-     * Note: Database integration will be added in a future sprint
+     * Save canvas to database (insert or update)
      */
-    saveCanvas(_canvas: Canvas): Promise<void>;
+    saveCanvas(canvas: Canvas): Promise<void>;
+    /**
+     * Load all canvases from DB for a user into memory
+     */
+    private loadUserCanvasesFromDb;
 }
 export declare const infiniteCanvas: InfiniteCanvas;
 //# sourceMappingURL=InfiniteCanvas.d.ts.map

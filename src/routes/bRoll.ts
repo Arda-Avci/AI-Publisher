@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Logger } from '../lib/logger.js';
 import path from 'path';
 import fs from 'fs-extra';
+import { dockerHost } from '../lib/docker-host.js';
 
 export const bRollRouter = Router();
 
@@ -19,20 +20,15 @@ bRollRouter.post(
         return res.status(400).json({ success: false, error: 'Prompt gerekli' });
       }
 
-      const COLAB_URL = process.env.COLAB_URL;
-      if (!COLAB_URL) {
-        return res
-          .status(503)
-          .json({ success: false, error: 'Colab bağlantısı (COLAB_URL) yapılandırılmamış.' });
-      }
-      const response = await axios.post(`${COLAB_URL}/generate-broll`, {
+      const bRollUrl = dockerHost.getServiceUrl('cogvideox', '/generate-broll');
+      const response = await axios.post(bRollUrl, {
         prompt,
         duration,
         output_format: 'mp4',
       });
 
       if (!response?.data?.download_url) {
-        return res.status(502).json({ success: false, error: 'Colab B-roll yanıt vermedi' });
+        return res.status(502).json({ success: false, error: 'Docker B-roll yanıt vermedi' });
       }
 
       const bRollResp = await axios({

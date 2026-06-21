@@ -17,7 +17,7 @@ import {
 import { CoverSelector } from './CoverSelector.js';
 import type { Job, UserCredits } from '../types.js';
 
-interface ColabStatusData {
+interface DockerStatusData {
   gpu?: string;
   gpuModel?: string;
   vram_used?: number;
@@ -202,7 +202,7 @@ export function GalleryPanel({
           flexShrink: 0,
         }}
       >
-        <ColabStatusPanel />
+        <DockerStatusPanel />
         {userCredits && (
           <CreditsBadge
             credits={userCredits.credits}
@@ -1157,15 +1157,15 @@ function MetaField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function ColabStatusPanel() {
-  const [data, setData] = useState<ColabStatusData | null>(null);
+function DockerStatusPanel() {
+  const [data, setData] = useState<DockerStatusData | null>(null);
   const [testResults, setTestResults] = useState<ModelTestEntry[] | null>(null);
   const [testLoading, setTestLoading] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('/api/v1/colab/status');
+      const res = await fetch('/api/v1/docker/status');
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -1176,26 +1176,26 @@ function ColabStatusPanel() {
   useEffect(() => {
     fetchStatus();
 
-    const bypassQuery = window.location.href.includes('ngrok')
-      ? '?ngrok-skip-browser-warning=true'
-      : '';
-    const sseUrl = `/colab-status-stream${bypassQuery}`;
-    let eventSource: EventSource | null = new EventSource(sseUrl);
+    const sseUrl = `/docker-status-stream`;
+    let eventSource: EventSource | null = new EventSource(sseUrl, { withCredentials: true });
 
     eventSource.onmessage = (event) => {
       try {
         const json = JSON.parse(event.data);
         setData(json);
-      } catch {}
+      } catch (e) {
+        console.error('[SSE-docker] parse error', e, event.data);
+      }
     };
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (evt) => {
+      console.error('[SSE-docker] connection error', evt);
       if (eventSource) {
         eventSource.close();
       }
       setTimeout(() => {
         if (eventSource) {
-          eventSource = new EventSource(sseUrl);
+          eventSource = new EventSource(sseUrl, { withCredentials: true });
         }
       }, 5000);
     };
@@ -1215,7 +1215,7 @@ function ColabStatusPanel() {
     setTestLoading(true);
     setTestOpen(true);
     try {
-      const res = await fetch('/api/v1/colab/test-models');
+      const res = await fetch('/api/v1/docker/test-models');
       const json = await res.json();
       setTestResults(Array.isArray(json) ? json : (json.results ?? []));
     } catch {
@@ -1248,7 +1248,7 @@ function ColabStatusPanel() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Cpu size={14} style={{ color: 'var(--accent)' }} />
         <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent)', flex: 1 }}>
-          Colab GPU
+          Docker GPU
         </span>
         <span
           style={{

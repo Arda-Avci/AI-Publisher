@@ -16,8 +16,8 @@ export interface TranscriptionResult {
 }
 /**
  * Zaman damgalı deşifre motoru.
- * Öncelikli olarak Google Colab sunucusundaki /transcribe endpoint'ini kullanır (faster-whisper & whisper fallback).
- * Colab kapalı ise Gemini 2.5 Flash structured JSON fallback altyapısını tetikler.
+ * Öncelikli olarak Docker Whisper servisindeki /transcribe endpoint'ini kullanır.
+ * Docker kapalı ise Gemini 2.5 Flash structured JSON fallback altyapısını tetikler.
  */
 export declare function transcribeVideoAudioWithTimestamps(videoPath: string, language?: string): Promise<TranscriptionResult>;
 /**

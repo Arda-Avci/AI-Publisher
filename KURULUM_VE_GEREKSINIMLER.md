@@ -6,11 +6,11 @@ Bu belge, **Otonom Çoklu Sosyal Medya Destekli AI Video Üretim ve Pazarlama Pl
 
 ## 🛠️ 1. Sistem ve Çalışma Ortamı Gereksinimleri
 
-Projenin çalıştırılabilmesi için yerel bilgisayarda ve uzak GPU sunucusunda (Google Colab veya lokal VRAM GPU) aşağıdaki temel yazılımların kurulu olması gerekir:
+Projenin çalıştırılabilmesi için yerel bilgisayarda ve Docker GPU container'larında aşağıdaki temel yazılımların kurulu olması gerekir:
 
 *   **Node.js:** v18.0.0 veya üzeri (ES Modül ve NodeNext desteğiyle).
 *   **FFmpeg & FFprobe:** Sistem PATH yoluna eklenmiş, altyazı ve font render desteğine sahip güncel sürüm. (Yerel makinede sadece hızlı concat işlemi için kullanılır).
-*   **Python:** v3.10 veya v3.11/v3.12 (Google Colab katmanı için).
+*   **Python:** v3.10 veya v3.11/v3.12 (Docker GPU container katmanı için).
 *   **PostgreSQL:** Ana veritabanı deposu (Üretim ortamı için).
 *   **SQLite:** Geliştirme ve hızlı yerel testler için entegre veritabanı.
 *   **Redis Server:** SSE durum yayınları ve Pub/Sub mimarisi için.
@@ -35,9 +35,9 @@ DEFAULT_ADMIN_PASSWORD=admin1234!!
 CALLBACK_TOKEN=local_callback_secure_token_2026
 PUBLIC_URL=https://your-localtunnel-subdomain.loca.lt
 
-# Colab Entegrasyon Ayarları
-COLAB_URL=https://your-ngrok-subdomain.ngrok-free.app
-MOCK_COLAB=false  # Gerçek AI video üretimi için false, testler için true yapılmalıdır
+# Docker GPU Container Ayarları
+DOCKER_HOST=http://localhost
+MOCK_DOCKER=false  # Gerçek AI video üretimi için false, testler için true yapılmalıdır
 
 # Yapay Zeka Servis Sağlayıcıları (Fallback Hiyerarşisi için)
 ZEN_FREE_API_KEY=your_zen_free_key

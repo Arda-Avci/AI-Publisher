@@ -19,7 +19,7 @@
 | Güvenlik Başlıkları (CSP, XSS, CSRF) | ✅ İYİ | Kapsamlı |
 | Session Güvenliği | ✅ İYİ | Production kontrolü mevcut |
 | `@ts-ignore` Kalıntıları | ✅ TEMİZ | Hiçbiri bulunamadı |
-| TODO/FIXME Kalıntıları | ⚠️ 7 adet TODO | Tamamlanmamış Colab entegrasyonları |
+| TODO/FIXME Kalıntıları | ⚠️ 7 adet TODO | Tamamlanmamış Docker entegrasyonları |
 | Bellek Yönetimi | ❌ KRİTİK | OOM hataları yaygın |
 
 ---
@@ -117,16 +117,16 @@ This will become an error in a future version.
 
 | Dosya | Satır | TODO İçeriği |
 |---|---|---|
-| [pictureNarration.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/pictureNarration.ts#L144) | 144 | Connect to Colab image generation |
+| [pictureNarration.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/pictureNarration.ts#L144) | 144 | Connect to Docker image generation |
 | [pictureNarration.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/pictureNarration.ts#L149) | 149 | Connect to TTS service |
 | [pictureNarration.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/pictureNarration.ts#L153) | 153 | Generate subtitles from text |
-| [inpainting.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/inpainting.ts#L101) | 101 | Colab `/api/v1/inpaint` endpoint not yet implemented |
-| [eyeContact.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/eyeContact.ts#L67) | 67 | Colab `/api/v1/eye-contact` endpoint not yet implemented |
-| [aiBroll.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/aiBroll.ts#L69) | 69 | Colab `/generate-broll` endpoint not fully implemented |
+| [inpainting.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/inpainting.ts#L101) | 101 | Docker `/api/v1/inpaint` endpoint not yet implemented |
+| [eyeContact.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/eyeContact.ts#L67) | 67 | Docker `/api/v1/eye-contact` endpoint not yet implemented |
+| [aiBroll.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/services/aiBroll.ts#L69) | 69 | Docker `/generate-broll` endpoint not fully implemented |
 | [batch.ts](file:///c:/Users/Damla/Proje/AI-Publisher/src/routes/batch.ts#L197) | 197 | Connect to actual publishing logic |
 
 > [!WARNING]
-> Bu servisler çağrıldığında Colab tarafında karşılık gelen endpoint bulunamayabilir. Runtime hatası riski taşır.
+> Bu servisler çağrıldığında Docker container'da karşılık gelen endpoint bulunamayabilir. Runtime hatası riski taşır.
 
 ---
 

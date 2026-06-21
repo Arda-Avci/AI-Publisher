@@ -1186,7 +1186,7 @@ export function getDashboardScripts(params: {
         if (window.trackedJobs.has(jobId)) return;
         window.trackedJobs.add(jobId);
 
-        const es = new EventSource('/progress/' + jobId + '?ngrok-skip-browser-warning=true');
+        const es = new EventSource('/api/v1/progress/stream?jobId=' + jobId);
         
         es.onmessage = function(event) {
           const data = JSON.parse(event.data);
@@ -1197,8 +1197,8 @@ export function getDashboardScripts(params: {
             if (data.stageKey === 'stageSceneGenerating') {
               displayStage = displayStage.replace('{{sceneNumber}}', data.sceneNumber || '?');
             }
-            if (data.stageKey === 'stageColabProgress') {
-              displayStage = displayStage.replace('{{colabMessage}}', data.colabMessage || data.colabStage || '');
+            if (data.stageKey === 'stageDockerProgress') {
+              displayStage = displayStage.replace('{{dockerMessage}}', data.dockerMessage || data.dockerStage || '');
             }
           }
           
@@ -1212,11 +1212,11 @@ export function getDashboardScripts(params: {
             const logLine = document.createElement('div');
             logLine.style.marginBottom = '4px';
             let pctVal = data.percent || 0;
-            if (data.stageKey === 'stageColabProgress' && data.colabPercent !== undefined) {
-              pctVal = data.colabPercent;
+            if (data.stageKey === 'stageDockerProgress' && data.dockerPercent !== undefined) {
+              pctVal = data.dockerPercent;
             }
             let logText = '[' + time + '] [RABBITMQ] Job ' + jobId + ' -> ' + displayStage + ' (' + pctVal + '%)';
-            if (data.colabMessage) logText += ' | ' + data.colabMessage + (data.etaSeconds ? ' [ETA:' + data.etaSeconds + 's]' : '');
+            if (data.dockerMessage) logText += ' | ' + data.dockerMessage + (data.etaSeconds ? ' [ETA:' + data.etaSeconds + 's]' : '');
             logLine.textContent = logText;
             termLog.appendChild(logLine);
             term.scrollTop = term.scrollHeight;
@@ -1227,8 +1227,8 @@ export function getDashboardScripts(params: {
           const badge = card.querySelector('.status-badge');
           if (badge && displayStage) {
             let badgePct = data.percent || 0;
-            if (data.stageKey === 'stageColabProgress' && data.colabPercent !== undefined) {
-              badgePct = data.colabPercent;
+            if (data.stageKey === 'stageDockerProgress' && data.dockerPercent !== undefined) {
+              badgePct = data.dockerPercent;
             }
             badge.textContent = displayStage + ' (' + badgePct + '%)';
             badge.className = 'status-badge status-processing';
@@ -1484,159 +1484,34 @@ export function getDashboardScripts(params: {
       const savedTheme = '${currentTheme}';
       if (savedTheme !== 'default') document.documentElement.classList.add('theme-' + savedTheme);
 
-      let colabPopoverOpen = false;
-      let colabEventSource = null;
-      let colabReconnectTimer = null;
-
-      function fmtUptime(secs) {
-        if (secs == null) return '—';
-        secs = Number(secs) || 0;
-        const h = Math.floor(secs / 3600);
-        const m = Math.floor((secs % 3600) / 60);
-        const s = secs % 60;
-        if (h > 0) return h + 'h ' + m + 'm';
-        if (m > 0) return m + 'm ' + s + 's';
-        return s + 's';
+      function renderDockerBadge() {
+        const label = document.getElementById('dockerLabel');
+        const dot = document.getElementById('dockerDot');
+        if (!label) return;
+        label.textContent = '🟢 Docker';
+        if (dot) dot.style.background = 'hsl(142,70%,50%)';
       }
 
-      function renderColabBadge(state) {
-        const badge = document.getElementById('colabBadge');
-        const label = document.getElementById('colabLabel');
-        if (!badge || !label) return;
-        ['colab-stopped','colab-starting','colab-running','colab-stopping','colab-error'].forEach(c => badge.classList.remove(c));
-        const status = state && state.status ? state.status : 'stopped';
-        badge.classList.add('colab-' + status);
-
-        const isTr = '${currentLang}' === 'tr';
-        if (status === 'stopped') {
-          label.textContent = '⚫ Colab';
-        } else if (status === 'starting') {
-          label.textContent = isTr ? '🟡 Başlatılıyor…' : '🟡 Starting…';
-        } else if (status === 'stopping') {
-          label.textContent = isTr ? '🟡 Durduruluyor…' : '🟡 Stopping…';
-        } else if (status === 'running') {
-          const mem = state.gpuMemoryGB;
-          if (mem != null) {
-            label.textContent = '🟢 T4 ' + Number(mem).toFixed(1) + 'GB';
-          } else {
-            label.textContent = '🟢 Colab';
-          }
-        } else if (status === 'error') {
-          label.textContent = isTr ? '🔴 Hata' : '🔴 Error';
-        }
-
-        const sEl = document.getElementById('colabPopStatus');
-        const uEl = document.getElementById('colabPopUrl');
-        const gEl = document.getElementById('colabPopGpu');
-        const upEl = document.getElementById('colabPopUptime');
-        const eRow = document.getElementById('colabPopErrRow');
-        const eEl = document.getElementById('colabPopErr');
-        if (sEl) sEl.textContent = status;
-        if (uEl) uEl.textContent = state.ngrokUrl || '—';
-        if (gEl) gEl.textContent = state.gpuMemoryGB != null ? Number(state.gpuMemoryGB).toFixed(2) + ' GB' : '—';
-        if (upEl) upEl.textContent = fmtUptime(state.uptimeSeconds);
-        if (eRow && eEl) {
-          if (state.lastError) {
-            eRow.style.display = '';
-            eEl.textContent = String(state.lastError).slice(0, 200);
-          } else {
-            eRow.style.display = 'none';
-          }
-        }
-        const startBtn = document.querySelector('.colab-action-start');
-        const stopBtn = document.querySelector('.colab-action-stop');
-        if (startBtn) startBtn.disabled = (status === 'starting' || status === 'stopping' || status === 'running');
-        if (stopBtn) stopBtn.disabled = (status === 'stopped' || status === 'starting' || status === 'stopping');
-      }
-
-      async function pollColabStatus() {
+      async function pollDockerStatus() {
         try {
-          const res = await fetch('/colab-status', { credentials: 'same-origin' });
-          if (!res.ok) return;
+          const res = await fetch('/docker-status', { credentials: 'same-origin' });
+          if (!res.ok) { renderDockerBadge(); return; }
           const state = await res.json();
-          renderColabBadge(state);
-        } catch (err) {
-        }
-      }
-
-      function startColabSSE() {
-        if (colabEventSource) {
-          try { colabEventSource.close(); } catch {}
-          colabEventSource = null;
-        }
-        if (colabReconnectTimer) {
-          clearTimeout(colabReconnectTimer);
-          colabReconnectTimer = null;
-        }
-        if (typeof EventSource === 'undefined') {
-          void pollColabStatus();
-          return;
-        }
-        const es = new EventSource('/colab-status-stream?ngrok-skip-browser-warning=true');
-        colabEventSource = es;
-        es.onmessage = (e) => {
-          try {
-            const state = JSON.parse(e.data);
-            renderColabBadge(state);
-          } catch {}
-        };
-        es.onerror = () => {
-          try { es.close(); } catch {}
-          colabEventSource = null;
-          colabReconnectTimer = setTimeout(startColabSSE, 5000);
-        };
-      }
-
-      function toggleColabPopover(e) {
-        if (e) e.stopPropagation();
-        const pop = document.getElementById('colabPopover');
-        if (!pop) return;
-        colabPopoverOpen = !colabPopoverOpen;
-        pop.style.display = colabPopoverOpen ? 'block' : 'none';
-        if (colabPopoverOpen) void pollColabStatus();
-      }
-
-      function closeColabPopover() {
-        const pop = document.getElementById('colabPopover');
-        if (pop) pop.style.display = 'none';
-        colabPopoverOpen = false;
-      }
-
-      document.addEventListener('click', function(e) {
-        if (!colabPopoverOpen) return;
-        const wrap = document.getElementById('colabStatusWrap');
-        if (wrap && !wrap.contains(e.target)) closeColabPopover();
-      });
-
-      async function manualColabStart() {
-        showToast('Colab GPU başlatılıyor...', 'success');
-        try {
-          const res = await fetch('/colab-start', { method: 'POST' });
-          const data = await res.json();
-          if (data.success) {
-            showToast('Başlatma sinyali gönderildi.', 'success');
-          } else {
-            showToast('Hata: ' + (data.error || 'unknown'), 'error');
+          const label = document.getElementById('dockerLabel');
+          if (label) {
+            if (state.healthy) {
+              label.textContent = '🟢 Docker';
+            } else {
+              label.textContent = '🟡 Docker Kısmi';
+            }
           }
-        } catch (err) {
-          showToast('Bağlantı hatası.', 'error');
+        } catch {
+          renderDockerBadge();
         }
       }
 
-      async function manualColabStop() {
-        showToast('Colab GPU durduruluyor...', 'success');
-        try {
-          const res = await fetch('/colab-stop', { method: 'POST' });
-          const data = await res.json();
-          if (data.success) {
-            showToast('Durdurma sinyali gönderildi.', 'success');
-          } else {
-            showToast('Hata: ' + (data.error || 'unknown'), 'error');
-          }
-        } catch (err) {
-          showToast('Bağlantı hatası.', 'error');
-        }
-      }
+      setInterval(pollDockerStatus, 30000);
+      void pollDockerStatus();
 
       async function selectCover(jobId, coverIndex, element) {
         try {
@@ -1665,7 +1540,7 @@ export function getDashboardScripts(params: {
         }
       }
 
-      startColabSSE();
+      void pollDockerStatus();
     </script>
   `;
 }

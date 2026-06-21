@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAdmin } from '../middleware/adminAuth.js';
 import { Logger } from '../lib/logger.js';
+import { dockerHost } from '../lib/docker-host.js';
 import os from 'os';
 
 const router = Router();
@@ -128,7 +129,7 @@ router.get('/system', async (req, res) => {
         memoryUsage: process.memoryUsage(),
         cpuUsage: process.cpuUsage(),
         dbConnections: 1,
-        colabConnected: !!process.env.COLAB_URL,
+        dockerConnected: !!process.env.DOCKER_HOST,
         activeJobs,
         queuedJobs,
         completedJobs,

@@ -73,7 +73,7 @@ def get_pipeline(video_model, is_i2v):
 
 def frames_to_mp4(frames, path, fps=8):
     uint8_frames = [(np.clip(np.array(f), 0.0, 1.0) * 255).astype(np.uint8) for f in frames]
-    imageio.mimwrite(path, uint8_frames, fps=fps, quality=8)
+    imageio.mimwrite(path, uint8_frames, fps=fps, codec='libx264', pixelformat='yuv420p', output_params=['-movflags', '+faststart', '-preset', 'medium', '-crf', '18'])
 
 @app.route("/generate", methods=["POST"])
 def generate():

@@ -49,18 +49,22 @@ export function SplitScreenPanel({
   const handlePreview = async () => {
     if (!jobId) return;
     try {
-      const colabUrl = (window as any).__COLAB_URL__ || '';
-      // Use Colab URL for preview since the endpoint is on Colab
-      const url = `${colabUrl}/api/v1/split/preview?layout=${encodeURIComponent(activeLayout)}&position=${encodeURIComponent(splitPosition)}`;
-      const resp = await axios.get(url, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
-        responseType: 'blob',
-      });
-      const objectUrl = URL.createObjectURL(resp.data);
-      setPreviewUrl(objectUrl);
+      const resp = await axios.post(
+        '/api/v1/split/preview',
+        {
+          jobId,
+          layout: activeLayout,
+          position: splitPosition,
+        },
+      );
+      if (resp.data?.success && resp.data?.data?.previewUrl) {
+        setPreviewUrl(resp.data.data.previewUrl);
+      } else {
+        setPreviewUrl(null);
+      }
       setApplied(false);
-    } catch {
-      // fallback: use placeholder
+    } catch (err) {
+      console.error('[SPLIT] Preview error:', err);
       setPreviewUrl(null);
     }
   };
@@ -68,20 +72,18 @@ export function SplitScreenPanel({
   const handleApply = async () => {
     if (!jobId) return;
     try {
-      const colabUrl = (window as any).__COLAB_URL__ || '';
       await axios.post(
-        `${colabUrl}/api/v1/split/apply`,
+        '/api/v1/split/apply',
         {
-          job_id: jobId,
+          jobId,
           layout: activeLayout,
           position: splitPosition,
         },
-        {
-          headers: { 'ngrok-skip-browser-warning': 'true', 'bypass-tunnel-reminder': 'true' },
-        },
       );
       setApplied(true);
-    } catch {
+    } catch (err) {
+      console.error('[SPLIT] Apply error:', err);
+    }
       setApplied(false);
     }
   };

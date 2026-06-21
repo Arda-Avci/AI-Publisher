@@ -157,7 +157,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
     // ✂️ Remove Background
     const handleRemoveBackground = async () => {
         setIsProcessing(true);
-        setStatusMsg('Arka plan temizleniyor (Colab rembg)...');
+        setStatusMsg('Arka plan temizleniyor (Docker rembg)...');
         try {
             const response = await fetch(editorImage);
             const imageBlob = await response.blob();
@@ -192,7 +192,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
         if (!maskCanvasRef.current)
             return;
         setIsProcessing(true);
-        setStatusMsg('Görsel inpaint ediliyor (Colab SD)...');
+        setStatusMsg('Görsel inpaint ediliyor (Docker SD)...');
         try {
             // Get base image blob
             const response = await fetch(editorImage);

@@ -242,7 +242,7 @@ export function StudioToolsPanel({
             fontFamily: 'var(--font-mono)',
           }}
         >
-          Colab GPU gerekli — proses sonrası otomatik uygulanır
+          Docker GPU gerekli — proses sonrası otomatik uygulanır
         </span>
       </div>
     </div>

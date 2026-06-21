@@ -27,7 +27,6 @@ import { registerProgressRoutes } from './routes/progress.js';
 import { registerSettingsRoutes } from './routes/settings.js';
 import { registerOpportunityRoutes } from './routes/opportunity.js';
 import { registerDifferentiationRoutes } from './routes/differentiation.js';
-import { registerColabRoutes } from './routes/colab.js';
 import { registerEditorRoutes } from './routes/editor.js';
 import { registerCreditRoutes } from './routes/credits.js';
 import { registerLocalesRoutes } from './routes/locales.js';
@@ -45,7 +44,6 @@ import { charactersRouter } from './routes/characters.js';
 import { publicRouter } from './routes/public.js';
 import { talkShowRouter } from './routes/talkShow.js';
 import { scriptsRouter } from './routes/scripts.js';
-import colabStatusRouter from './routes/colabStatus.js';
 import canvasRouter from './routes/canvas.js';
 import apiKeysRouter from './routes/apiKeys.js';
 import batchRouter from './routes/batch.js';
@@ -64,6 +62,8 @@ import aiStudioRouter from './routes/aiStudio.js';
 import storyboardRouter from './routes/storyboard.js';
 import editQueueRouter from './routes/editQueue.js';
 import { loraRouter } from './routes/lora.js';
+import { uploadRouter } from './routes/upload.js';
+import { schedulePublishRouter } from './routes/schedulePublish.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -116,12 +116,12 @@ app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
     `default-src 'self'; ` +
-      `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
+      `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'; ` +
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ` +
       `font-src 'self' https://fonts.gstatic.com; ` +
       `img-src 'self' data: https: blob:; ` +
       `media-src 'self' https: blob: http:; ` +
-      `connect-src 'self' wss: ws: https://*.ngrok.io https://*.ngrok-free.app https://*.localtunnel.me; ` +
+      `connect-src 'self' wss: ws:; ` +
       `frame-src 'self'; ` +
       `frame-ancestors 'self'`,
   );
@@ -166,7 +166,6 @@ registerProgressRoutes(app);
 registerSettingsRoutes(app);
 registerOpportunityRoutes(app);
 registerDifferentiationRoutes(app);
-registerColabRoutes(app);
 registerEditorRoutes(app);
 registerCreditRoutes(app);
 registerLocalesRoutes(app);
@@ -185,7 +184,6 @@ app.use('/api/v1/talkshow', scriptsRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/characters', charactersRouter);
 app.use('/api/v1/public', publicRouter);
-app.use('/api/v1/colab', colabStatusRouter);
 app.use('/api/v1/canvas', canvasRouter);
 app.use('/api/v1/api-keys', apiKeysRouter);
 app.use('/api/v1/batch', batchRouter);
@@ -205,6 +203,8 @@ app.use('/api/v1/storyboard', storyboardRouter);
 app.use('/api/v1/edit-queue', editQueueRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/lora', loraRouter);
+app.use('/api/v1/upload', uploadRouter);
+app.use('/api/v1/schedule-publish', schedulePublishRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {
@@ -226,17 +226,6 @@ app.get(/^\/(?!api|login|logout)(.*)/, (req, res) => {
 async function startServer() {
   await initDatabase();
   await initRabbitMQ();
-
-  // Ngrok tünelini başlat (varsa token ile)
-  try {
-    const { startNgrokTunnel } = await import('./lib/ngrok-tunnel.js');
-    await startNgrokTunnel(Number(PORT));
-  } catch (err: any) {
-    Logger.warn(
-      'Node.js ngrok tüneli başlatılamadı:',
-      (err as Error)?.stack || (err as Error)?.message || err,
-    );
-  }
 
   app.listen(Number(PORT), '127.0.0.1', () => {
     Logger.info(`AI Publisher sunucusu aktif: http://localhost:${PORT}`);

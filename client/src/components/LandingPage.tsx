@@ -1323,7 +1323,7 @@ export function LandingPage({
               marginRight: 'auto',
             }}
           >
-            Kredi kartı gerekmez. Colab GPU'su ile hemen video üretmeye başlayın.
+            Kredi kartı gerekmez. GPU ile hemen video üretmeye başlayın.
           </p>
           <button
             onClick={() => setIsLoginOpen(true)}

@@ -16,12 +16,12 @@ LoRA (Low-Rank Adaptation) fine-tuning pipeline'ı eklendi:
   - SDXL tabanlı, LoRA rank=32, 8-bit AdamW, gradient checkpointing
   - 3 endpoint: `/health`, `/train`, `/infer`
 - **Yeni servis:** `src/services/loraService.ts`
-  - `trainLoRA()`: Colab container'da LoRA eğitimi başlatma
+  - `trainLoRA()`: Docker container'da LoRA eğitimi başlatma
   - `inferWithLoRA()`: Eğitilmiş weight'lerle görsel üretme
 - **DB değişikliği:**
   - `character_lora_weights` tablosu (job_id, character_name, weights_path, training_status)
   - `video_jobs.lora_enabled` kolonu
-- **queue.ts entegrasyonu:** Her sahne üretiminden önce LoRA weights lookup → `lora_weights_path` payload'a eklenir → colab_server.py video generation'dan önce LoRA inference yapar → çıkan görsel init_image olarak kullanılır
+- **queue.ts entegrasyonu:** Her sahne üretiminden önce LoRA weights lookup → `lora_weights_path` payload'a eklenir → Docker container video generation'dan önce LoRA inference yapar → çıkan görsel init_image olarak kullanılır
 
 ### Akış
 1. Kullanıcı dashboard'da LoRA checkbox'ı işaretler + 3-5 referans görsel yükler
@@ -53,5 +53,5 @@ LoRA (Low-Rank Adaptation) fine-tuning pipeline'ı eklendi:
 ### Gelecek İyileştirmeler
 - [ ] Önceden eğitilmiş karakter kütüphanesi (tekrar kullanım)
 - [ ] Çoklu karakter desteği (her karakter için ayrı LoRA)
-- [ ] LoRA weight'lerinin Drive'da kalıcı saklanması
+- [ ] LoRA weight'lerinin kalıcı saklanması (Docker volume)
 - [ ] Eğitim ilerlemesinin SSE ile canlı broadcast'i
