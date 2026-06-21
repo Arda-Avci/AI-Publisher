@@ -57,14 +57,16 @@ if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publish
   echo "✅ Base image registry'de mevcut. Build atlandi."
 elif [ -f "Dockerfile.base" ]; then
   echo "[INFO] Base registry'de yok, Dockerfile.base Kaniko ile build ediliyor..."
+  KANIKO_OUTPUT=$(mktemp)
   $KANIKO_BIN --context=. \
          --dockerfile=Dockerfile.base \
          --destination=localhost:5000/ai-publisher-base:latest \
          --tarPath=base.tar \
          --whitelist-var-run=false \
          --ignore-var-run \
-         --snapshot-mode=redo
-  if [ $? -eq 0 ]; then
+         --snapshot-mode=redo > "$KANIKO_OUTPUT" 2>&1
+  KANIKO_EXIT=$?
+  if [ $KANIKO_EXIT -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
     echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
     if command -v pigz &> /dev/null; then
@@ -75,9 +77,14 @@ elif [ -f "Dockerfile.base" ]; then
     rm -f base.tar
     echo "✅ Base imaji Drive'a kaydedildi."
   else
-    echo "❌ Base Docker Imajı insa edilirken hata olustu!"
+    echo " Base Docker Imaj insa edilirken hata olustu! (exit: $KANIKO_EXIT)"
+    echo "=== KANIKO OUTPUT ==="
+    head -100 "$KANIKO_OUTPUT"
+    rm -f "$KANIKO_OUTPUT"
     exit 1
   fi
+  rm -f "$KANIKO_OUTPUT"
+fi
 else
   echo "❌ Dockerfile.base bulunamadi!"
   exit 1
