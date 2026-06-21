@@ -15,6 +15,9 @@
 - **PostgreSQL datetime Uyumluluk Yaması:**
   - SQLite uyumlu `datetime('now')` SQL fonksiyon çağrılarının PostgreSQL tarafında `function datetime(unknown) does not exist` hatası vermesi engellendi.
   - `src/db.ts` içerisindeki `convertQuery` SQL dönüştürücüsüne regex tabanlı `datetime('now')` -> `CURRENT_TIMESTAMP` dönüşüm katmanı eklenerek entegrasyon testlerinin PostgreSQL üzerinde hatasız çalışması sağlandı.
+- **Apt-Get İndirme Donması Yaması:**
+  - Colab üzerinde Kaniko ile `Dockerfile.base` derlenirken `archive.ubuntu.com` yavaşlığı veya ağ kesintileri nedeniyle paket indirme adımının takılı kalması engellendi.
+  - `colab_docker/Dockerfile.base` içerisine robust APT timeout (`Acquire::http::Timeout "30"`) ve retry (`Acquire::Retries "5"`) kuralları eklenerek ağ donmaları durumunda otomatik tekrar deneme mekanizması aktif edildi.
 - **Tip Güvenliği ve Doğrulama:**
   - `npm run check:types` ile TypeScript strictNullChecks ve tip uyuşmazlığı hataları tamamen giderildi. Derleme sıfır hata ile tamamlanıyor.
 

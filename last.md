@@ -488,6 +488,24 @@ Bir sonraki oturumda Oturum #11'den devam edilecek. Tüm önceki oturumlarda yap
 - [ ] **Mochi-1 & Pyramid-Flow** (Text-to-Video / Image-to-Video)
 
 ### Çıktılar
-- `TODO.md` dosyasına `FAZ 6: Hazır Docker Hub Video Motorlarının Entegrasyonu` eklendi.
-- `PROJECT_STATUS.md` sıradaki adımlar listesine dahil edildi.
 - `last.md` dosyası güncellendi.
+
+---
+
+## 📅 2026-06-22 — Oturum #13
+
+### Oturum Bilgileri
+- **Saat**: 02:15 (UTC+3)
+- **Çalışma Alanı**: `c:\Users\Damla\Proje\AI-Publisher`
+- **Proje Durumu**: v6.0, Sürüm 0.6.0-dev
+- **Conversation ID**: `cf60fa02-25bd-4b39-9dc6-7879af882299`
+- **Amaç**: Kaniko base build donma hatasının giderilmesi ve git push yapılması
+
+### Yapılan İşlemler
+
+| # | Saat | İşlem | Durum |
+|---|------|-------|-------|
+| 1 | 02:15 | `Dockerfile.base` dosyasındaki apt-get paket indirme donması analiz edildi | ✅ |
+| 2 | 02:16 | `Dockerfile.base` dosyasına APT timeout ve retry parametreleri eklenerek donmalar engellendi | ✅ |
+| 3 | 02:16 | Değişiklikler commit edilip `git push` ile uzak depoya başarıyla gönderildi | ✅ |
+| 4 | 02:16 | `PROJECT_STATUS.md` ve `last.md` dosyaları güncellendi | ✅ |
