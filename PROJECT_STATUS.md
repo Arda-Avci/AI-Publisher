@@ -12,6 +12,9 @@
   - Colab ortamında git clone ve `build_all_v2.sh` scriptlerini bash ile tetiklerken yaşanan GLIBC uyuşmazlığı (`libc.so.6: version GLIBC_2.33 not found`) hatası giderildi.
   - Hatanın Colab'ın custom kütüphane yollarının (`LD_LIBRARY_PATH`) sistem araçlarının (git, bash vb.) dynamic linker işlemlerini etkilemesinden kaynaklandığı saptandı.
   - `colab_setup.ipynb`, `colab_setup_v2.ipynb`, `colab_docker_build.ipynb` ve `Google_Colab_AI_Publisher.ipynb` dosyalarındaki tüm `subprocess` (run, Popen, check_call vb.) çağrıları taranarak, öncesinde `LD_LIBRARY_PATH` değişkenini temizleyen ve kabuk işlemlerini bu temizlenmiş çevre değişkeniyle çalıştıran yama uygulandı.
+- **PostgreSQL datetime Uyumluluk Yaması:**
+  - SQLite uyumlu `datetime('now')` SQL fonksiyon çağrılarının PostgreSQL tarafında `function datetime(unknown) does not exist` hatası vermesi engellendi.
+  - `src/db.ts` içerisindeki `convertQuery` SQL dönüştürücüsüne regex tabanlı `datetime('now')` -> `CURRENT_TIMESTAMP` dönüşüm katmanı eklenerek entegrasyon testlerinin PostgreSQL üzerinde hatasız çalışması sağlandı.
 - **Tip Güvenliği ve Doğrulama:**
   - `npm run check:types` ile TypeScript strictNullChecks ve tip uyuşmazlığı hataları tamamen giderildi. Derleme sıfır hata ile tamamlanıyor.
 

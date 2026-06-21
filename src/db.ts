@@ -15,6 +15,9 @@ const poolConfig: PoolConfig = {
 const pool = new Pool(poolConfig);
 
 function convertQuery(sql: string): string {
+  // SQLite datetime('now') -> PostgreSQL CURRENT_TIMESTAMP
+  const modifiedSql = sql.replace(/datetime\(\s*['"]now['"]\s*(?:,\s*['"]\w+['"]\s*)*\)/gi, 'CURRENT_TIMESTAMP');
+
   let counter = 1;
   let inSingleQuote = false;
   let inDoubleQuote = false;
@@ -22,8 +25,8 @@ function convertQuery(sql: string): string {
   let inBlockComment = false;
   let result = '';
 
-  for (let i = 0; i < sql.length; i++) {
-    const char = sql[i];
+  for (let i = 0; i < modifiedSql.length; i++) {
+    const char = modifiedSql[i];
     const nextChar = sql[i + 1] || '';
 
     if (inLineComment) {
