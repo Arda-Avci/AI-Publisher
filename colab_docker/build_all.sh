@@ -11,6 +11,15 @@ if [ -f "/usr/local/bin/kaniko" ]; then
 elif [ -f "/kaniko/executor" ]; then
   KANIKO_BIN="/kaniko/executor"
 fi
+# Validate existing Kaniko binary (not HTML page from failed download)
+if [ -f "$KANIKO_BIN" ] && [ -x "$KANIKO_BIN" ]; then
+  MAGIC=$(head -c 4 "$KANIKO_BIN" 2>/dev/null | od -A n -t x1 | tr -d ' ' 2>/dev/null)
+  if [ "$MAGIC" != "7f454c46" ]; then
+    echo "[WARN] $KANIKO_BIN ELF binary degil (HTML/text). Yeniden indiriliyor..."
+    rm -f /kaniko/executor /usr/local/bin/kaniko
+    KANIKO_BIN=""
+  fi
+fi
 # Auto-install Kaniko if missing (safety net)
 if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
   echo "[INFO] Kaniko binary bulunamadi. Otomatik indiriliyor..."
