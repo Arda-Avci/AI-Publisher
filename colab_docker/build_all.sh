@@ -22,40 +22,18 @@ if [ -f "$KANIKO_BIN" ] && [ -x "$KANIKO_BIN" ]; then
 fi
 # Auto-install Kaniko if missing (safety net)
 if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
-  echo "[INFO] Kaniko binary bulunamadi. Otomatik indiriliyor..."
-  mkdir -p /kaniko
-  # Once HTTP diagnostic, then try download
-  echo "  HTTP diagnostic: curl -sI https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64"
-  curl -sI "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64" 2>&1 | head -5
-  echo "  HTTP diagnostic: curl -sI https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64"
-  curl -sI "https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64" 2>&1 | head -5
-  for K_URL in \
-    "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64" \
-    "https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64" \
-    "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.21.1/kaniko-linux-amd64"; do
-    echo "  Trying: $K_URL"
-    curl -L --connect-timeout 15 --max-time 120 -o /kaniko/executor "$K_URL" 2>/dev/null
-    if [ -f /kaniko/executor ] && [ -s /kaniko/executor ]; then
-      chmod +x /kaniko/executor
-      # ELF binary dogrulama (HTML sayfa indiyse atla)
-      MAGIC=$(head -c 4 /kaniko/executor | od -A n -t x1 | tr -d ' ')
-      if [ "$MAGIC" = "7f454c46" ]; then
-        ln -sf /kaniko/executor /usr/local/bin/kaniko
-        KANIKO_BIN="/kaniko/executor"
-        echo "  Kaniko kuruldu."
-        break
-      else
-        echo "  HTML/text sayfasi indi, atlaniyor..."
-        rm -f /kaniko/executor
-      fi
-    else
-      rm -f /kaniko/executor
-    fi
-  done
-  if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
-    echo "[ERROR] Kaniko indirilemedi! Manual:"
-    echo "  curl -Lo /kaniko/executor https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64"
-    echo "  chmod +x /kaniko/executor"
+  echo "[INFO] Kaniko binary bulunamadi. Docker imajindan kopyalaniyor..."
+  docker pull gcr.io/kaniko-project/executor:latest 2>/dev/null || true
+  docker create --name kaniko-temp gcr.io/kaniko-project/executor:latest 2>/dev/null || true
+  docker cp kaniko-temp:/kaniko/executor /usr/local/bin/kaniko 2>/dev/null || true
+  docker rm kaniko-temp 2>/dev/null || true
+  if [ -f /usr/local/bin/kaniko ] && [ -s /usr/local/bin/kaniko ]; then
+    chmod +x /usr/local/bin/kaniko
+    KANIKO_BIN="/usr/local/bin/kaniko"
+    echo "  Kaniko kuruldu (Docker imajindan)."
+  else
+    echo "[ERROR] Kaniko Docker imajindan kopyalanamadi."
+    echo "  docker pull gcr.io/kaniko-project/executor:latest basarisiz."
     exit 1
   fi
 fi
