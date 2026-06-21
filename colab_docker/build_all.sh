@@ -4,36 +4,24 @@
 DRIVE_DIR="/content/drive/MyDrive/Colab Notebooks/docker/images"
 mkdir -p "$DRIVE_DIR"
 
-# Get absolute path of kaniko to prevent command not found errors
+# Get absolute path of kaniko; auto-install if missing
 KANIKO_BIN="kaniko"
 if [ -f "/usr/local/bin/kaniko" ]; then
   KANIKO_BIN="/usr/local/bin/kaniko"
 elif [ -f "/kaniko/executor" ]; then
   KANIKO_BIN="/kaniko/executor"
 fi
-# Fix permission if binary exists but not executable
-if [ "$KANIKO_BIN" = "kaniko" ] || [ -z "$KANIKO_BIN" ]; then
-  # Try harder - use full path
-  if [ -f "/usr/local/bin/kaniko" ]; then
-    KANIKO_BIN="/usr/local/bin/kaniko"
-  elif [ -f "/kaniko/executor" ]; then
-    KANIKO_BIN="/kaniko/executor"
-  fi
-fi
-if [ -f "$KANIKO_BIN" ] && [ ! -x "$KANIKO_BIN" ]; then
-  chmod +x "$KANIKO_BIN"
-fi
-# Final check - auto-install if missing
+# Auto-install Kaniko if missing (safety net)
 if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
-  echo "Kaniko binary bulunamadi. Otomatik indiriliyor..."
+  echo "[INFO] Kaniko binary bulunamadi. Otomatik indiriliyor..."
   mkdir -p /kaniko
   for K_URL in \
     "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64" \
     "https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64" \
     "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.21.1/kaniko-linux-amd64"; do
-    echo "  Deneniyor: $K_URL"
+    echo "  $K_URL"
     curl -L --connect-timeout 15 --max-time 120 -o /kaniko/executor "$K_URL" 2>/dev/null
-    if [ -f /kaniko/executor ] && [ $(stat -c%s /kaniko/executor 2>/dev/null || stat -f%z /kaniko/executor 2>/dev/null) -gt 1000000 ]; then
+    if [ -f /kaniko/executor ] && [ -s /kaniko/executor ]; then
       chmod +x /kaniko/executor
       ln -sf /kaniko/executor /usr/local/bin/kaniko
       KANIKO_BIN="/kaniko/executor"
@@ -43,7 +31,9 @@ if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
     rm -f /kaniko/executor
   done
   if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
-    echo "HATA: Kaniko indirilemedi. build durduruldu."
+    echo "[ERROR] Kaniko indirilemedi! Manual:"
+    echo "  curl -Lo /kaniko/executor https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64"
+    echo "  chmod +x /kaniko/executor"
     exit 1
   fi
 fi
@@ -89,16 +79,14 @@ if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publish
   echo "✅ Base image registry'de mevcut. Build atlandi."
 elif [ -f "Dockerfile.base" ]; then
   echo "[INFO] Base registry'de yok, Dockerfile.base Kaniko ile build ediliyor..."
-  KANIKO_OUTPUT=$(mktemp)
   $KANIKO_BIN --context=. \
          --dockerfile=Dockerfile.base \
          --destination=localhost:5000/ai-publisher-base:latest \
          --tarPath=base.tar \
          --whitelist-var-run=false \
          --ignore-var-run \
-         --snapshot-mode=redo > "$KANIKO_OUTPUT" 2>&1
-  KANIKO_EXIT=$?
-  if [ $KANIKO_EXIT -eq 0 ]; then
+         --snapshot-mode=redo
+  if [ $? -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
     echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
     if command -v pigz &> /dev/null; then
@@ -109,14 +97,9 @@ elif [ -f "Dockerfile.base" ]; then
     rm -f base.tar
     echo "✅ Base imaji Drive'a kaydedildi."
   else
-    echo " Base Docker Imaj insa edilirken hata olustu! (exit: $KANIKO_EXIT)"
-    echo "=== KANIKO OUTPUT ==="
-    head -100 "$KANIKO_OUTPUT"
-    rm -f "$KANIKO_OUTPUT"
+    echo "❌ Base Docker Imajı insa edilirken hata olustu!"
     exit 1
   fi
-  rm -f "$KANIKO_OUTPUT"
-fi
 else
   echo "❌ Dockerfile.base bulunamadi!"
   exit 1
