@@ -23,12 +23,20 @@ if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
     curl -L --connect-timeout 15 --max-time 120 -o /kaniko/executor "$K_URL" 2>/dev/null
     if [ -f /kaniko/executor ] && [ -s /kaniko/executor ]; then
       chmod +x /kaniko/executor
-      ln -sf /kaniko/executor /usr/local/bin/kaniko
-      KANIKO_BIN="/kaniko/executor"
-      echo "  Kaniko kuruldu."
-      break
+      # ELF binary dogrulama (HTML sayfa indiyse atla)
+      MAGIC=$(head -c 4 /kaniko/executor | od -A n -t x1 | tr -d ' ')
+      if [ "$MAGIC" = "7f454c46" ]; then
+        ln -sf /kaniko/executor /usr/local/bin/kaniko
+        KANIKO_BIN="/kaniko/executor"
+        echo "  Kaniko kuruldu."
+        break
+      else
+        echo "  HTML/text sayfasi indi, atlaniyor..."
+        rm -f /kaniko/executor
+      fi
+    else
+      rm -f /kaniko/executor
     fi
-    rm -f /kaniko/executor
   done
   if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
     echo "[ERROR] Kaniko indirilemedi! Manual:"
