@@ -3,7 +3,7 @@ import gc
 import torch
 import numpy as np
 from flask import Flask, request, jsonify
-import imageio
+import subprocess
 
 app = Flask(__name__)
 
@@ -72,8 +72,37 @@ def get_pipeline(video_model, is_i2v):
     return pipe
 
 def frames_to_mp4(frames, path, fps=8):
-    uint8_frames = [(np.clip(np.array(f), 0.0, 1.0) * 255).astype(np.uint8) for f in frames]
-    imageio.mimwrite(path, uint8_frames, fps=fps, codec='libx264', pixelformat='yuv420p', output_params=['-movflags', '+faststart', '-preset', 'medium', '-crf', '18'])
+    frame_arr = []
+    for f in frames:
+        f_np = np.array(f)
+        if f_np.dtype in [np.float16, np.float32, np.float64]:
+            if f_np.max() <= 1.0:
+                f_np = (np.clip(f_np, 0.0, 1.0) * 255).astype(np.uint8)
+            else:
+                f_np = f_np.astype(np.uint8)
+        elif f_np.dtype != np.uint8:
+            f_np = f_np.astype(np.uint8)
+        frame_arr.append(f_np)
+    frames_arr = np.stack(frame_arr)
+    h, w = frames_arr.shape[1:3]
+    cmd = [
+        'ffmpeg', '-y',
+        '-f', 'rawvideo',
+        '-vcodec', 'rawvideo',
+        '-s', f'{w}x{h}',
+        '-pix_fmt', 'rgb24',
+        '-r', str(fps),
+        '-i', '-',
+        '-c:v', 'libx264',
+        '-pix_fmt', 'yuv420p',
+        '-preset', 'medium',
+        '-crf', '18',
+        '-movflags', '+faststart',
+        path
+    ]
+    proc = subprocess.run(cmd, input=frames_arr.tobytes(), capture_output=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f'FFmpeg encoding failed: {proc.stderr.decode(errors="replace")}')
 
 @app.route("/generate", methods=["POST"])
 def generate():

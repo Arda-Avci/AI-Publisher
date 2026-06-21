@@ -3,8 +3,6 @@
 # Install HunyuanVideo specific dependencies
 RUN pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
-    imageio \
-    imageio-ffmpeg \
     decord \
     open_clip_torch
 
