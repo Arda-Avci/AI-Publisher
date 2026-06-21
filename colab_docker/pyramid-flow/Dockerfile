@@ -3,7 +3,7 @@ FROM ai-publisher-base:latest
 RUN pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
     "transformers>=4.39.3" \
-    "accelerate>=0.30.0" \
+    "accelerate==0.30.0" \
     "einops" \
     "ftfy" \
     "opencv-python-headless==4.10.0.84" \
@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir \
     "sentencepiece" \
     "timm==0.6.12" \
     "tiktoken" \
-    "scikit-image"
+    "scikit-image==0.22.0"
 
 COPY app.py /app/app.py
 WORKDIR /app

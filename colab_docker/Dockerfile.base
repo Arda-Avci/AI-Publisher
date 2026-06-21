@@ -1,4 +1,4 @@
-﻿FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 
 # Fix dpkg statoverride messagebus bug
 RUN sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true
@@ -12,6 +12,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     git \
     wget \
     curl \
+    cmake \
     libgl1-mesa-glx \
     libglib2.0-0 \
     build-essential \

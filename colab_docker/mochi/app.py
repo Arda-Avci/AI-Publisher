@@ -23,6 +23,9 @@ def get_pipeline():
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
     print(f"[CONTAINER] Loading Mochi-1 (VRAM: {vram_gb:.2f} GB)")
 
+    if vram_gb < 22.0:
+        raise RuntimeError(f"Insufficient VRAM for Mochi-1. Required: minimum 22GB (with CPU offload) or 42GB (full GPU). Available VRAM: {vram_gb:.2f}GB. Mochi-1 cannot run on T4 GPU (16GB VRAM).")
+
     from diffusers import MochiPipeline
     pipe = MochiPipeline.from_pretrained("genmo/mochi-1-preview", torch_dtype=torch.bfloat16)
 

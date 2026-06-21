@@ -1,7 +1,9 @@
 FROM ai-publisher-base:latest
 
-RUN pip install --no-cache-dir \
-    face_recognition \
+RUN pip install --no-cache-dir dlib-bin==19.24.1 && \
+    pip install --no-cache-dir face-recognition-models Click Pillow && \
+    pip install --no-cache-dir --no-deps face_recognition && \
+    pip install --no-cache-dir \
     scipy \
     opencv-python-headless \
     numba \

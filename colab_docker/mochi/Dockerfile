@@ -6,7 +6,8 @@ RUN pip install --no-cache-dir \
     "sentencepiece>=0.2.0" \
     "av==13.1.0" \
     "einops>=0.8.0" \
-    "moviepy==1.0.3"
+    "moviepy==1.0.3" \
+    "ray>=2.37.0"
 
 COPY app.py /app/app.py
 WORKDIR /app

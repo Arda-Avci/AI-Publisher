@@ -1,4 +1,4 @@
-﻿FROM ai-publisher-base:latest
+FROM ai-publisher-base:latest
 
 RUN pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir \
     open_clip_torch \
     torch==2.5.1+cu121 \
     torchvision==0.20.1+cu121 \
-    --index-url https://download.pytorch.org/whl/cu121
+    --extra-index-url https://download.pytorch.org/whl/cu121
 
 COPY app.py /app/app.py
 WORKDIR /app

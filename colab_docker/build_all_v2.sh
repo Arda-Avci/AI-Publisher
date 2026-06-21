@@ -79,7 +79,7 @@ else
   exit 1
 fi
 
-MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer" "sadtalker" "dynamicrafter" "zeroscope" "video-retalking" "geneface" "mochi" "pyramid-flow")
+MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer" "zeroscope" "dynamicrafter" "sadtalker" "pyramid-flow" "mochi" "video-retalking" "geneface")
 TOTAL_MODELS=${#MODELS[@]}
 
 for i in "${!MODELS[@]}"; do
@@ -127,7 +127,11 @@ for i in "${!MODELS[@]}"; do
   # Kaniko ile build (daemonless -> cgroup hatasi olmaz)
   # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
   echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
-  sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  YAMALANDI=false
+  if grep -q "FROM ai-publisher-base:latest" "$MODEL/Dockerfile"; then
+    sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+    YAMALANDI=true
+  fi
   
   # Faz 3: Kaniko Build
   echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
@@ -145,7 +149,9 @@ for i in "${!MODELS[@]}"; do
   BUILD_STATUS=$?
   
   # Dockerfile'ı eski haline geri döndür
-  sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  if [ "$YAMALANDI" = "true" ]; then
+    sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  fi
   
   if [ $BUILD_STATUS -eq 0 ]; then
     echo "👉 Kaniko insa tamamlandi."
@@ -163,7 +169,8 @@ for i in "${!MODELS[@]}"; do
   
   if command -v pigz &> /dev/null; then
     pigz -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
-  else
+  fi
+  if [ $? -ne 0 ] || [ ! -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
     gzip -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
   fi
   
@@ -176,6 +183,8 @@ for i in "${!MODELS[@]}"; do
   fi
   
   SAVE_DURATION=$((SECONDS - SAVE_START))
+  FILE_SIZE=$(stat -c%s "$DRIVE_DIR/$MODEL.tar.gz" 2>/dev/null || echo 0)
+  echo "💾 Sıkıştırılmış İmaj Boyutu: $((FILE_SIZE / 1024 / 1024)) MB"
   echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
   
   if command -v docker &> /dev/null; then

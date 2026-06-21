@@ -1,10 +1,21 @@
-# ⚠️ CUDA 11.1 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
-# Ayrı bir CUDA 11.x base imaj gerekli: pytorch/pytorch:1.9.0-cuda11.1-cudnn8-runtime
-FROM ai-publisher-base:latest
+# ⚠️ CUDA 11.8 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
+FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel
 
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ffmpeg \
+    cmake \
+    git \
+    wget \
+    curl \
+    build-essential \
+    libasound2-dev \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
+    flask \
+    requests \
     basicsr==1.4.2 \
     kornia==0.5.1 \
     face-alignment==1.3.4 \
@@ -12,7 +23,7 @@ RUN pip install --no-cache-dir \
     einops==0.4.1 \
     facexlib==0.2.5 \
     librosa==0.9.2 \
-    "numpy==1.23.4" \
+    "numpy<2.0.0" \
     opencv-python-headless \
     scipy
 

@@ -11,6 +11,16 @@
   - **Veo 3.1 native audio** → TTS+SFX pipeline'ı basitleştirir (opsiyonel, premium).
 - **Önerilen v7.1 patch listesi:** Gemini Flash default, MCP Server POC, Deep Think opsiyonel parametre, Pino logger.
 
+## 🚀 RunPod Serverless + Backblaze B2 Geçiş Planı (21 Haziran 2026)
+
+- **Amaç:** Google Colab'dan RunPod Serverless GPU'ya ve dosya depolama için Backblaze B2'ye geçiş
+- **Detay:** `son_implementation_plan.md` dosyasında tanımlı
+- **Yapılanlar:**
+  - [x] `src/lib/b2.ts` — Backblaze B2 S3 wrapper (upload/download/delete/list/getSignedUrl/health)
+  - [x] `.env.example` — B2 + RunPod env değişkenleri eklendi
+  - [x] `docs/edl-json-spec.md` — EDL JSON specification (RunPod entegrasyonu için)
+- **Kalanlar:** runpod.ts, webhook.ts, queue.ts RunPod geçişi, Dockerfile Handler güncellemeleri
+
 ## 🎯 Colab Runtime → Docker Native Migration (21 Haziran 2026)
 
 - **colab-manager.ts** silindi → yerine `docker-host.ts` (service registry, port mapping 5001-5016)
@@ -347,22 +357,60 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - [x] **colab_setup.ipynb Hücre 2:** pip install hata kontrolü eklendi. `capture_output=True` sessiz hata yutma sorunu giderildi. Başarısız paketler görünür, otomatik yeniden dener.
 - [x] **colab_setup.py:** pip install her zaman çalışır (sadece ilk kurulumda değil). Docker zaten kuruluysa `else` branşında da pip install yapılır.
 
-## 🔜 Kalan Sıradaki Adımlar
+## 🔜 Kalan Sıradaki Adımlar — RunPod + B2 Geçiş Planı
 
-### Grup 2 (Grup 1 sonrası başlayacak)
-1. **2C: NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone)
-2. **2D: 25+ alert() → toast dönüşümü** — Tüm React bileşenlerindeki alert() çağrılarını toast ile değiştir
-3. **3D: RunPod startup script** — s5cmd + docker load + compose up
-4. **3F: B2 callback endpoint** — `/api/v1/callback/b2`
-5. **4B→4G: Diğer 6 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow
+> **Kaynak:** `son_implementation_plan.md` — Colab'dan RunPod Serverless + Backblaze B2'ye geçiş
 
-### Grup 3 (Grup 2 sonrası)
-6. **3G: RunPod Pod oluştur + idle timeout**
-7. **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix
+### FAZ 1: Altyapı ve Depolama Entegrasyonu
+| # | Görev | Durum |
+|---|-------|-------|
+| 1 | **runpod.ts** — RunPod Serverless API istemcisi (`triggerJob`, `getJobStatus`, webhook URL paslama) | ⏳ Bekliyor |
+| 2 | **webhook.ts** — `/api/webhook/runpod` endpoint (payload doğrulama, DB güncelleme, SSE broadcast, sonraki sahne tetikleme) | ⏳ Bekliyor |
+| 3 | **.env güncellemesi** — `RUNPOD_API_KEY`, `WEBHOOK_URL`, `RUNPOD_ENDPOINT_*`, `B2_*` env değişkenleri | ⏳ Bekliyor |
+| 4 | **server.ts** — webhook rotasının Express'e kaydı | ⏳ Bekliyor |
 
-### Grup 4-5 (En son)
-8. **Faz 7C:** Entegrasyon Testleri (8 adet)
-9. **Faz 7D:** E2E Playwright (7 adet)
-10. **Faz 7E:** CI altyapısı + coverage
-11. **Production Readiness:** 17 test
-12. **Colab referanslarının temizlenmesi:** CLAUDE.md, AGENTS.md, skill dosyaları
+### FAZ 2: Job Queue RunPod Entegrasyonu
+| # | Görev | Durum |
+|---|-------|-------|
+| 5 | **queue.ts** — Colab HTTP istekleri ve dosya transfer kodlarını kaldır, RunPod Serverless tetikleme akışına geçir | ⏳ Bekliyor |
+| 6 | **Akış tasarımı:** Wan2.5 → webhook → XTTS → webhook → FFmpeg miksaj (CPU) → B2 yükleme | ⏳ Bekliyor |
+
+### FAZ 3: Docker Imajları (GHCR)
+| # | Görev | Durum |
+|---|-------|-------|
+| 7 | Tüm Dockerfile'ları RunPod Handler fonksiyonu barındıracak şekilde güncelle | ⏳ Bekliyor |
+| 8 | Model ağırlıklarını imaj içine göm veya HuggingFace indirme komutları ekle | ⏳ Bekliyor |
+
+### FAZ 4: Faz 6 Dockerfile Bağımlılık Düzeltmeleri (21 Haziran 2026)
+
+> **Kaynak:** 7 model internette araştırıldı, bağımlılıklar ve CUDA gereksinimleri karşılaştırıldı.
+
+| # | Görev | Öncelik | Durum |
+|---|-------|---------|-------|
+| 9 | **Dockerfile.base** — `cmake` ekle (sadtalker dlib compile için) | Yüksek | ⏳ Bekliyor |
+| 10 | **sadtalker** — `dlib-bin==19.24.1` ekle (compile bypass) | Yüksek | ⏳ Bekliyor |
+| 11 | **video-retalking** — CUDA 11.8 base image geçişi (`nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04`) | Yüksek | ⏳ Bekliyor |
+| 12 | **geneface** — 2-stage build + CUDA 11.8 + conda + PyTorch3D source build | Yüksek | ⏳ Bekliyor |
+| 13 | **mochi** — `sentencepiece` + `ray` ekle, VRAM uyarısı ekle | Orta | ⏳ Bekliyor |
+| 14 | **zeroscope** — `accelerate` + `scipy` + pin ekle | Düşük | ⏳ Bekliyor |
+| 15 | **pyramid-flow** — `accelerate` + `scikit-image` pin ekle | Düşük | ⏳ Bekliyor |
+| 16 | **dynamicrafter** — Değişiklik gerekmez (mevcut uyumlu) | - | ✅ Tamam |
+| 17 | **docker-compose.yml** — 7 yeni servis (port 5012-5018) + healthcheck | Orta | ⏳ Bekliyor |
+| 18 | **build_all_v2.sh** — CUDA 11.x model blokları + build sırası güncelle | Orta | ⏳ Bekliyor |
+
+### Mevcut Grup 2 Görevleri (Devam)
+| # | Görev | Durum |
+|---|-------|-------|
+| 19 | **NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone) | ⏳ Bekliyor |
+| 20 | **alert()→toast dönüşümü** — 25+ React bileşeninde alert() → toast | ⏳ Bekliyor |
+| 21 | **Kalan 6 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow (Dockerfile'lar hazır, test gerekli) | ⏳ Bekliyor |
+
+### Grup 3 (En son)
+| # | Görev | Durum |
+|---|-------|-------|
+| 22 | **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix | ⏳ Bekliyor |
+| 23 | **Faz 7C:** Entegrasyon Testleri (8 adet) | ⏳ Bekliyor |
+| 24 | **Faz 7D:** E2E Playwright (7 adet) | ⏳ Bekliyor |
+| 25 | **Faz 7E:** CI altyapısı + coverage | ⏳ Bekliyor |
+| 26 | **Production Readiness:** 17 test | ⏳ Bekliyor |
+| 27 | **Colab referanslarının temizlenmesi:** CLAUDE.md, AGENTS.md, skill dosyaları | ⏳ Bekliyor |

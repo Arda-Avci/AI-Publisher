@@ -1,5 +1,148 @@
 # Yapılacaklar Listesi (TODO)
 
+## 🚀 RunPod Serverless + Backblaze B2 Geçiş Görevleri (21 Haziran 2026)
+
+> **Kaynak:** `son_implementation_plan.md` — Colab'dan RunPod Serverless + Backblaze B2'ye geçiş planı
+
+### FAZ 1: Altyapı ve Depolama Entegrasyonu
+- [ ] **runpod.ts** — RunPod Serverless API istemcisi (`src/services/runpod.ts`)
+  - `triggerJob(endpointId, input, webhookUrl)` — Serverless endpoint'e iş tetikleme
+  - `getJobStatus(jobId)` — Fallback sorgulama fonksiyonu
+  - Webhook callback URL'sini (`WEBHOOK_URL/api/webhook/runpod`) parametre olarak gönderme
+- [ ] **webhook.ts** — RunPod callback endpoint (`src/routes/webhook.ts`)
+  - `/api/webhook/runpod` — RunPod payload doğrulama (token kontrolü)
+  - Başarılı iş: B2 medya URL'leri → DB güncelleme (`completed_scenes`, `progress_percent`) → SSE broadcast → sonraki sahne tetikleme
+  - Başarısız iş: Hata yakalama, DB'ye yazma, SSE ile kullanıcı bilgilendirme
+- [ ] **.env güncellemesi** — Aşağıdaki env değişkenleri eklenecek:
+  ```
+  RUNPOD_API_KEY=your_runpod_api_key
+  WEBHOOK_URL=https://your-ngrok-subdomain.ngrok-free.app
+  RUNPOD_ENDPOINT_WAN25=endpoint_id_1
+  RUNPOD_ENDPOINT_XTTS=endpoint_id_2
+  RUNPOD_ENDPOINT_WHISPER=endpoint_id_3
+  B2_KEY_ID=your_b2_key_id
+  B2_APPLICATION_KEY=your_b2_application_key
+  B2_BUCKET_NAME=your_bucket_name
+  B2_ENDPOINT=s3.us-west-004.backblazeb2.com
+  ```
+- [ ] **server.ts** — `/api/webhook/runpod` rotasının Express uygulamasına kaydı
+
+### FAZ 2: Job Queue RunPod Entegrasyonu
+- [ ] **queue.ts** — Colab tünel HTTP istekleri ve dosya transfer kodlarını kaldır
+- [ ] **queue.ts** — Her sahne işlenirken sırayla RunPod Serverless tetikleme
+  1. **Wan 2.5 Video:** `runpod.ts` → Wan2.5 endpoint → webhook URL pasla → `rendering_video`
+  2. **Webhook Bekleme:** RunPod bitirir → B2'ye yükler → backend'e webhook
+  3. **TTS Adımı:** XTTS Serverless endpoint tetikle → webhook bekle
+  4. **FFmpeg Miksaj:** B2'den indir → FFmpeg birleştir + altyazı bas (CPU)
+  5. **Final:** Birleştirilmiş video B2'ye yükle → DB güncelle
+
+### FAZ 3: Docker Imajlarının GHCR İçin Hazırlanması
+- [ ] Tüm Dockerfile'ları RunPod Serverless gereksinimlerine göre güncelle (Handler fonksiyonu)
+- [ ] Model ağırlıklarını imaj içine COPY veya HuggingFace indirme komutları ile göm
+
+### FAZ 4: Faz 6 Dockerfile Bağımlılık Düzeltmeleri (21 Haziran 2026)
+
+> **Kaynak:** Model bazlı araştırma sonuçları — tüm 7 model internette araştırıldı, bağımlılıklar ve CUDA gereksinimleri karşılaştırıldı.
+
+#### 4A: Base Image Düzeltmesi (Yüksek Öncelik)
+- [x] `colab_docker/Dockerfile.base` — `cmake` paketini apt-get listesine ekle
+  - Gerekçeli: `sadtalker` → `face_recognition` → `dlib` compile → `cmake` gerekir
+  - Mevcut: `build-essential curl wget git ffmpeg libgl1 libglib2.0-0`
+  - Eklenecek: `cmake` (sadece 1 satır)
+
+#### 4B: sadtalker Dockerfile (Yüksek Öncelik)
+- [x] `colab_docker/sadtalker/Dockerfile` — `dlib-bin` wheel ekle (compile bypass)
+  - Sorun: `face_recognition` → `dlib` kaynaktan compile eder, GPU'suz ortamda ~10dk+ sürer
+  - Çözüm: `pip install dlib-bin==19.24.1` (önceden derlenmiş wheel, compile gerektirmez)
+  - Sıra önemli: `dlib-bin` → sonra `face_recognition` (pip bağımlılığı karşılar)
+  - Ek paketler: `scipy`, `numba`, `gfpgan` (zaten mevcut)
+  - Kontrol: `kornia==0.6.8` opsiyonel (runtime'da gerekmez, sadece training)
+
+#### 4C: dynamicrafter Dockerfile (Düşük Öncelik)
+- [x] `colab_docker/dynamicrafter/Dockerfile` — Paket pin güncellemeleri
+  - Mevcut durum: Genel olarak uyumlu. `pytorch_lightning==1.9.3`, `decord==0.6.0`, `einops==0.3.0`, `omegaconf==2.1.1`, `open_clip_torch==2.22.0` doğru pinlenmiş
+  - Eksik: `xformers` pin yok → `xformers` base image'de var, sorun yok
+  - Eksik: `timm` pin yok → `timm` versiyonsuz, uyumlu
+  - Değişiklik gerekmez, sadece `--no-cache-dir` korunacak
+  - Not: Checkpoint (~10.44GB) runtime'da HuggingFace'den otomatik indirilir
+
+#### 4D: zeroscope Dockerfile (Düşük Öncelik)
+- [x] `colab_docker/zeroscope/Dockerfile` — Eksik paketleri ekle
+  - Sorun: `diffusers>=0.35,<0.36` — çok dar pin, `0.35.x` ile uyumlu
+  - Eklenecek: `accelerate==0.30.0` (CPU offloading için), `scipy==1.11.1`, `numpy==1.24.2`
+  - `decord` versiyonsuz → pin ekle: `decord==0.6.0`
+  - `open_clip_torch` versiyonsuz → pin ekle: `open_clip_torch==2.23.0`
+  - Not: CUDA 11.7-12.4 arası destekleniyor, base CUDA 12.1 uyumlu
+
+#### 4E: mochi Dockerfile (Orta Öncelik)
+- [x] `colab_docker/mochi/Dockerfile` — Eksik paketleri ekle + runtime uyarısı
+  - Eksik: `sentencepiece>=0.2.0` (T5 tokenizer için kesin gerekli)
+  - Eksik: `ray>=2.37.0` (paralel inference için)
+  - Eksik: `einops>=0.8.0` (zaten var, pin ekle)
+  - VRAM uyarısı: 42GB (bf16) / 22GB (CPU offload). T4 16GB ile çalışmaz
+  - Öneri: Runtime'da VRAM kontrolü + anlamlı hata mesajı
+  - Not: `av==13.1.0` pin doğru
+
+#### 4F: pyramid-flow Dockerfile (Düşük Öncelik)
+- [x] `colab_docker/pyramid-flow/Dockerfile` — Pin güncellemeleri
+  - Sorun: `diffusers>=0.35,<0.36` dar pin
+  - `transformers==4.39.3` → research `4.46.0` diyor ama `4.39.3` ile çalışır
+  - `accelerate>=0.30.0` → pin ekle: `accelerate==0.30.0`
+  - `opencv-python-headless==4.10.0.84` → doğru pin
+  - `timm==0.6.12` → doğru pin
+  - `scikit-image` versiyonsuz → pin ekle: `scikit-image==0.22.0`
+  - `pytorch3d` source build opsiyonel (diffusers pipeline ile çalışır)
+  - Not: Base imaj `runpod/pytorch:2.2.1-py3.10-cuda12.1.1` ile uyumlu
+
+#### 4G: video-retalking Dockerfile (Yüksek Öncelik)
+- [x] `colab_docker/video-retalking/Dockerfile` — CUDA 11.x base image geçişi
+  - Sorun: `ai-publisher-base` CUDA 12.1, Video-ReTalking **CUDA 11.x kesin** istiyor
+  - `ninja` ile derlenen CUDA kernel'lar CUDA 11.x derleyici bekler
+  - Çözüm: `FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04` base image
+  - Ek bağımlılıklar: `basicsr==1.4.2`, `kornia==0.5.1`, `face-alignment==1.3.4`, `ninja==1.10.2.3`
+  - Sistem paketleri: `ffmpeg`, `cmake`, `libasound2-dev`
+  - Python: `python3.10` + `pip` kurulumu gerekli (base image'de olmayabilir)
+  - VRAM: 4GB (çok hafif)
+
+#### 4H: geneface Dockerfile (Yüksek Öncelik)
+- [x] `colab_docker/geneface/Dockerfile` — 2-stage build + CUDA 11.8
+  - Sorun: CUDA 12.x desteklenmiyor (kesin). `pytorch3d` + `torch-ngp` C extension
+  - Çözüm: 2-stage Dockerfile:
+    - Stage 1: `nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04` + conda + PyTorch3D source build
+    - Stage 2: Runtime imaj (sadece gerekli dosyalar)
+  - Bağımlılıklar: `decord`, `einops==0.3.0`, `kornia==0.5.0`, `face_alignment`, `librosa==0.9.2`, `mediapipe`
+  - Conda: `conda create -n geneface python=3.10` + `pytorch3d` source build (~20dk)
+  - VRAM: 6-8GB (T4 uyumlu)
+
+#### 4I: docker-compose.ymlüncelleme (Orta Öncelik)
+- [x] `colab_docker/docker-compose.yml` — 7 yeni servis ekle (port 5012-5018)
+  - sadtalker: 5012:5000
+  - dynamicrafter: 5013:5000
+  - zeroscope: 5014:5000
+  - video-retalking: 5015:5000 (CUDA 11.x base ile build)
+  - geneface: 5016:5000 (CUDA 11.x base ile build)
+  - mochi: 5017:5000
+  - pyramid-flow: 5018:5000
+  - Her servis için healthcheck ekle
+  - VRAM limitleri: sadtalker(6GB), dynamicrafter(10GB), zeroscope(8GB), video-retalking(4GB), geneface(8GB), mochi(42GB→uyarı), pyramid-flow(24GB)
+
+#### 4J: build_all_v2.sh güncelleme (Orta Öncelik)
+- [x] `colab_docker/build_all_v2.sh` — Model listesini ve build mantığını güncelle
+  - CUDA 11.x modelleri için ayrı build bloğu (video-retalking, geneface)
+  - Build sırası: zeroscope → dynamicrafter → sadtalker → pyramid-flow → mochi → video-retalking → geneface
+  - Her model sonrası `docker image ls` ile boyut kontrolü
+
+### Mevcut Devam Eden Görevler
+- [ ] **NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone)
+- [ ] **alert()→toast dönüşümü** — 25+ React bileşeninde alert() çağrılarını toast ile değiştir
+- [ ] **Kalan 6 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow (Dockerfile'lar hazır, test gerekli)
+- [ ] **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix
+- [ ] **Faz 7C:** Entegrasyon Testleri (8 adet)
+- [ ] **Faz 7D:** E2E Playwright (7 adet)
+- [ ] **Faz 7E:** CI altyapısı + coverage
+- [ ] **Production Readiness:** 17 test
+- [ ] **Colab referanslarının temizlenmesi:** CLAUDE.md, AGENTS.md, skill dosyaları
+
 ## ✅ Araçlar & Scriptler (21 Haziran 2026)
 
 - [x] **scan-hardcoded-strings.ts:** Hardcoded kullanıcı metinlerini tarayan script (`res.status().json({error:...})`, `alert()`, SSE stage string'leri). `--json` ve `--fix` flag'leri destekler. 385 hardcoded string bulundu.
@@ -865,58 +1008,24 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **Tip Doğrulaması:** `npm run check:types` testi tamamen hatasız yeşillendirildi.
 - [x] **Git Entegrasyonu:** Tüm düzeltmeler commit edilerek `origin main` deposuna başarıyla push edildi.
 
-## 🔜 Sıradaki Bekleyen Görevler (Öncelik Sırası — 20 Haziran 2026)
+## 🔜 Sıradaki Bekleyen Görevler (Öncelik Sırası — 21 Haziran 2026)
 
-> **Not:** Bu faz, Oturum #11'de yapılan proje durum analizi sonucunda derlenen yol haritasıdır. Her madde kullanıcı talebi ve onayına göre ayrı ayrı ele alınacaktır.
+> **Not:** RunPod + B2 geçiş planı önceliklidir. Detaylı görevler yukarıdaki "RunPod Serverless + Backblaze B2 Geçiş Görevleri" bölümünde tanımlıdır.
 
-### 1. ✅ Colab Bütünlük Doğrulama (Patch) — TAMAMLANDI
-- [x] `verify_images.py` zaten mevcut: `tarfile`, `--drive-only`, bütünlük kontrolü, hata raporlama, exit codes
-- [x] `wan25`, `f5tts` listelere eklendi (14 imaj: base + 13 model)
-
-### 2. ✅ Wan2.5 PoC — 3-4x Hız Artışı (Minor) — TAMAMLANDI
-- [x] `colab_docker/wan25/Dockerfile` — 24GB VRAM, fp16, torch>=2.5.0
-- [x] `colab_docker/wan25/app.py` — Flask API (generate + health)
-- [x] `docker-compose.yml` — `wan25` servisi port 5014
-- [x] `colab_server.py` ContainerManager — `wan25: 5014`, GPU_HEAVY
-- [x] `src/queue.ts` — `production_template === 'wan25'` → `modelType = 'Wan2.5'`
-- [x] `src/views/dashboard.ts` — template select'te Wan2.5 seçeneği
-- [x] `src/locales/tr.json` ve `en.json` — Wan2.5 çevirileri
-
-### 3. ✅ Self-Consistency Video Chain (Minor) — TAMAMLANDI
-- [x] `src/services/sceneChaining.ts` — `getSceneChainingFrame()`, `validateSceneConsistency()`
-- [x] queue.ts inline chaining → modüler çağrı (`import('./services/sceneChaining.js')`)
-- [x] Rollback/fallback mekanizması
-- [x] Kalite metriği placeholder (CLIP/VLM için hazır)
-- [x] LoRA hook noktası (`characterFeatures` parametresi)
-
-### 4. ✅ F5-TTS Alternatif TTS — (Minor) — TAMAMLANDI
-- [x] `colab_docker/f5tts/Dockerfile` — 4GB VRAM, zero-shot klonlama
-- [x] `colab_docker/f5tts/app.py` — Flask API (synthesize + voices + health)
-- [x] `colab_server.py` ContainerManager — `f5tts: 5015`, GPU_HEAVY
-- [x] `src/queue.ts`/dashboard/locale/validation/types — f5tts desteği
-
-### 5. ✅ LoRA Fine-Tuning Pipeline (Major) — TAMAMLANDI
-- [x] lora-trainer container (Dockerfile + app.py, port 5016, rank=32)
-- [x] src/services/loraService.ts (trainLoRA, inferWithLoRA)
-- [x] character_lora_weights tablosu + lora_enabled kolonu
-- [x] queue.ts LoRA weights lookup + payload entegrasyonu
-- [x] Dashboard checkbox + karakter referans görsel yükleme
-- [x] TR/EN locale key'leri
-- [x] docker-compose, build_all.sh, verify_images, colab_server.py güncellemesi
-- [x] ADR-005 LoRA Pipeline mimari karar kaydı
-
-### 6. ✅ v7.1 Patch Listesi — TAMAMLANDI
-- [x] **Gemini 2.5 Flash default model** — Chain sırası değişti (Flash → Zen → Minimax)
-- [x] **Deep Think modu** — Opsiyonel parametre, dashboard checkbox, queue parametresi
-- [x] **MCP Server** — `generate_video` + `publish_video` tool eklendi
-- [x] **Pino structured logger** — correlation ID, redact, pino-pretty
-- [x] **State schema JSON-serialization contract** (ADR-003): Zod schema, broadcast() enjeksiyonu, SSE validasyonu
-
-### 7. ✅ Altyapı ve Süreç — TAMAMLANDI
-- [x] `!last.md` .gitignore eklendi
-- [x] ADR-004 Branch Stratejisi (GitHub Flow)
-- [x] `scripts/deploy-production.sh` oluşturuldu
-- [x] CI/CD pipeline zaten mevcut ve çalışıyor
+| # | Görev | Seviye | Durum | Öncelik |
+|---|-------|--------|-------|---------|
+| 1 | **runpod.ts** — RunPod API istemcisi | Minor | ⏳ Bekliyor | ⭐⭐⭐ |
+| 2 | **webhook.ts** — RunPod callback endpoint | Minor | ⏳ Bekliyor | ⭐⭐⭐ |
+| 3 | **queue.ts RunPod entegrasyonu** — Colab→RunPod geçişi | Major | ⏳ Bekliyor | ⭐⭐⭐ |
+| 4 | **Dockerfile Handler güncellemesi** — RunPod uyumlu | Minor | ⏳ Bekliyor | ⭐⭐⭐ |
+| 5 | **.env güncellemesi** — B2 + RunPod env değişkenleri | Patch | ⏳ Bekliyor | ⭐⭐ |
+| 6 | **NotificationToast.tsx** | Patch | ⏳ Bekliyor | ⭐⭐ |
+| 7 | **alert()→toast dönüşümü** | Patch | ⏳ Bekliyor | ⭐⭐ |
+| 8 | **Kalan 6 Docker Hub modeli** | Minor | ⏳ Bekliyor | ⭐⭐ |
+| 9 | **Test onarımları** | Patch | ⏳ Bekliyor | ⭐⭐ |
+| 10 | **Faz 7C/D/E Testleri** | Test | ⏳ Bekliyor | ⭐⭐ |
+| 11 | **Production Readiness** | Test | ⏳ Bekliyor | ⭐⭐ |
+| 12 | **Colab referans temizliği** | Patch | ⏳ Bekliyor | ⭐ |
 
 ## ✅ Docker Mimari Düzeltme (20 Haziran 2026)
 - [x] **colab_setup.ipynb Hücre 5:** ALL_MODELS listesi güncellendi (wan25, f5tts, lora-trainer, svd, animatediff eklendi)
