@@ -4,226 +4,157 @@
 DRIVE_DIR="/content/drive/MyDrive/Colab Notebooks/docker/images"
 mkdir -p "$DRIVE_DIR"
 
-# Get absolute path of kaniko; auto-install if missing
-KANIKO_BIN="kaniko"
-if [ -f "/usr/local/bin/kaniko" ]; then
-  KANIKO_BIN="/usr/local/bin/kaniko"
-elif [ -f "/kaniko/executor" ]; then
-  KANIKO_BIN="/kaniko/executor"
-fi
-# Validate existing Kaniko binary (not HTML page from failed download)
-if [ -f "$KANIKO_BIN" ] && [ -x "$KANIKO_BIN" ]; then
-  MAGIC=$(head -c 4 "$KANIKO_BIN" 2>/dev/null | od -A n -t x1 | tr -d ' ' 2>/dev/null)
-  if [ "$MAGIC" != "7f454c46" ]; then
-    echo "[WARN] $KANIKO_BIN ELF binary degil (HTML/text). Yeniden indiriliyor..."
-    rm -f /kaniko/executor /usr/local/bin/kaniko
-    KANIKO_BIN=""
-  fi
-fi
-# Auto-install Kaniko if missing (safety net)
-if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
-  echo "[INFO] Kaniko binary bulunamadi. Docker imajindan kopyalaniyor..."
-  docker pull gcr.io/kaniko-project/executor:latest 2>/dev/null || true
-  docker create --name kaniko-temp gcr.io/kaniko-project/executor:latest 2>/dev/null || true
-  docker cp kaniko-temp:/kaniko/executor /usr/local/bin/kaniko 2>/dev/null || true
-  docker rm kaniko-temp 2>/dev/null || true
-  if [ -f /usr/local/bin/kaniko ] && [ -s /usr/local/bin/kaniko ]; then
-    chmod +x /usr/local/bin/kaniko
-    KANIKO_BIN="/usr/local/bin/kaniko"
-    echo "  Kaniko kuruldu (Docker imajindan)."
-  else
-    echo "[ERROR] Kaniko Docker imajindan kopyalanamadi."
-    echo "  docker pull gcr.io/kaniko-project/executor:latest basarisiz."
-    exit 1
-  fi
-fi
+# Buildah storage config (VFS - Colab'da overlay calismaz)
+mkdir -p /etc/containers /tmp/containers/storage
+cat > /etc/containers/storage.conf << 'EOF'
+[storage]
+driver = "vfs"
+runroot = "/tmp/containers"
+graphroot = "/tmp/containers/storage"
+EOF
 
-echo "=========================================="
-echo "🚀 FAZ 1: Base Docker Imajı Insa Ediliyor (Kaniko)"
-echo "=========================================="
-START_TIME=$SECONDS
-
-# Local registry running check (fatal degil, uyari olarak)
-echo "[INFO] Yerel Registry baglantisi test ediliyor (localhost:5000)..."
-REGISTRY_UP=false
-if curl -s -f http://localhost:5000/v2/ > /dev/null 2>&1; then
-  REGISTRY_UP=true
-  echo "[OK] Registry calisiyor."
-else
-  echo "[WARN] Registry localhost:5000 calismiyor. Baslatilmayi deneniyor..."
-  if command -v registry &> /dev/null; then
-    pkill -f 'registry serve' 2>/dev/null || true
-    nohup registry serve /etc/docker/registry/config.yml > /tmp/registry.log 2>&1 &
-    sleep 2
-    for _ in $(seq 1 10); do
-      if curl -s -f http://localhost:5000/v2/ > /dev/null 2>&1; then
-        REGISTRY_UP=true
-        echo "[OK] Registry baslatildi!"
-        break
-      fi
-      sleep 1
-    done
-    if [ "$REGISTRY_UP" = "false" ]; then
-      echo "[WARN] Registry baslatilamadi. Log: /tmp/registry.log"
-    fi
-  else
-    echo "[WARN] Registry binary bulunamadi. Kanilo build gerektiginde hata alinabilir."
-  fi
-fi
-echo "[DEBUG] pwd: $(pwd)"
-echo "[DEBUG] listing files:"
-ls -la
-
-# Base: Registry'de yoksa Kaniko ile build et (Drive'a da kaydeder)
-if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1; then
-  echo "✅ Base image registry'de mevcut. Build atlandi."
-elif [ -f "Dockerfile.base" ]; then
-  echo "[INFO] Base registry'de yok, Dockerfile.base Kaniko ile build ediliyor..."
-  $KANIKO_BIN --context=. \
-         --dockerfile=Dockerfile.base \
-         --destination=localhost:5000/ai-publisher-base:latest \
-         --tarPath=base.tar \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
-  if [ $? -eq 0 ]; then
-    DURATION=$((SECONDS - START_TIME))
-    echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
-    if command -v pigz &> /dev/null; then
-      pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
-    else
-      gzip -c base.tar > "$DRIVE_DIR/base.tar.gz"
-    fi
-    rm -f base.tar
-    echo "✅ Base imaji Drive'a kaydedildi."
-  else
-    echo "❌ Base Docker Imajı insa edilirken hata olustu!"
-    exit 1
-  fi
-else
-  echo "❌ Dockerfile.base bulunamadi!"
+BUILDAH_BIN="buildah"
+if ! command -v buildah &>/dev/null; then
+  echo "[ERROR] buildah bulunamadi! Once 'apt-get install -y buildah' calistirin."
   exit 1
 fi
 
+echo "=========================================="
+echo "FAZ 1: Base Docker Imaji Insa Ediliyor (Buildah)"
+echo "=========================================="
+echo "[INFO] buildah versiyon: $(buildah --version 2>/dev/null | head -1)"
+START_TIME=$SECONDS
+
+# === BASE IMAGE ===
+if [ -f "$DRIVE_DIR/base.tar.gz" ]; then
+  SIZE=$(stat -c%s "$DRIVE_DIR/base.tar.gz" 2>/dev/null || stat -f%z "$DRIVE_DIR/base.tar.gz" 2>/dev/null || echo 0)
+  if [ "$SIZE" -ge 50000000 ]; then
+    echo "Base image Drive'da mevcut (${SIZE} bytes). Build atlandi."
+  else
+    echo "Base image Drive'da bozuk (${SIZE} bytes). Yeniden build..."
+    rm -f "$DRIVE_DIR/base.tar.gz"
+  fi
+fi
+
+if [ ! -f "$DRIVE_DIR/base.tar.gz" ]; then
+  if [ ! -f "Dockerfile.base" ]; then
+    echo "Dockerfile.base bulunamadi!"
+    exit 1
+  fi
+  echo "Base Dockerfile.base buildah ile insa ediliyor..."
+  buildah bud --format=docker -t ai-publisher-base:latest -f Dockerfile.base . 2>&1
+  if [ $? -eq 0 ]; then
+    DURATION=$((SECONDS - START_TIME))
+    echo "Base Docker Imaji basariyla olusturuldu. Sure: ${DURATION}s"
+    buildah push ai-publisher-base:latest docker-archive:base.tar 2>&1
+    if [ $? -eq 0 ]; then
+      if command -v pigz &>/dev/null; then
+        pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
+      else
+        gzip -c base.tar > "$DRIVE_DIR/base.tar.gz"
+      fi
+      rm -f base.tar
+      echo "Base imaji Drive'a kaydedildi."
+    else
+      echo "Base imaji push basarisiz!"
+      exit 1
+    fi
+  else
+    echo "Base Docker Imaji insa edilirken hata olustu!"
+    exit 1
+  fi
+fi
+
+# === MODEL IMAGES ===
 MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer")
 TOTAL_MODELS=${#MODELS[@]}
 
 for i in "${!MODELS[@]}"; do
   MODEL="${MODELS[$i]}"
   IDX=$((i + 1))
-  
-  # Drive'da varsa ve ≥100MB ise atla (incremental build)
+
+  # Drive'da varsa atla
   MIN_SIZE=$((100 * 1024 * 1024))
   if [ -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
     FILE_SIZE=$(stat -c%s "$DRIVE_DIR/$MODEL.tar.gz" 2>/dev/null || echo 0)
     if [ "$FILE_SIZE" -ge "$MIN_SIZE" ] 2>/dev/null; then
       echo ""
       echo "======================================================================"
-      echo "⏭️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da mevcut, atlandi)"
+      echo "[$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da mevcut, atlandi)"
       echo "======================================================================"
       continue
     else
       echo ""
       echo "======================================================================"
-      echo "⚠️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da bozuk/kücük: ${FILE_SIZE:-0} byte, yeniden build)"
+      echo "[$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da bozuk/kucuk, yeniden build)"
       echo "======================================================================"
       rm -f "$DRIVE_DIR/$MODEL.tar.gz"
     fi
   fi
-  
+
   echo ""
   echo "======================================================================"
-  echo "📦 [$IDX/$TOTAL_MODELS] MODEL: $MODEL"
+  echo "[$IDX/$TOTAL_MODELS] MODEL: $MODEL"
   echo "======================================================================"
-  
+
   MODEL_START=$SECONDS
-  
-  # Faz 1: Klasör ve Dockerfile Doğrulama
-  echo "[FAZ 1/4] Klasor ve Dockerfile dogrulaniyor..."
+
+  # Faz 1: Klasor ve Dockerfile Dogrulama
   if [ ! -d "$MODEL" ]; then
-    echo "❌ Hata: '$MODEL' dizini bulunamadi!"
+    echo "Hata: '$MODEL' dizini bulunamadi!"
     continue
   fi
   if [ ! -f "$MODEL/Dockerfile" ]; then
-    echo "❌ Hata: '$MODEL/Dockerfile' bulunamadi!"
+    echo "Hata: '$MODEL/Dockerfile' bulunamadi!"
     continue
   fi
-  echo "👉 Dogrulama basarili."
-  
-  # Kaniko ile build (daemonless -> cgroup hatasi olmaz)
-  # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
-  echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
-  sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-  
-  # Faz 3: Kaniko Build
-  echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
-  
-  $KANIKO_BIN --context="$MODEL/" \
-         --dockerfile="$MODEL/Dockerfile" \
-         --destination="localhost:5000/ai-publisher-$MODEL:latest" \
-         --tarPath="$MODEL.tar" \
-         --insecure \
-         --skip-tls-verify \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
-  
+  echo "Dogrulama basarili."
+
+  # Faz 2: Buildah ile build
+  echo "Buildah ile model imaji insa ediliyor..."
+  echo "(Not: Base image buildah storage'inda olmali - once base build edilmis olmali)"
+
+  buildah bud --format=docker -t "ai-publisher-$MODEL:latest" -f "$MODEL/Dockerfile" "$MODEL/" 2>&1
   BUILD_STATUS=$?
-  
-  # Dockerfile'ı eski haline geri döndür
-  sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-  
-  if [ $BUILD_STATUS -eq 0 ]; then
-    echo "👉 Kaniko insa tamamlandi."
-  fi
-  
+
   if [ $BUILD_STATUS -ne 0 ]; then
-    echo "❌ Hata: $MODEL imaji insa edilemedi!"
+    echo "Hata: $MODEL imaji insa edilemedi! (exit: $BUILD_STATUS)"
+    echo "Base image buildah storage'inda degilse 'buildah pull docker-archive:...' ile yukleyin."
+    continue
+  fi
+  echo "Build tamamlandi."
+
+  # Faz 3: Push to tar
+  echo "Imaj sikistirilip Drive'a kaydediliyor..."
+  buildah push "ai-publisher-$MODEL:latest" docker-archive:"$MODEL.tar" 2>&1
+  if [ $? -eq 0 ]; then
+    if command -v pigz &>/dev/null; then
+      pigz -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
+    else
+      gzip -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
+    fi
     rm -f "$MODEL.tar"
-    continue
-  fi
-  
-  # Faz 4: Sıkıştırma ve Drive'a yazma
-  echo "[FAZ 4/4] Imaj sıkıştırılıp Drive'a kaydediliyor..."
-  SAVE_START=$SECONDS
-  
-  if command -v pigz &> /dev/null; then
-    pigz -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
+    echo "Basarili! $MODEL.tar.gz Drive'a kaydedildi."
   else
-    gzip -c "$MODEL.tar" > "$DRIVE_DIR/$MODEL.tar.gz"
-  fi
-  
-  SAVE_STATUS=$?
-  rm -f "$MODEL.tar"
-  
-  if [ $SAVE_STATUS -ne 0 ]; then
-    echo "❌ Hata: $MODEL imaji kaydedilirken sıkıştırma sorunu oluştu!"
+    echo "Hata: $MODEL imaji push edilemedi!"
     continue
   fi
-  
-  SAVE_DURATION=$((SECONDS - SAVE_START))
-  echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
-  
-  if command -v docker &> /dev/null; then
-    docker system prune -f || true
-  fi
-  if command -v podman &> /dev/null; then
-    podman system prune -f || true
-  fi
-  
+
+  # Buildah storage'dan temizle (disk tasarrufu)
+  buildah rmi "ai-publisher-$MODEL:latest" 2>/dev/null || true
+
+  # Docker/podman prune
+  if command -v docker &>/dev/null; then docker system prune -f 2>/dev/null || true; fi
+  if command -v podman &>/dev/null; then podman system prune -f 2>/dev/null || true; fi
+
   MODEL_DURATION=$((SECONDS - MODEL_START))
-  echo "⏱️ Toplam Islem Suresi ($MODEL): ${MODEL_DURATION}s"
+  echo "Toplam Sure ($MODEL): ${MODEL_DURATION}s"
 done
+
+# Base image'i de storage'dan temizle
+buildah rmi ai-publisher-base:latest 2>/dev/null || true
 
 echo ""
 echo "=========================================="
-echo "🎉 Build tamamlandi! Eksik imajlar insa edildi ve Drive'a kaydedildi."
-echo "   Drive'da zaten var olan imajlar atlandi (incremental build)."
+echo "Build tamamlandi! Tum imajlar Drive'a kaydedildi."
 echo "=========================================="
-
-if command -v docker &> /dev/null; then
-  docker system prune -a -f || true
-fi
-if command -v podman &> /dev/null; then
-  podman system prune -a -f || true
-fi
