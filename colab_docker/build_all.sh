@@ -23,12 +23,29 @@ fi
 if [ -f "$KANIKO_BIN" ] && [ ! -x "$KANIKO_BIN" ]; then
   chmod +x "$KANIKO_BIN"
 fi
-# Final check
+# Final check - auto-install if missing
 if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
-  echo "Kaniko binary bulunamadi veya calistirilamiyor!"
-  echo "Notebook'taki Hucre 2'yi (Bagimliliklar) calistirdiginizdan emin olun."
-  echo "Manuel cozum: curl -Lo /kaniko/executor https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64 && chmod +x /kaniko/executor"
-  exit 1
+  echo "Kaniko binary bulunamadi. Otomatik indiriliyor..."
+  mkdir -p /kaniko
+  for K_URL in \
+    "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/kaniko-linux-amd64" \
+    "https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64" \
+    "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.21.1/kaniko-linux-amd64"; do
+    echo "  Deneniyor: $K_URL"
+    curl -L --connect-timeout 15 --max-time 120 -o /kaniko/executor "$K_URL" 2>/dev/null
+    if [ -f /kaniko/executor ] && [ $(stat -c%s /kaniko/executor 2>/dev/null || stat -f%z /kaniko/executor 2>/dev/null) -gt 1000000 ]; then
+      chmod +x /kaniko/executor
+      ln -sf /kaniko/executor /usr/local/bin/kaniko
+      KANIKO_BIN="/kaniko/executor"
+      echo "  Kaniko kuruldu."
+      break
+    fi
+    rm -f /kaniko/executor
+  done
+  if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
+    echo "HATA: Kaniko indirilemedi. build durduruldu."
+    exit 1
+  fi
 fi
 
 echo "=========================================="
