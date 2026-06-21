@@ -4,7 +4,9 @@ RUN pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
     decord \
     open_clip_torch \
-    "torch>=2.5.0"
+    torch==2.5.1+cu121 \
+    torchvision==0.20.1+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
 
 COPY app.py /app/app.py
 WORKDIR /app

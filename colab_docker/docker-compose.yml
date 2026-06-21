@@ -407,6 +407,188 @@ services:
     networks:
       - ai-pub-net
 
+  # ── SadTalker (Konuşan Kafa) ─────────────────────────────
+  sadtalker:
+    build: ./sadtalker
+    image: ai-publisher-sadtalker:latest
+    container_name: ai-pub-sadtalker
+    ports:
+      - "5017:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Pyramid-Flow (Cascaded Video) ────────────────────────
+  pyramid-flow:
+    build: ./pyramid-flow
+    image: ai-publisher-pyramid-flow:latest
+    container_name: ai-pub-pyramid-flow
+    ports:
+      - "5023:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── DynamiCrafter (Image-to-Video) ─────────────────────
+  dynamictrafter:
+    build: ./dynamicrafter
+    image: ai-publisher-dynamicrafter:latest
+    container_name: ai-pub-dynamicrafter
+    ports:
+      - "5018:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Zeroscope (Text-to-Video) ────────────────────────────
+  zeroscope:
+    build: ./zeroscope
+    image: ai-publisher-zeroscope:latest
+    container_name: ai-pub-zeroscope
+    ports:
+      - "5019:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Video-ReTalking (Lip Sync) ──────────────────────────
+  video-retalking:
+    build: ./video-retalking
+    image: ai-publisher-video-retalking:latest
+    container_name: ai-pub-video-retalking
+    ports:
+      - "5020:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── GeneFace++ (3D Talking Head) ─────────────────────────
+  geneface:
+    build: ./geneface
+    image: ai-publisher-geneface:latest
+    container_name: ai-pub-geneface
+    ports:
+      - "5021:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Mochi-1 (GenFilm T2V) ────────────────────────────────
+  mochi:
+    build: ./mochi
+    image: ai-publisher-mochi:latest
+    container_name: ai-pub-mochi
+    ports:
+      - "5022:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
 networks:
   ai-pub-net:
     driver: bridge

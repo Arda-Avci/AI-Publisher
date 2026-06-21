@@ -7,7 +7,7 @@ DRIVE_DIR="/content/drive/MyDrive/Colab Notebooks/docker/images"
 
 if [ $# -eq 0 ]; then
   echo "Usage: $0 model1 model2 ..."
-  echo "  Models: base, cogvideox, wan, ltx, hunyuan, svd, animatediff, wan25, xtts, audioldm2, wav2lip, musetalk, whisper, stablediffusion, kokorotts, f5tts, lora-trainer"
+  echo "  Models: base, cogvideox, wan, ltx, hunyuan, svd, animatediff, wan25, xtts, audioldm2, wav2lip, musetalk, whisper, stablediffusion, kokorotts, f5tts, lora-trainer, sadtalker, dynamicrafter, zeroscope, video-retalking, geneface, mochi, pyramid-flow"
   exit 1
 fi
 

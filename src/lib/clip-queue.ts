@@ -109,6 +109,11 @@ export async function startClipQueueWorker() {
         try {
           await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['processing', clipJobId]);
           await broadcastProgress(clipJobId, {
+            jobId: clipJobId,
+            currentStage: 'Transkripsiyon yapılıyor...',
+            progressPercent: 10,
+            completedScenes: 0,
+            totalScenes: 0,
             event: 'clip-start',
             stage: 'Transkripsiyon yapılıyor...',
             percent: 10,
@@ -125,6 +130,11 @@ export async function startClipQueueWorker() {
           };
 
           await broadcastProgress(clipJobId, {
+            jobId: clipJobId,
+            currentStage: 'Transkripsiyon tamam',
+            progressPercent: 30,
+            completedScenes: 0,
+            totalScenes: 0,
             event: 'clip-transcribe',
             stage: 'Transkripsiyon tamam',
             percent: 30,
@@ -147,6 +157,11 @@ export async function startClipQueueWorker() {
           );
 
           await broadcastProgress(clipJobId, {
+            jobId: clipJobId,
+            currentStage: 'Viral analiz tamam',
+            progressPercent: 60,
+            completedScenes: 0,
+            totalScenes: 0,
             event: 'clip-analyze',
             stage: 'Viral analiz tamam',
             percent: 60,
@@ -162,6 +177,11 @@ export async function startClipQueueWorker() {
           );
 
           await broadcastProgress(clipJobId, {
+            jobId: clipJobId,
+            currentStage: 'Analiz tamamlandı',
+            progressPercent: 100,
+            completedScenes: 0,
+            totalScenes: 0,
             event: 'clip-complete',
             stage: 'Analiz tamamlandı',
             overallScore: analysis.overallScore,
@@ -198,6 +218,11 @@ export async function startClipQueueWorker() {
               ]);
 
               await broadcastProgress(clipJobId, {
+                jobId: clipJobId,
+                currentStage: `Hata oluştu, yeniden denenecek (${nextRetry}/${maxRetries})...`,
+                progressPercent: 0,
+                completedScenes: 0,
+                totalScenes: 0,
                 event: 'clip-retry',
                 stage: `Hata oluştu, yeniden denenecek (${nextRetry}/${maxRetries})...`,
                 percent: 0,
@@ -237,6 +262,11 @@ export async function startClipQueueWorker() {
               // Max retry aşıldı
               await db.run('UPDATE clip_jobs SET status = $1 WHERE id = $2', ['failed', clipJobId]);
               await broadcastProgress(clipJobId, {
+                jobId: clipJobId,
+                currentStage: `Hata: ${err.message || 'bilinmeyen'} (max retry aşıldı)`,
+                progressPercent: 0,
+                completedScenes: 0,
+                totalScenes: 0,
                 event: 'clip-error',
                 stage: `Hata: ${err.message || 'bilinmeyen'} (max retry aşıldı)`,
                 percent: 0,

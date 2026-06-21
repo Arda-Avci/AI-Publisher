@@ -211,6 +211,11 @@ export function registerPublishRoutes(app: Application): void {
 
         try {
           await broadcastProgress(jobId, {
+            jobId,
+            currentStage: 'Yayın kullanıcı tarafından iptal edildi',
+            progressPercent: 0,
+            completedScenes: 0,
+            totalScenes: 0,
             event: 'publish-complete',
             platform,
             success: false,

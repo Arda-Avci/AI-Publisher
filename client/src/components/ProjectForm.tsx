@@ -90,6 +90,13 @@ const TEMPLATES: Array<{ key: ProductionTemplate; model: string; speed: string }
   { key: 'dynamic', model: 'Wan 2.1', speed: '⭐⭐' },
   { key: 'simple', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
   { key: 'pixar', model: 'Wan 2.1', speed: '⭐⭐' },
+  { key: 'sadtalker', model: 'SadTalker', speed: '⭐⭐⭐' },
+  { key: 'dynamicrafter', model: 'DynamiCrafter', speed: '⭐⭐' },
+  { key: 'zeroscope', model: 'Zeroscope', speed: '⭐⭐⭐' },
+  { key: 'pyramid-flow', model: 'Pyramid-Flow', speed: '⭐⭐' },
+  { key: 'mochi', model: 'Mochi-1', speed: '⭐' },
+  { key: 'video-retalking', model: 'Video-ReTalking', speed: '⭐⭐' },
+  { key: 'geneface', model: 'GeneFace++', speed: '⭐' },
 ];
 
 const MODEL_MAP: Record<string, { key: ProductionTemplate; model: string; speed: string }> = {
@@ -97,6 +104,13 @@ const MODEL_MAP: Record<string, { key: ProductionTemplate; model: string; speed:
   dynamic: { key: 'dynamic', model: 'Wan 2.1', speed: '⭐⭐' },
   simple: { key: 'simple', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
   pixar: { key: 'pixar', model: 'Wan 2.1', speed: '⭐⭐' },
+  sadtalker: { key: 'sadtalker', model: 'SadTalker', speed: '⭐⭐⭐' },
+  dynamicrafter: { key: 'dynamicrafter', model: 'DynamiCrafter', speed: '⭐⭐' },
+  zeroscope: { key: 'zeroscope', model: 'Zeroscope', speed: '⭐⭐⭐' },
+  'pyramid-flow': { key: 'pyramid-flow', model: 'Pyramid-Flow', speed: '⭐⭐' },
+  'video-retalking': { key: 'video-retalking', model: 'Video-ReTalking', speed: '⭐⭐' },
+  mochi: { key: 'mochi', model: 'Mochi-1', speed: '⭐' },
+  geneface: { key: 'geneface', model: 'GeneFace++', speed: '⭐' },
 };
 
 const ALL_MODELS = [
@@ -115,6 +129,60 @@ const ALL_MODELS = [
     label: 'CogVideoX-2b (Hızlı)',
     model: 'CogVideoX-2b',
     speed: '⭐⭐⭐⭐',
+  },
+  {
+    value: 'cogvideox2b' as ProductionTemplate,
+    label: 'CogVideoX-2b (Hızlı)',
+    model: 'CogVideoX-2b',
+    speed: '⭐⭐⭐⭐',
+  },
+  {
+    value: 'cogvideox2b' as ProductionTemplate,
+    label: 'CogVideoX-2b (Hızlı)',
+    model: 'CogVideoX-2b',
+    speed: '⭐⭐⭐⭐',
+  },
+  {
+    value: 'dynamicrafter' as ProductionTemplate,
+    label: 'DynamiCrafter (Görselden Video)',
+    model: 'DynamiCrafter',
+    speed: '⭐⭐',
+  },
+  {
+    value: 'cogvideox2b' as ProductionTemplate,
+    label: 'CogVideoX-2b (Hızlı)',
+    model: 'CogVideoX-2b',
+    speed: '⭐⭐⭐⭐',
+  },
+  {
+    value: 'zeroscope' as ProductionTemplate,
+    label: 'Zeroscope (Hızlı Video)',
+    model: 'Zeroscope',
+    speed: '⭐⭐⭐',
+  },
+  {
+    value: 'pyramid-flow' as ProductionTemplate,
+    label: 'Pyramid-Flow (Kademeli Video)',
+    model: 'Pyramid-Flow',
+    speed: '⭐⭐',
+  },
+  {
+    value: 'video-retalking' as ProductionTemplate,
+    label: 'Video-ReTalking (Dudak Senk.)',
+    model: 'Video-ReTalking',
+    speed: '⭐⭐',
+  },
+  {
+    value: 'mochi' as ProductionTemplate,
+    label: 'Mochi-1 (Yüksek Kalite)',
+    model: 'Mochi-1',
+    speed: '?',
+  },
+  {
+    value: 'geneface' as ProductionTemplate,
+    label: 'GeneFace++ (3D Konuşan Kafa)',
+    model: 'GeneFace++',
+    speed: '⭐',
   },
 ];
 

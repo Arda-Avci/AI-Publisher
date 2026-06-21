@@ -42,8 +42,16 @@ import {
 
 let isProcessing = false;
 
-function broadcast(jobId: number, data: object) {
-  broadcastProgress(jobId, data).catch((err) => Logger.error('[queue broadcast] err:', err));
+function broadcast(jobId: number, data: Record<string, unknown>) {
+  const enriched: Record<string, unknown> = {
+    ...data,
+    jobId,
+    currentStage: (data.currentStage as string) || (data.stageKey as string) || (data.stage as string) || '',
+    progressPercent: (data.progressPercent as number) ?? (data.percent as number) ?? 0,
+    completedScenes: (data.completedScenes as number) ?? 0,
+    totalScenes: (data.totalScenes as number) ?? 0,
+  };
+  broadcastProgress(jobId, enriched).catch((err) => Logger.error('[queue broadcast] err:', err));
 }
 
 // S6: export broadcast so background tasks (e.g. publish uploads) can

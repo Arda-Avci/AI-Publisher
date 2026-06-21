@@ -89,11 +89,15 @@ export function registerPipecatRoutes(app: Application): void {
 
         pipecatBridge.onStatus(pipelineId, (status) => {
           broadcastProgress(jobId, {
+            jobId,
+            currentStage: 'pipecat_pipeline',
+            progressPercent: status.progress ?? 0,
+            completedScenes: status.currentScene ?? 0,
+            totalScenes: status.totalScenes ?? 0,
             stage: 'pipecat_pipeline',
             progress: status.progress,
             message: status.message,
             currentScene: status.currentScene,
-            totalScenes: status.totalScenes,
           });
         });
 

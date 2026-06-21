@@ -85,6 +85,11 @@ export async function startPublishQueueWorker() {
           // Broadcast SSE
           try {
             await broadcastProgress(jobId, {
+              jobId,
+              currentStage: success ? 'Yayın tamamlandı' : 'Yayın başarısız',
+              progressPercent: 100,
+              completedScenes: 0,
+              totalScenes: 0,
               event: 'publish-complete',
               platform,
               success,
@@ -108,6 +113,11 @@ export async function startPublishQueueWorker() {
             const errStr = String(err);
             const isAuthError = /auth|login|cookie|expired|session/i.test(errStr);
             await broadcastProgress(jobId, {
+              jobId,
+              currentStage: 'Yayın hatası: ' + (err?.message || 'bilinmeyen'),
+              progressPercent: 100,
+              completedScenes: 0,
+              totalScenes: 0,
               event: 'publish-complete',
               platform,
               success: false,

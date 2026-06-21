@@ -30,7 +30,14 @@ export type DockerService =
   | 'svd'
   | 'wan25'
   | 'f5tts'
-  | 'lora-trainer';
+  | 'lora-trainer'
+  | 'sadtalker'
+  | 'dynamicrafter'
+  | 'zeroscope'
+  | 'pyramid-flow'
+  | 'video-retalking'
+  | 'geneface'
+  | 'mochi';
 
 export interface ServiceInfo {
   port: number;
@@ -55,6 +62,13 @@ const SERVICE_REGISTRY: Record<DockerService, ServiceInfo> = {
   wan25:        { port: 5014, description: 'Video Generation (Wan2.5)',           healthUrl: '/health' },
   f5tts:        { port: 5015, description: 'Zero-Shot TTS (F5-TTS)',              healthUrl: '/health' },
   'lora-trainer': { port: 5016, description: 'LoRA Fine-Tuning',                  healthUrl: '/health' },
+  sadtalker:            { port: 5017, description: 'Talking Head (SadTalker)',                healthUrl: '/health' },
+  'video-retalking':    { port: 5020, description: 'Lip Sync (Video-ReTalking)',             healthUrl: '/health' },
+  zeroscope:            { port: 5019, description: 'Text-to-Video (Zeroscope)',              healthUrl: '/health' },
+  dynamicrafter:  { port: 5018, description: 'Image-to-Video (DynamiCrafter)',     healthUrl: '/health' },
+  mochi:          { port: 5022, description: 'Video Generation (Mochi-1)',           healthUrl: '/health' },
+  'pyramid-flow': { port: 5023, description: 'Video Generation (Pyramid-Flow)',    healthUrl: '/health' },
+  geneface:       { port: 5021, description: '3D Talking Head (GeneFace++)',       healthUrl: '/health' },
 };
 
 export interface DockerHostState {

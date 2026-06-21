@@ -6,5 +6,5 @@ export declare const redisSub: Redis;
  * @param jobId İş ID'si
  * @param payload SSE tarafına gönderilecek veri (JSON)
  */
-export declare function broadcastProgress(jobId: number, payload: any): Promise<boolean>;
+export declare function broadcastProgress(jobId: number, payload: Record<string, unknown>): Promise<boolean>;
 //# sourceMappingURL=redis.d.ts.map

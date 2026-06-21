@@ -679,4 +679,18 @@ export async function initDatabase() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // notifications tablosu
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      type VARCHAR(20) NOT NULL DEFAULT 'info',
+      title TEXT NOT NULL,
+      message TEXT NOT NULL DEFAULT '',
+      job_id INTEGER REFERENCES video_jobs(id),
+      is_read BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 }

@@ -315,6 +315,32 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - [x] **Hücre 1:** İki aşamalı çalışma modeli eklendi (BUILD CPU / RUN GPU). Tüm adım listesi güncellendi.
 - [x] **Mimari netleştirme:** BUILD (CPU, Kaniko daemonless) ↔ RUN (GPU, Docker daemon + colab_server.py) ayrımı notebook'ta belirginleştirildi.
 
+## 🟢 Tamamlananlar (21 Haziran 2026 — Oturum #16: Grup 1 Paralel İşler)
+
+- [x] **ADR-003 State Schema:** `JobStateSchema` Zod schema `src/types/job.ts`'ye eklendi
+- [x] **`broadcastProgress` tip güvenliği:** `payload: any` → `payload: Record<string, unknown>` (`src/lib/redis.ts`, `.d.ts`)
+- [x] **`broadcast()` enjeksiyonu:** `src/queue.ts` broadcast fonksiyonu standart alanları (`jobId`, `currentStage`, `progressPercent`, `completedScenes`, `totalScenes`) payload'a otomatik enjekte eder
+- [x] **SSE validasyonu:** `src/routes/progress.ts` handleSseConnection Redis mesajlarını `JobStateSchema.safeParse()` ile doğrular, geçersiz mesajı loglar ama iletir
+- [x] **Tüm dış çağıranlar güncellendi:** differentiate.ts (15 çağrı), publish-queue.ts (2 çağrı), clip-queue.ts (6 çağrı), pipecat.ts (1 çağrı), publish.ts (1 çağrı) — standart alanlar payload'a eklendi
+- [x] **tsc --noEmit:** 0 hata
+
+### Faz 1 — Kod Kalitesi & Altyapı
+- [x] **1A: ADR-003 State Schema** — JobStateSchema (Zod) job.ts'ye eklendi, broadcastProgress tip güvenli, 6 caller güncellendi, SSE validation eklendi
+- [x] **1B: Hardcoded string scanner** — `scripts/scan-hardcoded-strings.ts` oluşturuldu, 385 string tespit edildi, `--fix` ile alert→toast dönüşümü
+- [x] **1C: Typo dedektörü** — `scripts/scan-typos.ts` zaten mevcuttu (37 pattern), Türkçe typo + TECHDEBT taraması
+
+### Faz 2 — UX İyileştirme
+- [x] **2A: notificationService.ts** — `src/services/notificationService.ts` oluşturuldu (create/get/markAsRead/broadcast)
+- [x] **2B: notifications DB tablosu** — `src/db.ts`'ye `notifications` tablosu migration'ı eklendi (SERIAL PK, user_id FK, type, title, message, job_id, is_read)
+
+### Faz 3 — Depolama & Dağıtım (B2 + RunPod)
+- [x] **3B: B2 S3 wrapper** — `src/lib/b2.ts` oluşturuldu (upload/download/delete/list/getSignedUrl/health)
+- [x] **3C: .env.example güncelleme** — B2 (ENDPOINT, KEY_ID, KEY, BUCKET) + RunPod (API_KEY, POD_ID) env değişkenleri eklendi
+- [x] **3E: EDL JSON spec dokümantasyonu** — `docs/edl-json-spec.md` oluşturuldu (schema, flow, endpoints, B2 key convention)
+
+### Faz 4 — Yeni Modeller (Faz 6)
+- [x] **4A: SadTalker** — İlk Docker Hub modeli tamamlandı: Dockerfile + app.py + docker-compose(port 5017) + docker-host.ts + frontend types/form + TR/EN locale + creditService
+
 ## 🟢 Tamamlananlar (20 Haziran 2026 — Oturum #15: Colab Runtime Hata Düzeltmeleri)
 
 - [x] **colab_server.py:** `NGROK_URL` env var desteği eklendi. Hücre 7 ngrok URL'ini bulursa, sunucu kendi ngrok'unu açmaya çalışmaz. Çift ngrok çakışması çözüldü.
@@ -323,9 +349,20 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 
 ## 🔜 Kalan Sıradaki Adımlar
 
-1. **Docker GPU Build Test:** colab_setup.ipynb'i CPU runtime'da çalıştır, 16 imajın Drive'a yedeklendiğini doğrula
-2. **Faz 7 Testleri:** 16 kalan test maddesi (E2E Playwright, entegrasyon, CI altyapısı)
-3. **Node.js notification fix** (Sprint sonu)
-4. **GPU Runtime Setup:** Docker daemon + NVIDIA Container Toolkit ayrı bir GPU oturumunda kurulur, imajlar Drive'dan yüklenir, colab_server.py başlatılır
-5. **Docker Hub Video Motorları Entegrasyonu (FAZ 6):** Zeroscope, SadTalker, DynamiCrafter, Video-ReTalking, GeneFace++, Mochi-1 ve Pyramid-Flow modellerinin (proje dışı hazır imajlar) pipeline'a dahil edilmesi.
-6. **Colab referanslarının temizlenmesi:** Kalan dosyalarda (CLAUDE.md, AGENTS.md, skill dosyaları) Colab→Docker güncellemesi yapılacak.
+### Grup 2 (Grup 1 sonrası başlayacak)
+1. **2C: NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone)
+2. **2D: 25+ alert() → toast dönüşümü** — Tüm React bileşenlerindeki alert() çağrılarını toast ile değiştir
+3. **3D: RunPod startup script** — s5cmd + docker load + compose up
+4. **3F: B2 callback endpoint** — `/api/v1/callback/b2`
+5. **4B→4G: Diğer 6 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow
+
+### Grup 3 (Grup 2 sonrası)
+6. **3G: RunPod Pod oluştur + idle timeout**
+7. **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix
+
+### Grup 4-5 (En son)
+8. **Faz 7C:** Entegrasyon Testleri (8 adet)
+9. **Faz 7D:** E2E Playwright (7 adet)
+10. **Faz 7E:** CI altyapısı + coverage
+11. **Production Readiness:** 17 test
+12. **Colab referanslarının temizlenmesi:** CLAUDE.md, AGENTS.md, skill dosyaları

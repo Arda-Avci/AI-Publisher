@@ -10,6 +10,13 @@ const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
   'LTX-Video': { sceneCost: 5, coverCost: 3 },
   'SVD-XT': { sceneCost: 12, coverCost: 6 },
   'AnimateDiff': { sceneCost: 8, coverCost: 4 },
+  'SadTalker': { sceneCost: 8, coverCost: 4 },
+  'DynamiCrafter': { sceneCost: 12, coverCost: 6 },
+  'Zeroscope': { sceneCost: 6, coverCost: 3 },
+  'Pyramid-Flow': { sceneCost: 14, coverCost: 7 },
+  'GeneFace++': { sceneCost: 15, coverCost: 8 },
+  'Mochi-1': { sceneCost: 20, coverCost: 10 },
+  'Video-ReTalking': { sceneCost: 10, coverCost: 5 },
 };
 
 const DEFAULT_COST = { sceneCost: 10, coverCost: 5 };

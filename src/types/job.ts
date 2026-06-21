@@ -113,3 +113,20 @@ export interface VideoScene {
   music_volume?: number;
   speaker?: string;
 }
+
+import { z } from 'zod';
+
+export const JobStateSchema = z.object({
+  jobId: z.number(),
+  userId: z.number().optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled', 'awaiting_approval']),
+  currentStage: z.string(),
+  progressPercent: z.number().min(0).max(100),
+  completedScenes: z.number(),
+  totalScenes: z.number(),
+  etaSeconds: z.number().optional(),
+  error: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type JobState = z.infer<typeof JobStateSchema>;

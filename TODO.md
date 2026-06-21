@@ -1,5 +1,9 @@
 # Yapılacaklar Listesi (TODO)
 
+## ✅ Araçlar & Scriptler (21 Haziran 2026)
+
+- [x] **scan-hardcoded-strings.ts:** Hardcoded kullanıcı metinlerini tarayan script (`res.status().json({error:...})`, `alert()`, SSE stage string'leri). `--json` ve `--fix` flag'leri destekler. 385 hardcoded string bulundu.
+
 ## ✅ Colab→Docker Migration (21 Haziran 2026)
 
 - [x] **Dokümantasyon güncellemesi (13 dosya):** ADR'ler, spec'ler, rehberler Colab→Docker terminolojisine taşındı
@@ -25,7 +29,7 @@
 
 ### Önerilen v7.2 Minor Listesi
 - [ ] Veo 3.1 opsiyonel I2V motoru (Colab'da native audio deneyi)
-- [ ] State schema JSON-serialization contract dökümanı (ADR-003)
+- [x] State schema JSON-serialization contract (ADR-003): Zod schema, broadcast() enjeksiyonu, SSE validasyonu
 - [ ] OpenTelemetry instrumentation (HTTP, DB, queue metrics)
 
 ### v8.0 Major Değişiklikler (Defer)
@@ -906,7 +910,7 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **Deep Think modu** — Opsiyonel parametre, dashboard checkbox, queue parametresi
 - [x] **MCP Server** — `generate_video` + `publish_video` tool eklendi
 - [x] **Pino structured logger** — correlation ID, redact, pino-pretty
-- [ ] **State schema JSON-serialization contract** (ADR-003): Hâlâ beklemede
+- [x] **State schema JSON-serialization contract** (ADR-003): Zod schema, broadcast() enjeksiyonu, SSE validasyonu
 
 ### 7. ✅ Altyapı ve Süreç — TAMAMLANDI
 - [x] `!last.md` .gitignore eklendi
@@ -934,22 +938,39 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 - [x] **colab_setup.py:** pip install her zaman çalışır (else branşında da).
 - [x] **Sebep:** `import requests` ModuleNotFoundError → sessiz hata yutuluyordu. Ngrok çift başlatma çakışması.
 
-### Güncel Öncelik Matrisi
+### ✅ Grup 1 Tamamlananlar (21 Haziran 2026)
+
+| # | Görev | Dosyalar |
+|---|-------|----------|
+| 1A | ADR-003 State Schema | `src/types/job.ts`, `lib/redis.ts`, `routes/progress.ts`, queue/differentiate/publish/pipecat/clip |
+| 1B | Hardcoded string scanner | `scripts/scan-hardcoded-strings.ts` (385 string bulundu) |
+| 1C | Typo dedektörü | `scripts/scan-typos.ts` (37 pattern) |
+| 2A | notificationService.ts | `src/services/notificationService.ts` |
+| 2B | notifications DB tablosu | `src/db.ts` — `notifications` migration eklendi |
+| 3B | B2 S3 wrapper | `src/lib/b2.ts` (upload/download/delete/list/signedUrl/health) |
+| 3C | .env.example güncelleme | B2 + RunPod env değişkenleri eklendi |
+| 3E | EDL JSON spec | `docs/edl-json-spec.md` |
+| 4A | SadTalker model | 9 dosyada değişiklik (Dockerfile, app.py, docker-compose, docker-host, types, form, locale, credit) |
+
+### Güncel Öncelik Matrisi (Grup 2 →)
 
 | # | Görev | Seviye | Durum | Öncelik |
 |---|-------|--------|-------|---------|
-| 1 | LoRA fine-tuning | Major | ✅ Tamamlandı | ⭐⭐⭐ |
-| 2 | LoRA pre-trained + multi-char + Drive + SSE | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
-| 3 | test_clipper_whisper fix (video ses) | Patch | ✅ Tamamlandı | ⭐⭐ |
-| 4 | test_viral_hook fix (API timeout) | Patch | ✅ Tamamlandı | ⭐⭐ |
-| 5 | State schema ADR-003 | Patch | ✅ Tamamlandı | ⭐ |
-| 6 | Docker mimari fix (notebook lazy-loading) | Patch | ✅ Tamamlandı | ⭐⭐⭐ |
-| 7 | colab_setup.ipynb CPU build final (Hücre 3,5,4,1) | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
-| 8 | **Colab Runtime Fix:** NGROK_URL env + pip install error handling | Patch | ✅ Tamamlandı | ⭐⭐⭐ |
-| 9 | **Colab CPU Build Test:** notebook'u CPU runtime çalıştır | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
-| 10 | **Colab GPU Run Test:** GPU oturumunda Docker + colab_server.py doğrula | Süreç | ⏳ Yapılacak | ⭐⭐⭐ |
-| 11 | Node.js notification fix | Patch | ⏳ Yapılacak | ⭐⭐ |
-| 12 | Faz 7 Testleri (16 madde) | Test | ⏳ Yapılacak | ⭐⭐ |
+| 1 | SadTalker | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 2 | ADR-003 State Schema | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 3 | Notification service + DB | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 4 | Hardcoded string scanner | Patch | ✅ Tamamlandı | ⭐ |
+| 5 | B2 S3 wrapper | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 6 | EDL JSON spec dokümantasyonu | Patch | ✅ Tamamlandı | ⭐ |
+| 7 | **NotificationToast.tsx (2C)** | Patch | ⏳ Sıradaki | ⭐⭐ |
+| 8 | **alert()→toast dönüşümü (2D)** | Patch | ⏳ Sıradaki | ⭐⭐ |
+| 9 | **RunPod startup script (3D)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
+| 10 | **B2 callback endpoint (3F)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
+| 11 | **Kalan 6 Docker Hub modeli (4B→4G)** | Minor | ⏳ Sıradaki | ⭐⭐ |
+| 12 | **RunPod Pod + idle timeout (3G)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
+| 13 | Test onarımları | Patch | ⏳ Sıradaki | ⭐⭐ |
+| 14 | Faz 7C/D/E Testleri | Test | ⏳ Sıradaki | ⭐⭐ |
+| 15 | Production Readiness (17 test) | Test | ⏳ Sıradaki | ⭐⭐ |
 
 
 

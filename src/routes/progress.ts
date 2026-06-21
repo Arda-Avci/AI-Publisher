@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { redisSub } from '../lib/redis.js';
 import { Application, Request, Response } from 'express';
 import { Logger } from '../lib/logger.js';
+import { JobStateSchema } from '../types/job.js';
 
 function extractJobId(req: Request): number {
   // Supports: /progress/:id (param) and /api/v1/progress/stream?jobId= (query)
@@ -30,6 +31,13 @@ function handleSseConnection(
   subscriber.on('message', (chan, message) => {
     if (chan === channel) {
       try {
+        const parsed = JSON.parse(message);
+        const validation = JobStateSchema.safeParse(parsed);
+        if (!validation.success) {
+          Logger.warn(`[SSE] Invalid job state message for job ${jobId}`, {
+            errors: validation.error.format(),
+          });
+        }
         res.write(`data: ${message}\n\n`);
       } catch (err) {
         Logger.error(`SSE write error for job ${jobId}`, err);

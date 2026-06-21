@@ -223,9 +223,14 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
       [jobId],
     );
     await broadcastProgress(jobId, {
+      jobId,
       stageKey: 'phase1Transcript',
+      currentStage: 'Transkript çekiliyor...',
+      progressPercent: 10,
       percent: 10,
       stage: 'Transkript çekiliyor...',
+      completedScenes: 0,
+      totalScenes: 0,
     });
 
     const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
@@ -250,9 +255,14 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
       [jobId],
     );
     await broadcastProgress(jobId, {
+      jobId,
       stageKey: 'phase1Transcript',
+      currentStage: 'Transkript çekiliyor...',
+      progressPercent: 40,
       percent: 40,
       stage: 'Transkript çekiliyor...',
+      completedScenes: 0,
+      totalScenes: 0,
     });
     let originalText = '';
     try {
@@ -268,9 +278,14 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
         [jobId],
       );
       await broadcastProgress(jobId, {
+        jobId,
         stageKey: 'phase1AI',
+        currentStage: 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...',
+        progressPercent: 50,
         percent: 50,
         stage: 'Başlık ve açıklamadan metin üretiliyor (Yapay Zeka)...',
+        completedScenes: 0,
+        totalScenes: 0,
       });
       const meta = job.source_video_meta ? JSON.parse(job.source_video_meta) : {};
       const { generateScriptFromMetadata } = await import('../services/aiService.js');
@@ -283,9 +298,14 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
       [originalText, jobId],
     );
     await broadcastProgress(jobId, {
+      jobId,
       stageKey: 'phase1Clean',
+      currentStage: 'Metin temizleniyor...',
+      progressPercent: 60,
       percent: 60,
       stage: 'Metin temizleniyor...',
+      completedScenes: 0,
+      totalScenes: 0,
     });
     const cleanedText = await cleanText(originalText);
 
@@ -295,9 +315,14 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
       [cleanedText, jobId],
     );
     await broadcastProgress(jobId, {
+      jobId,
       stageKey: 'phase1Translate',
+      currentStage: 'Çeviri yapılıyor...',
+      progressPercent: 75,
       percent: 75,
       stage: 'Çeviri yapılıyor...',
+      completedScenes: 0,
+      totalScenes: 0,
     });
     const translatedText = await translateText(cleanedText || originalText, targetLang);
 
@@ -307,9 +332,14 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
       [jobId],
     );
     await broadcastProgress(jobId, {
+      jobId,
       stageKey: 'phase1Prompts',
+      currentStage: 'Promptlar üretiliyor...',
+      progressPercent: 90,
       percent: 90,
       stage: 'Promptlar üretiliyor...',
+      completedScenes: 0,
+      totalScenes: 0,
     });
 
     const durationMode: DurationMode = isValidDurationMode(job.differentiation_duration_mode)
@@ -338,10 +368,15 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
       [translatedText, productionNotesPreview, scenesJson, firstScenePrompt, imagePath, jobId],
     );
     await broadcastProgress(jobId, {
+      jobId,
       stageKey: 'phase1Done',
+      currentStage: 'Onaylandı — Manuel başlatma bekleniyor',
+      progressPercent: 100,
       percent: 100,
       stage: 'Onaylandı — Manuel başlatma bekleniyor',
       status: 'pending',
+      completedScenes: 0,
+      totalScenes: 0,
     });
 
     Logger.info('Differentiation tamamlandı: job #' + jobId);
@@ -358,10 +393,15 @@ export async function runPhase1Background(jobId: number, userId: number): Promis
         ['Hata: ' + errorMsg, jobId],
       );
       await broadcastProgress(jobId, {
+        jobId,
         stageKey: 'stageError',
+        currentStage: 'Hata: ' + errorMsg,
+        progressPercent: 0,
         percent: 0,
         stage: 'Hata: ' + errorMsg,
         status: 'failed',
+        completedScenes: 0,
+        totalScenes: 0,
       });
     } catch (innerErr: any) {
       Logger.error('Failed to mark job #' + jobId + ' as failed', innerErr);
@@ -607,9 +647,14 @@ export async function runDifferentiationPipeline(jobId: number, userId: number):
     [jobId],
   );
   await broadcastProgress(jobId, {
+    jobId,
     stageKey: 'phase1Translate',
+    currentStage: 'Başlık ve Açıklama Çevriliyor...',
+    progressPercent: 5,
     percent: 5,
     stage: 'Başlık ve Açıklama Çevriliyor...',
+    completedScenes: 0,
+    totalScenes: 0,
   });
 
   const translatedMeta = await translateTitleAndDesc(origTitle, origDesc, targetLang);
@@ -620,9 +665,14 @@ export async function runDifferentiationPipeline(jobId: number, userId: number):
     [jobId],
   );
   await broadcastProgress(jobId, {
+    jobId,
     stageKey: 'phase1Transcript',
+    currentStage: 'Transkript Çekiliyor...',
+    progressPercent: 8,
     percent: 8,
     stage: 'Transkript Çekiliyor...',
+    completedScenes: 0,
+    totalScenes: 0,
   });
 
   let originalText = '';
@@ -644,9 +694,14 @@ export async function runDifferentiationPipeline(jobId: number, userId: number):
     [jobId],
   );
   await broadcastProgress(jobId, {
+    jobId,
     stageKey: 'phase1Translate',
+    currentStage: 'Transkript Çevriliyor...',
+    progressPercent: 12,
     percent: 12,
     stage: 'Transkript Çevriliyor...',
+    completedScenes: 0,
+    totalScenes: 0,
   });
 
   const translatedTranscript = await translateText(originalText, targetLang);
@@ -657,9 +712,14 @@ export async function runDifferentiationPipeline(jobId: number, userId: number):
     [jobId],
   );
   await broadcastProgress(jobId, {
+    jobId,
     stageKey: 'phase1Clean',
+    currentStage: 'Metin Özgünleştiriliyor...',
+    progressPercent: 15,
     percent: 15,
     stage: 'Metin Özgünleştiriliyor...',
+    completedScenes: 0,
+    totalScenes: 0,
   });
 
   const rewrittenTranscript = await rewriteTranscript(translatedTranscript, targetLang);
@@ -670,9 +730,14 @@ export async function runDifferentiationPipeline(jobId: number, userId: number):
     [jobId],
   );
   await broadcastProgress(jobId, {
+    jobId,
     stageKey: 'phase1Prompts',
+    currentStage: 'Sahneler Planlanıyor...',
+    progressPercent: 18,
     percent: 18,
     stage: 'Sahneler Planlanıyor...',
+    completedScenes: 0,
+    totalScenes: 0,
   });
 
   const baseScenes = await generateScenePrompts(rewrittenTranscript, targetLang);
@@ -737,10 +802,15 @@ export async function runDifferentiationPipeline(jobId: number, userId: number):
   );
 
   await broadcastProgress(jobId, {
+    jobId,
     stageKey: 'phase1Done',
+    currentStage: 'Onay Bekliyor',
+    progressPercent: 100,
     percent: 100,
     stage: 'Onay Bekliyor',
     status: 'awaiting_approval',
+    completedScenes: 0,
+    totalScenes: 0,
   });
 
   Logger.info('Differentiation pipeline completed for job #' + jobId);
