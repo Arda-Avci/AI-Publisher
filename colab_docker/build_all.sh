@@ -12,8 +12,23 @@ elif [ -f "/kaniko/executor" ]; then
   KANIKO_BIN="/kaniko/executor"
 fi
 # Fix permission if binary exists but not executable
+if [ "$KANIKO_BIN" = "kaniko" ] || [ -z "$KANIKO_BIN" ]; then
+  # Try harder - use full path
+  if [ -f "/usr/local/bin/kaniko" ]; then
+    KANIKO_BIN="/usr/local/bin/kaniko"
+  elif [ -f "/kaniko/executor" ]; then
+    KANIKO_BIN="/kaniko/executor"
+  fi
+fi
 if [ -f "$KANIKO_BIN" ] && [ ! -x "$KANIKO_BIN" ]; then
   chmod +x "$KANIKO_BIN"
+fi
+# Final check
+if [ ! -f "$KANIKO_BIN" ] || [ ! -x "$KANIKO_BIN" ]; then
+  echo "Kaniko binary bulunamadi veya calistirilamiyor!"
+  echo "Notebook'taki Hucre 2'yi (Bagimliliklar) calistirdiginizdan emin olun."
+  echo "Manuel cozum: curl -Lo /kaniko/executor https://storage.googleapis.com/kaniko-releases/v1.23.2/kaniko-linux-amd64 && chmod +x /kaniko/executor"
+  exit 1
 fi
 
 echo "=========================================="
