@@ -12,7 +12,11 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction) 
   }
 
   // Test ortamında veya callback rotasında doğrulamayı bypass et
-  if (process.env.NODE_ENV === 'test' || req.path === '/api/v1/video/callback') {
+  if (
+    process.env.NODE_ENV === 'test' ||
+    req.path === '/api/v1/video/callback' ||
+    req.path === '/api/webhook/runpod'
+  ) {
     return next();
   }
 

@@ -347,6 +347,9 @@ export async function initDatabase() {
 
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS background_music_path TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;');
+  await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS runpod_job_id TEXT;');
+  await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS sfx_path TEXT;');
+  await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS subtitle_path TEXT;');
 
   // v6.0 Grup 1 columns
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS niche_profile TEXT;');
@@ -664,7 +667,7 @@ export async function initDatabase() {
       scheduled_time TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'awaiting',
       error_message TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
@@ -675,8 +678,8 @@ export async function initDatabase() {
       name TEXT NOT NULL,
       nodes_data TEXT NOT NULL DEFAULT '[]',
       connections_data TEXT NOT NULL DEFAULT '[]',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 

@@ -55,10 +55,10 @@ export function AiAssistantPanel({ language: _language, t: _t }: AiAssistantPane
       if (data.success) {
         setTutorialResult(data.data);
       } else {
-        alert('Eğitim promptları üretilemedi: ' + data.error);
+        window.showToast?.('error', 'Planlama Hatası', 'Eğitim promptları üretilemedi: ' + data.error);
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Sistem Hatası', err.message);
     } finally {
       setLoading(false);
     }
@@ -78,10 +78,10 @@ export function AiAssistantPanel({ language: _language, t: _t }: AiAssistantPane
       if (data.success) {
         setLandingResult(data.data);
       } else {
-        alert('Vitrin promptları üretilemedi: ' + data.error);
+        window.showToast?.('error', 'Üretim Hatası', 'Vitrin promptları üretilemedi: ' + data.error);
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Sistem Hatası', err.message);
     } finally {
       setLoading(false);
     }
@@ -101,10 +101,10 @@ export function AiAssistantPanel({ language: _language, t: _t }: AiAssistantPane
       if (data.success) {
         setThemeResult(data.data);
       } else {
-        alert('Tema renk paleti üretilemedi: ' + data.error);
+        window.showToast?.('error', 'Tema Hatası', 'Tema renk paleti üretilemedi: ' + data.error);
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Sistem Hatası', err.message);
     } finally {
       setLoading(false);
     }
@@ -135,7 +135,7 @@ export function AiAssistantPanel({ language: _language, t: _t }: AiAssistantPane
       );
     }
 
-    alert(`"${themeResult.themeName}" teması başarıyla uygulandı!`);
+    window.showToast?.('success', 'Tema Uygulandı', `"${themeResult.themeName}" teması başarıyla uygulandı!`);
   };
 
   return (

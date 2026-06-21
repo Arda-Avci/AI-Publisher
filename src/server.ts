@@ -64,6 +64,8 @@ import editQueueRouter from './routes/editQueue.js';
 import { loraRouter } from './routes/lora.js';
 import { uploadRouter } from './routes/upload.js';
 import { schedulePublishRouter } from './routes/schedulePublish.js';
+import { registerWebhookRoutes } from './routes/webhook.js';
+import { registerNotificationRoutes } from './routes/notifications.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -173,6 +175,8 @@ registerAuditRoutes(app);
 registerChatToEditRoutes(app);
 registerViMaxRoutes(app);
 registerPipecatRoutes(app);
+registerWebhookRoutes(app);
+registerNotificationRoutes(app);
 
 // API Rotaları
 app.use('/api/v1/broll', bRollRouter);

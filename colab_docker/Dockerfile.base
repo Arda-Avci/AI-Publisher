@@ -31,4 +31,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
     "numpy<2.0.0" \
     accelerate \
     "transformers>=4.46" \
-    pillow
+    pillow \
+    runpod \
+    boto3

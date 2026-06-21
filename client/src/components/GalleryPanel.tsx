@@ -688,13 +688,13 @@ function MetaEditor({
       });
       const data = await res.json();
       if (data.success) {
-        alert('Göz teması düzeltme işlemi başarıyla tamamlandı!');
+        window.showToast?.('success', 'Göz Teması Düzeltme', 'Göz teması düzeltme işlemi başarıyla tamamlandı!');
         onRefreshJobs();
       } else {
-        alert('Göz teması düzeltme hatası: ' + (data.error || 'Bilinmeyen hata'));
+        window.showToast?.('error', 'Göz Teması Hatası', data.error || 'Bilinmeyen hata');
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Göz Teması Hatası', err.message);
     } finally {
       setKurguLoading(false);
     }
@@ -717,13 +717,13 @@ function MetaEditor({
       });
       const data = await res.json();
       if (data.success) {
-        alert('Ses iyileştirme işlemi başarıyla tamamlandı!');
+        window.showToast?.('success', 'Ses İyileştirme', 'Ses iyileştirme işlemi başarıyla tamamlandı!');
         onRefreshJobs();
       } else {
-        alert('Ses iyileştirme hatası: ' + (data.error || 'Bilinmeyen hata'));
+        window.showToast?.('error', 'Ses İyileştirme Hatası', data.error || 'Bilinmeyen hata');
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Ses İyileştirme Hatası', err.message);
     } finally {
       setKurguLoading(false);
     }
@@ -745,13 +745,13 @@ function MetaEditor({
       });
       const data = await res.json();
       if (data.success) {
-        alert('Yeniden çerçeveleme (9:16) başarıyla tamamlandı!');
+        window.showToast?.('success', 'Reframe (9:16)', 'Yeniden çerçeveleme (9:16) başarıyla tamamlandı!');
         onRefreshJobs();
       } else {
-        alert('Reframe hatası: ' + (data.error || 'Bilinmeyen hata'));
+        window.showToast?.('error', 'Reframe Hatası', data.error || 'Bilinmeyen hata');
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Reframe Hatası', err.message);
     } finally {
       setKurguLoading(false);
     }
@@ -779,13 +779,13 @@ function MetaEditor({
       });
       const data = await res.json();
       if (data.success) {
-        alert('Video nesne silme işlemi başarıyla tamamlandı!');
+        window.showToast?.('success', 'Nesne Silme (Inpaint)', 'Video nesne silme işlemi başarıyla tamamlandı!');
         onRefreshJobs();
       } else {
-        alert('Inpainting hatası: ' + (data.error || 'Bilinmeyen hata'));
+        window.showToast?.('error', 'Nesne Silme Hatası', data.error || 'Bilinmeyen hata');
       }
     } catch (err: any) {
-      alert('Hata: ' + err.message);
+      window.showToast?.('error', 'Nesne Silme Hatası', err.message);
     } finally {
       setKurguLoading(false);
     }

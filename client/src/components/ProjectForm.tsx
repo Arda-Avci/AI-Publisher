@@ -293,10 +293,10 @@ export function ProjectForm(props: ProjectFormProps) {
       if (data.success && data.enhancedPrompt) {
         props.onSetMasterPrompt(data.enhancedPrompt);
       } else {
-        alert('Prompt geliştirilemedi: ' + (data.error || 'Bilinmeyen hata'));
+        window.showToast?.('error', 'Prompt Geliştirme Hatası', data.error || 'Bilinmeyen hata');
       }
     } catch (err: any) {
-      alert('İletişim hatası: ' + err.message);
+      window.showToast?.('error', 'İletişim Hatası', err.message);
     } finally {
       setEnhancing(false);
     }

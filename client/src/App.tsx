@@ -38,6 +38,7 @@ import AdminUsers from './components/admin/AdminUsers.js';
 import AdminHelpVideos from './components/admin/AdminHelpVideos.js';
 import AdminSystem from './components/admin/AdminSystem.js';
 import type { AdminPage } from './components/admin/AdminLayout.js';
+import { NotificationToast } from './components/NotificationToast.js';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -327,9 +328,9 @@ export default function App() {
       if (d.success) {
         fetchJobs();
         fetchScenes(selectedJob.id);
-      } else alert('Yeniden üretim hatası: ' + d.error);
+      } else window.showToast?.('error', 'Yeniden Üretim Hatası', d.error);
     } catch (e: any) {
-      alert('İletişim hatası: ' + e.message);
+      window.showToast?.('error', 'İletişim Hatası', e.message);
     }
   };
 
@@ -508,12 +509,12 @@ export default function App() {
         });
         const dp = await rp.json();
         if (dp.success) {
-          alert('Kopyalar kaydedildi ve Playwright paylaşım botu tetiklendi!');
+          window.showToast?.('success', 'Yayın Tetiklendi', 'Kopyalar kaydedildi ve Playwright paylaşım botu tetiklendi!');
           fetchJobs();
-        } else alert('Yayınlama hatası: ' + dp.error);
-      } else alert('Kayıt hatası: ' + ds.error);
+        } else window.showToast?.('error', 'Yayınlama Hatası', dp.error);
+      } else window.showToast?.('error', 'Kayıt Hatası', ds.error);
     } catch (e: any) {
-      alert('Hata: ' + e.message);
+      window.showToast?.('error', 'Hata', e.message);
     } finally {
       setIsMetaSaving(false);
     }
@@ -530,9 +531,9 @@ export default function App() {
       if (d.success) {
         fetchJobs();
         if (selectedJob?.id === id) setSelectedJob(null);
-      } else alert('Hata: ' + d.error);
+      } else window.showToast?.('error', 'Hata', d.error);
     } catch (e: any) {
-      alert('Hata: ' + e.message);
+      window.showToast?.('error', 'Hata', e.message);
     }
   };
 
@@ -547,9 +548,9 @@ export default function App() {
       if (d.success) {
         fetchJobs();
         if (selectedJob?.id === id) setSelectedJob(null);
-      } else alert('Hata: ' + d.error);
+      } else window.showToast?.('error', 'Hata', d.error);
     } catch (e: any) {
-      alert('Hata: ' + e.message);
+      window.showToast?.('error', 'Hata', e.message);
     }
   };
 
@@ -581,10 +582,10 @@ export default function App() {
       const d = await r.json();
       if (d.success) {
         fetchJobs();
-        alert(`AI Viralite Skoru: ${d.score}/100`);
-      } else alert('Viralite analizi hatası: ' + d.error);
+        window.showToast?.('success', 'Viralite Skoru', `AI Viralite Skoru: ${d.score}/100`);
+      } else window.showToast?.('error', 'Viralite Analiz Hatası', d.error);
     } catch (e: any) {
-      alert('Hata: ' + e.message);
+      window.showToast?.('error', 'Hata', e.message);
     }
   };
 
@@ -863,35 +864,35 @@ export default function App() {
                     <CanvasPanel
                       language={language}
                       t={t}
-                      onShowToast={(msg, type) => console.log(msg, type)}
+                      onShowToast={(msg, type) => window.showToast?.(type as any, 'Canvas', msg)}
                     />
                   )}
                   {mainTab === 'API Keys' && (
                     <ApiKeyManager
                       language={language}
                       t={t}
-                      onShowToast={(msg, type) => console.log(msg, type)}
+                      onShowToast={(msg, type) => window.showToast?.(type as any, 'API Anahtarları', msg)}
                     />
                   )}
                   {mainTab === 'Batch' && (
                     <BatchUpload
                       language={language}
                       t={t}
-                      onShowToast={(msg, type) => console.log(msg, type)}
+                      onShowToast={(msg, type) => window.showToast?.(type as any, 'Toplu İşlemler', msg)}
                     />
                   )}
                   {mainTab === 'Clipper' && (
                     <ClipperPanel
                       language={language}
                       t={t}
-                      onShowToast={(msg, type) => console.log(msg, type)}
+                      onShowToast={(msg, type) => window.showToast?.(type as any, 'Clipper', msg)}
                     />
                   )}
                   {mainTab === 'Yayın Planla' && (
                     <SchedulePublishPanel
                       language={language}
                       t={t}
-                      onShowToast={(msg, type) => console.log(msg, type)}
+                      onShowToast={(msg, type) => window.showToast?.(type as any, 'Yayın Planlama', msg)}
                     />
                   )}
                   {mainTab === 'AI Stüdyo' && (
@@ -1008,6 +1009,7 @@ export default function App() {
                 onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
                 t={t}
               />
+              <NotificationToast />
             </div>
           )
         }

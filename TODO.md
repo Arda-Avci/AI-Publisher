@@ -5,31 +5,20 @@
 > **Kaynak:** `son_implementation_plan.md` — Colab'dan RunPod Serverless + Backblaze B2'ye geçiş planı
 
 ### FAZ 1: Altyapı ve Depolama Entegrasyonu
-- [ ] **runpod.ts** — RunPod Serverless API istemcisi (`src/services/runpod.ts`)
+- [x] **runpod.ts** — RunPod Serverless API istemcisi (`src/services/runpod.ts`)
   - `triggerJob(endpointId, input, webhookUrl)` — Serverless endpoint'e iş tetikleme
   - `getJobStatus(jobId)` — Fallback sorgulama fonksiyonu
   - Webhook callback URL'sini (`WEBHOOK_URL/api/webhook/runpod`) parametre olarak gönderme
-- [ ] **webhook.ts** — RunPod callback endpoint (`src/routes/webhook.ts`)
+- [x] **webhook.ts** — RunPod callback endpoint (`src/routes/webhook.ts`)
   - `/api/webhook/runpod` — RunPod payload doğrulama (token kontrolü)
   - Başarılı iş: B2 medya URL'leri → DB güncelleme (`completed_scenes`, `progress_percent`) → SSE broadcast → sonraki sahne tetikleme
   - Başarısız iş: Hata yakalama, DB'ye yazma, SSE ile kullanıcı bilgilendirme
-- [ ] **.env güncellemesi** — Aşağıdaki env değişkenleri eklenecek:
-  ```
-  RUNPOD_API_KEY=your_runpod_api_key
-  WEBHOOK_URL=https://your-ngrok-subdomain.ngrok-free.app
-  RUNPOD_ENDPOINT_WAN25=endpoint_id_1
-  RUNPOD_ENDPOINT_XTTS=endpoint_id_2
-  RUNPOD_ENDPOINT_WHISPER=endpoint_id_3
-  B2_KEY_ID=your_b2_key_id
-  B2_APPLICATION_KEY=your_b2_application_key
-  B2_BUCKET_NAME=your_bucket_name
-  B2_ENDPOINT=s3.us-west-004.backblazeb2.com
-  ```
-- [ ] **server.ts** — `/api/webhook/runpod` rotasının Express uygulamasına kaydı
+- [x] **.env güncellemesi** — Env değişkenleri `.env.example` dosyasına belgelendi ve yerel ortamda yapılandırıldı.
+- [x] **server.ts** — `/api/webhook/runpod` rotasının Express uygulamasına kaydı
 
 ### FAZ 2: Job Queue RunPod Entegrasyonu
-- [ ] **queue.ts** — Colab tünel HTTP istekleri ve dosya transfer kodlarını kaldır
-- [ ] **queue.ts** — Her sahne işlenirken sırayla RunPod Serverless tetikleme
+- [x] **queue.ts** — Colab tünel HTTP istekleri ve dosya transfer kodlarını kaldır
+- [x] **queue.ts** — Her sahne işlenirken sırayla RunPod Serverless tetikleme
   1. **Wan 2.5 Video:** `runpod.ts` → Wan2.5 endpoint → webhook URL pasla → `rendering_video`
   2. **Webhook Bekleme:** RunPod bitirir → B2'ye yükler → backend'e webhook
   3. **TTS Adımı:** XTTS Serverless endpoint tetikle → webhook bekle
@@ -37,8 +26,8 @@
   5. **Final:** Birleştirilmiş video B2'ye yükle → DB güncelle
 
 ### FAZ 3: Docker Imajlarının GHCR İçin Hazırlanması
-- [ ] Tüm Dockerfile'ları RunPod Serverless gereksinimlerine göre güncelle (Handler fonksiyonu)
-- [ ] Model ağırlıklarını imaj içine COPY veya HuggingFace indirme komutları ile göm
+- [x] Tüm Dockerfile'ları RunPod Serverless gereksinimlerine göre güncelle (Handler fonksiyonu)
+- [x] Model ağırlıklarını imaj içine COPY veya HuggingFace indirme komutları ile göm (Colab Kaniko build zinciri hazırlandı)
 
 ### FAZ 4: Faz 6 Dockerfile Bağımlılık Düzeltmeleri (21 Haziran 2026)
 
@@ -1014,13 +1003,13 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 
 | # | Görev | Seviye | Durum | Öncelik |
 |---|-------|--------|-------|---------|
-| 1 | **runpod.ts** — RunPod API istemcisi | Minor | ⏳ Bekliyor | ⭐⭐⭐ |
-| 2 | **webhook.ts** — RunPod callback endpoint | Minor | ⏳ Bekliyor | ⭐⭐⭐ |
-| 3 | **queue.ts RunPod entegrasyonu** — Colab→RunPod geçişi | Major | ⏳ Bekliyor | ⭐⭐⭐ |
-| 4 | **Dockerfile Handler güncellemesi** — RunPod uyumlu | Minor | ⏳ Bekliyor | ⭐⭐⭐ |
-| 5 | **.env güncellemesi** — B2 + RunPod env değişkenleri | Patch | ⏳ Bekliyor | ⭐⭐ |
-| 6 | **NotificationToast.tsx** | Patch | ⏳ Bekliyor | ⭐⭐ |
-| 7 | **alert()→toast dönüşümü** | Patch | ⏳ Bekliyor | ⭐⭐ |
+| 1 | **runpod.ts** — RunPod API istemcisi | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 2 | **webhook.ts** — RunPod callback endpoint | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 3 | **queue.ts RunPod entegrasyonu** — Colab→RunPod geçişi | Major | ✅ Tamamlandı | ⭐⭐⭐ |
+| 4 | **Dockerfile Handler güncellemesi** — RunPod uyumlu | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 5 | **.env güncellemesi** — B2 + RunPod env değişkenleri | Patch | ✅ Tamamlandı | ⭐x |
+| 6 | **NotificationToast.tsx** | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 7 | **alert()→toast dönüşümü** | Patch | ✅ Tamamlandı | ⭐⭐ |
 | 8 | **Kalan 6 Docker Hub modeli** | Minor | ⏳ Bekliyor | ⭐⭐ |
 | 9 | **Test onarımları** | Patch | ⏳ Bekliyor | ⭐⭐ |
 | 10 | **Faz 7C/D/E Testleri** | Test | ⏳ Bekliyor | ⭐⭐ |
@@ -1071,8 +1060,8 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 | 4 | Hardcoded string scanner | Patch | ✅ Tamamlandı | ⭐ |
 | 5 | B2 S3 wrapper | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
 | 6 | EDL JSON spec dokümantasyonu | Patch | ✅ Tamamlandı | ⭐ |
-| 7 | **NotificationToast.tsx (2C)** | Patch | ⏳ Sıradaki | ⭐⭐ |
-| 8 | **alert()→toast dönüşümü (2D)** | Patch | ⏳ Sıradaki | ⭐⭐ |
+| 7 | **NotificationToast.tsx (2C)** | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 8 | **alert()→toast dönüşümü (2D)** | Patch | ✅ Tamamlandı | ⭐⭐ |
 | 9 | **RunPod startup script (3D)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
 | 10 | **B2 callback endpoint (3F)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
 | 11 | **Kalan 6 Docker Hub modeli (4B→4G)** | Minor | ⏳ Sıradaki | ⭐⭐ |

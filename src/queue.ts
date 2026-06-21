@@ -1,6 +1,7 @@
 import { getRabbitChannel, VIDEO_JOBS_QUEUE, registerReconnectCallback } from './lib/rabbitmq.js';
 import { checkZenModelsHealth } from './lib/ai-provider.js';
 import { t, STAGE_KEYS } from './lib/server-i18n.js';
+import { RunPodClient } from './services/runpod.js';
 import {
   extractReferenceFrame,
   runFFmpegWithFallback,
@@ -826,59 +827,114 @@ async function startProduction(job: VideoJob) {
         let taskStatus = 'processing';
         let taskData: any = null;
 
+        const b2Credentials = {
+          endpoint_url: process.env.B2_ENDPOINT_URL,
+          key_id: process.env.B2_KEY_ID,
+          application_key: process.env.B2_APPLICATION_KEY,
+          bucket_name: process.env.B2_BUCKET_NAME
+        };
+
+        const callbackUrl = process.env.PUBLIC_URL
+          ? `${process.env.PUBLIC_URL}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
+          : `http://localhost:${process.env.PORT || 4000}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`;
+
+        let endpointId = '';
+        const lowerModel = modelType.toLowerCase();
+        if (lowerModel.includes('cogvideox-5b') || lowerModel === 'cogvideox') {
+          endpointId = process.env.RUNPOD_COGVIDEOX_5B_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('cogvideox-2b')) {
+          endpointId = process.env.RUNPOD_COGVIDEOX_2B_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('hunyuan')) {
+          endpointId = process.env.RUNPOD_HUNYUANVIDEO_ENDPOINT_ID || '';
+        } else if (lowerModel === 'wan' || lowerModel.includes('wan2.1')) {
+          endpointId = process.env.RUNPOD_WAN_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('wan2.5') || lowerModel.includes('wan25')) {
+          endpointId = process.env.RUNPOD_WAN25_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('ltx')) {
+          endpointId = process.env.RUNPOD_LTX_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('sadtalker')) {
+          endpointId = process.env.RUNPOD_SADTALKER_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('musetalk')) {
+          endpointId = process.env.RUNPOD_MUSETALK_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('wav2lip')) {
+          endpointId = process.env.RUNPOD_WAV2LIP_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('animatediff')) {
+          endpointId = process.env.RUNPOD_ANIMATEDIFF_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('audioldm2')) {
+          endpointId = process.env.RUNPOD_AUDIOLDM2_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('dynamicrafter')) {
+          endpointId = process.env.RUNPOD_DYNAMICRAFTER_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('f5tts')) {
+          endpointId = process.env.RUNPOD_F5TTS_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('geneface')) {
+          endpointId = process.env.RUNPOD_GENEFACE_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('kokorotts')) {
+          endpointId = process.env.RUNPOD_KOKOROTTS_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('lora-trainer') || lowerModel.includes('loratrainer')) {
+          endpointId = process.env.RUNPOD_LORATRAINER_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('mochi')) {
+          endpointId = process.env.RUNPOD_MOCHI_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('pyramid-flow') || lowerModel.includes('pyramidflow')) {
+          endpointId = process.env.RUNPOD_PYRAMIDFLOW_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('stablediffusion')) {
+          endpointId = process.env.RUNPOD_STABLEDIFFUSION_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('svd')) {
+          endpointId = process.env.RUNPOD_SVD_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('video-retalking') || lowerModel.includes('videoretalking')) {
+          endpointId = process.env.RUNPOD_VIDEORETALKING_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('whisper')) {
+          endpointId = process.env.RUNPOD_WHISPER_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('xtts')) {
+          endpointId = process.env.RUNPOD_XTTS_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('zeroscope')) {
+          endpointId = process.env.RUNPOD_ZEROSCOPE_ENDPOINT_ID || '';
+        } else {
+          endpointId = process.env.RUNPOD_DEFAULT_ENDPOINT_ID || '';
+        }
+
+        if (!endpointId && process.env.MOCK_COLAB !== 'true') {
+          throw new Error(`No RunPod Serverless Endpoint ID mapped for model: ${modelType}`);
+        }
+
         if (process.env.MOCK_COLAB === 'true') {
           Logger.info(`[MOCK] Mocking media generation for Scene ${scene.scene_number}...`);
           taskStatus = 'success';
           taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
         } else {
-          const response = await axios.post(
-            `${COG_URL}/generate-media`,
-            {
-              scene_number: scene.scene_number,
-              video_prompt: finalPrompt,
-              speech_text: scene.speech_text,
-              sfx_prompt: scene.sfx_prompt,
-              character_features: '',
-              reference_image_base64: referenceImageBase64,
-              source_video_id: sendSourceVideoId,
-              user_image_path: job.material_path,
-              apply_lipsync: applyLipsync,
-              job_id: job.id,
-              video_model: modelType,
-              tts_provider: job.tts_provider || 'xtts',
-              tts_voice:
-                job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
-              reference_audio_base64: speakerAudioBase64,
-              character_images: characterImages,
-              speaker: currentSpeaker,
-              background_music: remoteMusicUrl,
-              music_volume:
-                scene.music_volume !== undefined && scene.music_volume !== null
-                  ? scene.music_volume
-                  : 0.15,
-              logo_url: remoteLogoUrl,
-              differentiation_layout: job.differentiation_layout === 1 ? 'horizontal' : 'none',
-              subtitle_primary_color: user?.brand_primary_color || '#00F2FE',
-              subtitle_secondary_color: user?.brand_secondary_color || '#FFFFFF',
-              subtitle_font_name: user?.brand_font_path
-                ? path.basename(user.brand_font_path, path.extname(user.brand_font_path))
-                : 'Arial',
-              subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
-              callback_url: process.env.PUBLIC_URL
-                ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-                : `http://localhost:${process.env.PORT || 4000}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`,
-              lora_weights_path: loraWeightsPath,
-            },
-            { timeout: 600000 },
-          );
+          const runpodInput = {
+            job_id: job.id,
+            scene_number: scene.scene_number,
+            video_prompt: finalPrompt,
+            speech_text: scene.speech_text,
+            sfx_prompt: scene.sfx_prompt,
+            character_features: '',
+            reference_image_base64: referenceImageBase64,
+            source_video_id: sendSourceVideoId,
+            user_image_path: job.material_path,
+            apply_lipsync: applyLipsync,
+            video_model: modelType,
+            tts_provider: job.tts_provider || 'xtts',
+            tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
+            reference_audio_base64: speakerAudioBase64,
+            character_images: characterImages,
+            speaker: currentSpeaker,
+            background_music: remoteMusicUrl,
+            music_volume: scene.music_volume !== undefined && scene.music_volume !== null ? scene.music_volume : 0.15,
+            logo_url: remoteLogoUrl,
+            differentiation_layout: job.differentiation_layout === 1 ? 'horizontal' : 'none',
+            subtitle_primary_color: user?.brand_primary_color || '#00F2FE',
+            subtitle_secondary_color: user?.brand_secondary_color || '#FFFFFF',
+            subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
+            subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
+            lora_weights_path: loraWeightsPath,
+            b2_credentials: b2Credentials
+          };
 
-          const receivedId = response.data?.task_id;
-          if (!receivedId) {
-            Logger.error('Docker task_id DÖNMEDİ', response.data);
-            throw new Error('Docker task_id dönmedi.');
-          }
-          taskId = receivedId;
-          Logger.info('[PRODUCTION] Docker task started', { taskId, status: response.data?.status });
+          const runpodRes = await RunPodClient.runJob(endpointId, runpodInput, callbackUrl);
+          taskId = runpodRes.id;
+          Logger.info('[PRODUCTION] RunPod serverless job started', { taskId, status: runpodRes.status });
+
+          await db.run('UPDATE video_scenes SET runpod_job_id = ? WHERE id = ?', [taskId, scene.id]);
         }
 
         const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.scene_number}.mp4`);
@@ -892,109 +948,43 @@ async function startProduction(job: VideoJob) {
 
         await db.run('UPDATE video_jobs SET task_id = ? WHERE id = ?', [taskId, job.id]);
 
-        let attempt = 0;
-        const taskStartTime = Date.now();
-        let dynamicTimeoutMs = 720000; // Başlangıçta varsayılan 12 dakika
+        if (process.env.MOCK_COLAB !== 'true') {
+          let dbSceneStatus = 'pending';
+          const pollStartTime = Date.now();
+          const dynamicTimeoutMs = 720000; // 12 minutes max
 
-        while (taskStatus === 'processing' || taskStatus === 'accepted') {
-          attempt++;
-          await new Promise((resolve) => setTimeout(resolve, 3000));
+          while (dbSceneStatus === 'pending' || dbSceneStatus === 'processing') {
+            await new Promise((resolve) => setTimeout(resolve, 5000));
 
-          // Erken çıkış (Early Exit) kontrolü: Eğer callback tüm dosyaları diskimize push ettiyse polling beklemeyelim
-          try {
-            const isVideoDone = await fs.pathExists(tV);
-            const isSpeechDone = await fs.pathExists(tS);
-            const isSfxDone = await fs.pathExists(tE);
-            const isSubtitleDone =
-              job.has_subtitles === 0 || !applyLipsync || (await fs.pathExists(tSRT));
+            // Check cancellation
+            const cancelCheck = await db.get('SELECT status FROM video_jobs WHERE id = ?', [job.id]);
+            if (cancelCheck && cancelCheck.status === 'cancelled') {
+              Logger.info('Polling: Job cancelled by user.');
+              throw new Error('JOB_CANCELLED');
+            }
 
-            if (isVideoDone && isSpeechDone && isSfxDone && isSubtitleDone) {
-              Logger.info(
-                `[Early Exit] Sahne ${scene.scene_number} dosyalari callback ile diskte algilandi, polling sonlandiriliyor.`,
-                { jobId: job.id },
-              );
+            const currentScene = await db.get('SELECT status FROM video_scenes WHERE id = ?', [scene.id]);
+            dbSceneStatus = currentScene?.status || 'pending';
+
+            if (dbSceneStatus === 'completed') {
+              Logger.info(`[Queue] RunPod job ${taskId} completed successfully. Proceeding to downloads.`);
               taskStatus = 'success';
-              taskData = { status: 'success', has_subtitle: await fs.pathExists(tSRT) };
+              taskData = { status: 'success', has_subtitle: true }; // updated after download checks
               break;
             }
-          } catch (checkErr) {
-            Logger.warn('[PRODUCTION] Early polling exit check error:', checkErr);
-          }
 
-          // Docker kilitlenme/timeout önlemi (Dinamik zaman aşımı)
-          const totalElapsedMs = Date.now() - taskStartTime;
-          if (totalElapsedMs > dynamicTimeoutMs) {
-            Logger.error(
-              `Docker render işlemi zaman aşımına uğradı (${Math.round(dynamicTimeoutMs / 1000)} sn)`,
-              new Error('COLAB_RENDER_TIMEOUT'),
-            );
-            throw new Error(
-              `Docker video üretimi zaman aşımı sınırını (${Math.round(dynamicTimeoutMs / 1000)} sn) aştı.`,
-            );
-          }
-
-          // Polling döngüsünde iptal kontrolü
-          const cancelCheck2: { status: string } | undefined = await db.get(
-            'SELECT status FROM video_jobs WHERE id = ?',
-            [job.id],
-          );
-          if (cancelCheck2 && cancelCheck2.status === 'cancelled') {
-            Logger.info('Polling sırasında iş iptal edildi');
-            throw new Error('JOB_CANCELLED');
-          }
-
-          try {
-            const statusRes = await axios.get(`${COG_URL}/status/${taskId}`, {
-              timeout: 10000,
-            });
-            taskData = statusRes.data;
-            taskStatus = taskData.status || 'processing';
-
-            Logger.info(`Docker polling #${attempt}`, {
-              taskId,
-              taskStatus,
-              stage: taskData?.stage,
-              stagePercent: taskData?.stagePercent,
-              message: taskData?.message,
-              etaSeconds: taskData?.etaSeconds,
-            });
-
-            // Dinamik watchdog zaman aşımı güncellemesi
-            if (taskData && typeof taskData.etaSeconds === 'number') {
-              dynamicTimeoutMs = totalElapsedMs + taskData.etaSeconds * 1000 + 180000; // geçen süre + kalan süre + 3 dk güvenlik payı
-              Logger.info(
-                `Watchdog zaman aşımı güncellendi: ${Math.round(dynamicTimeoutMs / 1000)} sn (Docker ETA: ${taskData.etaSeconds} sn)`,
-              );
+            if (dbSceneStatus === 'failed') {
+              Logger.error(`[Queue] RunPod job ${taskId} failed.`);
+              taskStatus = 'failed';
+              taskData = { status: 'failed', message: 'RunPod job failed' };
+              break;
             }
 
-            // S7: Docker sub-stage bilgisini SSE'ye yayınla
-            if (taskData?.stage) {
-              let etaSeconds: number | null = null;
-              if (taskData && typeof taskData.etaSeconds === 'number') {
-                etaSeconds = taskData.etaSeconds;
-              } else if (taskData.stagePercent > 5) {
-                const elapsedSec = (Date.now() - taskStartTime) / 1000;
-                etaSeconds = Math.round(
-                  (elapsedSec / taskData.stagePercent) * (100 - taskData.stagePercent),
-                );
-              }
-              broadcast(job.id, {
-                stageKey: 'stageDockerProgress',
-                dockerStage: taskData.stage,
-                dockerMessage: taskData.message || '',
-                dockerPercent: taskData.stagePercent || 0,
-                percent: pct,
-                etaSeconds,
-              });
-            }
-          } catch (statusErr: any) {
-            Logger.warn(`Docker status check hatası (tekrar denenecek)`, {
-              attempt,
-              error: statusErr.message,
-            });
-            if (attempt > 60) {
-              Logger.error('Docker timeout (3 dk)', statusErr);
-              throw new Error(`Docker sunucusuna erişilemiyor (timeout): ${statusErr.message}`);
+            if (Date.now() - pollStartTime > dynamicTimeoutMs) {
+              Logger.error(`[Queue] RunPod job ${taskId} timed out.`);
+              taskStatus = 'failed';
+              taskData = { status: 'failed', message: 'RunPod job timed out' };
+              break;
             }
           }
         }
@@ -1008,87 +998,61 @@ async function startProduction(job: VideoJob) {
         const hasSubtitle = taskData?.has_subtitle || false;
         Logger.info('[PRODUCTION] Scene completed, downloading files', { hasSubtitle });
 
+        let srtFile = '';
         if (process.env.MOCK_COLAB === 'true') {
           Logger.info('[MOCK] Generating mock scene files via FFmpeg...');
           const { exec } = require('child_process');
 
-          // 1. Mock Video (6 sn)
           if (!(await fs.pathExists(tV))) {
             const escText = (scene.video_prompt || '').replace(/'/g, "'\\\\''").slice(0, 50);
             const cmd = `ffmpeg -y -f lavfi -i "color=c=0x08111F:s=1280x720:d=6:r=24" -vf "drawtext=text='Scene ${scene.scene_number} - ${escText}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2" -c:v libx264 "${tV}"`;
             await new Promise<void>((r) => exec(cmd, () => r()));
           }
 
-          // 2. Mock Speech (6 sn)
           if (!(await fs.pathExists(tS))) {
             const cmd = `ffmpeg -y -f lavfi -i "anullsrc=r=16000:cl=mono" -t 6 "${tS}"`;
             await new Promise<void>((r) => exec(cmd, () => r()));
           }
 
-          // 3. Mock SFX (6 sn)
           if (!(await fs.pathExists(tE))) {
             const cmd = `ffmpeg -y -f lavfi -i "anullsrc=r=16000:cl=mono" -t 6 "${tE}"`;
             await new Promise<void>((r) => exec(cmd, () => r()));
           }
         } else {
+          const currentScene = await db.get(
+            'SELECT video_path, audio_path, sfx_path, subtitle_path FROM video_scenes WHERE id = ?',
+            [scene.id]
+          );
+
           if (!(await fs.pathExists(tV))) {
-            Logger.info('[PRODUCTION] Downloading video...', {
-              url: dockerHost.resolveEndpoint('/download/video'),
-            });
-            await dl(dockerHost.resolveEndpoint('/download/video'), tV);
-          } else {
-            Logger.info(
-              '[PRODUCTION] Video already local (pushed via callback), skipping download.',
-              { tV },
-            );
+            if (currentScene?.video_path) {
+              Logger.info(`[PRODUCTION] Downloading video from B2: ${currentScene.video_path}`);
+              await dl(currentScene.video_path, tV);
+            } else {
+              throw new Error('Video path is missing after production completed.');
+            }
           }
 
           if (!(await fs.pathExists(tS))) {
-            Logger.info('[PRODUCTION] Downloading speech...', {
-              url: dockerHost.resolveEndpoint('/download/speech'),
-            });
-            await dl(dockerHost.resolveEndpoint('/download/speech'), tS);
-          } else {
-            Logger.info(
-              '[PRODUCTION] Speech already local (pushed via callback), skipping download.',
-              { tS },
-            );
+            if (currentScene?.audio_path) {
+              Logger.info(`[PRODUCTION] Downloading speech from B2: ${currentScene.audio_path}`);
+              await dl(currentScene.audio_path, tS);
+            }
           }
 
           if (!(await fs.pathExists(tE))) {
-            Logger.info('[PRODUCTION] Downloading SFX...', { url: dockerHost.resolveEndpoint('/download/sfx') });
-            await dl(dockerHost.resolveEndpoint('/download/sfx'), tE);
-          } else {
-            Logger.info(
-              '[PRODUCTION] SFX already local (pushed via callback), skipping download.',
-              { tE },
-            );
-          }
-        }
-
-        let srtFile = '';
-        if (process.env.MOCK_COLAB === 'true') {
-          if (scene.speech_text && job.has_subtitles !== 0) {
-            srtFile = tSRT;
-            fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`);
-          }
-        } else if (hasSubtitle && job.has_subtitles !== 0) {
-          if (await fs.pathExists(tSRT)) {
-            Logger.info(
-              '[PRODUCTION] Subtitle already local (pushed via callback), skipping download.',
-              { tSRT },
-            );
-            srtFile = tSRT;
-          } else {
-            try {
-              Logger.info('[PRODUCTION] Downloading subtitle...', {
-                url: dockerHost.resolveEndpoint('/download/subtitle'),
-              });
-              await dl(dockerHost.resolveEndpoint('/download/subtitle'), tSRT);
-              srtFile = tSRT;
-            } catch (srtErr) {
-              Logger.warn('[PRODUCTION] Subtitle download failed:', srtErr);
+            if (currentScene?.sfx_path) {
+              Logger.info(`[PRODUCTION] Downloading SFX from B2: ${currentScene.sfx_path}`);
+              await dl(currentScene.sfx_path, tE);
             }
+          }
+
+          if (currentScene?.subtitle_path) {
+            if (!(await fs.pathExists(tSRT))) {
+              Logger.info(`[PRODUCTION] Downloading subtitle from B2: ${currentScene.subtitle_path}`);
+              await dl(currentScene.subtitle_path, tSRT);
+            }
+            srtFile = tSRT;
           }
         }
 

@@ -74,10 +74,15 @@ export default function AdminUsers() {
     try {
       const r = await fetch(`/api/v1/admin/users/${id}`, { method: 'DELETE' });
       const d = await r.json();
-      if (d.success) fetchUsers();
-      else alert(d.error);
-    } catch (e) {
+      if (d.success) {
+        fetchUsers();
+        window.showToast?.('success', 'Kullanıcı Silindi', 'Kullanıcı başarıyla silindi.');
+      } else {
+        window.showToast?.('error', 'Silme Hatası', d.error || 'Bilinmeyen hata');
+      }
+    } catch (e: any) {
       console.error(e);
+      window.showToast?.('error', 'Sistem Hatası', e.message);
     }
   };
 

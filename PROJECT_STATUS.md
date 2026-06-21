@@ -1,25 +1,42 @@
 # AI_Publisher Proje Durumu
 
-## 📚 2026 Multimodal & Agent Araştırma Raporu (20 Haziran 2026)
+## 🔔 Canlı Bildirim Sistemi, Modern Toast ve Colab Klonlama Düzeltmesi (22 Haziran 2026)
 
-- [x] **Araştırma raporu:** Gemini 2.5, GPT-5.5, Claude 4, LangGraph, CrewAI, MAF, MCP, Veo 3.1 karşılaştırması tamamlandı.
-- Rapor: `brain/cf60fa02-25bd-4b39-9dc6-7879af882299/multimodal_agent_research_2026.md`
-- **Kritik bulgular:**
-  - Microsoft **AutoGen Mayıs 2026'da maintenance mode'a** alındı. Halefi: MAF (GA 2 Nis 2026).
-  - **MCP endüstri standardı** (Linux Foundation governance). v7.1 patch olarak MCP Server uygulanabilir.
-  - **Gemini 2.5 Flash** default, Pro premium tier — maliyet tasarrufu %60.
-  - **Veo 3.1 native audio** → TTS+SFX pipeline'ı basitleştirir (opsiyonel, premium).
-- **Önerilen v7.1 patch listesi:** Gemini Flash default, MCP Server POC, Deep Think opsiyonel parametre, Pino logger.
+- **SSE ve Canlı Bildirim:**
+  - `/api/v1/notifications/stream` SSE rotası ve Redis subscription kanalı aracılığıyla sunucudaki otonom işlerin (sosyal medya yükleme, render adımları) durumu tarayıcıya anlık aktarılıyor.
+  - SQLite/PostgreSQL tabanlı bildirim tablosu rotaları (`/api/v1/notifications`, `:id/read`, `read-all`) tamamlandı.
+- **Glassmorphic Toast Entegrasyonu:**
+  - Premium neon/glassmorphism temasıyla `NotificationToast.tsx` ve global `window.showToast` API'si entegre edildi.
+  - Arayüzdeki (GalleryPanel, AiAssistantPanel, ProjectForm, AdminUsers, App) 35'ten fazla bloke edici `alert()` çağrısı toast sistemine dönüştürüldü.
+- **Colab Git Klonlama ve Kabuk (Bash) GLIBC Hatası Onarımı:**
+  - Colab ortamında git clone ve `build_all_v2.sh` scriptlerini bash ile tetiklerken yaşanan GLIBC uyuşmazlığı (`libc.so.6: version GLIBC_2.33 not found`) hatası giderildi.
+  - Hatanın Colab'ın custom kütüphane yollarının (`LD_LIBRARY_PATH`) sistem araçlarının (git, bash vb.) dynamic linker işlemlerini etkilemesinden kaynaklandığı saptandı.
+  - `colab_setup.ipynb`, `colab_setup_v2.ipynb`, `colab_docker_build.ipynb` ve `Google_Colab_AI_Publisher.ipynb` dosyalarındaki tüm `subprocess` (run, Popen, check_call vb.) çağrıları taranarak, öncesinde `LD_LIBRARY_PATH` değişkenini temizleyen ve kabuk işlemlerini bu temizlenmiş çevre değişkeniyle çalıştıran yama uygulandı.
+- **Tip Güvenliği ve Doğrulama:**
+  - `npm run check:types` ile TypeScript strictNullChecks ve tip uyuşmazlığı hataları tamamen giderildi. Derleme sıfır hata ile tamamlanıyor.
 
-## 🚀 RunPod Serverless + Backblaze B2 Geçiş Planı (21 Haziran 2026)
+## ☁️ RunPod Serverless + Backblaze B2 Mimarisi (22 Haziran 2026)
 
-- **Amaç:** Google Colab'dan RunPod Serverless GPU'ya ve dosya depolama için Backblaze B2'ye geçiş
-- **Detay:** `son_implementation_plan.md` dosyasında tanımlı
-- **Yapılanlar:**
-  - [x] `src/lib/b2.ts` — Backblaze B2 S3 wrapper (upload/download/delete/list/getSignedUrl/health)
-  - [x] `.env.example` — B2 + RunPod env değişkenleri eklendi
-  - [x] `docs/edl-json-spec.md` — EDL JSON specification (RunPod entegrasyonu için)
-- **Kalanlar:** runpod.ts, webhook.ts, queue.ts RunPod geçişi, Dockerfile Handler güncellemeleri
+- **Çekirdek Altyapı:**
+  - **Veritabanı:** PostgreSQL (Merkezi pg bağlantı havuzu, SQLite uyumluluk katmanı)
+  - **Önbellek & Kilit Yönetimi:** Redis (Memurai)
+  - **İş Kuyruğu:** RabbitMQ (Dağıtık mesaj kuyruğu sistemi)
+  - **Depolama:** Backblaze B2 (Medya çıktıları için genel bulut deposu)
+
+- **Mimari Akış:**
+  - **Google Colab:** Sadece Docker imajı build etmek için kullanılır. İmajları `ghcr.io` (GitHub Container Registry) deposuna pushlar ve yedek olarak Google Drive'a `.tar.gz` formatında yükler.
+  - **GitHub Container Registry (GHCR):** Yapay zeka Docker imajlarımızı (`base` + 23 model) barındırır.
+  - **RunPod:** Yapay zeka imajlarını serverless veya VM olarak çalıştırıp GPU render yükünü üstlenir.
+  - **Node.js Backend:** Kuyruktan gelen talepleri RunPod API'sine paslar, RunPod webhook'u B2 çıktılarını bildirdiğinde bunlarla localde hızlı FFmpeg mixing/concat (CPU) yaparak final videosunu oluşturur.
+- **Aktif Durum:**
+  - [x] `src/lib/b2.ts` — Backblaze B2 S3 wrapper yazıldı ve doğrulandı.
+  - [x] `.env.example` — B2 ve RunPod env değişkenleri eklendi.
+  - [x] `docs/edl-json-spec.md` — EDL JSON format ve webhook şemaları belgelendi.
+  - [x] Dockerfile'lar (sadtalker dlib bypass dahil) Colab derlemesine hazır.
+  - [x] `runpod.ts` API istemcisi (`triggerJob`, `getJobStatus`) yazıldı.
+  - [x] `/api/webhook/runpod` Express webhook rotası yazıldı ve CSRF muafiyeti sağlandı.
+  - [x] `queue.ts` dosyasında local Docker/Colab çağrıları RunPod Serverless modeline geçirildi ve DB status polling entegre edildi.
+  - [x] `runpod_handler.py` generic serverless wrapper yazılıp imajlara eklendi.
 
 ## 🎯 Colab Runtime → Docker Native Migration (21 Haziran 2026)
 

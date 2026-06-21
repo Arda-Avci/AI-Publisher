@@ -136,6 +136,9 @@ for i in "${!MODELS[@]}"; do
   # Faz 3: Kaniko Build
   echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
   
+  # Copy runpod_handler.py to model directory for context access during build
+  cp -f runpod_handler.py "$MODEL/"
+  
   $KANIKO_BIN --context="$MODEL/" \
          --dockerfile="$MODEL/Dockerfile" \
          --destination="localhost:5000/ai-publisher-$MODEL:latest" \
@@ -147,6 +150,9 @@ for i in "${!MODELS[@]}"; do
          --snapshot-mode=redo
   
   BUILD_STATUS=$?
+  
+  # Clean up runpod_handler.py from model directory
+  rm -f "$MODEL/runpod_handler.py"
   
   # Dockerfile'ı eski haline geri döndür
   if [ "$YAMALANDI" = "true" ]; then

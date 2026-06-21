@@ -36,4 +36,5 @@ RUN curl -sL https://github.com/OpenTalker/video-retalking/archive/refs/heads/ma
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000
-CMD ["python", "app.py"]
+COPY runpod_handler.py /app/
+CMD ["python", "-u", "runpod_handler.py"]

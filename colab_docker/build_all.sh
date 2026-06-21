@@ -79,7 +79,7 @@ else
   exit 1
 fi
 
-MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer")
+MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer" "zeroscope" "dynamicrafter" "sadtalker" "pyramid-flow" "mochi" "video-retalking" "geneface")
 TOTAL_MODELS=${#MODELS[@]}
 
 for i in "${!MODELS[@]}"; do
@@ -132,6 +132,9 @@ for i in "${!MODELS[@]}"; do
   # Faz 3: Kaniko Build
   echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
   
+  # Copy runpod_handler.py to model directory for context access during build
+  cp -f runpod_handler.py "$MODEL/"
+  
   $KANIKO_BIN --context="$MODEL/" \
          --dockerfile="$MODEL/Dockerfile" \
          --destination="localhost:5000/ai-publisher-$MODEL:latest" \
@@ -143,6 +146,9 @@ for i in "${!MODELS[@]}"; do
          --snapshot-mode=redo
   
   BUILD_STATUS=$?
+  
+  # Clean up runpod_handler.py from model directory
+  rm -f "$MODEL/runpod_handler.py"
   
   # Dockerfile'ı eski haline geri döndür
   sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
