@@ -151,7 +151,7 @@ export async function transcribeVideoAudioWithTimestamps(
             },
             language: { type: 'STRING' },
           },
-          required: ['text', 'segments'],
+          required: ['text', 'segments', 'language'],
         },
       },
     };

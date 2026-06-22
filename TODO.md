@@ -124,7 +124,7 @@
 ### Mevcut Devam Eden Görevler
 - [x] **NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone) (22 Haziran 2026)
 - [x] **alert()→toast dönüşümü** — 25+ React bileşeninde alert() çağrılarını toast ile değiştir (22 Haziran 2026)
-- [ ] **Kalan 6 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow (Dockerfile'lar hazır, test gerekli)
+- [x] **7 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow, SadTalker (Dockerfile'lar + bağımlılıklar + CUDA 11.x uyumluluğu tamam)
 - [ ] **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix
 - [ ] **Faz 7C:** Entegrasyon Testleri (8 adet)
 - [ ] **Faz 7D:** E2E Playwright (7 adet)
@@ -178,6 +178,7 @@
 - [x] `verify_images.py --drive-only` betiği ile Drive'a yedeklenen 21 imajın arşiv bütünlüğünün sıfır hata ile doğrulanması.
 
 ### FAZ 2: RunPod GPU Altyapısı ve Konteyner Entegrasyonu
+- [x] RunPod Serverless Hub üzerindeki tüm 72 hazır şablonun listesini tarayıcı otomasyonuyla çıkarma ve dökümantasyonunu tamamlama (22 Haziran 2026).
 - [ ] Model ağırlıklarının yüksek hızlı RunPod kalıcı ağ sürücüsüne (Network Volume) yüklenmesi ve `/workspace/models` altına mount edilmesi.
 - [ ] Konteynerlerin port yönlendirmelerinin (`5001 - 5012`) test edilmesi ve `colab_server.py` (RunPod orkestratörü) üzerinden model lazy-loading / VRAM kontrollerinin yapılması.
 - [ ] Sunucu PORT 3016 üzerinden, RunPod'dan dönen callback (webhook) POST isteklerinin başarılı bir şekilde diske yazıldığının doğrulanması.

@@ -246,15 +246,12 @@ export async function checkZenModelsHealth(): Promise<void> {
 
 /**
  * Returns an array of configured AI models for the system (fallback chain).
- * Order: Gemini 2.5 Flash -> Zen API Free models -> Minimax
+ * Order: Zen API Free models (priority) -> Minimax -> Gemini 2.5 Flash (last resort)
  */
 export function getAIModelChain() {
   const models = [];
 
-  // 1. Gemini 2.5 Flash - PRIMARY MODEL
-  models.push(google('gemini-2.5-flash'));
-
-  // 2. Zen API Free modelleri (fallback)
+  // 1. Zen API Free modelleri (priority — ücretsiz, hızlı)
   const zen = getZenProvider();
   if (zen) {
     const zenModels = ['big-pickle', 'mimo-v2.5-free', 'nemotron-3-ultra-free'];
@@ -263,7 +260,7 @@ export function getAIModelChain() {
     }
   }
 
-  // 3. Minimax (final fallback)
+  // 2. Minimax (second fallback)
   if (process.env.ANTHROPIC_API_KEY) {
     let minimaxBaseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
     // Minimax Anthropic-compatible API requires /v1 suffix for the Anthropic SDK proxy to access /v1/messages
@@ -282,21 +279,21 @@ export function getAIModelChain() {
     models.push(minimax(modelName));
   }
 
+  // 3. Gemini 2.5 Flash (last resort)
+  models.push(google('gemini-2.5-flash'));
+
   return models;
 }
 
 /**
  * Returns model chain for structured output (schema-based) operations.
  * Only models that support response_format are included (Zen doesn't).
- * Order: Gemini 2.5 Flash -> Minimax
+ * Order: Minimax (priority) -> Gemini 2.5 Flash (last resort)
  */
 export function getObjectModelChain() {
   const models = [];
 
-  // 1. Gemini 2.5 Flash - PRIMARY
-  models.push(google('gemini-2.5-flash'));
-
-  // 2. Minimax (fallback for structured output)
+  // 1. Minimax (priority for structured output)
   if (process.env.ANTHROPIC_API_KEY) {
     let minimaxBaseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
     if (!minimaxBaseURL.endsWith('/v1')) {
@@ -310,6 +307,9 @@ export function getObjectModelChain() {
     modelName = modelName.replace(/^"|"$/g, '');
     models.push(minimax(modelName));
   }
+
+  // 2. Gemini 2.5 Flash (last resort — quota koruma)
+  models.push(google('gemini-2.5-flash'));
 
   return models;
 }
