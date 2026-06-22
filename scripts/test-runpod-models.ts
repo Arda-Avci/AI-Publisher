@@ -6,7 +6,8 @@ dotenv.config();
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
 
 console.log('========================================================');
-console.log('🚀 RunPod Serverless Hazır Model Doğrulama Aracı');
+console.log('🚀 RunPod Serverless Hub Hazır Şablonlar Doğrulama Aracı');
+console.log('   (Sadece Video ve Ses Modelleri - LLM/Ollama Hariç)');
 console.log('========================================================');
 
 if (!RUNPOD_API_KEY) {
@@ -14,22 +15,26 @@ if (!RUNPOD_API_KEY) {
   process.exit(1);
 }
 
-// Env Endpoint Listesi
+// Hazır şablon endpoint env değişkenleri
 const ENDPOINTS = {
-  WAN25: process.env.RUNPOD_WAN25_ENDPOINT_ID,
-  WAN: process.env.RUNPOD_WAN_ENDPOINT_ID,
-  MOCHI: process.env.RUNPOD_MOCHI_ENDPOINT_ID,
-  XTTS: process.env.RUNPOD_XTTS_ENDPOINT_ID,
-  AUDIOLDM2: process.env.RUNPOD_AUDIOLDM2_ENDPOINT_ID,
-  HUNYUAN_AVATAR: process.env.RUNPOD_HUNYUANVIDEO_ENDPOINT_ID,
-  MUSETALK: process.env.RUNPOD_MUSETALK_ENDPOINT_ID,
+  // --- Video Modelleri ---
+  WAN22_LORA: process.env.RUNPOD_WAN22_ENDPOINT_ID, // Wan2.2 with LoRA
+  MOCHI: process.env.RUNPOD_MOCHI_ENDPOINT_ID,       // Mochi Video Generator
+  SANA: process.env.RUNPOD_SANA_ENDPOINT_ID,         // Sana 0.6B Text-to-Image
+  HUNYUAN_AVATAR: process.env.RUNPOD_HUNYUANVIDEO_ENDPOINT_ID, // HunyuanVideo-Avatar API
+  MULTITALK: process.env.RUNPOD_MULTITALK_ENDPOINT_ID, // Multitalk_Runpod_hub
+
+  // --- Ses / TTS / STT Modelleri ---
+  FISH_SPEECH: process.env.RUNPOD_FISHSPEECH_ENDPOINT_ID, // Runpod Worker Fish Speech
+  COSYVOICE: process.env.RUNPOD_COSYVOICE_ENDPOINT_ID,     // CosyVoice3 TTS Runpod
+  WHISPERX: process.env.RUNPOD_WHISPERX_ENDPOINT_ID,       // WhisperX Worker v2
 };
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Durum Takip Fonksiyonu
+// Durum Takip (Polling) Fonksiyonu
 async function pollJob(endpointId: string, jobId: string, maxWaitSeconds = 600): Promise<any> {
   const start = Date.now();
   console.log(`[Polling] Job ID ${jobId} için durum kontrol ediliyor...`);
@@ -65,17 +70,19 @@ async function pollJob(endpointId: string, jobId: string, maxWaitSeconds = 600):
   throw new Error(`Job ${jobId} zaman aşımına uğradı (${maxWaitSeconds}s).`);
 }
 
-// 1. Wan 2.5 Video Testi
-async function testWan25() {
-  const endpointId = ENDPOINTS.WAN25;
+// --- VİDEO MODELLERİ TEST FONKSİYONLARI ---
+
+// 1. Wan2.2 with LoRA Testi
+async function testWan22() {
+  const endpointId = ENDPOINTS.WAN22_LORA;
   if (!endpointId) {
-    console.warn('\n⚠️ RUNPOD_WAN25_ENDPOINT_ID tanımlı değil. Wan 2.5 testi atlanıyor.');
+    console.warn('\n⚠️ RUNPOD_WAN22_ENDPOINT_ID tanımlı değil. Wan2.2 testi atlanıyor.');
     return;
   }
 
-  console.log('\n🎬 1. Wan 2.5 Video Modeli Test Ediliyor...');
+  console.log('\n🎬 Wan 2.2 with LoRA Test Ediliyor...');
   const input = {
-    prompt: 'A tiny neon cyan robot dancing on a table, 3d render, high quality.',
+    prompt: 'A close-up shot of a burning airplane falling down from the sky, photorealistic, cinematic.',
     num_frames: 49,
     width: 832,
     height: 480,
@@ -88,11 +95,11 @@ async function testWan25() {
     console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
     await pollJob(endpointId, job.id);
   } catch (err: any) {
-    console.error(`[Hata] Wan 2.5 testi başarısız: ${err.message}`);
+    console.error(`[Hata] Wan2.2 testi başarısız: ${err.message}`);
   }
 }
 
-// 2. Mochi Video Testi
+// 2. Mochi Video Generator Testi
 async function testMochi() {
   const endpointId = ENDPOINTS.MOCHI;
   if (!endpointId) {
@@ -100,9 +107,9 @@ async function testMochi() {
     return;
   }
 
-  console.log('\n🎬 2. Mochi Video Sentez Modeli Test Ediliyor...');
+  console.log('\n🎬 Mochi Video Generator Test Ediliyor...');
   const input = {
-    prompt: 'Fast camera motion zooming into a burning wooden cube on a table, realistic fire.',
+    prompt: 'Fast camera motion tracking a burning airplane wing falling into a green field.',
     num_frames: 49,
     width: 848,
     height: 480,
@@ -117,20 +124,19 @@ async function testMochi() {
   }
 }
 
-// 3. XTTS Türkçe Seslendirme Testi
-async function testXtts() {
-  const endpointId = ENDPOINTS.XTTS;
+// 3. Sana 0.6B Text-to-Image Testi
+async function testSana() {
+  const endpointId = ENDPOINTS.SANA;
   if (!endpointId) {
-    console.warn('\n⚠️ RUNPOD_XTTS_ENDPOINT_ID tanımlı değil. XTTS testi atlanıyor.');
+    console.warn('\n⚠️ RUNPOD_SANA_ENDPOINT_ID tanımlı değil. Sana 0.6B testi atlanıyor.');
     return;
   }
 
-  console.log('\n🗣️ 3. XTTS Seslendirme Modeli Test Ediliyor...');
+  console.log('\n🎬 Sana 0.6B Text-to-Image Test Ediliyor...');
   const input = {
-    text: 'Sayın seyirciler, stüdyomuzdan canlı yayınla sıcak bir gelişmeyi aktarıyoruz. Şu anda arkamdaki pencereden alevler içinde bir uçağın geçtiği görülüyor.',
-    language: 'tr',
-    // Projedeki varsayılan referans seslerden birini veya boş dummy referansı kullanabiliriz
-    speaker_wav: 'https://github.com/coqui-ai/TTS/raw/main/tests/data/ljspeech/wavs/LJ001-0001.wav',
+    prompt: 'A professional male news anchor in a modern neon cyan studio, photorealistic, 1024x1024 resolution.',
+    width: 1024,
+    height: 1024,
   };
 
   try {
@@ -138,99 +144,166 @@ async function testXtts() {
     console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
     await pollJob(endpointId, job.id);
   } catch (err: any) {
-    console.error(`[Hata] XTTS testi başarısız: ${err.message}`);
+    console.error(`[Hata] Sana testi başarısız: ${err.message}`);
   }
 }
 
-// 4. AudioLDM2 Ses Efekti Testi
-async function testAudioLdm2() {
-  const endpointId = ENDPOINTS.AUDIOLDM2;
-  if (!endpointId) {
-    console.warn('\n⚠️ RUNPOD_AUDIOLDM2_ENDPOINT_ID tanımlı değil. AudioLDM2 testi atlanıyor.');
-    return;
-  }
-
-  console.log('\n🎵 4. AudioLDM2 Ses Efekti (SFX) Modeli Test Ediliyor...');
-  const input = {
-    prompt: 'Deafening jet engine roar with massive crackling fire and explosion sounds',
-    duration: 5.0,
-    guidance_scale: 3.5,
-    ddim_steps: 30,
-  };
-
-  try {
-    const job = await RunPodClient.runJob(endpointId, input);
-    console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
-    await pollJob(endpointId, job.id);
-  } catch (err: any) {
-    console.error(`[Hata] AudioLDM2 testi başarısız: ${err.message}`);
-  }
-}
-
-// 5. Hunyuan Video Avatar / MuseTalk Ağız Senkronizasyon Testi
+// 4. HunyuanVideo-Avatar API Testi
 async function testHunyuanAvatar() {
-  const endpointId = ENDPOINTS.HUNYUAN_AVATAR || ENDPOINTS.MUSETALK;
-  const isHunyuan = !!ENDPOINTS.HUNYUAN_AVATAR;
-
+  const endpointId = ENDPOINTS.HUNYUAN_AVATAR;
   if (!endpointId) {
-    console.warn('\n⚠️ RUNPOD_HUNYUANVIDEO_ENDPOINT_ID veya RUNPOD_MUSETALK_ENDPOINT_ID tanımlı değil. Avatar testi atlanıyor.');
+    console.warn('\n⚠️ RUNPOD_HUNYUANVIDEO_ENDPOINT_ID tanımlı değil. HunyuanVideo-Avatar testi atlanıyor.');
     return;
   }
 
-  console.log(`\n👤 5. ${isHunyuan ? 'HunyuanVideo-Avatar' : 'MuseTalk'} Ağız Senkronizasyon Modeli Test Ediliyor...`);
-  const input = isHunyuan
-    ? {
-        video_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_anchor_base.mp4',
-        audio_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_audio_tr.mp3',
-      }
-    : {
-        avatar_image: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_anchor_frame.png',
-        audio_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_audio_tr.mp3',
-      };
+  console.log('\n👤 HunyuanVideo-Avatar API Test Ediliyor...');
+  const input = {
+    video_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_anchor_base.mp4',
+    audio_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_audio_tr.mp3',
+  };
 
   try {
     const job = await RunPodClient.runJob(endpointId, input);
     console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
     await pollJob(endpointId, job.id);
   } catch (err: any) {
-    console.error(`[Hata] Avatar ağız senkronizasyon testi başarısız: ${err.message}`);
+    console.error(`[Hata] HunyuanVideo-Avatar testi başarısız: ${err.message}`);
   }
 }
 
-// Ana Başlatıcı
-async function runAllTests() {
-  console.log('Testler sırayla başlatılıyor...');
-  
+// 5. Multitalk Ağız Senkronizasyon Testi
+async function testMultitalk() {
+  const endpointId = ENDPOINTS.MULTITALK;
+  if (!endpointId) {
+    console.warn('\n⚠️ RUNPOD_MULTITALK_ENDPOINT_ID tanımlı değil. Multitalk testi atlanıyor.');
+    return;
+  }
+
+  console.log('\n👤 Multitalk Ağız Senkronizasyon Test Ediliyor...');
+  const input = {
+    avatar_image: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_anchor_frame.png',
+    audio_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_audio_tr.mp3',
+  };
+
+  try {
+    const job = await RunPodClient.runJob(endpointId, input);
+    console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
+    await pollJob(endpointId, job.id);
+  } catch (err: any) {
+    console.error(`[Hata] Multitalk testi başarısız: ${err.message}`);
+  }
+}
+
+// --- SES (AUDIO / TTS / STT) MODELLERİ TEST FONKSİYONLARI ---
+
+// 6. Fish Speech TTS Testi
+async function testFishSpeech() {
+  const endpointId = ENDPOINTS.FISH_SPEECH;
+  if (!endpointId) {
+    console.warn('\n⚠️ RUNPOD_FISHSPEECH_ENDPOINT_ID tanımlı değil. Fish Speech testi atlanıyor.');
+    return;
+  }
+
+  console.log('\n🗣️ Fish Speech TTS Test Ediliyor...');
+  const input = {
+    text: 'Sayın seyirciler, stüdyomuzdan canlı yayınla sıcak bir gelişmeyi aktarıyoruz.',
+    reference_audio: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/anchor_ref.wav',
+  };
+
+  try {
+    const job = await RunPodClient.runJob(endpointId, input);
+    console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
+    await pollJob(endpointId, job.id);
+  } catch (err: any) {
+    console.error(`[Hata] Fish Speech testi başarısız: ${err.message}`);
+  }
+}
+
+// 7. CosyVoice TTS Testi
+async function testCosyVoice() {
+  const endpointId = ENDPOINTS.COSYVOICE;
+  if (!endpointId) {
+    console.warn('\n⚠️ RUNPOD_COSYVOICE_ENDPOINT_ID tanımlı değil. CosyVoice testi atlanıyor.');
+    return;
+  }
+
+  console.log('\n🗣️ CosyVoice TTS Test Ediliyor...');
+  const input = {
+    text: 'Aman tanrım! Uçak hızla irtifa kaybediyor ve şu an yere çakılıyor!',
+    role: 'default',
+  };
+
+  try {
+    const job = await RunPodClient.runJob(endpointId, input);
+    console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
+    await pollJob(endpointId, job.id);
+  } catch (err: any) {
+    console.error(`[Hata] CosyVoice testi başarısız: ${err.message}`);
+  }
+}
+
+// 8. WhisperX Deşifre (STT) Testi
+async function testWhisperX() {
+  const endpointId = ENDPOINTS.WHISPERX;
+  if (!endpointId) {
+    console.warn('\n⚠️ RUNPOD_WHISPERX_ENDPOINT_ID tanımlı değil. WhisperX testi atlanıyor.');
+    return;
+  }
+
+  console.log('\n🗣️ WhisperX STT (Deşifre) Test Ediliyor...');
+  const input = {
+    audio_url: 'https://pub-c0646c0e86334547908b53d1000bb69d.r2.dev/news_audio_tr.mp3',
+    language: 'tr',
+  };
+
+  try {
+    const job = await RunPodClient.runJob(endpointId, input);
+    console.log(`[Bilgi] Job tetiklendi. ID: ${job.id}`);
+    await pollJob(endpointId, job.id);
+  } catch (err: any) {
+    console.error(`[Hata] WhisperX testi başarısız: ${err.message}`);
+  }
+}
+
+// Ana Çalıştırıcı
+async function main() {
   const target = process.argv[2];
-  if (target === '--wan25') {
-    await testWan25();
-  } else if (target === '--mochi') {
+
+  if (target === '--video') {
+    await testWan22();
     await testMochi();
-  } else if (target === '--xtts') {
-    await testXtts();
-  } else if (target === '--sfx') {
-    await testAudioLdm2();
-  } else if (target === '--avatar') {
+    await testSana();
     await testHunyuanAvatar();
+    await testMultitalk();
+  } else if (target === '--audio') {
+    await testFishSpeech();
+    await testCosyVoice();
+    await testWhisperX();
   } else {
-    // Varsayılan: Sırayla hepsini test et
-    await testWan25();
+    // Varsayılan: Tüm video ve ses modellerini sırayla test et
+    console.log('Seçilen tüm video modelleri test ediliyor...');
+    await testWan22();
     await testMochi();
-    await testXtts();
-    await testAudioLdm2();
+    await testSana();
     await testHunyuanAvatar();
+    await testMultitalk();
+
+    console.log('\nSeçilen tüm ses modelleri test ediliyor...');
+    await testFishSpeech();
+    await testCosyVoice();
+    await testWhisperX();
   }
 
   console.log('\n========================================================');
-  console.log('✅ RunPod Model Doğrulama Testi Tamamlandı!');
+  console.log('✅ Hazır Şablonlar Doğrulama Testi Tamamlandı!');
   console.log('========================================================');
 }
 
 // Node.js CLI çalıştırıcı kontrolü
 const isMain = import.meta.url.endsWith(process.argv[1] || '');
 if (isMain || process.argv.includes('--run')) {
-  runAllTests().catch(err => {
-    console.error('Test süreci kritik hata ile sonlandı:', err);
+  main().catch(err => {
+    console.error('Doğrulama süreci kritik hata ile sonlandı:', err);
     process.exit(1);
   });
 }
