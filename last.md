@@ -508,4 +508,5 @@ Bir sonraki oturumda Oturum #11'den devam edilecek. Tüm önceki oturumlarda yap
 | 1 | 02:15 | `Dockerfile.base` dosyasındaki apt-get paket indirme donması analiz edildi | ✅ |
 | 2 | 02:16 | `Dockerfile.base` dosyasına APT timeout ve retry parametreleri eklenerek donmalar engellendi | ✅ |
 | 3 | 02:16 | Değişiklikler commit edilip `git push` ile uzak depoya başarıyla gönderildi | ✅ |
-| 4 | 02:16 | `PROJECT_STATUS.md` ve `last.md` dosyaları güncellendi | ✅ |
+| 4 | 07:00 | Colab local repo uyuşmazlığını önlemek için `Google_Colab_AI_Publisher.ipynb` hücresindeki `git pull` satırı `git fetch && git reset --hard` olarak güncellendi | ✅ |
+| 5 | 07:02 | Değişiklikler commit edilip pushlandı, `PROJECT_STATUS.md` ve `last.md` güncellendi | ✅ |

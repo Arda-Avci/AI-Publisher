@@ -18,6 +18,9 @@
 - **Apt-Get İndirme Donması Yaması:**
   - Colab üzerinde Kaniko ile `Dockerfile.base` derlenirken `archive.ubuntu.com` yavaşlığı veya ağ kesintileri nedeniyle paket indirme adımının takılı kalması engellendi.
   - `colab_docker/Dockerfile.base` içerisine robust APT timeout (`Acquire::http::Timeout "30"`) ve retry (`Acquire::Retries "5"`) kuralları eklenerek ağ donmaları durumunda otomatik tekrar deneme mekanizması aktif edildi.
+- **Google Colab Senkronizasyon Hatası Yaması:**
+  - Colab üzerinde yerel çakışmaların (git conflict) `git pull` komutunu bozması ve en son `Dockerfile.base` yamasının çekilmesini engellemesi çözüldü.
+  - Seçenek C hücresindeki git güncelleme adımı `git fetch origin && git reset --hard origin/main` şeklinde değiştirilerek reponun uzak depoyla %100 zorunlu eşitlenmesi sağlandı.
 - **Tip Güvenliği ve Doğrulama:**
   - `npm run check:types` ile TypeScript strictNullChecks ve tip uyuşmazlığı hataları tamamen giderildi. Derleme sıfır hata ile tamamlanıyor.
 
