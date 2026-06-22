@@ -2,6 +2,10 @@
 
 ## 🔔 Canlı Bildirim Sistemi, Modern Toast ve Colab Docker Derleme Başarısı (22 Haziran 2026)
 
+- **RunPod Serverless Entegrasyon ve Senaryo Test Scriptleri Yazıldı:**
+  - RunPod üzerindeki video, ses ve avatar modellerinin (Wan2.5, Mochi, XTTS, AudioLDM2, HunyuanVideo-Avatar) API bağlantılarını tekil olarak test eden `scripts/test-runpod-models.ts` scripti yazıldı.
+  - Haber spikerinin stüdyoda sunum yaparken arkasından yanan uçak geçmesi, kameranın uçağa odaklanıp düşüşü göstermesi ve spikerin konusunu kazaya çevirmesi senaryosunu uçtan uca simüle edip FFmpeg kurgu motoruyla birleştiren `scripts/test-news-crash-scenario.ts` scripti kodlandı.
+  - Çalıştırma onayı bekleniyor.
 - **Google Colab Docker Derlemesi Tamamlandı:**
   - Proje için gerekli olan 21 Docker imajının (Base + CogVideoX, Wan, LTX, Hunyuan, SVD, AnimateDiff, Wan2.5, XTTS, AudioLDM2, Wav2Lip, MuseTalk, Whisper, Stable Diffusion, Kokoro, F5-TTS, LoRA-Trainer vb.) Google Colab üzerinde Kaniko ile derlenme ve Drive'a yedeklenme süreci **%100 başarıyla tamamlandı** (Exit code: 0).
   - İmaj bütünlük doğrulaması `verify_images.py` ile yapılarak 21 imajın da sorunsuz olduğu onaylandı.
