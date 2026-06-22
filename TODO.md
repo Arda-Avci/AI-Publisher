@@ -122,8 +122,8 @@
   - Her model sonrası `docker image ls` ile boyut kontrolü
 
 ### Mevcut Devam Eden Görevler
-- [ ] **NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone)
-- [ ] **alert()→toast dönüşümü** — 25+ React bileşeninde alert() çağrılarını toast ile değiştir
+- [x] **NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone) (22 Haziran 2026)
+- [x] **alert()→toast dönüşümü** — 25+ React bileşeninde alert() çağrılarını toast ile değiştir (22 Haziran 2026)
 - [ ] **Kalan 6 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow (Dockerfile'lar hazır, test gerekli)
 - [ ] **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix
 - [ ] **Faz 7C:** Entegrasyon Testleri (8 adet)
@@ -172,10 +172,10 @@
 ## 🚀 SaaS Canlı Yayına Geçiş ve Prod Test Fazları (2026)
 
 ### FAZ 1: Google Colab Derleme ve Drive Yedekleme (CI/CD)
-- [ ] Google Colab notebook dosyasındaki `Seçenek C (Docker İmaj Derleme)` hücresinin çalıştırılması.
-- [ ] 12 Docker imajının (Base + 11 Model) Kaniko ile sırayla derlenmesi.
-- [ ] Her model drive'a sıkıştırılıp atıldıktan sonra registry repositories klasörünün silindiğinin ve Colab disk alanının dolmadığının doğrulanması.
-- [ ] `verify_images.py --drive-only` betiği ile Drive'a yedeklenen `.tar.gz` arşivlerinin bozuk olmadığının kontrol edilmesi.
+- [x] Google Colab notebook dosyasındaki `Seçenek C (Docker İmaj Derleme)` hücresinin çalıştırılması (22 Haziran 2026).
+- [x] Docker imajlarının Kaniko ile sırayla derlenmesi ve yerel registry yardımıyla base imaj bağımlılıklarının çözülmesi (22 Haziran 2026).
+- [x] Her model Drive'a sıkıştırılıp aktarıldıktan sonra registry repositories klasörünün silindiğinin ve disk alanının taşmadığının doğrulanması.
+- [x] `verify_images.py --drive-only` betiği ile Drive'a yedeklenen 21 imajın arşiv bütünlüğünün sıfır hata ile doğrulanması.
 
 ### FAZ 2: RunPod GPU Altyapısı ve Konteyner Entegrasyonu
 - [ ] Model ağırlıklarının yüksek hızlı RunPod kalıcı ağ sürücüsüne (Network Volume) yüklenmesi ve `/workspace/models` altına mount edilmesi.
