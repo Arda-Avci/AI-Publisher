@@ -1,5 +1,10 @@
 # Yapılacaklar Listesi (TODO)
 
+## 🟢 Bu Oturum
+- [x] Eski notebook temizligi: colab_setup.ipynb, colab_setup_v2.ipynb, Google_Colab_AI_Publisher.ipynb, colab_test_models.ipynb silindi
+- [x] colab_docker_build.ipynb: GHCR push cell eklendi (Build → Drive tgz → GHCR)
+- [x] GH Actions workflow fix: ORG Arda-Avci, matrix if step-level, base tag duzeltmesi
+
 ## 🟢 Tamamlanan Major Fazlar
 
 | Faz | Tarih |

@@ -1,5 +1,12 @@
 # AI_Publisher Proje Durumu
 
+## 🧹 Notebook Temizliği + GHCR Push Entegrasyonu (23 Haziran 2026)
+
+- **Eski notebooklar silindi:** `colab_setup.ipynb`, `colab_setup_v2.ipynb`, `Google_Colab_AI_Publisher.ipynb`, `colab_test_models.ipynb` — artık kullanılmıyordu
+- **colab_docker_build.ipynb'ye GHCR push eklendi:** Build sonrası Drive tgz → Podman → GHCR (`ghcr.io/arda-avci/ai-publisher-{model}:latest`)
+- **Sıralama:** Build (Kaniko) → Drive tgz (yedek) → GHCR push (dağıtım)
+- **GH Actions workflow fix:** ORG `anomalyco` → `Arda-Avci` (GITHUB_TOKEN yetkisi), `matrix` if step-level'a taşındı (job-level geçersizdi), base image pull sonrası local tag eklendi
+
 ## 🌐 Trend Analizi Phase 3 — Periyodik Tarama + Zaman Serisi Grafikleri Tamamlandı (23 Haziran 2026)
 
 - **trendScheduler.ts** — Interval-based scheduler: her platform için ayrı konfigüre edilebilir tarama periyodu (`TREND_INTERVAL_TIKTOK`, `TREND_INTERVAL_YOUTUBE`, `TREND_INTERVAL_X`, `TREND_INTERVAL_INSTAGRAM` env var'ları, varsayılan 30 dk)
