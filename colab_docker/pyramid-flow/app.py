@@ -83,7 +83,7 @@ def generate():
     data = request.get_json(force=True) or {}
     prompt = data.get("prompt", "")
     image_path = data.get("image_path", "")
-    output_path = data.get("output_path", "/content/raw_video.mp4")
+    output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
 
     is_i2v = bool(image_path and os.path.exists(image_path))
 
@@ -122,5 +122,17 @@ def generate():
 def health():
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load model into VRAM to avoid cold start latency."""
+    try:
+        pipe = get_pipeline()
+        vram_cleanup()
+        return jsonify({"status": "ok", "model_loaded": pipe is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
+

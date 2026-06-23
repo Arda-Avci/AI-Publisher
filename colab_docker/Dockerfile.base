@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-devel
 
 # Set non-interactive frontend and timezone to prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -31,6 +31,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
 
+# HuggingFace/Torch cache → Network Volume
+ENV HF_HOME="/workspace/hf_cache"
+ENV TORCH_HOME="/workspace/torch_cache"
+ENV XFORMERS_DISABLE_CACHE=0
+
 # Upgrade pip and install common Python packages
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
@@ -42,4 +47,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     "transformers>=4.46" \
     pillow \
     runpod \
-    boto3
+    boto3 \
+    torchaudio \
+    torchvision \
+    xformers \
+    opencv-python-headless

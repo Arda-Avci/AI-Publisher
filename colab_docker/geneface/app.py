@@ -52,7 +52,7 @@ def generate():
     data = request.get_json(force=True) or {}
     face_path = data.get("face_image_path", "")
     audio_path = data.get("audio_path", "")
-    output_path = data.get("output_path", "/content/output.mp4")
+    output_path = data.get("output_path", "/workspace/outputs/output.mp4")
 
     if not face_path or not audio_path:
         return jsonify({"error": "face_image_path and audio_path required"}), 400
@@ -90,3 +90,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+

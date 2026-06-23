@@ -81,7 +81,7 @@ def generate():
     data = request.get_json(force=True) or {}
     image_path = data.get("image_path", "")
     prompt = data.get("prompt", "")
-    output_path = data.get("output_path", "/content/output.mp4")
+    output_path = data.get("output_path", "/workspace/outputs/output.mp4")
     num_frames = int(data.get("num_frames", 16))
     steps = int(data.get("num_inference_steps", 25))
     fps = int(data.get("fps", 8))
@@ -120,3 +120,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+

@@ -31,7 +31,7 @@ def load_wav2lip():
     try:
         from Wav2Lip.inference import load_model as _w2l_load_model
         # Check checkpoints directory in mounted /content or local /app
-        ckpt_path = "/content/Wav2Lip/checkpoints/wav2lip.pth"
+        ckpt_path = "/workspace/models/Wav2Lip/checkpoints/wav2lip.pth"
         if not os.path.exists(ckpt_path):
             ckpt_path = "/app/Wav2Lip/checkpoints/wav2lip.pth"
             
@@ -95,6 +95,16 @@ def make_custom_face_detect(ref_encoding=None):
         return final_results
         
     return custom_face_detect
+
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load Wav2Lip model into VRAM to avoid cold start latency."""
+    try:
+        model = load_wav2lip()
+        flush_memory()
+        return jsonify({"status": "ok", "model_loaded": model is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/apply-lipsync", methods=["POST"])
 def apply_lipsync():
@@ -174,3 +184,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+

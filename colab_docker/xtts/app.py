@@ -83,10 +83,10 @@ def generate_tts_edge(text, output_path, voice="tr-TR-EmelNeural"):
 def synthesize():
     data = request.get_json(force=True) or {}
     text = data.get("text", "")
-    output_path = data.get("output_path", "/content/speech.wav")
+    output_path = data.get("output_path", "/workspace/outputs/speech.wav")
     provider = data.get("provider", "xtts")
     target_duration_sec = data.get("target_duration_sec")
-    speaker_wav = data.get("speaker_wav", "/content/karakter.wav")
+    speaker_wav = data.get("speaker_wav", "/workspace/outputs/karakter.wav")
     voice = data.get("voice", "")
     language = data.get("language", "tr")
     ref_audio_b64 = data.get("reference_audio_base64", "")
@@ -160,9 +160,20 @@ def synthesize():
         except Exception as fallback_e:
             return jsonify({"status": "error", "message": str(fallback_e)}), 500
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load XTTS model into VRAM to avoid cold start latency."""
+    try:
+        model = load_tts_model()
+        flush_memory()
+        return jsonify({"status": "ok", "model_loaded": model is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+

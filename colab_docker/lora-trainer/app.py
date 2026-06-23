@@ -8,10 +8,8 @@ current_pipe = None
 current_weights_path = None
 training_progress = {}  # {job_id: {"percent": int, "status": str}}
 
-LORA_BASE_DIR = "/content/lora_weights"
-DRIVE_LORA_DIR = "/content/drive/MyDrive/Colab_Cache/lora_weights"
+LORA_BASE_DIR = "/workspace/lora_weights"
 os.makedirs(LORA_BASE_DIR, exist_ok=True)
-os.makedirs(DRIVE_LORA_DIR, exist_ok=True)
 
 def flush_memory():
     gc.collect()
@@ -114,9 +112,9 @@ PRETRAINED_LORAS = [
 @app.route("/pretrained", methods=["GET"])
 def list_pretrained():
     drive_loras = []
-    if os.path.isdir(DRIVE_LORA_DIR):
-        for d in os.listdir(DRIVE_LORA_DIR):
-            wpath = os.path.join(DRIVE_LORA_DIR, d)
+    if os.path.isdir(LORA_BASE_DIR):
+        for d in os.listdir(LORA_BASE_DIR):
+            wpath = os.path.join(LORA_BASE_DIR, d)
             if os.path.isdir(wpath) and os.path.exists(os.path.join(wpath, "pytorch_lora_weights.safetensors")):
                 drive_loras.append({
                     "id": d,
@@ -283,18 +281,9 @@ def _train_internal(job_id, image_paths, character_name, output_dir, callback_ur
         os.makedirs(weights_path, exist_ok=True)
         unet.save_pretrained(weights_path)
 
-    drive_path = None
-    if os.path.isdir("/content/drive/MyDrive"):
-        drive_path = os.path.join(DRIVE_LORA_DIR, character_name)
-        os.makedirs(drive_path, exist_ok=True)
-        import shutil
-        for f in os.listdir(weights_path):
-            shutil.copy2(os.path.join(weights_path, f), os.path.join(drive_path, f))
-        print(f"[LoRA] Copied weights to Drive: {drive_path}")
-
     flush_memory()
     _send_progress(job_id, 100, "Training complete", callback_url)
-    return {"status": "success", "weights_path": weights_path, "drive_path": drive_path, "steps_completed": step}
+    return {"status": "success", "weights_path": weights_path, "steps_completed": step}
 
 # ── Train (background thread) ──────────────────────────
 @app.route("/train", methods=["POST"])
@@ -326,11 +315,11 @@ def infer():
     data = request.get_json(force=True) or {}
     weights_path = data.get("weights_path", "")
     prompt = data.get("prompt", "portrait of a person")
-    output_path = data.get("output_path", "/content/lora_output.png")
+    output_path = data.get("output_path", "/workspace/outputs/lora_output.png")
     use_cogvideo = data.get("use_cogvideo", False)
 
     if not weights_path or not os.path.isdir(weights_path):
-        drive_candidate = os.path.join(DRIVE_LORA_DIR, os.path.basename(weights_path))
+        drive_candidate = os.path.join(LORA_BASE_DIR, os.path.basename(weights_path))
         if os.path.isdir(drive_candidate):
             weights_path = drive_candidate
         else:
@@ -369,5 +358,17 @@ def get_progress(job_id):
     prog = training_progress.get(job_id, {"percent": 0, "status": "unknown"})
     return jsonify(prog), 200
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load model into VRAM to avoid cold start latency."""
+    try:
+        pipe = get_pipeline()
+        vram_cleanup()
+        return jsonify({"status": "ok", "model_loaded": pipe is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, threaded=True)
+
+

@@ -110,7 +110,7 @@ def generate():
     prompt = data.get("prompt", "")
     image_path = data.get("image_path", "")
     video_model = data.get("video_model", "CogVideoX-5b")
-    output_path = data.get("output_path", "/content/raw_video.mp4")
+    output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
     num_frames = int(data.get("num_frames", 49))
     num_inference_steps = int(data.get("num_inference_steps", 30))
 
@@ -157,5 +157,17 @@ def generate():
 def health():
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load model into VRAM to avoid cold start latency."""
+    try:
+        pipe = get_pipeline()
+        vram_cleanup()
+        return jsonify({"status": "ok", "model_loaded": pipe is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
+

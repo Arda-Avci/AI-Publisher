@@ -1,4 +1,4 @@
-﻿FROM ai-publisher-base:latest
+FROM ai-publisher-base:latest
 
 # Install SVD-XT specific dependencies
 RUN pip install --no-cache-dir \
@@ -11,4 +11,6 @@ WORKDIR /app
 EXPOSE 5000
 
 COPY runpod_handler.py /app/
+COPY shared/ /app/shared/
 CMD ["python", "-u", "runpod_handler.py"]
+

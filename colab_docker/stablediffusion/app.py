@@ -92,7 +92,7 @@ def generate_image():
     data = request.get_json(force=True) or {}
     prompt = data.get("prompt", "")
     model_type = data.get("model_type", "dreamshaper") # dreamshaper or flux
-    output_path = data.get("output_path", "/content/generated_anchor.png")
+    output_path = data.get("output_path", "/workspace/outputs/generated_anchor.png")
 
     if not prompt:
         return jsonify({"error": "prompt is required"}), 400
@@ -115,7 +115,7 @@ def generate_image():
 def generate_covers():
     data = request.get_json(force=True) or {}
     cover_prompt = data.get("cover_prompt", "")
-    output_paths = data.get("output_paths", ["/content/cover_0.jpg", "/content/cover_1.jpg", "/content/cover_2.jpg"])
+    output_paths = data.get("output_paths", ["/workspace/outputs/cover_0.jpg", "/workspace/outputs/cover_1.jpg", "/workspace/outputs/cover_2.jpg"])
 
     if not cover_prompt:
         return jsonify({"error": "cover_prompt is required"}), 400
@@ -176,7 +176,7 @@ def inpaint():
     image_path = data.get("image_path")
     mask_path = data.get("mask_path")
     prompt = data.get("prompt")
-    output_path = data.get("output_path", "/content/inpaint_output.png")
+    output_path = data.get("output_path", "/workspace/outputs/inpaint_output.png")
 
     if not image_path or not mask_path or not prompt:
         return jsonify({"error": "image_path, mask_path, and prompt are required"}), 400
@@ -219,5 +219,17 @@ def remove_background():
 def health():
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load model into VRAM to avoid cold start latency."""
+    try:
+        pipe = get_pipeline()
+        vram_cleanup()
+        return jsonify({"status": "ok", "model_loaded": pipe is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
+

@@ -10,6 +10,7 @@ import { metrics } from '@opentelemetry/api';
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { SpanExporter } from '@opentelemetry/sdk-trace-base';
 import { Logger } from './logger.js';
+import { initTracing } from './tracing.js';
 
 const enabled = process.env.OTEL_ENABLED !== 'false';
 const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -59,6 +60,7 @@ if (enabled) {
 
     _sdk = new NodeSDK(sdkConfig as any);
     _metricsHandler = (req, res) => prometheusExporter.getMetricsRequestHandler(req, res);
+    initTracing();
     Logger.info('[OTEL] OpenTelemetry initialized');
   } catch (err) {
     Logger.error('[OTEL] SDK init failed', err);

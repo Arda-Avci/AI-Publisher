@@ -7,6 +7,7 @@ import { Logger } from './lib/logger.js';
 import { broadcastProgress } from './lib/redis.js';
 import { db } from './db.js';
 import { generateStudioScenes } from './services/aiService.js';
+import { runContentTeam } from './services/contentTeam.js';
 import { RunPodClient } from './services/runpod.js';
 import {
   runFFmpegWithFallback,
@@ -153,27 +154,41 @@ async function directorPlanning(state: GraphState): Promise<Partial<GraphState>>
   let totalScenes = dbScenes[0]?.cnt || 0;
 
   if (totalScenes < 1) {
-    Logger.info(`[Graph] No scenes in DB for job #${jobId}, calling generateStudioScenes`);
-    await updateProgress(jobId, 'stageDirectorPlanning', 7);
-    const studio = await generateStudioScenes(job);
-    totalScenes = studio.scenes.length;
-
-    for (let i = 0; i < studio.scenes.length; i++) {
-      const s = studio.scenes[i]!;
-      await db.run(
-        `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, sort_order, speaker, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-        [jobId, s.sceneNumber, s.videoPrompt, s.speechText ?? '', s.sfxPrompt ?? '', s.cameraMotion ?? 'none', i, s.speaker ?? ''],
+    if (process.env.CONTENT_TEAM_ENABLED === 'true') {
+      Logger.info(`[Graph] CONTENT_TEAM_ENABLED=true, using multi-agent pipeline for job #${jobId}`);
+      await updateProgress(jobId, 'stageDirectorPlanning', 7);
+      const result = await runContentTeam(
+        jobId,
+        job.master_prompt || '',
+        job.production_notes || '',
+        job.character_features || '',
+        job.material_path || '',
       );
+      totalScenes = result.scenes.length;
+      Logger.info(`[Graph] Content team: ${totalScenes} scenes, ${result.iterations} iteration(s)`);
+    } else {
+      Logger.info(`[Graph] No scenes in DB for job #${jobId}, calling generateStudioScenes`);
+      await updateProgress(jobId, 'stageDirectorPlanning', 7);
+      const studio = await generateStudioScenes(job);
+      totalScenes = studio.scenes.length;
+
+      for (let i = 0; i < studio.scenes.length; i++) {
+        const s = studio.scenes[i]!;
+        await db.run(
+          `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, sort_order, speaker, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+          [jobId, s.sceneNumber, s.videoPrompt, s.speechText ?? '', s.sfxPrompt ?? '', s.cameraMotion ?? 'none', i, s.speaker ?? ''],
+        );
+      }
+
+      const m = studio.marketing;
+      await db.run(
+        `UPDATE video_jobs SET total_scenes = ?, yt_title = ?, yt_desc = ?, yt_tags = ?, tt_desc = ?, tt_tags = ?, x_desc = ?, x_tags = ?, meta_desc = ?, meta_tags = ? WHERE id = ?`,
+        [totalScenes, m.ytTitle, m.ytDesc, m.ytTags, m.ttDesc, m.ttTags, m.xDesc, m.xTags, m.metaDesc, m.metaTags, jobId],
+      );
+
+      Logger.info(`[Graph] Generated ${totalScenes} scenes + marketing for job #${jobId}`);
     }
-
-    const m = studio.marketing;
-    await db.run(
-      `UPDATE video_jobs SET total_scenes = ?, yt_title = ?, yt_desc = ?, yt_tags = ?, tt_desc = ?, tt_tags = ?, x_desc = ?, x_tags = ?, meta_desc = ?, meta_tags = ? WHERE id = ?`,
-      [totalScenes, m.ytTitle, m.ytDesc, m.ytTags, m.ttDesc, m.ttTags, m.xDesc, m.xTags, m.metaDesc, m.metaTags, jobId],
-    );
-
-    Logger.info(`[Graph] Generated ${totalScenes} scenes + marketing for job #${jobId}`);
   }
 
   const marketing: MarketingContent = {

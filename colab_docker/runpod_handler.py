@@ -4,6 +4,11 @@ import time
 import threading
 import requests
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "shared"))
+from utils import upload_to_backblaze
+
+OUTPUT_BASE = os.environ.get("RUNPOD_OUTPUT_PATH", "/workspace/outputs")
+
 # Check if running in serverless mode
 IS_SERVERLESS = os.environ.get("RUNPOD_SERVERLESS", "false").lower() == "true"
 
@@ -18,8 +23,6 @@ if not IS_SERVERLESS:
 else:
     # Serverless mode: run Flask in background and start RunPod loop
     import runpod
-    import boto3
-    from botocore.client import Config
 
     # Start Flask in a daemon thread
     threading.Thread(target=run_flask, daemon=True).start()
@@ -40,32 +43,6 @@ else:
     if not ready:
         print("[WRAPPER] Flask app failed to start within 90 seconds. Exiting.")
         sys.exit(1)
-
-    def upload_to_b2(local_path, key, b2_creds):
-        endpoint = b2_creds.get("endpoint_url") or os.environ.get("B2_ENDPOINT_URL") or "https://s3.us-west-004.backblazeb2.com"
-        key_id = b2_creds.get("key_id") or os.environ.get("B2_KEY_ID")
-        app_key = b2_creds.get("application_key") or os.environ.get("B2_APPLICATION_KEY")
-        bucket_name = b2_creds.get("bucket_name") or os.environ.get("B2_BUCKET_NAME") or "ai-publisher-models"
-
-        if not key_id or not app_key:
-            print("[WRAPPER] B2 credentials missing. Skipping upload.")
-            return None
-
-        try:
-            s3 = boto3.client(
-                's3',
-                endpoint_url=endpoint,
-                aws_access_key_id=key_id,
-                aws_secret_access_key=app_key,
-                config=Config(signature_version='s3v4'),
-                region_name='us-west-004'
-            )
-            s3.upload_file(local_path, bucket_name, key)
-            print(f"[WRAPPER] Uploaded: {local_path} -> {key}")
-            return f"{endpoint.rstrip('/')}/{bucket_name}/{key}"
-        except Exception as e:
-            print(f"[WRAPPER] B2 upload failed for {local_path}: {e}")
-            return None
 
     def handler(job):
         job_input = job.get('input', {})
@@ -94,16 +71,16 @@ else:
         scene_num = job_input.get("scene_number", 1)
         
         upload_map = {
-            "/content/current_scene.mp4": f"outputs/{job_id}/scene_{scene_num}.mp4",
-            "/content/raw_video.mp4": f"outputs/{job_id}/scene_{scene_num}_raw.mp4",
-            "/content/speech.wav": f"outputs/{job_id}/scene_{scene_num}_speech.wav",
-            "/content/kokoro_speech.wav": f"outputs/{job_id}/scene_{scene_num}_kokoro.wav",
-            "/content/sfx.wav": f"outputs/{job_id}/scene_{scene_num}_sfx.wav",
-            "/content/subtitle.srt": f"outputs/{job_id}/scene_{scene_num}.srt",
-            "/content/generated_anchor.png": f"outputs/{job_id}/anchor_{scene_num}.png",
-            "/content/cover_0.jpg": f"outputs/{job_id}/cover_0.jpg",
-            "/content/cover_1.jpg": f"outputs/{job_id}/cover_1.jpg",
-            "/content/cover_2.jpg": f"outputs/{job_id}/cover_2.jpg"
+            f"{OUTPUT_BASE}/current_scene.mp4": f"outputs/{job_id}/scene_{scene_num}.mp4",
+            f"{OUTPUT_BASE}/raw_video.mp4": f"outputs/{job_id}/scene_{scene_num}_raw.mp4",
+            f"{OUTPUT_BASE}/speech.wav": f"outputs/{job_id}/scene_{scene_num}_speech.wav",
+            f"{OUTPUT_BASE}/kokoro_speech.wav": f"outputs/{job_id}/scene_{scene_num}_kokoro.wav",
+            f"{OUTPUT_BASE}/sfx.wav": f"outputs/{job_id}/scene_{scene_num}_sfx.wav",
+            f"{OUTPUT_BASE}/subtitle.srt": f"outputs/{job_id}/scene_{scene_num}.srt",
+            f"{OUTPUT_BASE}/generated_anchor.png": f"outputs/{job_id}/anchor_{scene_num}.png",
+            f"{OUTPUT_BASE}/cover_0.jpg": f"outputs/{job_id}/cover_0.jpg",
+            f"{OUTPUT_BASE}/cover_1.jpg": f"outputs/{job_id}/cover_1.jpg",
+            f"{OUTPUT_BASE}/cover_2.jpg": f"outputs/{job_id}/cover_2.jpg"
         }
         
         # Check dynamic returned paths in the Flask JSON response
@@ -118,32 +95,34 @@ else:
         b2_urls = {}
         for local_path, b2_key in upload_map.items():
             if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
-                b2_url = upload_to_b2(local_path, b2_key, b2_creds)
+                bucket = b2_creds.get("bucket_name") if b2_creds else None
+                b2_url = upload_to_backblaze(local_path, b2_key, bucket)
                 if b2_url:
                     b2_urls[local_path] = b2_url
-                    # Try to clean up local file
                     try:
                         os.remove(local_path)
                     except:
                         pass
         
         # Map uploaded URLs to keys in JSON output for Node.js consumption
+        content_keys = {
+            "video_url": ["current_scene.mp4", "raw_video.mp4"],
+            "speech_url": ["speech.wav", "kokoro_speech.wav"],
+        }
         if b2_urls:
             result["b2_urls"] = b2_urls
-            if "/content/current_scene.mp4" in b2_urls:
-                result["video_url"] = b2_urls["/content/current_scene.mp4"]
-            elif "/content/raw_video.mp4" in b2_urls:
-                result["video_url"] = b2_urls["/content/raw_video.mp4"]
-            if "/content/speech.wav" in b2_urls:
-                result["speech_url"] = b2_urls["/content/speech.wav"]
-            elif "/content/kokoro_speech.wav" in b2_urls:
-                result["speech_url"] = b2_urls["/content/kokoro_speech.wav"]
-            if "/content/sfx.wav" in b2_urls:
-                result["sfx_url"] = b2_urls["/content/sfx.wav"]
-            if "/content/subtitle.srt" in b2_urls:
-                result["subtitle_url"] = b2_urls["/content/subtitle.srt"]
-            if "/content/generated_anchor.png" in b2_urls:
-                result["image_url"] = b2_urls["/content/generated_anchor.png"]
+            for url_key, filename_candidates in content_keys.items():
+                if url_key not in result:
+                    for fname in filename_candidates:
+                        path = f"{OUTPUT_BASE}/{fname}"
+                        if path in b2_urls:
+                            result[url_key] = b2_urls[path]
+                            break
+            for key_suffix in ["sfx.wav", "subtitle.srt", "generated_anchor.png"]:
+                path = f"{OUTPUT_BASE}/{key_suffix}"
+                if path in b2_urls:
+                    map_key = key_suffix.replace(".wav", "_url").replace(".srt", "_url").replace(".png", "_url").replace("generated_anchor", "image")
+                    result[map_key] = b2_urls[path]
 
         return result
 

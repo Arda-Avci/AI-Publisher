@@ -1,0 +1,135 @@
+name: Docker Build & Push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'colab_docker/**'
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Build single model (empty = all)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  ORG: anomalyco
+  CONTEXT: colab_docker
+
+jobs:
+  base:
+    name: Build base image
+    runs-on: ubuntu-latest
+    outputs:
+      base_tag: ${{ steps.build_base.outputs.base_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push base image
+        id: build_base
+        run: |
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:latest"
+          SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:${{ github.sha }}"
+          docker build -f ${{ env.CONTEXT }}/Dockerfile.base \
+            -t "$BASE_TAG" -t "$SHA_TAG" \
+            ${{ env.CONTEXT }}
+          docker push "$BASE_TAG"
+          docker push "$SHA_TAG"
+          echo "base_tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
+
+  models:
+    name: Build ${{ matrix.model }}
+    needs: base
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.model || inputs.model == matrix.model }}
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - animatediff
+          - audioldm2
+          - cogvideox
+          - dynamicrafter
+          - f5tts
+          - hunyuan
+          - kokorotts
+          - lora-trainer
+          - ltx
+          - mochi
+          - musetalk
+          - pyramid-flow
+          - sadtalker
+          - stablediffusion
+          - svd
+          - wan
+          - wan25
+          - wav2lip
+          - whisper
+          - xtts
+          - zeroscope
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull base image
+        run: docker pull ${{ needs.base.outputs.base_tag }}
+
+      - name: Build & push ${{ matrix.model }}
+        run: |
+          MODEL_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:latest"
+          SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:${{ github.sha }}"
+          docker build -f ${{ env.CONTEXT }}/${{ matrix.model }}/Dockerfile \
+            -t "$MODEL_TAG" -t "$SHA_TAG" \
+            ${{ env.CONTEXT }}
+          docker push "$MODEL_TAG"
+          docker push "$SHA_TAG"
+
+  special:
+    name: Build ${{ matrix.model }}
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.model || inputs.model == matrix.model }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: browser-use
+            dockerfile: browser-use/Dockerfile
+          - model: geneface
+            dockerfile: geneface/Dockerfile
+          - model: video-retalking
+            dockerfile: video-retalking/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push ${{ matrix.model }}
+        run: |
+          MODEL_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:latest"
+          SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:${{ github.sha }}"
+          docker build -f ${{ env.CONTEXT }}/${{ matrix.dockerfile }} \
+            -t "$MODEL_TAG" -t "$SHA_TAG" \
+            ${{ env.CONTEXT }}
+          docker push "$MODEL_TAG"
+          docker push "$SHA_TAG"

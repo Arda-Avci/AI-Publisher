@@ -15,6 +15,9 @@ import {
 
 import { FIXTURES } from './__fixtures__/index.js';
 
+// AI calls require API keys; skip if unavailable in CI
+const aiAvailable = !!(process.env.GEMINI_API_KEY || process.env.ZEN_API_KEY || process.env.MINIMAX_API_KEY);
+
 describe('viralHook', () => {
   // ── HookQualitySchema interface ─────────────────────────────────────────────
 
@@ -137,82 +140,57 @@ describe('viralHook', () => {
 
   // ── generateViralTitles ─────────────────────────────────────────────────────
 
-  it('generateViralTitles returns array', async () => {
-    try {
-      const result = await generateViralTitles('AI technology trends', 5);
-      expect(Array.isArray(result.titles)).toBe(true);
-      if (result.titles.length > 0) {
-        expect(result.titles[0]).toHaveProperty('title');
-        expect(result.titles[0]).toHaveProperty('style');
-      }
-    } catch {
-      // AI API unavailable — skip assertion
-      expect(true).toBe(true);
+  it.runIf(aiAvailable)('generateViralTitles returns array', async () => {
+    const result = await generateViralTitles('AI technology trends', 5);
+    expect(Array.isArray(result.titles)).toBe(true);
+    if (result.titles.length > 0) {
+      expect(result.titles[0]).toHaveProperty('title');
+      expect(result.titles[0]).toHaveProperty('style');
     }
-  }, 120000);
+  }, 60000);
 
-  it('generateViralTitles returns array with different styles', async () => {
-    try {
-      const result = await generateViralTitles('test topic');
-      expect(result.titles.length).toBeGreaterThan(0);
-    } catch {
-      expect(true).toBe(true);
-    }
-  }, 120000);
+  it.runIf(aiAvailable)('generateViralTitles returns array with different styles', async () => {
+    const result = await generateViralTitles('test topic');
+    expect(result.titles.length).toBeGreaterThan(0);
+  }, 60000);
 
   // ── generateHashtags ───────────────────────────────────────────────────────
 
-  it('generateHashtags returns array', async () => {
-    try {
-      const result = await generateHashtags('artificial intelligence video', 'youtube');
-      expect(Array.isArray(result.hashtags)).toBe(true);
-      if (result.hashtags.length > 0) {
-        expect(result.hashtags[0]).toHaveProperty('tag');
-        expect(result.hashtags[0]).toHaveProperty('platform');
-        expect(result.hashtags[0]).toHaveProperty('category');
-      }
-    } catch {
-      expect(true).toBe(true);
+  it.runIf(aiAvailable)('generateHashtags returns array', async () => {
+    const result = await generateHashtags('artificial intelligence video', 'youtube');
+    expect(Array.isArray(result.hashtags)).toBe(true);
+    if (result.hashtags.length > 0) {
+      expect(result.hashtags[0]).toHaveProperty('tag');
+      expect(result.hashtags[0]).toHaveProperty('platform');
+      expect(result.hashtags[0]).toHaveProperty('category');
     }
-  }, 120000);
+  }, 60000);
 
-  it('generateHashtags works for all platforms', async () => {
-    try {
-      const platforms: Platform[] = ['youtube', 'tiktok', 'x', 'meta'];
-      const results = await Promise.all(
-        platforms.map((platform) => generateHashtags('content', platform)),
-      );
-      for (const result of results) {
-        expect(Array.isArray(result.hashtags)).toBe(true);
-      }
-    } catch {
-      expect(true).toBe(true);
+  it.runIf(aiAvailable)('generateHashtags works for all platforms', async () => {
+    const platforms: Platform[] = ['youtube', 'tiktok', 'x', 'meta'];
+    const results = await Promise.all(
+      platforms.map((platform) => generateHashtags('content', platform)),
+    );
+    for (const result of results) {
+      expect(Array.isArray(result.hashtags)).toBe(true);
     }
   }, 120000);
 
   // ── analyzeHookQuality ─────────────────────────────────────────────────────
 
-  it('analyzeHookQuality returns HookQualitySchema shape', async () => {
-    try {
-      const result = await analyzeHookQuality(FIXTURES.video);
-      expect(result).toHaveProperty('score');
-      expect(result).toHaveProperty('hookType');
-    } catch {
-      expect(true).toBe(true);
-    }
+  it.runIf(aiAvailable)('analyzeHookQuality returns HookQualitySchema shape', async () => {
+    const result = await analyzeHookQuality(FIXTURES.video);
+    expect(result).toHaveProperty('score');
+    expect(result).toHaveProperty('hookType');
   }, 120000);
 
   // ── optimizeForViral ────────────────────────────────────────────────────────
 
-  it('optimizeForViral combines hook + titles + hashtags', async () => {
-    try {
-      const result = await optimizeForViral(FIXTURES.video, 'AI topic', 'youtube');
-      expect(result).toHaveProperty('hookScore');
-      expect(result).toHaveProperty('titles');
-      expect(result).toHaveProperty('hashtags');
-    } catch {
-      expect(true).toBe(true);
-    }
+  it.runIf(aiAvailable)('optimizeForViral combines hook + titles + hashtags', async () => {
+    const result = await optimizeForViral(FIXTURES.video, 'AI topic', 'youtube');
+    expect(result).toHaveProperty('hookScore');
+    expect(result).toHaveProperty('titles');
+    expect(result).toHaveProperty('hashtags');
   }, 120000);
 
   // ── ViralContentSchema ─────────────────────────────────────────────────────
@@ -238,14 +216,10 @@ describe('viralHook', () => {
 
   // ── generateViralContent ────────────────────────────────────────────────────
 
-  it('generateViralContent returns titles + hashtags + hookScore', async () => {
-    try {
-      const result = await generateViralContent(FIXTURES.video, 'test transcript');
-      expect(Array.isArray(result.titles)).toBe(true);
-      expect(Array.isArray(result.hashtags)).toBe(true);
-      expect(typeof result.hookScore).toBe('number');
-    } catch {
-      expect(true).toBe(true);
-    }
+  it.runIf(aiAvailable)('generateViralContent returns titles + hashtags + hookScore', async () => {
+    const result = await generateViralContent(FIXTURES.video, 'test transcript');
+    expect(Array.isArray(result.titles)).toBe(true);
+    expect(Array.isArray(result.hashtags)).toBe(true);
+    expect(typeof result.hookScore).toBe('number');
   }, 120000);
 });

@@ -32,7 +32,7 @@ def synthesize():
     text = data.get("text", "")
     voice = data.get("voice", "af_bella") # Default English female voice
     speed = float(data.get("speed", 1.0))
-    output_path = data.get("output_path", "/content/kokoro_speech.wav")
+    output_path = data.get("output_path", "/workspace/outputs/kokoro_speech.wav")
 
     if not text:
         return jsonify({"error": "text is required"}), 400
@@ -67,5 +67,17 @@ def synthesize():
 def health():
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load model into VRAM to avoid cold start latency."""
+    try:
+        pipe = get_pipeline()
+        vram_cleanup()
+        return jsonify({"status": "ok", "model_loaded": pipe is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
+

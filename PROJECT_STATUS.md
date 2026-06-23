@@ -236,13 +236,16 @@
 - Storyboard agent: 3 endpoint
 - Edit Queue: 4 endpoint
 - MuseTalk: 2 endpoint
-- Docker container endpoint: 23
+- Docker container endpoint: 23 (tümünde /preload + /workspace çıktı yolu)
 - Docker named volume: 1 (lora-weights)
 - Graph node: 5 (Director, Screenwriter, Producer, Quality, Revisor)
+- Content team agent: 5 (Director, Screenwriter, Producer, Marketing, Quality)
 - Frontend component: ~25+
 - Build: `tsc --noEmit` 0 hata, `vite build` ~1.2s
 - Test: 23 integration test (Faz 7C) + 18 prod readiness test passed
 - Colab→Docker: 19 dosya güncellendi
+- Teknik borç: 7 orphan fixture silindi, silent-pass anti-pattern düzeltildi, OTLP telemetry'ye entegre
+- Docker iyileştirme: base→devel, 20 modele /preload, /content/→/workspace/, GH Actions workflow, shared/utils.py
 
 ## 📁 Proje Yapısı (Önemli Dosyalar)
 
@@ -251,6 +254,7 @@ src/
   services/
     agentGraph.ts              # Generic graph runtime (2A)
     multiAgentPipeline.ts       # 5-node LangGraph pipeline (2A)
+    contentTeam.ts             # CrewAI-style content team (yeni)
     editQueue.ts               # Edit queue service (2B)
     storyboardAgent/            # Storyboard agent (2C)
     aiStudio.ts                # AI Studio unified service (4C)
@@ -264,10 +268,20 @@ src/
     niche.ts                   # Niche routes (1B)
     museTalk.ts                # MuseTalk routes
     admin.ts                   # Admin system routes
+    payments.ts                # iyzico ödeme rotaları (yeni)
   queue.ts                     # Dubbing + edit + storyboard integration
+  queue-graph.ts               # 8-node LangGraph StateGraph (yeni)
   db.ts                        # 16 migration kolonu
 server.ts                      # Router kayıtları
 colab_server.py                # Docker Supervisor & Gateway (MuseTalk + AI Studio + STT)
+lib/
+  telemetry.ts                 # OpenTelemetry SDK setup
+  tracing.ts                   # OTLP span export (opsiyonel, telemetry'e entegre)
+  metrics.ts                   # Domain metrics wrapper
+  logger.ts                    # Pino structured logger
+  b2.ts                        # B2 S3 wrapper
+  cleanup.ts                   # Garbage collector (disk temizliği)
+  redis.ts                     # Redis pub/sub (SSE) + broadcastProgress
 client/src/components/
     StudioPanel.tsx            # Ana panel (VideoPreview + Timeline + MuseTalk + EditQueue)
     Timeline.tsx               # Profesyonel multi-track timeline editor
@@ -279,6 +293,16 @@ client/src/components/
     AdminHelpVideos.tsx        # Admin yardım video yönetimi
     AdminSystem.tsx            # Admin sistem sağlığı
     StudioToolsPanel.tsx       # AI Studio araçları (göz teması, ses, reframe, inpaint)
+colab_docker/
+  Dockerfile.base              # Base image (-devel, xformers, HF_HOME env)
+  shared/
+    utils.py                   # upload_to_backblaze + vram_cleanup (yeni)
+  runpod_handler.py            # Serverless wrapper (utils import, /workspace paths)
+  animatediff/...              # 23 model (her biri app.py + Dockerfile, /preload eklendi)
+  build_all_v2.sh              # 23 model build script
+  verify_images.py             # Colab integrity checker
+.github/workflows/
+  docker-build.yml             # GHCR build chain (yeni)
 docs/v6_roadmap/Faz_7_Testing_QA.md
 ```
 
@@ -515,6 +539,11 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 | 5 | **Production Readiness:** 18 test | Test | ✅ |
 | 6 | **Colab referans temizliği:** CLAUDE.md, AGENTS.md, skill'ler | Cleanup | ✅ |
 | 7 | **GHCR upload notebook:** colab_docker/colab_ghcr_upload.ipynb | Docker | ✅ |
+| 8 | **Teknik borç:** tracing OTLP entegrasyonu + fixture temizliği + test onarımları | Bakım | ✅ |
+| 9 | **Docker iyileştirme:** base→devel, /preload, /workspace, GH Actions workflow | Docker | ✅ |
+| 10 | **RunPod Network Volume** — model ağırlığı yükleme, port testi, webhook doğrulama | Altyapı | ⏳ |
+| 11 | **iyzico canlı test** — sandbox checkout + abonelik + kredi blokajı | Ödeme | ⏳ |
+| 12 | **GHCR imaj → RunPod** — 7 model ContainerManager entegrasyonu | Docker | ⏳ |
 
 ### Batch 3 — OpenTelemetry (v7.2 Minor)
 
@@ -543,8 +572,7 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 |---|-------|--------|-------|
 | 1 | Veo 3.1 I2V API + model routing + credit costs | Major | ✅ |
 | 2 | LangGraph + Postgres Checkpointer (queue.ts replacement) | Major | ✅ |
-| 3 | Multi-agent Content Team (CrewAI Flows) | Major | ⏳ |
-| 4 | MAF migration (sadece Azure) | Major | ⏳ |
+| 3 | Multi-agent Content Team (CrewAI Flows) | Major | ✅ |
 
 ### Batch 5 Detay — Veo 3.1 Entegrasyonu (23 Haziran 2026)
 
@@ -573,4 +601,20 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - `concatFinal`: `concatVideosWithCrossfade(xfade 0.3s)` ile final video, uploads'a kopya
   - `publishSocial`: Dinamik import ile `publisher.ts` fonksiyonları (YouTube/TikTok/X/Meta)
 - **Bağımlılıklar:** `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`, `@langchain/core`
+- **Tip güvenliği:** `tsc --noEmit` 0 hata
+
+### Batch 5 Detay — Multi-agent Content Team (CrewAI Flows) (23 Haziran 2026)
+
+- **src/services/contentTeam.ts:** CrewAI-style multi-agent pipeline (Director→Screenwriter→Producer→Marketing→Quality)
+- **Agent tanımları:** Her agent role, goal, backstory ile tanımlandı (CrewAI pattern)
+- **Director:** Hikaye analizi, scene structure, emotional arc (DirectorPlanSchema)
+- **Screenwriter:** 6sn micro-scene yazımı, video prompt + speech + SFX + camera motion (StudioSchema)
+- **Producer:** GPU iş akışı optimizasyonu, parallelization, priority, estimated GPU time (ProducerWorkflowSchema)
+- **Marketing:** Platform-özel başlık/açıklama/hashtag üretimi (YouTube, TikTok, X, Meta)
+- **Quality:** Scene consistency, character continuity, pacing kontrolü, revision loop (max 3 iterasyon)
+- **Calışma mantığı:** Pipeline tamamlandığında scenes + marketing DB'ye kaydedilir
+- **queue-graph.ts entegrasyonu:** `CONTENT_TEAM_ENABLED=true` env var ile aktif, varsayılan `generateStudioScenes` fallback
+- **.env.example:** CONTENT_TEAM_ENABLED değişkeni eklendi
+- **Yeniden kullanım:** `agents`, `directorPlan`, `producerOptimize`, `qualityInspect`, `generateMarketingCopy` bağımsız export edildi
+- **Bağımlılık:** Mevcut `multiAgentPipeline.ts`'nin 5 LangGraph node'u üzerine inşa edildi
 - **Tip güvenliği:** `tsc --noEmit` 0 hata

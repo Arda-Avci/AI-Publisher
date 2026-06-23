@@ -164,6 +164,16 @@ def transcribe():
             except: pass
         flush_memory()
 
+@app.route("/preload", methods=["POST"])
+def preload():
+    """Pre-load Whisper model into VRAM to avoid cold start latency."""
+    try:
+        model = load_faster_whisper()
+        flush_memory()
+        return jsonify({"status": "ok", "model_loaded": model is not None})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy"}), 200
