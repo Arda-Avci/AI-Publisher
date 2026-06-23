@@ -60,6 +60,6 @@
 ---
 
 ## 📝 Notlar
-- Docker Hub kullanılmaz. Tüm imajlar → GHCR (`ghcr.io/anomalyco/`) → Colab'da Kaniko ile build → RunPod'da çalışır
+- Docker Hub kullanılmaz. Tüm imajlar → GHCR (`ghcr.io/Arda-Avci/`) → GitHub Actions ile build → RunPod'da çalışır
 - Üretilen medya dosyaları Backblaze B2'de saklanır
 - Test için: `npx vitest run`, typecheck: `npm run check:types`, lint: `npm run check:lint`

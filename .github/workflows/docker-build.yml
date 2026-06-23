@@ -14,7 +14,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  ORG: anomalyco
+  ORG: Arda-Avci
   CONTEXT: colab_docker
 
 jobs:
@@ -87,7 +87,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull base image
-        run: docker pull ${{ needs.base.outputs.base_tag }}
+        run: |
+          docker pull ${{ needs.base.outputs.base_tag }}
+          docker tag ${{ needs.base.outputs.base_tag }} ai-publisher-base:latest
 
       - name: Build & push ${{ matrix.model }}
         run: |
