@@ -1541,6 +1541,87 @@ export function getDashboardScripts(params: {
       }
 
       void pollDockerStatus();
+
+      // ── Payment / Kredi ──
+
+      async function fetchCredits() {
+        try {
+          const res = await fetch('/api/v1/user/credits');
+          if (!res.ok) return;
+          const data = await res.json();
+          const el = document.getElementById('headerCredits');
+          if (el) el.textContent = data.credits ?? data.credits === 0 ? String(data.credits) : '0';
+        } catch { /* ignore */ }
+      }
+
+      function openPaymentModal() {
+        document.getElementById('paymentOptions').style.display = '';
+        document.getElementById('iyzico-iframe-wrapper').style.display = 'none';
+        openModal('paymentModal');
+      }
+
+      async function initiateIyzicoPayment(packageId) {
+        const optionsEl = document.getElementById('paymentOptions');
+        const iframeWrapper = document.getElementById('iyzico-iframe-wrapper');
+        const checkoutForm = document.getElementById('iyzipay-checkout-form');
+        const loadingEl = document.getElementById('payment-loading');
+
+        optionsEl.style.display = 'none';
+        iframeWrapper.style.display = '';
+        if (loadingEl) loadingEl.style.display = '';
+
+        try {
+          const res = await fetch('/api/v1/payments/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ packageId }),
+          });
+          const data = await res.json();
+
+          if (data.status === 'success' && data.checkoutFormContent) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            checkoutForm.innerHTML = data.checkoutFormContent;
+
+            const scripts = checkoutForm.getElementsByTagName('script');
+            for (let i = 0; i < scripts.length; i++) {
+              const oldScript = scripts[i];
+              const newScript = document.createElement('script');
+              if (oldScript.src) {
+                newScript.src = oldScript.src;
+              } else {
+                newScript.textContent = oldScript.textContent;
+              }
+              oldScript.parentNode.replaceChild(newScript, oldScript);
+            }
+          } else {
+            showToast(data.error || trMsg('Ödeme formu yüklenemedi.', 'Payment form failed to load.'), 'error');
+            openPaymentModal();
+          }
+        } catch (err) {
+          showToast(trMsg('Bağlantı hatası.', 'Connection error.'), 'error');
+          openPaymentModal();
+        }
+      }
+
+      // Handle payment redirect (iyzico webhook → ?payment=...)
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const paymentStatus = params.get('payment');
+        if (paymentStatus === 'success') {
+          fetchCredits();
+          showToast(trMsg('Ödeme başarılı! Kredileriniz yüklendi 🎉', 'Payment successful! Credits loaded 🎉'), 'success');
+          window.history.replaceState({}, '', window.location.pathname);
+        } else if (paymentStatus === 'failed' || paymentStatus === 'error') {
+          showToast(trMsg('Ödeme başarısız oldu. Tekrar deneyin.', 'Payment failed. Please try again.'), 'error');
+          window.history.replaceState({}, '', window.location.pathname);
+        } else if (paymentStatus === 'user_not_found') {
+          showToast(trMsg('Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.', 'User not found. Please login again.'), 'error');
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      })();
+
+      // Fetch credits on load
+      fetchCredits();
     </script>
   `;
 }

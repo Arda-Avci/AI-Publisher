@@ -562,9 +562,15 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 
 - **src/queue-graph.ts:** 8-node StateGraph (directorPlanning→sceneGeneration→coverSynthesis→loraTraining→sceneRender→ffmpegMix→concatFinal→publishSocial)
 - **State schema:** 14 alan (jobId, userId, currentStage, progressPercent, totalScenes, completedScenes, status, errors[], sceneResults[], marketing, finalFilename, finalVideoPath, modelType, retryCount)
-- **Postgres Checkpointer:** `PostgresSaver.fromConnString()` ile state persistence, crash sonrası kaldığı yerden devam
+- **Postgres Checkpointer:** `PostgresSaver.fromConnString()` — state persistence, crash recovery
 - **queue.ts toggle:** `OTEL_QUEUE_GRAPH=true` env var ile aktif, varsayılan `false` (fallback queue.ts)
 - **resumeJobGraph():** Checkpoint'ten kalan yerden devam etme
 - **SSE broadcast:** Her node progress güncellemesi (`updateProgress`)
+- **Servis entegrasyonu tamamlandı:**
+  - `directorPlanning`: DB'de scene yoksa `generateStudioScenes()` ile AI scene+müşteri metni üretimi, `video_scenes` INSERT
+  - `sceneRender`: Model routing (Veo-31 direkt Vertex AI / RunPod endpoint dispatch), polling + B2 download, mock mode FFmpeg
+  - `ffmpegMix`: Her scene için FFmpeg mixing (video+speech+sfx+subtitles+callout)
+  - `concatFinal`: `concatVideosWithCrossfade(xfade 0.3s)` ile final video, uploads'a kopya
+  - `publishSocial`: Dinamik import ile `publisher.ts` fonksiyonları (YouTube/TikTok/X/Meta)
 - **Bağımlılıklar:** `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`, `@langchain/core`
 - **Tip güvenliği:** `tsc --noEmit` 0 hata

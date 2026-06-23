@@ -233,6 +233,15 @@
 - [x] **SSE broadcast:** Her node progress güncellemesi
 - [x] **Tip güvenliği:** tsc --noEmit 0 hata
 - [x] **.env.example:** OTEL_QUEUE_GRAPH değişkeni eklendi
+- [x] **Servis entegrasyonu:**
+  - [x] `directorPlanning` → + `generateStudioScenes` çağrısı (AI scene/marketing üretimi, video_scenes INSERT)
+  - [x] `sceneGeneration` → scene sayım + progress broadcast (artık directorPlanning'de yapılıyor)
+  - [x] `coverSynthesis` → SD/Flux RunPod dispatch (opsiyonel)
+  - [x] `loraTraining` → RunPod LoRA trainer dispatch
+  - [x] `sceneRender` → model routing (Veo-31 direkt API / RunPod endpoint dispatch), poll + B2 download + mock mode
+  - [x] `ffmpegMix` → video+srt+sfx+callout FFmpeg mixing per scene
+  - [x] `concatFinal` → `concatVideosWithCrossfade` ile final video
+  - [x] `publishSocial` → dinamik import ile `publisher.ts` (YouTube/TikTok/X/Meta)
 
 ### Ongoing & Planned
 - [ ] **Multi-agent Content Team (CrewAI Flows)** — Major
