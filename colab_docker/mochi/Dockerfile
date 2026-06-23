@@ -9,6 +9,11 @@ RUN pip install --no-cache-dir \
     "moviepy==1.0.3" \
     "ray>=2.37.0"
 
+# Build-time weight download
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "genmo/mochi-1-preview"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

@@ -6,6 +6,12 @@ RUN pip install --no-cache-dir \
     decord \
     open_clip_torch
 
+# Build-time weight download
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "guoyww/animatediff-motion-adapter-v1-5-2" && \
+    /tmp/download_weights.sh "frankjoshua/toonyou_beta6"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

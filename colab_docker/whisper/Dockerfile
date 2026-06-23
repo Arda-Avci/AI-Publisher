@@ -5,6 +5,15 @@ RUN pip install --no-cache-dir \
     faster-whisper \
     openai-whisper
 
+# Build-time weight download (default model_size=small, fallback medium/large)
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "Systran/faster-whisper-small" && \
+    /tmp/download_weights.sh "Systran/faster-whisper-medium" && \
+    /tmp/download_weights.sh "Systran/faster-whisper-large-v3" && \
+    /tmp/download_weights.sh "openai/whisper-small" && \
+    /tmp/download_weights.sh "openai/whisper-large-v3"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

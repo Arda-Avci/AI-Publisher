@@ -17,6 +17,20 @@ RUN pip install --no-cache-dir \
 # Fix parse_args() issue in Wav2Lip/inference.py to allow it to be imported as a module
 RUN sed -i "s/args = parser.parse_args()/if __name__ == '__main__':\n    args = parser.parse_args()/g" /app/Wav2Lip/inference.py
 
+# Build-time weight download (Wav2Lip GAN + visual quality checkpoints)
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    mkdir -p /workspace/models/Wav2Lip/checkpoints && \
+    python -c "
+from huggingface_hub import hf_hub_download
+import shutil, os
+os.makedirs('/workspace/models/Wav2Lip/checkpoints', exist_ok=True)
+for fname in ['wav2lip.pth', 'wav2lip_gan.pth', 'visual_quality_disc.pth']:
+    p = hf_hub_download(repo_id='Rudrabha/Wav2Lip', filename=fname, cache_dir='/workspace/models/hf_cache', token=os.environ.get('HF_TOKEN') or None)
+    shutil.copy(p, f'/workspace/models/Wav2Lip/checkpoints/{fname}')
+    print(f'[WAV2LIP] OK: {fname}')
+"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

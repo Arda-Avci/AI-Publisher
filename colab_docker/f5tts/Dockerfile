@@ -6,6 +6,11 @@ RUN pip install --no-cache-dir \
     soundfile \
     librosa
 
+# Build-time weight download (F5-TTS: Vocos + inference checkpoints)
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "charactr/vocos-mel-24khz"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

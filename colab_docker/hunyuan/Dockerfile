@@ -6,6 +6,11 @@ RUN pip install --no-cache-dir \
     decord \
     open_clip_torch
 
+# Build-time weight download
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "hunyuanvideo-community/HunyuanVideo"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

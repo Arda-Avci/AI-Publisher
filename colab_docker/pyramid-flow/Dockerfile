@@ -14,6 +14,11 @@ RUN pip install --no-cache-dir \
     "tiktoken" \
     "scikit-image==0.22.0"
 
+# Build-time weight download
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "nvidia/Pyramid-Flow"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

@@ -11,6 +11,12 @@ RUN pip install --no-cache-dir \
     open_clip_torch \
     requests
 
+# Build-time weight download (CogVideoX 5b base for LoRA training)
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    /tmp/download_weights.sh "THUDM/CogVideoX-5b" && \
+    /tmp/download_weights.sh "stabilityai/stable-diffusion-xl-base-1.0"
+
 COPY app.py /app/app.py
 WORKDIR /app
 EXPOSE 5000

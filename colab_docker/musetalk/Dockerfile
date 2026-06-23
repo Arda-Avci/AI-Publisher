@@ -42,12 +42,23 @@ RUN pip install --no-cache-dir \
     trimesh
 RUN pip install --no-cache-dir pytorch3d 2>/dev/null || true
 
-# Download MuseTalk model weights (required for inference)
-RUN mkdir -p /app/MuseTalk/models && \
+# Download MuseTalk model weights (required for inference) - build-time bake
+COPY download_weights.sh /tmp/download_weights.sh
+RUN chmod +x /tmp/download_weights.sh && \
+    mkdir -p /app/MuseTalk/models && \
     cd /app/MuseTalk && \
-    pip install --no-cache-dir huggingface_hub && \
-    python -c "from huggingface_hub import snapshot_download; snapshot_download('TMElyralab/MuseTalk', local_dir='models', ignore_patterns=['*.git*', 'docs/*'])" 2>/dev/null || \
-    echo "[WARN] MuseTalk model weights will be downloaded at runtime"
+    HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \
+    python -c "
+from huggingface_hub import snapshot_download
+import os
+snapshot_download(
+    'TMElyralab/MuseTalk',
+    local_dir='models',
+    cache_dir=os.environ['HF_HOME'],
+    ignore_patterns=['*.git*', 'docs/*'],
+    token=os.environ.get('HF_TOKEN') or None,
+)
+" || echo "[WARN] MuseTalk model weights will be downloaded at runtime"
 
 COPY app.py /app/app.py
 WORKDIR /app
