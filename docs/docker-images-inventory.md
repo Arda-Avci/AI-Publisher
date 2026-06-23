@@ -146,6 +146,21 @@
 
 ---
 
+### videocrafter
+| Özellik | Değer |
+|---------|-------|
+| **Base** | ai-publisher-base:latest |
+| **Models** | `VideoCrafter/Text2Video-1024`, `VideoCrafter/Text2Video-512`, `VideoCrafter/Image2Video-512` |
+| **Packages** | pytorch-lightning==2.1.0, xformers==0.0.24, omegaconf==2.3.0, einops==0.7.0, ftfy==6.2.0, decord |
+| **Framework** | Custom PyTorch (LV-DM — diffusers DEĞİL, `lvdm` modülleri) |
+| **Precision** | fp16 |
+| **Output** | MP4 (numpy frames → ffmpeg) |
+| **VRAM** | 10–12GB (320×512) / 24GB (1024×576) |
+| **Port** | **5024** (docker-compose: 5024→5000) |
+| **Endpoint** | `POST /generate` (T2V), `POST /generate-i2v` (I2V) |
+
+---
+
 ### svd (Stable Video Diffusion)
 | Özellik | Değer |
 |---------|-------|
@@ -346,6 +361,7 @@
 | pyramid-flow | ≥18GB | bfloat16 |
 | wan | ≥18GB | bfloat16 |
 | animatediff | ≥18GB | fp16 |
+| videocrafter | 10–12GB (512) / 24GB (1024) | fp16 |
 | svd | ≥16GB | fp16 |
 | zeroscope | ≥12GB | fp16 |
 | f5tts | <3.5GB → CPU fallback | — |

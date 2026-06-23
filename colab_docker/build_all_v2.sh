@@ -79,7 +79,7 @@ else
   exit 1
 fi
 
-MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer" "zeroscope" "dynamicrafter" "sadtalker" "pyramid-flow" "mochi" "video-retalking" "geneface")
+MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer" "zeroscope" "dynamicrafter" "sadtalker" "pyramid-flow" "mochi" "video-retalking" "geneface" "videocrafter")
 TOTAL_MODELS=${#MODELS[@]}
 
 for i in "${!MODELS[@]}"; do

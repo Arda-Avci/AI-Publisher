@@ -62,6 +62,15 @@ npm run check:lint # eslint check
 - `src/publisher.ts` — Playwright upload functions for YouTube, TikTok, X, and Meta.
 - `src/services/runpod.ts` — Coordinates RunPod endpoint lifecycle (start, stop, status polling, webhook registration).
 - `src/services/veo31.ts` — Google Vertex AI Veo 3.1 REST API wrapper. Direkt API çağrısı (RunPod bypass). `generateVideo(imageUrl, prompt, aspectRatio)`, operation polling (5dk timeout, 5sn interval).
+- `src/services/apiVideoService.ts` — Cloud API factory: `isCloudAPIModel()`, `getVideoAPIService()`, `generateViaAPI()`. Lazy-loaded singletons per provider.
+- `src/services/runwayService.ts` — Runway Gen-4.5 Turbo API.
+- `src/services/klingService.ts` — Kling AI 2.0 API.
+- `src/services/pikaService.ts` — Pika Labs 2.5 API.
+- `src/services/lumaService.ts` — Luma Dream Machine 1.6 API.
+- `src/services/haiperService.ts` — Haiper Turbo API.
+- `src/services/pixverseService.ts` — PixVerse v3 API.
+- `src/services/veo2Service.ts` — Google Veo 2 (Vertex AI) API.
+- `src/services/browserUseService.ts` — Browser-use SDK wrapper: `uploadYouTube`, `uploadTikTok`, `uploadToX`, `uploadToMeta`. RunPod endpoint veya local Flask fallback.
 - `src/queue-graph.ts` — LangGraph StateGraph (8 node: directorPlanning→sceneGeneration→coverSynthesis→loraTraining→sceneRender→ffmpegMix→concatFinal→publishSocial). PostgresSaver checkpointer. `OTEL_QUEUE_GRAPH=true` env var ile aktif.
 - `src/services/trendAnalyzer.ts` — Playwright ile 4 platform trend scraping (TikTok, YouTube, X, Instagram).
 - `src/services/trendScheduler.ts` — Interval-based trend tarama scheduler (env var periyot, varsayılan 30dk).
@@ -121,9 +130,11 @@ audit_log: id SERIAL PRIMARY KEY, user_id INTEGER, action TEXT NOT NULL, entity_
 4. **Phase 4**: User starts the job → Enqueued to RabbitMQ worker → RunPod endpoint is triggered.
 
 ### Model Routing (queue.ts)
-- `production_template` → `modelType` → `endpointId` (RunPod). Veo-31 bu zinciri kırar: direkt Vertex AI REST API.
+- `production_template` → `modelType` → `endpointId` (RunPod). Veo-31 / Veo-2 bu zinciri kırar: direkt Vertex AI REST API.
+- Cloud API modelleri (`runway-gen4`, `kling-2`, `pika-2.5`, `luma-16`, `haiper-turbo`, `pixverse-v3`, `veo-2`) RunPod zincirini tamamen bypass eder: `endpointId = ''` + `generateViaAPI()` çağrısı → `taskStatus = 'success'`.
+- VideoCrafter: `RUNPOD_VIDEOCRAFTER_ENDPOINT_ID` ile RunPod üzerinden (port 5024).
 - RunPod dispatch: `runpod.ts` → endpoint → webhook callback → B2 download → FFmpeg mix.
-- Docker container fallback: ContainerManager port (5001-5023) HTTP polling.
+- Docker container fallback: ContainerManager port (5001-5024) HTTP polling.
 
 ### LangGraph Queue (queue-graph.ts)
 - `OTEL_QUEUE_GRAPH=true` env var ile aktif. Fallback: queue.ts.

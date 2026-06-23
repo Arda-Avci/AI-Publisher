@@ -101,3 +101,39 @@ Bu dokümanda, Sprint 4.C (React Migration) tamamlandıktan sonra başlanacak 7 
 ---
 
 *Not: Bu işlerin v1 MVP'leri halihazırda tamamlanmıştır. v2 geliştirmeleri mevcut implementasyonların üzerine inşa edilecektir.*
+
+---
+
+## ✅ Batch 5: VideoCrafter Docker + Cloud API Entegrasyonları (Tamamlandı — 2026)
+
+8 yeni video modeli entegre edildi. Tek platform API key + %50 markup üzerinden kredi sistemi entegre.
+
+### VideoCrafter (Self-Hosted Docker, Port 5024)
+- [x] `colab_docker/videocrafter/app.py` — Flask T2V + I2V endpoint'leri
+- [x] `colab_docker/videocrafter/Dockerfile` — custom PyTorch LV-DM
+- [x] `docker-compose.yml` — port 5024
+- [x] `build_all_v2.sh` — "videocrafter" modeli eklendi
+- [x] `RUNPOD_VIDEOCRAFTER_ENDPOINT_ID` env var
+- [x] `src/queue.ts` — endpoint routing
+
+### Cloud API Servisleri
+- [x] `src/services/apiVideoService.ts` — IVideoAPIService factory
+- [x] `src/services/runwayService.ts` — Runway Gen-4.5 Turbo
+- [x] `src/services/klingService.ts` — Kling AI 2.0
+- [x] `src/services/pikaService.ts` — Pika Labs 2.5
+- [x] `src/services/lumaService.ts` — Luma Dream Machine 1.6
+- [x] `src/services/haiperService.ts` — Haiper Turbo
+- [x] `src/services/pixverseService.ts` — PixVerse v3
+- [x] `src/services/veo2Service.ts` — Google Veo 2 (Vertex AI)
+- [x] `src/services/creditService.ts` — MODEL_COSTS güncellendi (×1.5 markup)
+- [x] `src/queue.ts` — cloud API bypass (RunPod zinciri atlanır, `generateViaAPI()`)
+- [x] `.env.example` — tüm API key env var'ları
+
+### Browser-Use Remote Publishing
+- [x] `src/services/browserUseService.ts` — RunPod endpoint / local Flask fallback
+- [x] `src/lib/publish-queue.ts` — `USE_BROWSER_REMOTE` env var
+
+### Dokümantasyon
+- [x] `docs/docker-images-inventory.md` — VideoCrafter satırı + VRAM tablosu
+- [x] `docs/video-models-research-2025.md` — Entegrasyon durumu (2026)
+- [x] `CLAUDE.md` — Architecture + Model Routing güncellendi

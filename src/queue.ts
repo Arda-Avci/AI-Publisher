@@ -908,8 +908,59 @@ async function startProduction(job: VideoJob) {
           endpointId = process.env.RUNPOD_XTTS_ENDPOINT_ID || '';
         } else if (lowerModel.includes('zeroscope')) {
           endpointId = process.env.RUNPOD_ZEROSCOPE_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('videocrafter')) {
+          endpointId = process.env.RUNPOD_VIDEOCRAFTER_ENDPOINT_ID || '';
         } else {
           endpointId = process.env.RUNPOD_DEFAULT_ENDPOINT_ID || '';
+        }
+
+        // ── Cloud API bypass: RunPod zinciri atlanir ──
+        if (lowerModel.includes('runway') || lowerModel.includes('gen-4')) {
+          const { generateViaAPI } = await import('./services/apiVideoService.js');
+          Logger.info(`[Cloud] Generating scene ${scene.scene_number} via Runway API...`);
+          const cloudResult = await generateViaAPI(modelType, {
+            prompt: finalPrompt,
+            imageUrl: referenceImageBase64 || sendSourceVideoId || '',
+            duration: 5,
+          });
+          taskId = `runway_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
+        } else if (lowerModel.includes('kling')) {
+          const { generateViaAPI } = await import('./services/apiVideoService.js');
+          Logger.info(`[Cloud] Generating scene ${scene.scene_number} via Kling API...`);
+          const cloudResult = await generateViaAPI(modelType, {
+            prompt: finalPrompt,
+            imageUrl: referenceImageBase64 || '',
+            duration: 5,
+          });
+          taskId = `kling_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
+        } else if (lowerModel.includes('pika')) {
+          const { generateViaAPI } = await import('./services/apiVideoService.js');
+          const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
+          taskId = `pika_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
+        } else if (lowerModel.includes('luma')) {
+          const { generateViaAPI } = await import('./services/apiVideoService.js');
+          const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
+          taskId = `luma_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
+        } else if (lowerModel.includes('haiper')) {
+          const { generateViaAPI } = await import('./services/apiVideoService.js');
+          const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
+          taskId = `haiper_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
+        } else if (lowerModel.includes('pixverse')) {
+          const { generateViaAPI } = await import('./services/apiVideoService.js');
+          const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
+          taskId = `pixverse_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         }
 
         if (lowerModel.includes('veo-31') || lowerModel.includes('veo31')) {

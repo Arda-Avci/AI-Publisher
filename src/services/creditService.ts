@@ -18,6 +18,15 @@ const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
   'Mochi-1': { sceneCost: 20, coverCost: 10 },
   'Video-ReTalking': { sceneCost: 10, coverCost: 5 },
   'Veo-31': { sceneCost: 40, coverCost: 20 },
+  // ── Cloud API modelleri (API maliyeti × 1.5 markup)
+  'VideoCrafter': { sceneCost: 15, coverCost: 8 },   // LVDM, 24GB VRAM önerilen
+  'runway-gen4': { sceneCost: 9, coverCost: 0 },     // ~6 kredi/sn × 1.5
+  'kling-2': { sceneCost: 15, coverCost: 0 },        // ~$0.10/sn × 1.5
+  'pika-25': { sceneCost: 7, coverCost: 0 },       // ~4.8 kredi/sn × 1.5
+  'luma-16': { sceneCost: 10, coverCost: 0 },
+  'haiper-turbo': { sceneCost: 10, coverCost: 0 },
+  'pixverse-v3': { sceneCost: 10, coverCost: 0 },
+  'veo-2': { sceneCost: 30, coverCost: 0 },       // ~$0.20/sn × 1.5
 };
 
 const DEFAULT_COST = { sceneCost: 10, coverCost: 5 };
