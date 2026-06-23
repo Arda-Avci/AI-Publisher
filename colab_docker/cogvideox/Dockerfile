@@ -11,7 +11,6 @@ COPY download_weights.sh /tmp/download_weights.sh
 RUN chmod +x /tmp/download_weights.sh && \
     /tmp/download_weights.sh "THUDM/CogVideoX-2b" && \
     /tmp/download_weights.sh "THUDM/CogVideoX-5b" && \
-    /tmp/download_weights.sh "THUDM/CogVideoX-2b-I2V" && \
     /tmp/download_weights.sh "THUDM/CogVideoX-5b-I2V"
 
 COPY app.py /app/app.py
