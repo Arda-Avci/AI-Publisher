@@ -655,7 +655,19 @@ async function startProduction(job: VideoJob) {
           customPrompt = customPrompt + motionSuffix;
         }
 
-        const finalCharacterFeatures = job.character_features;
+        // Karakter profili (boy, kg, olculer) zenginlestirmesi
+        let finalCharacterFeatures = job.character_features;
+        if (job.character_profiles) {
+          try {
+            const { getProfiles, integrateWithFeatures } = await import('./services/characterProfileService.js');
+            const profiles = getProfiles({ character_profiles: job.character_profiles });
+            if (profiles.length > 0) {
+              finalCharacterFeatures = integrateWithFeatures(job.character_features, profiles);
+            }
+          } catch {
+            // Servir yuklenemezse orjinal feature kullan
+          }
+        }
         const finalPrompt =
           (finalCharacterFeatures ? `${finalCharacterFeatures}, ${customPrompt}` : customPrompt) ||
           '';

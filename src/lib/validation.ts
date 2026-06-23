@@ -10,6 +10,7 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
     master_prompt,
     production_notes,
     character_features,
+    character_profiles,
     platforms,
     playlist_id,
     tts_provider,
@@ -50,6 +51,34 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
       field: 'character_features',
       message: 'Karakter özellikleri en fazla 2000 karakter olabilir.',
     });
+  }
+
+  // character_profiles: optional, JSON string veya array, max 10 profil
+  if (character_profiles !== undefined && character_profiles !== null) {
+    let parsed: unknown;
+    if (typeof character_profiles === 'string') {
+      try {
+        parsed = JSON.parse(character_profiles);
+      } catch {
+        errors.push({
+          field: 'character_profiles',
+          message: 'character_profiles JSON parse hatasi.',
+        });
+      }
+    } else if (Array.isArray(character_profiles)) {
+      parsed = character_profiles;
+    } else {
+      errors.push({
+        field: 'character_profiles',
+        message: 'character_profiles array veya JSON string olmali.',
+      });
+    }
+    if (Array.isArray(parsed) && parsed.length > 10) {
+      errors.push({
+        field: 'character_profiles',
+        message: 'En fazla 10 karakter profili eklenebilir.',
+      });
+    }
   }
 
   // platforms: optional, array of string, valid platform options

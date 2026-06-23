@@ -45,6 +45,7 @@ export function registerJobRoutes(app: Application): void {
         master_prompt,
         production_notes,
         character_features,
+        character_profiles,
         platforms,
         playlist_id,
         has_shorts,
@@ -89,10 +90,19 @@ export function registerJobRoutes(app: Application): void {
         const finalProductionTemplate = production_template || 'cinematic';
 
         const trendEnabled = trend_enabled === '1' ? 1 : 0;
+        // Karakter profili JSON string'i (boy, kg, olculer, gorunum)
+        const characterProfilesJson = (() => {
+          if (!character_profiles) return '[]';
+          if (typeof character_profiles === 'string') {
+            try { JSON.parse(character_profiles); return character_profiles; } catch { return '[]'; }
+          }
+          return JSON.stringify(character_profiles);
+        })();
+
         const insertResult: any = await db.run(
           `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context, character_profiles
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             userId,
             master_prompt,
@@ -112,6 +122,7 @@ export function registerJobRoutes(app: Application): void {
             backgroundMusicPath,
             trendEnabled,
             trend_context || '',
+            characterProfilesJson,
           ],
         );
 

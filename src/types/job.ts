@@ -94,6 +94,8 @@
   lora_enabled?: number;
   character_images?: string;
   multi_character?: number;
+  /** Detayli karakter profilleri (boy, kg, olculer, gorunum, stil) — JSON array */
+  character_profiles?: string;
 }
 
 export interface VideoScene {

@@ -4,6 +4,11 @@
 - [x] Eski notebook temizligi: colab_setup.ipynb, colab_setup_v2.ipynb, Google_Colab_AI_Publisher.ipynb, colab_test_models.ipynb silindi
 - [x] colab_docker_build.ipynb: GHCR push cell eklendi (Build → Drive tgz → GHCR)
 - [x] GH Actions workflow fix: ORG Arda-Avci, matrix if step-level, base tag duzeltmesi
+- [x] ModelRouter (cost-priority + 1.7x user cost = KDV %20 + iyzico) - 27 test
+- [x] Kullanici dostu kalite secimi (low/medium/high) + cinematic auto-upgrade
+- [x] Affordability check + downgrade onerileri
+- [x] Karakter Profil sistemi (boy, kg, gogus/bel/kalca, gorunum, stil) - 20 test
+- [x] character_profiles DB kolonu + JSON validation
 
 ## 🟢 Tamamlanan Major Fazlar
 

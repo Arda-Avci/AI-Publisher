@@ -87,6 +87,21 @@ export async function generateStudioScenes(job: any, deepThink?: boolean) {
   const transcriptText =
     job.transcript_translated || job.transcript_cleaned || job.transcript || 'Bilinmiyor';
 
+  // Karakter profili (boy, kg, olculer, gorunum) zenginlestirmesi
+  // Detayli fiziksel ozellikler character_features metnine otomatik enjekte edilir
+  let characterFeaturesEnriched = job.character_features || '';
+  if (job.character_profiles) {
+    try {
+      const { getProfiles, integrateWithFeatures } = await import('./characterProfileService.js');
+      const profiles = getProfiles({ character_profiles: job.character_profiles });
+      if (profiles.length > 0) {
+        characterFeaturesEnriched = integrateWithFeatures(job.character_features, profiles);
+      }
+    } catch {
+      // Servir yuklenemezse orjinal feature kullan
+    }
+  }
+
   // Trend bağlamı (Phase 2): trend_enabled=1 ise prompt'a trend bilgisi ekle
   let trendBlock = '';
   if (job.trend_enabled && job.trend_context) {
@@ -127,7 +142,7 @@ Kurallar:
         ? `Generate scenes and marketing data in Turkish in JSON format using these details:
 Topic: ${job.master_prompt}
 Notes: ${job.production_notes}
-Character: ${job.character_features}
+Character: ${characterFeaturesEnriched}
 Transcript: ${transcriptText}
 Template Style: ${job.production_template}
 Identify speaker (e.g. @me, @sibel) and charactersInScene (e.g. ['@me', '@sibel']) for each scene.`
@@ -149,7 +164,7 @@ Görevlerin:
 Giriş Verileri:
 Videonun Konusu / Başlığı: ${job.master_prompt}
 Üretim Notları: ${job.production_notes}
-Karakter Özellikleri: ${job.character_features}
+Karakter Özellikleri: ${characterFeaturesEnriched}
 Referans Metin / Transkript: ${transcriptText}${trendBlock}`;
 
       return generateObject({

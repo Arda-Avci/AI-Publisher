@@ -503,6 +503,12 @@ export async function initDatabase() {
     'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS multi_character INTEGER DEFAULT 0;',
   );
 
+  // Character profile detaylari (boy, kg, olculer, gorunum, stil)
+  // JSON array olarak saklanir: [{ name, role, measurements, appearance, style, ... }, ...]
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS character_profiles TEXT DEFAULT '[]';",
+  );
+
   // Sprint 3.B Talk-Show character extensions
   await db.exec(
     "ALTER TABLE characters ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(20) DEFAULT 'zen'",
