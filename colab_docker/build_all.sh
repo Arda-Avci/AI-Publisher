@@ -48,36 +48,122 @@ echo "[DEBUG] pwd: $(pwd)"
 echo "[DEBUG] listing files:"
 ls -la
 
-# Base: Registry'de yoksa Kaniko ile build et (Drive'a da kaydeder)
+# Base Dockerfile sha256 hesapla
+BASE_DOCKERFILE_SHA=""
+if [ -f "Dockerfile.base" ]; then
+  BASE_DOCKERFILE_SHA=$(sha256sum "Dockerfile.base" | awk '{print $1}')
+  echo "[INFO] Dockerfile.base sha256: ${BASE_DOCKERFILE_SHA:0:12}..."
+fi
+
+# Base: Registry / Drive cache / Kaniko (3 kademeli skip)
+# 1) Registry'de mevcut mu?
+# 2) Drive'da base.tar.gz + base.sha256 var mi + sha eslesti mi?
+# 3) Kaniko ile sifirdan build
+BASE_SKIPPED=false
 if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publisher-base/tags/list > /dev/null 2>&1; then
   echo "✅ Base image registry'de mevcut. Build atlandi."
-elif [ -f "Dockerfile.base" ]; then
-  echo "[INFO] Base registry'de yok, Dockerfile.base Kaniko ile build ediliyor..."
-  $KANIKO_BIN --context=. \
-         --dockerfile=Dockerfile.base \
-         --destination=localhost:5000/ai-publisher-base:latest \
-         --tarPath=base.tar \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
-  if [ $? -eq 0 ]; then
-    DURATION=$((SECONDS - START_TIME))
-    echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
-    if command -v pigz &> /dev/null; then
-      pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
-    else
-      gzip -c base.tar > "$DRIVE_DIR/base.tar.gz"
+  BASE_SKIPPED=true
+elif [ -f "$DRIVE_DIR/base.tar.gz" ] && [ -n "$BASE_DOCKERFILE_SHA" ]; then
+  if [ -f "$DRIVE_DIR/base.sha256" ] && [ "$(cat "$DRIVE_DIR/base.sha256")" = "$BASE_DOCKERFILE_SHA" ]; then
+    # Drive'da cache var, sha eslesti → Kaniko bypass, registry'ye load et
+    echo "✅ Base Drive cache HIT (sha eslesti): $DRIVE_DIR/base.tar.gz"
+    BASE_SKIPPED=true
+    if [ "$REGISTRY_UP" = "true" ]; then
+      echo "[INFO] Drive'dan registry'ye yukleniyor..."
+      TMP_TAR="$(mktemp --suffix=.tar)"
+      gunzip -c "$DRIVE_DIR/base.tar.gz" > "$TMP_TAR"
+      if command -v skopeo &> /dev/null; then
+        skopeo copy --dest-tls-verify=false \
+          "docker-archive:$TMP_TAR" \
+          "docker://localhost:5000/ai-publisher-base:latest" 2>&1 | tail -3
+      elif command -v podman &> /dev/null; then
+        podman load -i "$TMP_TAR"
+        LOADED=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep ai-publisher-base | head -1)
+        if [ -n "$LOADED" ]; then
+          podman tag "$LOADED" localhost:5000/ai-publisher-base:latest
+          podman push --tls-verify=false localhost:5000/ai-publisher-base:latest 2>&1 | tail -3
+        fi
+      else
+        echo "⚠️  skopeo/podman yok, base registry'ye yuklenemedi. Modeller base cekemez."
+        BASE_SKIPPED=false
+      fi
+      rm -f "$TMP_TAR"
     fi
-    rm -f base.tar
-    echo "✅ Base imaji Drive'a kaydedildi."
   else
-    echo "❌ Base Docker Imajı insa edilirken hata olustu!"
+    # Bootstrap: base.tar.gz var ama .sha256 yok (eski build) → mevcut sha'yi yaz, guven
+    if [ ! -f "$DRIVE_DIR/base.sha256" ]; then
+      echo "🆕 Base bootstrap: base.sha256 olusturuluyor (eski build, mevcut cache guveniliyor)"
+      echo "$BASE_DOCKERFILE_SHA" > "$DRIVE_DIR/base.sha256"
+      BASE_SKIPPED=true
+      if [ "$REGISTRY_UP" = "true" ]; then
+        echo "[INFO] Drive'dan registry'ye yukleniyor..."
+        TMP_TAR="$(mktemp --suffix=.tar)"
+        gunzip -c "$DRIVE_DIR/base.tar.gz" > "$TMP_TAR"
+        if command -v skopeo &> /dev/null; then
+          skopeo copy --dest-tls-verify=false \
+            "docker-archive:$TMP_TAR" \
+            "docker://localhost:5000/ai-publisher-base:latest" 2>&1 | tail -3
+        elif command -v podman &> /dev/null; then
+          podman load -i "$TMP_TAR"
+          LOADED=$(podman images --format "{{.Repository}}:{{.Tag}}" | grep ai-publisher-base | head -1)
+          if [ -n "$LOADED" ]; then
+            podman tag "$LOADED" localhost:5000/ai-publisher-base:latest
+            podman push --tls-verify=false localhost:5000/ai-publisher-base:latest 2>&1 | tail -3
+          fi
+        fi
+        rm -f "$TMP_TAR"
+      fi
+    fi
+    # Not: base.sha256 var ama eslesmiyorsa → Kaniko rebuild (asagidaki blok)
+  fi
+fi
+
+if [ "$BASE_SKIPPED" = "false" ]; then
+  if [ -f "Dockerfile.base" ]; then
+    echo "[INFO] Base yeniden insa ediliyor (Kaniko)..."
+    $KANIKO_BIN --context=. \
+           --dockerfile=Dockerfile.base \
+           --destination=localhost:5000/ai-publisher-base:latest \
+           --tarPath=base.tar \
+           --whitelist-var-run=false \
+           --ignore-var-run \
+           --snapshot-mode=redo
+    if [ $? -eq 0 ]; then
+      DURATION=$((SECONDS - START_TIME))
+      echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
+      if command -v pigz &> /dev/null; then
+        pigz -c base.tar > "$DRIVE_DIR/base.tar.gz"
+      else
+        gzip -c base.tar > "$DRIVE_DIR/base.tar.gz"
+      fi
+      rm -f base.tar
+      echo "✅ Base imaji Drive'a kaydedildi."
+    else
+      echo "❌ Base Docker Imajı insa edilirken hata olustu!"
+      exit 1
+    fi
+  else
+    echo "❌ Dockerfile.base bulunamadi!"
     exit 1
   fi
-else
-  echo "❌ Dockerfile.base bulunamadi!"
-  exit 1
 fi
+
+# Base sha256 → DRIVE_DIR/base.sha256 yaz
+# Tum modeller bu hash'i kullanarak stale image kontrolu yapar.
+if [ -n "$BASE_DOCKERFILE_SHA" ]; then
+  echo "$BASE_DOCKERFILE_SHA" > "$DRIVE_DIR/base.sha256"
+  echo "✅ base.sha256: ${BASE_DOCKERFILE_SHA:0:12}..."
+fi
+
+# Model skip helper: DRIVE_DIR/MODEL.sha256 (base+Dockerfile hash) eslesiyorsa skip
+compute_model_sha() {
+  local model=$1
+  local base_sha=$2
+  local df_sha
+  df_sha=$(sha256sum "$model/Dockerfile" | awk '{print $1}')
+  # base sha + dockerfile sha → model identity
+  echo -n "${base_sha}:${df_sha}" | sha256sum | awk '{print $1}'
+}
 
 MODELS=("cogvideox" "wan" "ltx" "hunyuan" "xtts" "audioldm2" "wav2lip" "musetalk" "whisper" "stablediffusion" "kokorotts" "svd" "animatediff" "wan25" "f5tts" "lora-trainer" "zeroscope" "dynamicrafter" "sadtalker" "pyramid-flow" "mochi" "video-retalking" "geneface")
 TOTAL_MODELS=${#MODELS[@]}
@@ -86,22 +172,49 @@ for i in "${!MODELS[@]}"; do
   MODEL="${MODELS[$i]}"
   IDX=$((i + 1))
   
-  # Drive'da varsa ve ≥100MB ise atla (incremental build)
+  # Skip logic: base.sha256 + Dockerfile sha256 eşleşiyorsa ve tar.gz varsa atla
+  # Bu sayede base değişikliği otomatik invalidate eder.
   MIN_SIZE=$((100 * 1024 * 1024))
-  if [ -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
+  if [ -f "$DRIVE_DIR/$MODEL.tar.gz" ] && [ -f "$DRIVE_DIR/$MODEL.sha256" ] && [ -f "Dockerfile.base" ]; then
+    CURRENT_SHA=$(compute_model_sha "$MODEL" "$(cat "$DRIVE_DIR/base.sha256" 2>/dev/null)")
+    STORED_SHA=$(cat "$DRIVE_DIR/$MODEL.sha256" 2>/dev/null)
     FILE_SIZE=$(stat -c%s "$DRIVE_DIR/$MODEL.tar.gz" 2>/dev/null || echo 0)
-    if [ "$FILE_SIZE" -ge "$MIN_SIZE" ] 2>/dev/null; then
+    if [ "$CURRENT_SHA" = "$STORED_SHA" ] && [ "$FILE_SIZE" -ge "$MIN_SIZE" ] 2>/dev/null; then
       echo ""
       echo "======================================================================"
-      echo "⏭️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da mevcut, atlandi)"
+      echo "⏭️  [$IDX/$TOTAL_MODELS] MODEL: $MODEL (sha256 eslesti, atlandi)"
+      echo "      ${CURRENT_SHA:0:12}... / boyut: $((FILE_SIZE/1024/1024)) MB"
       echo "======================================================================"
       continue
     else
+      REASON="sha degisti"
+      [ "$FILE_SIZE" -lt "$MIN_SIZE" ] 2>/dev/null && REASON="dosya bozuk/kucuk"
       echo ""
       echo "======================================================================"
-      echo "⚠️ [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da bozuk/kücük: ${FILE_SIZE:-0} byte, yeniden build)"
+      echo "🔄 [$IDX/$TOTAL_MODELS] MODEL: $MODEL (yeniden build: $REASON)"
+      echo "      eski: ${STORED_SHA:0:12}  yeni: ${CURRENT_SHA:0:12}"
       echo "======================================================================"
-      rm -f "$DRIVE_DIR/$MODEL.tar.gz"
+      rm -f "$DRIVE_DIR/$MODEL.tar.gz" "$DRIVE_DIR/$MODEL.sha256"
+    fi
+  elif [ -f "$DRIVE_DIR/$MODEL.tar.gz" ]; then
+    FILE_SIZE=$(stat -c%s "$DRIVE_DIR/$MODEL.tar.gz" 2>/dev/null || echo 0)
+    if [ "$FILE_SIZE" -lt "$MIN_SIZE" ] 2>/dev/null; then
+      echo ""
+      echo "======================================================================"
+      echo "⚠️  [$IDX/$TOTAL_MODELS] MODEL: $MODEL (Drive'da bozuk/kucuk: ${FILE_SIZE:-0} byte, yeniden build)"
+      echo "======================================================================"
+      rm -f "$DRIVE_DIR/$MODEL.tar.gz" "$DRIVE_DIR/$MODEL.sha256"
+    else
+      # Bootstrap: tar.gz var ama .sha256 yok → mevcut hash'i yaz, "guvenilir" kabul et
+      # Ilk calistirmada bir kere yazilir, sonraki calistirmalarda gercek skip devreye girer.
+      BOOTSTRAP_SHA=$(compute_model_sha "$MODEL" "$(cat "$DRIVE_DIR/base.sha256" 2>/dev/null)")
+      echo "$BOOTSTRAP_SHA" > "$DRIVE_DIR/$MODEL.sha256"
+      echo ""
+      echo "======================================================================"
+      echo "🆕 [$IDX/$TOTAL_MODELS] MODEL: $MODEL (bootstrap: sha olusturuldu)"
+      echo "      ${BOOTSTRAP_SHA:0:12}... / boyut: $((FILE_SIZE/1024/1024)) MB"
+      echo "======================================================================"
+      continue
     fi
   fi
   
@@ -183,7 +296,14 @@ for i in "${!MODELS[@]}"; do
   
   SAVE_DURATION=$((SECONDS - SAVE_START))
   echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
-  
+
+  # Model sha256 yaz (base.sha256 + Dockerfile hash)
+  if [ -f "Dockerfile.base" ] && [ -f "$MODEL/Dockerfile" ] && [ -f "$DRIVE_DIR/base.sha256" ]; then
+    MODEL_SHA=$(compute_model_sha "$MODEL" "$(cat "$DRIVE_DIR/base.sha256")")
+    echo "$MODEL_SHA" > "$DRIVE_DIR/$MODEL.sha256"
+    echo "   sha256: ${MODEL_SHA:0:12}... (base+Dockerfile hash)"
+  fi
+
   if command -v docker &> /dev/null; then
     docker system prune -f || true
   fi
