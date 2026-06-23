@@ -245,8 +245,9 @@ for i in "${!MODELS[@]}"; do
   # Faz 3: Kaniko Build
   echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
   
-  # Copy runpod_handler.py to model directory for context access during build
+  # Copy shared files to model directory for context access during build
   cp -f runpod_handler.py "$MODEL/"
+  cp -f download_weights.sh "$MODEL/"
   
   $KANIKO_BIN --context="$MODEL/" \
          --dockerfile="$MODEL/Dockerfile" \
@@ -260,8 +261,8 @@ for i in "${!MODELS[@]}"; do
   
   BUILD_STATUS=$?
   
-  # Clean up runpod_handler.py from model directory
-  rm -f "$MODEL/runpod_handler.py"
+  # Clean up shared files from model directory
+  rm -f "$MODEL/runpod_handler.py" "$MODEL/download_weights.sh"
   
   # Dockerfile'ı eski haline geri döndür
   sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
