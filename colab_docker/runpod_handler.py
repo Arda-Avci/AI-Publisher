@@ -73,14 +73,18 @@ else:
         
         # Determine Flask endpoint path
         endpoint_path = os.environ.get("RUNPOD_ENDPOINT_PATH", "/generate-media")
-        
+        flask_port = os.environ.get("RUNPOD_FLASK_PORT", "5000")
+
         # If mode is passed or we need alternative routing
         if "mode" in job_input and job_input["mode"] == "kokoro_tts":
             endpoint_path = "/generate-media"
-            
-        print(f"[WRAPPER] Forwarding request to local Flask: {endpoint_path}")
+        elif "mode" in job_input and job_input["mode"] == "browser_use":
+            endpoint_path = "/browser-task"
+            flask_port = os.environ.get("RUNPOD_BROWSER_USE_PORT", "5017")
+
+        print(f"[WRAPPER] Forwarding request to local Flask:{flask_port}{endpoint_path}")
         try:
-            resp = requests.post(f"http://localhost:5000{endpoint_path}", json=job_input, timeout=600)
+            resp = requests.post(f"http://localhost:{flask_port}{endpoint_path}", json=job_input, timeout=600)
             result = resp.json()
         except Exception as e:
             return {"status": "error", "message": f"Flask forward failed: {str(e)}"}

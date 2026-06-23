@@ -4,7 +4,7 @@ Sen kıdemli bir Full-Stack ve Yapay Zeka Entegrasyon Mühendisisin. Hedefin; bu
 Senden, aşağıda mimarisi ve tüm detayları belirtilen "Otonom Çoklu Sosyal Medya Destekli AI Video Üretim ve Pazarlama Platformu" (SaaS) projesini uçtan uca, temiz, tür güvenli (type-safe) ve üretime hazır şekilde kodlamanı istiyorum. 
 
 Sistem iki ana katmandan oluşacaktır:
-1. Google Colab: Docker imajı build etmek için kullanılır. Modeller docker-compose ile localhost:5001-5016'da çalışır.
+1. Google Colab: Docker imajı build etmek ve GHCR'a push etmek için kullanılır. GPU gerektirmez (CPU runtime yeterli), Kaniko ile build alınır.
 2. Node.js (TypeScript / Express Sunucusu): Kullanıcı panelini sunan, iş kuyruğunu (Job Queue) yöneten, SSE ile canlı ilerleme durumunu tarayıcıya basan ve Playwright ile çoklu sosyal medya yüklemelerini yöneten komut merkezi katmanı.
 
 Her zaman şu önceliklere odaklan:
@@ -178,13 +178,11 @@ Sistemin tüm katmanlarını aşağıdaki spesifikasyonlara göre baştan aşağ
 
 ---
 
-### BÖLÜM 1: GOOGLE COLAB KATMANI (Python / Flask)
-Google Colab'da T4 GPU üzerinde çalışacak, Ngrok ile dış dünyaya açılacak Flask sunucu kodunu yaz. Bu sunucu şu işlevleri yerine getirmelidir:
-1. Model Yüklemeleri: THUDM/CogVideoX-5b-I2V (Video), tts_models/multilingual/multi-dataset/xtts_v2 (Ses Klonlama/TTS), ve cvssp/audioldm2 (Ses Efekti/SFX) modellerini float16 hassasiyetinde ve CPU-offload/tiling optimizasyonlarıyla GPU'ya yüklemeli.
-2. Akıllı Sahne Sürekliliği (Autoregressive Chaining): /generate-media endpoint'i üzerinden istek almalı. Eğer gelen sahne numarası 1'den büyükse, bir önceki sahnenin bittiği video dosyasının en son karesini (frame) OpenCV ile ayıklayıp Image-to-Video modeline başlangıç görseli (init_image) yapmalı. Sahne 1 ise kullanıcının yüklediği materyal yolunu referans almalı.
-3. Karakter Sabitliği (LoRA Tasvir Entegrasyonu): Gelen görsel promptu, kullanıcının gönderdiği fiziksel karakter özellikleri şablonuyla birleştirmeli.
-4. Yapay Zeka Dudak Senkronizasyonu (Lip-Sync): Üretilen 6 saniyelik video karesi ile XTTS'in ürettiği Türkçe ses dosyasını almalı, sesin genliğine/şiddetine (audio amplitude) göre karakterin ağız/çene bölgesini (OpenCV manipülasyonuyla) sese paralel esneterek senkronize etmeli.
-5. İndirme Noktaları: Node.js tarafının üretilen medyaları çekebilmesi için /download/video, /download/speech ve /download/sfx statik indirme uçlarını (endpoints) sunmalı.
+### BÖLÜM 1: GOOGLE COLAB KATMANI (Docker Image Build)
+Google Colab, yalnızca Docker imajlarını build etmek ve GHCR'a push etmek için kullanılır. GPU runtime gerekmez — CPU runtime yeterlidir. Kaniko ile build alınır ve imajlar `ghcr.io/anomalyco/` altına push edilir.
+- Build script: `colab_docker/build_all_v2.sh` (23 model)
+- Build notları: `colab_docker_build.ipynb`
+- Çalışan modeller RunPod serverless endpoint'ler olarak deploy edilir, Node.js katmanı RunPod API üzerinden çağrı yapar.
 
 ---
 
@@ -198,7 +196,7 @@ SQLite kullanarak şu tabloları ve şemaları oluştur:
 #### 2. İş Kuyruğu ve Canlı İlerleme Takip Sistemi (src/queue.ts)
 - İşlerin birbirini beklemesi ve sırayla çalışması için otonom bir Job Queue yapısı kur.
 - Bir iş processing durumuna geçtiğinde, Vercel AI SDK (@ai-sdk/google) ve gemini-2.5-flash modelini kullanarak master promptu ve üretim notlarını analiz et. Hikayeyi ardışık 6 saniyelik sahnelere bölen ve aynı zamanda her platform için (YouTube Shorts, TikTok, X, Meta Reels) ayrı ayrı SEO/trend uyumlu başlık, açıklama ve hashtag'leri üreten bir Zod şeması (generateObject) çalıştır.
-- Sahneleri sırayla Colab'a gönder, üretilen medyaları otomatik bilgisayara indir (download). Her sahne bittiğinde, FFmpeg kullanarak videoyu, konuşmayı ve efekti miksle, aynı zamanda konuşma metnini sarı renkli şık altyazılar (Burn-in Subtitles) olarak videonun üzerine kalıcı olarak bas.
+- Sahneleri sırayla RunPod endpoint'lerine gönder, üretilen medyaları B2'den indir (download). Her sahne bittiğinde, FFmpeg kullanarak videoyu, konuşmayı ve efekti miksle, aynı zamanda konuşma metnini sarı renkli şık altyazılar (Burn-in Subtitles) olarak videonun üzerine kalıcı olarak bas.
 - Tüm sahneler bittiğinde FFmpeg concat ile tek parça final videosu üret. Tüm bu aşamalarda (Hangi aşamada olunduğu, yüzde kaç tamamlandığı, tahmini bitiş süresi) Server-Sent Events (SSE) protokolü üzerinden tarayıcıya anlık (broadcastProgress) fırlat.
 
 #### 3. Playwright Çoklu Sosyal Medya Yayın Motoru (src/publisher.ts)

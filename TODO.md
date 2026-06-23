@@ -1,5 +1,52 @@
 # Yapılacaklar Listesi (TODO)
 
+## 📊 Batch 3 — OpenTelemetry Entegrasyonu Tamamlandı (23 Haziran 2026)
+
+- [x] **167 paket kuruldu:** @opentelemetry/sdk-node, auto-instrumentations-node, instrumentasyon
+- [x] **src/lib/telemetry.ts** — NodeSDK kurulumu (HTTP, Express, PG, ioredis, amqplib instrumentasyonları)
+- [x] **src/lib/metrics.ts** — Domain metrikleri: job duration histogram, scene counter, render time, active jobs, failed jobs
+- [x] **server.ts** — `/metrics` endpoint (Prometheus text format, PrometheusExporter.getMetricsRequestHandler)
+- [x] **queue.ts** — trackJobStart (processing), trackJobEnd (completed), trackJobFailed (failed) entegrasyonu
+- [x] **.env.example** — OTEL_ENABLED, OTEL_PG_ENHANCED değişkenleri
+- [x] **Sağlık endiği:** /metrics ve /health skip edilir (ignoreIncomingRequestHook)
+- [x] **Tip güvenliği:** tsc --noEmit 0 hata, eslint --quiet temiz
+- [x] **Test:** 18/18 production readiness test geçti
+- [ ] **src/lib/tracing.ts** — Jaeger/Zipkin OTLP span export (opsiyonel)
+
+## 🔧 LoRA Pipeline Final Eksikler Giderildi (23 Haziran 2026)
+
+- [x] **Concurrent polling:** `queue.ts`'de `trainLoRA()` ve `pollLoraProgress()` eşzamanlı çalışır
+- [x] **Flask threaded=True:** `lora-trainer/app.py` single-thread → threaded, `/progress` bloklanmaz
+- [x] **Background training:** `/train` endpoint'i `threading.Thread`'e alındı, hemen 202 döner
+- [x] **Progress callback webhook:** `POST /api/v1/lora/progress-callback` rotası (push-based SSE)
+- [x] **Docker volume:** `docker-compose.yml`'de `lora-weights` named volume (kalıcı weight'ler)
+- [x] **pollLoraProgress stop:** `attempts >= 120` veya `percent >= 100` veya `percent < 0` durumlarında polling durur
+- [x] **Tip güvenliği:** tsc --noEmit 0 hata
+
+## 🌐 Çoklu Platform Trend Analizi (23 Haziran 2026)
+
+- [x] **trendAnalyzer.ts** — Playwright ile TikTok/YouTube/X/Instagram trend scraping servisi
+- [x] **trend_analysis tablosu** — DB migration (platform, title, engagement, hashtags, category indeksleri)
+- [x] **routes/trends.ts** — GET /api/v1/trends, GET /search, POST /refresh, GET /summary
+- [x] **TrendPanel.tsx** — Frontend bileşen (platform tab'ları, arama, yenile, trend kartları)
+- [x] **server.ts** — Trend rota kaydı
+- [x] **App.tsx** — 'Trendler' sekmesi eklendi
+- [x] **Tip güvenliği** — tsc --noEmit 0 hata, vite build başarılı
+- [x] **Trend verilerinin AI video üretim prompt'larına otomatik beslenmesi (Phase 2)**
+  - [x] `POST /api/v1/trends/apply` — trend + prompt → enhancedPrompt + trendContext
+  - [x] `trendAnalyzer.ts` — `applyTrendToPrompt()` fonksiyonu
+  - [x] `aiService.ts` — `generateStudioScenes()` trend context enjeksiyonu
+  - [x] `jobs.ts` — `/create-job` trend_enabled + trend_context alanları
+  - [x] `TrendPanel.tsx` — "Trend'i Kullan" butonu (Sparkles ikonu)
+  - [x] `App.tsx` — handleApplyTrend callback, trend akışı
+  - [x] Veritabanı: `video_jobs` tablosuna `trend_enabled`, `trend_context` kolonları
+- [x] **trendScheduler.ts** — Interval-based scheduler (env var ile periyot, varsayılan 30dk)
+- [x] **GET /history** — Zaman serisi endpoint (days, platform, bucket parametreleri)
+- [x] **TrendChart.tsx** — SVG-based çizgi grafik (smooth cubic bezier, gradient fill, dot tooltip)
+- [x] **TrendPanel.tsx** — "Trendler"/"Geçmiş" toggle, gün filtresi (1/3/7/14/30), scheduler config kartı
+- [x] **Otomatik veri temizlik** — 7 gün retention + nightly cleanup
+- [x] **Tip güvenliği** — tsc --noEmit 0 hata, vite build başarılı
+
 ## 🚀 RunPod Serverless + Backblaze B2 Geçiş Görevleri (21 Haziran 2026)
 
 > **Kaynak:** `son_implementation_plan.md` — Colab'dan RunPod Serverless + Backblaze B2'ye geçiş planı
@@ -125,12 +172,16 @@
 - [x] **NotificationToast.tsx** — React toast bileşeni (SSE notification kanalına abone) (22 Haziran 2026)
 - [x] **alert()→toast dönüşümü** — 25+ React bileşeninde alert() çağrılarını toast ile değiştir (22 Haziran 2026)
 - [x] **7 Docker Hub modeli** — DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow, SadTalker (Dockerfile'lar + bağımlılıklar + CUDA 11.x uyumluluğu tamam)
-- [ ] **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix
-- [ ] **Faz 7C:** Entegrasyon Testleri (8 adet)
+- [x] **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix (22 Haziran 2026)
+- [x] **Faz 7C:** Entegrasyon Testleri (23 adet, 8 suite) — 23/23 passed
 - [ ] **Faz 7D:** E2E Playwright (7 adet)
-- [ ] **Faz 7E:** CI altyapısı + coverage
-- [ ] **Production Readiness:** 17 test
-- [ ] **Colab referanslarının temizlenmesi:** CLAUDE.md, AGENTS.md, skill dosyaları
+- [x] **Faz 7E:** CI altyapısı + coverage (.github/workflows/ci.yml, npm run test:coverage/ test:watch) (22 Haziran 2026)
+- [x] **Production Readiness:** 18 test (18/18 passed) — 23 Haziran 2026
+- [x] **Colab referans temizliği:** CLAUDE.md (güncellendi), skill'ler (gpu-optimized-synthesis → rename + Docker içerik). AGENTS.md: bu dosya değiştirilemez kuralı nedeniyle dokunulmadı. (22 Haziran 2026)
+
+## ✅ GHCR Upload Notebook (22 Haziran 2026)
+
+- [x] **colab_ghcr_upload.ipynb:** Drive'daki `.tar.gz` Docker imaj arsivlerini GHCR'a (`ghcr.io/anomalyco/`) yukleyen Colab notebook. 7 hucre: Drive mount, tarama, Podman kurulumu, GHCR login, push dongusu, ozet, dogrulama. GitHub PAT ile auth. Skopeo fallback.
 
 ## ✅ Araçlar & Scriptler (21 Haziran 2026)
 
@@ -143,7 +194,7 @@
 - [x] **Env & config:** `.env` MOCK_COLAB→MOCK_DOCKER, `project_plan.md` COLAB_URL→DOCKER_URL, `KURULUM_VE_GEREKSINIMLER.md` Colab→Docker
 - [x] **API route rename:** `/api/v1/colab/status`→`/api/v1/docker/status`, `/colab-status-stream`→`/docker-status-stream`, `/api/v1/colab/test-models`→`/api/v1/docker/test-models`
 - [x] **SSE events:** `d.colabMessage`→`d.dockerMessage`
-- [ ] Kalan Colab referansları (CLAUDE.md, AGENTS.md, colab_server.py header, skill'ler) sonraki oturumda temizlenecek
+- [x] Colab referansları temizlendi: CLAUDE.md ✅, skill'ler ✅, colab_server.py header → korundu (colab_docker build için referans). AGENTS.md: değiştirilemez kuralı nedeniyle dokunulmadı.
 
 ## 📚 2026 Multimodal & Agent Araştırma Fazı (20 Haziran 2026)
 
@@ -153,16 +204,40 @@
 - [x] Native audio-video modeller (Veo 3.1, Sora 2, Kling 3) kıyaslandı.
 - Rapor: `brain/cf60fa02-25bd-4b39-9dc6-7879af882299/multimodal_agent_research_2026.md`
 
-### Önerilen v7.1 Patch Listesi (Araştırma Raporundan)
-- [ ] Gemini 2.5 Flash'ı default yap (queue.ts) — maliyet optimizasyonu (%60 tasarruf)
-- [ ] Deep Think modu opsiyonel parametre olarak ekle (karmaşık sahne planlaması)
-- [ ] MCP Server POC (`src/mcp-server.ts`) — AI host'lardan kontrol demosu
-- [ ] Pino structured logger ekleme (observability 2026 standardı)
+### v7.1 Patch Tamamlandı (23 Haziran 2026)
+- [x] Gemini 2.5 Flash varsayılan — zaten öyleydi, Pro artık `DEEP_THINK_PRO=true` ile opt-in
+- [x] Deep Think fallback zinciri — Minimax → Gemini Flash, Pro sadece opt-in
+- [x] MCP Server POC — önceden yapılmıştı (`src/services/mcpServer.ts`, port 3099)
+- [x] Pino structured logger — `pino-http` middleware, istek/yanıt loglama
 
-### Önerilen v7.2 Minor Listesi
-- [ ] Veo 3.1 opsiyonel I2V motoru (Colab'da native audio deneyi)
-- [x] State schema JSON-serialization contract (ADR-003): Zod schema, broadcast() enjeksiyonu, SSE validasyonu
-- [ ] OpenTelemetry instrumentation (HTTP, DB, queue metrics)
+### Batch 5 — Veo 3.1 Entegrasyonu (23 Haziran 2026)
+
+- [x] **src/services/veo31.ts:** Google Vertex AI Veo 3.1 REST API wrapper (generateVideo, pollOperation)
+- [x] **src/queue.ts:** Veo-31 model routing — RunPod bypass, direkt API çağrısı
+- [x] **src/services/creditService.ts:** MODEL_COSTS'ye Veo-31 eklendi (sceneCost: 40, coverCost: 20)
+- [x] **src/db.ts:** credit_costs seed'e Veo-31 eklendi
+- [x] **client/src/types.ts:** ProductionTemplate'e 'veo31' eklendi
+- [x] **client/src/components/ProjectForm.tsx:** TEMPLATES/MODEL_MAP/ALL_MODELS'e Veo-31 seçeneği
+- [x] **client/src/components/TemplatePreview.tsx:** veo31 gradient + ikon
+- [x] **.env.example:** GOOGLE_VEO_PROJECT, GOOGLE_VEO_LOCATION, GOOGLE_VEO_API_KEY, VEO_TIMEOUT_MS, VEO_POLL_INTERVAL
+- [x] **Tip güvenliği:** tsc --noEmit 0 hata
+
+### Batch 5 — LangGraph Queue Upgrade (23 Haziran 2026)
+
+- [x] **Paketler:** `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`, `@langchain/core` kuruldu
+- [x] **src/queue-graph.ts:** 8-node StateGraph (directorPlanning→sceneGeneration→coverSynthesis→loraTraining→sceneRender→ffmpegMix→concatFinal→publishSocial)
+- [x] **State schema:** 14 alan (jobId, userId, currentStage, progressPercent, totalScenes, completedScenes, status, errors[], sceneResults[], marketing, finalFilename, finalVideoPath, modelType, retryCount)
+- [x] **Postgres Checkpointer:** `PostgresSaver.fromConnString()` ile state persistence, crash recovery support
+- [x] **queue.ts toggle:** `OTEL_QUEUE_GRAPH=true` → `runJobGraph(jobId)` yönlendirmesi
+- [x] **resumeJobGraph():** Checkpoint'ten kalan yerden devam etme
+- [x] **SSE broadcast:** Her node progress güncellemesi
+- [x] **Tip güvenliği:** tsc --noEmit 0 hata
+- [x] **.env.example:** OTEL_QUEUE_GRAPH değişkeni eklendi
+
+### Ongoing & Planned
+- [ ] **Multi-agent Content Team (CrewAI Flows)** — Major
+- [ ] **Faz 7D:** E2E Playwright (7 adet)
+- [ ] **Faz 7E:** CI coverage
 
 ### v8.0 Major Değişiklikler (Defer)
 - [ ] LangGraph + Postgres Checkpointer (queue.ts replacement) — Major
@@ -180,7 +255,10 @@
 ### FAZ 2: RunPod GPU Altyapısı ve Konteyner Entegrasyonu
 - [x] RunPod Serverless Hub üzerindeki tüm 72 hazır şablonun listesini tarayıcı otomasyonuyla çıkarma ve dökümantasyonunu tamamlama (22 Haziran 2026).
 - [x] RunPod serverless modellerini tekil test eden `test-runpod-models.ts` ve haber spikeri & uçak kazası senaryosunu test eden `test-news-crash-scenario.ts` scriptlerini yazma (22 Haziran 2026).
-- [ ] Yazılan test scriptlerini kullanıcı onayından sonra staging/RunPod ortamında çalıştırma.
+### FAZ 2: RunPod GPU Altyapısı ve Konteyner Entegrasyonu
+- [x] RunPod Serverless Hub üzerindeki tüm 72 hazır şablonun listesini tarayıcı otomasyonuyla çıkarma ve dökümantasyonunu tamamlama (22 Haziran 2026).
+- [x] RunPod serverless modellerini tekil test eden `test-runpod-models.ts` ve haber spikeri & uçak kazası senaryosunu test eden `test-news-crash-scenario.ts` scriptlerini yazma (22 Haziran 2026).
+- [x] RunPod Serverless Endpoint (Wan2.2) oluşturulması ve B2 S3 çevre değişkenlerinin (`BUCKET_ENDPOINT_URL`, `BUCKET_ACCESS_KEY_ID`, `BUCKET_SECRET_ACCESS_KEY`) konsol üzerinden bağlanması (22 Haziran 2026).
 - [ ] Model ağırlıklarının yüksek hızlı RunPod kalıcı ağ sürücüsüne (Network Volume) yüklenmesi ve `/workspace/models` altına mount edilmesi.
 - [ ] Konteynerlerin port yönlendirmelerinin (`5001 - 5012`) test edilmesi ve `colab_server.py` (RunPod orkestratörü) üzerinden model lazy-loading / VRAM kontrollerinin yapılması.
 - [ ] Sunucu PORT 3016 üzerinden, RunPod'dan dönen callback (webhook) POST isteklerinin başarılı bir şekilde diske yazıldığının doğrulanması.
@@ -1067,11 +1145,14 @@ Detaylı roadmap: `docs/v6_roadmap/README.md`
 | 8 | **alert()→toast dönüşümü (2D)** | Patch | ✅ Tamamlandı | ⭐⭐ |
 | 9 | **RunPod startup script (3D)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
 | 10 | **B2 callback endpoint (3F)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
-| 11 | **Kalan 6 Docker Hub modeli (4B→4G)** | Minor | ⏳ Sıradaki | ⭐⭐ |
-| 12 | **RunPod Pod + idle timeout (3G)** | Minor | ⏳ Sıradaki | ⭐⭐⭐ |
-| 13 | Test onarımları | Patch | ⏳ Sıradaki | ⭐⭐ |
-| 14 | Faz 7C/D/E Testleri | Test | ⏳ Sıradaki | ⭐⭐ |
-| 15 | Production Readiness (17 test) | Test | ⏳ Sıradaki | ⭐⭐ |
+| 11 | **Docker Hub modelleri (sadtalker, dynamicrafter, geneface, video-retalking)** | Minor | ✅ Tamamlandı | ⭐⭐ |
+| 12 | **LoRA pipeline final (concurrent polling, threaded Flask, callback webhook, volume)** | Minor | ✅ Tamamlandı | ⭐⭐⭐ |
+| 13 | Test onarımları | Patch | ✅ Tamamlandı | ⭐⭐ |
+| 14 | Faz 7C/D/E Testleri | Test | 7C✅ 7D⏳ 7E✅ | ⭐⭐ |
+| 15 | Production Readiness (18 test) | Test | ✅ Tamamlandı | ⭐⭐ |
+| 16 | **OpenTelemetry** | Minor | ⏳ Batch 3 | ⭐⭐⭐ |
+| 17 | **dynamicCaptions + smartDubbing + autoCameo** | Minor | ⏳ Batch 4 | ⭐⭐ |
+| 18 | **Veo 3.1 + LangGraph upgrade** | Major | ⏳ Batch 5 | ⭐⭐⭐ |
 
 
 

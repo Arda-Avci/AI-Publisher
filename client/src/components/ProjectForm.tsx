@@ -97,6 +97,7 @@ const TEMPLATES: Array<{ key: ProductionTemplate; model: string; speed: string }
   { key: 'mochi', model: 'Mochi-1', speed: '⭐' },
   { key: 'video-retalking', model: 'Video-ReTalking', speed: '⭐⭐' },
   { key: 'geneface', model: 'GeneFace++', speed: '⭐' },
+  { key: 'veo31', model: 'Veo-31', speed: '⭐⭐' },
 ];
 
 const MODEL_MAP: Record<string, { key: ProductionTemplate; model: string; speed: string }> = {
@@ -111,6 +112,7 @@ const MODEL_MAP: Record<string, { key: ProductionTemplate; model: string; speed:
   'video-retalking': { key: 'video-retalking', model: 'Video-ReTalking', speed: '⭐⭐' },
   mochi: { key: 'mochi', model: 'Mochi-1', speed: '⭐' },
   geneface: { key: 'geneface', model: 'GeneFace++', speed: '⭐' },
+  veo31: { key: 'veo31', model: 'Veo-31', speed: '⭐⭐' },
 };
 
 const ALL_MODELS = [
@@ -183,6 +185,12 @@ const ALL_MODELS = [
     label: 'GeneFace++ (3D Konuşan Kafa)',
     model: 'GeneFace++',
     speed: '⭐',
+  },
+  {
+    value: 'veo31' as ProductionTemplate,
+    label: 'Veo 3.1 (Google I2V)',
+    model: 'Veo-31',
+    speed: '⭐⭐',
   },
 ];
 

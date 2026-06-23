@@ -315,10 +315,36 @@ export function getObjectModelChain() {
 }
 
 /**
- * Deep Think model using Gemini 2.5 Pro with extended thinking.
- * Used for complex scene planning and reasoning tasks.
+ * Deep Think model chain for complex scene planning and reasoning tasks.
+ * Order: Minimax (priority) -> Gemini 2.5 Flash (last resort).
+ * Gemini 2.5 Pro only used if DEEP_THINK_PRO=true env var set.
  */
 export function getDeepThinkModel() {
-  return google('gemini-2.5-pro-exp-03-25');
+  const models = [];
+
+  // 1. Minimax (priority)
+  if (process.env.ANTHROPIC_API_KEY) {
+    let minimaxBaseURL = process.env.ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
+    if (!minimaxBaseURL.endsWith('/v1')) {
+      minimaxBaseURL = minimaxBaseURL.replace(/\/+$/, '') + '/v1';
+    }
+    const minimax = createAnthropic({
+      baseURL: minimaxBaseURL,
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+    let modelName = process.env.MODEL || 'MiniMax-M3';
+    modelName = modelName.replace(/^"|"$/g, '');
+    models.push(minimax(modelName));
+  }
+
+  // 2. Gemini 2.5 Pro (opt-in, env DEEP_THINK_PRO=true)
+  if (process.env.DEEP_THINK_PRO === 'true') {
+    models.push(google('gemini-2.5-pro-exp-03-25'));
+  }
+
+  // 3. Gemini 2.5 Flash (last resort — ücretsiz/ucuz)
+  models.push(google('gemini-2.5-flash'));
+
+  return models;
 }
 // trigger restart

@@ -81,11 +81,35 @@ Görevlerin:
 }
 
 export async function generateStudioScenes(job: any, deepThink?: boolean) {
-  const models = deepThink ? [getDeepThinkModel()] : getObjectModelChain();
+  const models = deepThink ? getDeepThinkModel() : getObjectModelChain();
 
   // Eğer iş akışında transkript varsa (Phase 1 yapılmışsa) ana referans metnimiz budur.
   const transcriptText =
     job.transcript_translated || job.transcript_cleaned || job.transcript || 'Bilinmiyor';
+
+  // Trend bağlamı (Phase 2): trend_enabled=1 ise prompt'a trend bilgisi ekle
+  let trendBlock = '';
+  if (job.trend_enabled && job.trend_context) {
+    try {
+      const tc = typeof job.trend_context === 'string' ? JSON.parse(job.trend_context) : job.trend_context;
+      const hashtagStr = (tc.hashtags || []).slice(0, 8).join(' ');
+      trendBlock = `
+--- TREND BAĞLAMI (AKTİF) ---
+Bu içerik şu trend'e göre optimize edilecek:
+Trend Başlığı: ${tc.title || ''}
+Platform: ${tc.platform || ''}
+Kategori: ${tc.category || ''}
+Trend Hashtag'ler: ${hashtagStr}
+
+Kurallar:
+1. Görsel stilleri ${tc.category || 'genel'} kategorisine uygun tasarla (renk paleti, ışık, kompozisyon).
+2. Trend hashtag'lerini sahne konuşmalarına ve görsel prompt'lara doğal şekilde entegre et.
+3. Videonun ilk 3 saniyesi (hook) trend başlığına atıfla başlasın.
+4. Marketing metinlerinde trend hashtag'lerini kullan.`;
+    } catch {
+      // trend_context parse edilemezse sessizce geç
+    }
+  }
 
   let styleInstruction = '';
   if (job.production_template === 'pixar') {
@@ -126,7 +150,7 @@ Giriş Verileri:
 Videonun Konusu / Başlığı: ${job.master_prompt}
 Üretim Notları: ${job.production_notes}
 Karakter Özellikleri: ${job.character_features}
-Referans Metin / Transkript: ${transcriptText}`;
+Referans Metin / Transkript: ${transcriptText}${trendBlock}`;
 
       return generateObject({
         model,

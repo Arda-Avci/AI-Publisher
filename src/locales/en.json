@@ -294,6 +294,8 @@
   "templateSvdDesc": "Generates smooth videos from reference images using the open-source Stable Video Diffusion (SVD-XT) model running on local L4 GPU.",
   "templateWan25": "Wan2.5 (3-4x Faster)",
   "templateWan25Desc": "Alibaba Wan2.5 with 1080p, 5s/clip, 3-4x speed boost",
+  "templateWan22Comfyui": "Wan2.2 (ComfyUI Serverless)",
+  "templateWan22ComfyuiDesc": "Generates high quality 1080p, 5s video using Wan2.2 model via RunPod ComfyUI Serverless.",
   "templateF5tts": "F5-TTS (Zero-Shot Cloning)",
   "templateF5ttsDesc": "Zero-shot voice cloning, 2x real-time, multilingual",
   "templatePyramidflow": "Pyramid-Flow (Cascaded Video)",

@@ -78,8 +78,13 @@ def health():
 def preload():
     if load_video_retalking_model():
         return jsonify({"status": "success", "message": "Video-ReTalking model loaded"}), 200
-    else:
+    try:
+        ok = load_video_retalking_model()
+        if ok:
+            return jsonify({"status": "success", "message": "Video-ReTalking model loaded"}), 200
         return jsonify({"status": "error", "message": MODEL_ERROR or "Model loading failed"}), 503
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/generate", methods=["POST"])

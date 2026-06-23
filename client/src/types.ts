@@ -122,7 +122,32 @@ export interface Character {
   updated_at?: string;
 }
 
-export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar' | 'cogvideox5b' | 'cogvideox2b' | 'sadtalker' | 'dynamicrafter' | 'zeroscope' | 'geneface' | 'pyramid-flow' | 'video-retalking' | 'mochi';
+export interface TrendItem {
+  platform: 'tiktok' | 'youtube' | 'x' | 'instagram';
+  title: string;
+  description: string;
+  url: string;
+  thumbnail?: string;
+  engagement: number;
+  hashtags: string[];
+  category: string;
+  author?: string;
+  scrapedAt: string;
+}
+
+export interface TrendHistoryPoint {
+  date: string;
+  count: number;
+  platform: string;
+}
+
+export interface TrendSummary {
+  platform: string;
+  total: number;
+  topCategories: { category: string; count: number }[];
+}
+
+export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar' | 'cogvideox5b' | 'cogvideox2b' | 'sadtalker' | 'dynamicrafter' | 'zeroscope' | 'geneface' | 'pyramid-flow' | 'video-retalking' | 'mochi' | 'veo31';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
 export type Language = 'tr' | 'en';

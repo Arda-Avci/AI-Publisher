@@ -56,6 +56,8 @@ export function registerJobRoutes(app: Application): void {
         tts_provider,
         tts_voice,
         production_template,
+        trend_enabled,
+        trend_context,
       } = req.body;
 
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -86,10 +88,11 @@ export function registerJobRoutes(app: Application): void {
           tts_voice || (finalTtsProvider === 'openai' ? 'alloy' : 'Claribel Dervla');
         const finalProductionTemplate = production_template || 'cinematic';
 
+        const trendEnabled = trend_enabled === '1' ? 1 : 0;
         const insertResult: any = await db.run(
           `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             userId,
             master_prompt,
@@ -107,6 +110,8 @@ export function registerJobRoutes(app: Application): void {
             finalTtsVoice,
             finalProductionTemplate,
             backgroundMusicPath,
+            trendEnabled,
+            trend_context || '',
           ],
         );
 

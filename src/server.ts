@@ -1,7 +1,11 @@
+// OpenTelemetry must be imported before any other module
+import { getMetricsHandler } from './lib/telemetry.js';
+
 import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import type { Request, Response } from 'express';
 import session from 'express-session';
 import path from 'path';
 import crypto from 'crypto';
@@ -12,7 +16,8 @@ import { initRabbitMQ } from './lib/rabbitmq.js';
 import { startPublishQueueWorker } from './lib/publish-queue.js';
 import { startClipQueueWorker } from './lib/clip-queue.js';
 import { i18nMiddleware } from './middleware/i18n.js';
-import { Logger, setCorrelationId } from './lib/logger.js';
+import { Logger, setCorrelationId, pinoLogger } from './lib/logger.js';
+import pinoHttp from 'pino-http';
 import { csrfMiddleware } from './middleware/csrf.js';
 
 import { themeMiddleware } from './middleware/theme.js';
@@ -66,6 +71,7 @@ import { uploadRouter } from './routes/upload.js';
 import { schedulePublishRouter } from './routes/schedulePublish.js';
 import { registerWebhookRoutes } from './routes/webhook.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
+import trendRouter from './routes/trends.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -102,6 +108,9 @@ process.on('uncaughtException', (err) => {
 
 // Correlation ID — her istek için unique ID ata
 app.use((_req, _res, next) => { setCorrelationId(); next(); });
+
+// Pino HTTP request logging — her isteği structured logla
+app.use(pinoHttp({ logger: pinoLogger }));
 
 // UTF-8 encoding middleware — tüm response'larda Türkçe karakter desteği
 app.use(utf8Middleware);
@@ -209,11 +218,21 @@ app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/lora', loraRouter);
 app.use('/api/v1/upload', uploadRouter);
 app.use('/api/v1/schedule-publish', schedulePublishRouter);
+app.use('/api/v1/trends', trendRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {
   res.json({ csrfToken: req.session.csrfToken || '' });
 });
+
+// Prometheus metrics endpoint (OpenTelemetry)
+const metricsHandler = getMetricsHandler();
+if (metricsHandler) {
+  app.get('/metrics', (req: Request, res: Response) => {
+    metricsHandler(req as any, res as any);
+  });
+  Logger.info('[OTEL] /metrics endpoint registered');
+}
 
 // Global error handler (last)
 app.use(errorHandler);
@@ -237,6 +256,11 @@ async function startServer() {
     startVideoQueueWorker();
     startPublishQueueWorker();
     startClipQueueWorker();
+
+    // Trend scheduler — periyodik trend taramasi
+    import('./services/trendScheduler.js').then(({ startTrendScheduler }) => {
+      startTrendScheduler();
+    });
 
     // Pipecat bridge sunucusu — multi-agent voice/video pipeline
     import('./services/pipecatBridge.js').then(({ pipecatBridge }) => {

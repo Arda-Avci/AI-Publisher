@@ -17,6 +17,7 @@ const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
   'GeneFace++': { sceneCost: 15, coverCost: 8 },
   'Mochi-1': { sceneCost: 20, coverCost: 10 },
   'Video-ReTalking': { sceneCost: 10, coverCost: 5 },
+  'Veo-31': { sceneCost: 40, coverCost: 20 },
 };
 
 const DEFAULT_COST = { sceneCost: 10, coverCost: 5 };

@@ -390,6 +390,7 @@ services:
       - "5016:5000"
     volumes:
       - ./shared:/app/shared
+      - lora-weights:/app/lora_weights
     deploy:
       resources:
         reservations:
@@ -588,6 +589,9 @@ services:
     restart: unless-stopped
     networks:
       - ai-pub-net
+
+volumes:
+  lora-weights:
 
 networks:
   ai-pub-net:

@@ -7,7 +7,7 @@ export function setCorrelationId(id?: string) {
   correlationId = id || randomUUID();
 }
 
-const pinoLogger = pino({
+export const pinoLogger: ReturnType<typeof pino> = pino({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   transport: process.env.NODE_ENV !== 'production'
     ? { target: 'pino-pretty', options: { colorize: true } }

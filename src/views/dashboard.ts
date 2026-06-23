@@ -1220,7 +1220,8 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     pixar: '${escapeHtml(t.templatePixarDesc || 'Pixar stili 3D animasyon ve çizgi film tarzı yüksek kaliteli çocuk/sosyal medya videoları için Wan 2.1 modelini otonom prompt yönlendirmesiyle çalıştırır.')}',
                     animatediff: '${escapeHtml(t.templateAnimatediffDesc || 'SD 1.5 tabanlı AnimateDiff ile metinden akıcı animasyonlu videolar üretir. Çizgi film/stilize animasyon için idealdir.')}',
                     svd: '${escapeHtml(t.templateSvdDesc || 'Stability AI Stable Video Diffusion XT ile görselden yüksek kaliteli video üretir. Düşük VRAM tüketimi ile 25 kare video sentezler.')}',
-                    wan25: '${escapeHtml(t.templateWan25Desc || 'Alibaba Wan2.5 ile 1080p, 5s/clip, 3-4x hız artışı')}'
+                    wan25: '${escapeHtml(t.templateWan25Desc || 'Alibaba Wan2.5 ile 1080p, 5s/clip, 3-4x hız artışı')}',
+                    'wan2.2-comfyui': '${escapeHtml(t.templateWan22ComfyuiDesc || 'RunPod ComfyUI Serverless üzerinden Wan2.2 modeli ile yüksek kaliteli 1080p, 5s video sentezler.')}'
                   };
                   document.getElementById('template-hint').innerText = hints[this.value];
                 ">
@@ -1231,6 +1232,7 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <option value="animatediff">${t.templateAnimatediff || 'AnimateDiff (SD 1.5 Tabanlı)'}</option>
                   <option value="svd">${t.templateSvd || 'SVD-XT (Stable Video Diffusion)'}</option>
                   <option value="wan25">${t.templateWan25 || 'Wan2.5 (3-4x Hızlı)'}</option>
+                  <option value="wan2.2-comfyui">${t.templateWan22Comfyui || 'Wan2.2 (ComfyUI Serverless)'}</option>
                 </select>
                 <small style="opacity:0.6;font-size:0.65rem;display:block;margin-top:4px;" id="template-hint">${t.templateCinematicDesc}</small>
               </div>

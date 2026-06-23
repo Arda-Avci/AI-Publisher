@@ -32,6 +32,7 @@ import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
 import { StudioToolsPanel } from './components/StudioToolsPanel.js';
+import { TrendPanel } from './components/TrendPanel.js';
 import AdminLayout from './components/admin/AdminLayout.js';
 import AdminDashboard from './components/admin/AdminDashboard.js';
 import AdminUsers from './components/admin/AdminUsers.js';
@@ -121,6 +122,8 @@ export default function App() {
   const [splitLayout, setSplitLayout] = useState('50/50');
   const [splitPosition, setSplitPosition] = useState('top');
   const [useMuseTalk, setUseMuseTalk] = useState(false);
+  const [trendContext, setTrendContext] = useState<string | null>(null);
+  const [trendEnabled, setTrendEnabled] = useState(false);
 
   const mainTabs = [
     'Örnekler',
@@ -134,6 +137,7 @@ export default function App() {
     'Batch',
     'Clipper',
     'Yayın Planla',
+    'Trendler',
     'AI Stüdyo',
   ] as const;
   const [mainTab, setMainTab] = useState<(typeof mainTabs)[number]>('Örnekler');
@@ -392,6 +396,8 @@ export default function App() {
       fd.append('dubbing_lang', dubbingLang);
       fd.append('subtitle_style', subtitleStyle);
       fd.append('color_grading', colorGrading);
+      fd.append('trend_enabled', trendEnabled ? '1' : '0');
+      if (trendContext) fd.append('trend_context', trendContext);
       targetPlatforms.forEach((p) => fd.append('platforms[]', p));
       if (selectedFile) fd.append('material', selectedFile);
       if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
@@ -418,6 +424,8 @@ export default function App() {
     fd.append('dubbing_lang', dubbingLang);
     fd.append('subtitle_style', subtitleStyle);
     fd.append('color_grading', colorGrading);
+    fd.append('trend_enabled', trendEnabled ? '1' : '0');
+    if (trendContext) fd.append('trend_context', trendContext);
     targetPlatforms.forEach((p) => fd.append('platforms[]', p));
     if (selectedFile) fd.append('material', selectedFile);
     if (selectedMusicFile) fd.append('background_music', selectedMusicFile);
@@ -446,6 +454,15 @@ export default function App() {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleApplyTrend = (trend: any, enhancedPrompt: string, tc: string) => {
+    setTrendContext(tc);
+    setTrendEnabled(true);
+    if (enhancedPrompt) setMasterPrompt(enhancedPrompt);
+    setActiveTab('create');
+    setMainTab('Stüdyo');
+    window.showToast?.('success', 'Trend', 'Trend başarıyla uygulandı. Prompt güncellendi.');
   };
 
   const handleCharModalConfirm = async (
@@ -895,6 +912,7 @@ export default function App() {
                       onShowToast={(msg, type) => window.showToast?.(type as any, 'Yayın Planlama', msg)}
                     />
                   )}
+                  {mainTab === 'Trendler' && <TrendPanel onApplyTrend={handleApplyTrend} />}
                   {mainTab === 'AI Stüdyo' && (
                     <StudioToolsPanel
                       studioSoundEnabled={studioSoundEnabled}
@@ -923,7 +941,9 @@ export default function App() {
                                 ? 'characters'
                                 : mainTab === 'API Keys'
                                   ? 'api_keys'
-                                  : 'studio'
+                                  : mainTab === 'Trendler'
+                                    ? 'studio'
+                                    : 'studio'
                     }
                     language={language}
                   />

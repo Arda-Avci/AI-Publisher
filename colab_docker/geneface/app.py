@@ -1,10 +1,10 @@
-import os, gc, torch
-from flask import Flask, request, jsonify
+import os, gc, torch, subprocess, sys
+import numpy as np
+from flask import Flask, request, jsonify, send_file
 
 app = Flask(__name__)
-
-current_model = None
-
+MODEL = None
+MODEL_DIR = "/app/geneface"
 
 def flush_memory():
     gc.collect()
@@ -12,16 +12,40 @@ def flush_memory():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
-
 def get_model():
-    global current_model
-    if current_model is not None:
-        return current_model
+    global MODEL
+    if MODEL is not None:
+        return MODEL
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
-    print(f"[CONTAINER - GeneFace++] Loading model (VRAM: {vram_gb:.2f} GB)")
-    current_model = {"loaded": True}
-    return current_model
+    print(f"[GeneFace++] Loading model (VRAM: {vram_gb:.2f} GB)")
 
+    if not os.path.exists(MODEL_DIR):
+        print("[GeneFace++] Cloning GeneFace++ repo...")
+        subprocess.run(
+            ["git", "clone", "https://github.com/yerfor/GeneFacePlusPlus.git", MODEL_DIR],
+            check=True, capture_output=True
+        )
+    sys.path.insert(0, MODEL_DIR)
+
+    from utils.commons import run_model
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    audio2motion = torch.jit.load(os.path.join(MODEL_DIR, "checkpoints", "audio2motion.pt"))
+    motion2video = torch.jit.load(os.path.join(MODEL_DIR, "checkpoints", "motion2video.pt"))
+    if device == "cuda":
+        audio2motion = audio2motion.cuda()
+        motion2video = motion2video.cuda()
+    MODEL = {"audio2motion": audio2motion, "motion2video": motion2video, "device": device}
+    print("[GeneFace++] Model ready.")
+    return MODEL
+
+@app.route("/preload", methods=["POST"])
+def preload():
+    try:
+        get_model()
+        return jsonify({"status": "success", "message": "GeneFace++ loaded"}), 200
+    except Exception as e:
+        flush_memory()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -29,10 +53,29 @@ def generate():
     face_path = data.get("face_image_path", "")
     audio_path = data.get("audio_path", "")
     output_path = data.get("output_path", "/content/output.mp4")
+
+    if not face_path or not audio_path:
+        return jsonify({"error": "face_image_path and audio_path required"}), 400
+    if not os.path.exists(face_path):
+        return jsonify({"error": f"face_image not found: {face_path}"}), 404
+    if not os.path.exists(audio_path):
+        return jsonify({"error": f"audio not found: {audio_path}"}), 404
+
     try:
-        _ = get_model()
-        torch.cuda.synchronize()
-        return jsonify({"status": "success", "output_path": output_path}), 200
+        model = get_model()
+        from utils.commons import run_model
+        result = run_model(
+            audio2motion=model["audio2motion"],
+            motion2video=model["motion2video"],
+            source_image=face_path,
+            audio_path=audio_path,
+            output_path=output_path,
+            device=model["device"]
+        )
+        flush_memory()
+        if os.path.exists(output_path):
+            return send_file(output_path, mimetype="video/mp4")
+        return jsonify({"error": "Output not generated"}), 500
     except torch.cuda.OutOfMemoryError as exc:
         flush_memory()
         return jsonify({"status": "error", "message": "GPU OOM", "error": str(exc)}), 500
@@ -40,11 +83,10 @@ def generate():
         flush_memory()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "healthy"}), 200
-
+    status = "healthy" if MODEL is not None else "starting"
+    return jsonify({"status": status, "model": "geneface"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

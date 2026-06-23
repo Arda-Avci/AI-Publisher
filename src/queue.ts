@@ -59,19 +59,30 @@ function broadcast(jobId: number, data: Record<string, unknown>) {
 // push SSE events to the browser without holding the HTTP request open.
 export { broadcast, checkQueue };
 
-// LoRA training progress polling (if training is in progress)
+// LoRA training progress polling (runs concurrently with training)
 async function pollLoraProgress(jobId: number): Promise<void> {
-  try {
-    const progress = await getTrainingProgress(jobId);
-    if (progress.percent > 0 && progress.percent < 100) {
-      broadcast(jobId, { stageKey: 'lora_training', percent: progress.percent, status: progress.status });
-      if (progress.percent > 0) {
-        setTimeout(() => pollLoraProgress(jobId), 3000);
+  let attempts = 0;
+  const maxAttempts = 120; // 120 * 3s = 6 min max
+  const poll = async (): Promise<void> => {
+    if (attempts >= maxAttempts) return;
+    attempts++;
+    try {
+      const progress = await getTrainingProgress(jobId);
+      if (progress.percent >= 100) return; // done
+      if (progress.percent < 0) {
+        broadcast(jobId, { stageKey: 'lora_training', percent: 0, status: progress.status || 'error' });
+        return; // error
       }
+      if (progress.percent > 0) {
+        broadcast(jobId, { stageKey: 'lora_training', percent: progress.percent, status: progress.status });
+      }
+      setTimeout(poll, 3000);
+    } catch {
+      setTimeout(poll, 3000);
     }
-  } catch {
-    /* silently fail */
-  }
+  };
+  // Wait a moment then start polling
+  setTimeout(poll, 2000);
 }
 
 async function checkQueue() {
@@ -168,6 +179,8 @@ async function startProduction(job: VideoJob) {
 
   try {
     Logger.info('[PRODUCTION] Stage: Director Planning and Scene Preparation...');
+    const { trackJobStart } = await import('./lib/metrics.js');
+    trackJobStart(job.id!, { model_type: job.model_type || 'unknown' });
     await db.run(
       "UPDATE video_jobs SET status = 'processing', current_stage = ?, progress_percent = 5 WHERE id = ?",
       [STAGE_KEYS.DIRECTOR_PLANNING, job.id],
@@ -493,10 +506,11 @@ async function startProduction(job: VideoJob) {
             broadcast(job.id, { stageKey: 'stageLoraTraining', percent: 13, character: char.name, message: `${char.name} eğitiliyor...` });
 
             const { trainLoRA } = await import('./services/loraService.js');
-            const result = await trainLoRA(job.id!, char.name, char.paths);
+            const trainPromise = trainLoRA(job.id!, char.name, char.paths);
+            const pollPromise = pollLoraProgress(job.id!);
+            const result = await trainPromise;
             if (result.success) {
               Logger.info(`[LoRA] Character "${char.name}" trained successfully`, { jobId: job.id, weightsPath: result.weightsPath });
-              pollLoraProgress(job.id!);
             } else {
               Logger.warn(`[LoRA] Character "${char.name}" training failed, continuing`, { jobId: job.id, error: result.error });
             }
@@ -740,6 +754,10 @@ async function startProduction(job: VideoJob) {
           modelType = 'CogVideoX-2b';
         } else if (job.production_template === 'wan25') {
           modelType = 'Wan2.5';
+        } else if (job.production_template === 'wan2.2-comfyui') {
+          modelType = 'Wan2.2-ComfyUI';
+        } else if (job.production_template === 'veo31') {
+          modelType = 'Veo-31';
         } else if (job.model_type) {
           modelType = job.model_type;
         }
@@ -850,6 +868,8 @@ async function startProduction(job: VideoJob) {
           endpointId = process.env.RUNPOD_WAN_ENDPOINT_ID || '';
         } else if (lowerModel.includes('wan2.5') || lowerModel.includes('wan25')) {
           endpointId = process.env.RUNPOD_WAN25_ENDPOINT_ID || '';
+        } else if (lowerModel.includes('wan2.2-comfyui') || lowerModel === 'wan2.2-comfyui') {
+          endpointId = process.env.RUNPOD_WAN22_COMFYUI_ENDPOINT_ID || '';
         } else if (lowerModel.includes('ltx')) {
           endpointId = process.env.RUNPOD_LTX_ENDPOINT_ID || '';
         } else if (lowerModel.includes('sadtalker')) {
@@ -892,50 +912,137 @@ async function startProduction(job: VideoJob) {
           endpointId = process.env.RUNPOD_DEFAULT_ENDPOINT_ID || '';
         }
 
-        if (!endpointId && process.env.MOCK_COLAB !== 'true') {
-          throw new Error(`No RunPod Serverless Endpoint ID mapped for model: ${modelType}`);
-        }
-
-        if (process.env.MOCK_COLAB === 'true') {
-          Logger.info(`[MOCK] Mocking media generation for Scene ${scene.scene_number}...`);
+        if (lowerModel.includes('veo-31') || lowerModel.includes('veo31')) {
+          Logger.info(`[Veo31] Generating scene ${scene.scene_number} via Google Veo 3.1 API...`);
+          const { generateVideo } = await import('./services/veo31.js');
+          const veoResult = await generateVideo({
+            imageUrl: sendSourceVideoId || referenceImageBase64 || '',
+            prompt: finalPrompt,
+            aspectRatio: '16:9',
+          });
+          taskId = `veo31_${job.id}_${scene.scene_number}`;
           taskStatus = 'success';
-          taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
-        } else {
-          const runpodInput = {
-            job_id: job.id,
-            scene_number: scene.scene_number,
-            video_prompt: finalPrompt,
-            speech_text: scene.speech_text,
-            sfx_prompt: scene.sfx_prompt,
-            character_features: '',
-            reference_image_base64: referenceImageBase64,
-            source_video_id: sendSourceVideoId,
-            user_image_path: job.material_path,
-            apply_lipsync: applyLipsync,
-            video_model: modelType,
-            tts_provider: job.tts_provider || 'xtts',
-            tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
-            reference_audio_base64: speakerAudioBase64,
-            character_images: characterImages,
-            speaker: currentSpeaker,
-            background_music: remoteMusicUrl,
-            music_volume: scene.music_volume !== undefined && scene.music_volume !== null ? scene.music_volume : 0.15,
-            logo_url: remoteLogoUrl,
-            differentiation_layout: job.differentiation_layout === 1 ? 'horizontal' : 'none',
-            subtitle_primary_color: user?.brand_primary_color || '#00F2FE',
-            subtitle_secondary_color: user?.brand_secondary_color || '#FFFFFF',
-            subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
-            subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
-            lora_weights_path: loraWeightsPath,
-            b2_credentials: b2Credentials
+          taskData = {
+            status: 'success',
+            video_url: veoResult.videoUrl,
+            gcs_uri: veoResult.gcsUri,
+            has_subtitle: scene.speech_text ? true : false,
           };
+          Logger.info(`[Veo31] Scene ${scene.scene_number} generated`, { videoUrl: veoResult.videoUrl });
+        } else {
+          if (!endpointId && process.env.MOCK_COLAB !== 'true') {
+            throw new Error(`No RunPod Serverless Endpoint ID mapped for model: ${modelType}`);
+          }
+
+          if (process.env.MOCK_COLAB === 'true') {
+            Logger.info(`[MOCK] Mocking media generation for Scene ${scene.scene_number}...`);
+            taskStatus = 'success';
+            taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
+          } else {
+            let runpodInput: any;
+          if (modelType === 'Wan2.2-ComfyUI') {
+            const seed = Math.floor(Math.random() * 100000000);
+            runpodInput = {
+              workflow: {
+                "3": {
+                  "class_type": "KSampler",
+                  "inputs": {
+                    "cfg": 6,
+                    "denoise": 1,
+                    "model": ["10", 0],
+                    "positive": ["6", 0],
+                    "negative": ["7", 0],
+                    "latent_image": ["5", 0],
+                    "sampler_name": "uni_pc",
+                    "scheduler": "normal",
+                    "seed": seed,
+                    "steps": 30
+                  }
+                },
+                "10": {
+                  "class_type": "WanVideoLoader",
+                  "inputs": {
+                    "model_name": "wan2.1-t2v-14b-fp8.safetensors"
+                  }
+                },
+                "6": {
+                  "class_type": "CLIPTextEncode",
+                  "inputs": {
+                    "clip": ["10", 1],
+                    "text": finalPrompt
+                  }
+                },
+                "7": {
+                  "class_type": "CLIPTextEncode",
+                  "inputs": {
+                    "clip": ["10", 1],
+                    "text": "blurry, low quality, distorted, worst quality, static, web design"
+                  }
+                },
+                "5": {
+                  "class_type": "EmptyWanVideoLatent",
+                  "inputs": {
+                    "width": 832,
+                    "height": 480,
+                    "length": 81,
+                    "batch_size": 1
+                  }
+                },
+                "8": {
+                  "class_type": "WanVideoDecoder",
+                  "inputs": {
+                    "vae": ["10", 2],
+                    "samples": ["3", 0]
+                  }
+                },
+                "9": {
+                  "class_type": "SaveVideo",
+                  "inputs": {
+                    "images": ["8", 0],
+                    "fps": 16,
+                    "filename_prefix": `WanVideo_${job.id}_${scene.scene_number}`
+                  }
+                }
+              }
+            };
+          } else {
+            runpodInput = {
+              job_id: job.id,
+              scene_number: scene.scene_number,
+              video_prompt: finalPrompt,
+              speech_text: scene.speech_text,
+              sfx_prompt: scene.sfx_prompt,
+              character_features: '',
+              reference_image_base64: referenceImageBase64,
+              source_video_id: sendSourceVideoId,
+              user_image_path: job.material_path,
+              apply_lipsync: applyLipsync,
+              video_model: modelType,
+              tts_provider: job.tts_provider || 'xtts',
+              tts_voice: job.tts_voice || (job.tts_provider === 'openai' ? 'alloy' : 'Claribel Dervla'),
+              reference_audio_base64: speakerAudioBase64,
+              character_images: characterImages,
+              speaker: currentSpeaker,
+              background_music: remoteMusicUrl,
+              music_volume: scene.music_volume !== undefined && scene.music_volume !== null ? scene.music_volume : 0.15,
+              logo_url: remoteLogoUrl,
+              differentiation_layout: job.differentiation_layout === 1 ? 'horizontal' : 'none',
+              subtitle_primary_color: user?.brand_primary_color || '#00F2FE',
+              subtitle_secondary_color: user?.brand_secondary_color || '#FFFFFF',
+              subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
+              subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
+              lora_weights_path: loraWeightsPath,
+              b2_credentials: b2Credentials
+            };
+          }
 
           const runpodRes = await RunPodClient.runJob(endpointId, runpodInput, callbackUrl);
           taskId = runpodRes.id;
           Logger.info('[PRODUCTION] RunPod serverless job started', { taskId, status: runpodRes.status });
 
           await db.run('UPDATE video_scenes SET runpod_job_id = ? WHERE id = ?', [taskId, scene.id]);
-        }
+        }   // close else (MOCK_COLAB)
+        }   // close else (Veo-31 vs RunPod)
 
         const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.scene_number}.mp4`);
         const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.scene_number}.wav`);
@@ -2150,6 +2257,8 @@ async function startProduction(job: VideoJob) {
     );
     broadcast(job.id, { stageKey: 'stageCompleted', percent: 100, finalFilename: fName });
     Logger.info(`İş başarıyla tamamlandı: ID=${job.id}`);
+    const { trackJobEnd } = await import('./lib/metrics.js');
+    trackJobEnd(job.id!, { model_type: job.model_type || 'unknown' });
 
     // Kredi düşme — sadece üretim başarıyla tamamlanınca (kullanıcının istediği davranış)
     if (requiredCredits > 0) {
@@ -2209,6 +2318,8 @@ async function startProduction(job: VideoJob) {
       [job.id],
     );
     broadcast(job.id, { stageKey: 'stageError', percent: 0 });
+    const { trackJobFailed } = await import('./lib/metrics.js');
+    trackJobFailed(job.id!, { model_type: job.model_type || 'unknown' });
   } finally {
     // Yüklenen materyal dosyasını (resim/video vb.) iş bittiği (veya hata verdiği) anda diskten temizle
     if (job.material_path) {
@@ -2276,7 +2387,13 @@ export async function startVideoQueueWorker() {
             return;
           }
 
-          await startProduction(job);
+          if (process.env.OTEL_QUEUE_GRAPH === 'true') {
+            Logger.info(`[Queue] OTEL_QUEUE_GRAPH=true — routing job #${job.id} to LangGraph`);
+            const { runJobGraph } = await import('./queue-graph.js');
+            await runJobGraph(job.id);
+          } else {
+            await startProduction(job);
+          }
 
           channel.ack(msg);
         } catch (error: any) {

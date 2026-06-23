@@ -3,6 +3,10 @@ import { db } from '../db.js';
 import { broadcastProgress } from './redis.js';
 import { Logger } from './logger.js';
 import { uploadToYouTube, uploadToTikTok, uploadToX, uploadToMeta } from '../publisher.js';
+import { BrowserUseService } from '../services/browserUseService.js';
+
+// Set USE_BROWSER_REMOTE=true in .env to use RunPod browser-use instead of local Playwright
+const USE_BROWSER_REMOTE = process.env.USE_BROWSER_REMOTE === 'true';
 
 export interface PublishJobData {
   jobId: number;
@@ -50,31 +54,72 @@ export async function startPublishQueueWorker() {
         let success = false;
 
         try {
-          if (platform === 'youtube') {
-            success = await uploadToYouTube(
-              videoPath,
-              jobData.yt_title || '',
-              jobData.yt_desc || '',
-              jobData.yt_tags || '',
-              jobData.playlist_id,
-              jobId,
-            );
-          } else if (platform === 'tiktok') {
-            success = await uploadToTikTok(
-              videoPath,
-              jobData.tt_desc || '',
-              jobData.tt_tags || '',
-              jobId,
-            );
-          } else if (platform === 'x') {
-            success = await uploadToX(videoPath, jobData.x_desc || '', jobData.x_tags || '', jobId);
-          } else if (platform === 'meta') {
-            success = await uploadToMeta(
-              videoPath,
-              jobData.meta_desc || '',
-              jobData.meta_tags || '',
-              jobId,
-            );
+          if (USE_BROWSER_REMOTE) {
+            // ── Remote browser-use via RunPod ──
+            if (platform === 'youtube') {
+              const result = await BrowserUseService.uploadYouTube({
+                videoPath,
+                title: jobData.yt_title || '',
+                description: jobData.yt_desc || '',
+                tags: jobData.yt_tags || '',
+                playlistName: jobData.playlist_id,
+                jobId,
+              });
+              success = result.status === 'success';
+              if (!success) Logger.warn('[publish-queue] browser-use YouTube:', result.error);
+            } else if (platform === 'tiktok') {
+              const result = await BrowserUseService.uploadTikTok({
+                videoPath,
+                description: jobData.tt_desc || '',
+                tags: jobData.tt_tags || '',
+                jobId,
+              });
+              success = result.status === 'success';
+            } else if (platform === 'x') {
+              const result = await BrowserUseService.uploadToX({
+                videoPath,
+                description: jobData.x_desc || '',
+                tags: jobData.x_tags || '',
+                jobId,
+              });
+              success = result.status === 'success';
+            } else if (platform === 'meta') {
+              const result = await BrowserUseService.uploadToMeta({
+                videoPath,
+                description: jobData.meta_desc || '',
+                tags: jobData.meta_tags || '',
+                jobId,
+              });
+              success = result.status === 'success';
+            }
+          } else {
+            // ── Local Playwright (existing behavior) ──
+            if (platform === 'youtube') {
+              success = await uploadToYouTube(
+                videoPath,
+                jobData.yt_title || '',
+                jobData.yt_desc || '',
+                jobData.yt_tags || '',
+                jobData.playlist_id,
+                jobId,
+              );
+            } else if (platform === 'tiktok') {
+              success = await uploadToTikTok(
+                videoPath,
+                jobData.tt_desc || '',
+                jobData.tt_tags || '',
+                jobId,
+              );
+            } else if (platform === 'x') {
+              success = await uploadToX(videoPath, jobData.x_desc || '', jobData.x_tags || '', jobId);
+            } else if (platform === 'meta') {
+              success = await uploadToMeta(
+                videoPath,
+                jobData.meta_desc || '',
+                jobData.meta_tags || '',
+                jobId,
+              );
+            }
           }
 
           await db.run(`UPDATE video_jobs SET ${statusField} = $1 WHERE id = $2`, [

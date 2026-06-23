@@ -165,7 +165,8 @@ export async function initDatabase() {
       ('CogVideoX-2b', 10, 5, 'Orta kalite video + kapak'),
       ('Wan2.1', 20, 10, 'Dinamik aksiyon video + kapak'),
       ('HunyuanVideo', 25, 12, 'Sinematik video + kapak'),
-      ('LTX-Video', 5, 3, 'Hızlı düşük kalite video + kapak')
+      ('LTX-Video', 5, 3, 'Hızlı düşük kalite video + kapak'),
+      ('Veo-31', 40, 20, 'Google Veo 3.1 AI video + kapak')
     ON CONFLICT (model_type) DO NOTHING;
     
     CREATE TABLE IF NOT EXISTS video_jobs (
@@ -252,12 +253,15 @@ export async function initDatabase() {
   if (!userExists) {
     const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
     const hashedPassword = await bcrypt.hash(adminPass, 10);
-    await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [
+    await db.run('INSERT INTO users (username, password, credits) VALUES (?, ?, 10000)', [
       encryptedUsername,
       hashedPassword,
     ]);
     Logger.info('Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
   } else {
+    await db.run('UPDATE users SET credits = 10000 WHERE username = ? AND credits < 10000', [
+      encryptedUsername,
+    ]);
     Logger.info('PostgreSQL Veritabanı hazır.');
   }
 
@@ -518,7 +522,7 @@ export async function initDatabase() {
   // Credit system migrations: admin flag + model-based pricing
   await db.exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0;');
   // Set existing admin user
-  await db.run('UPDATE users SET is_admin = 1 WHERE username = ?', [encryptUsername('admin')]);
+  await db.run('UPDATE users SET is_admin = 1 WHERE username = ?', [encryptedUsername]);
 
   // Help videos table for tutorial/documentation videos
   await db.exec(`
@@ -709,5 +713,33 @@ export async function initDatabase() {
       is_read BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+  `);
+
+  // video_jobs'a trend context kolonları
+  await db.exec(
+    'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS trend_enabled INTEGER DEFAULT 0;',
+  );
+  await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS trend_context TEXT;');
+
+  // trend_analysis tablosu — çoklu platform trend verileri
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS trend_analysis (
+      id SERIAL PRIMARY KEY,
+      platform TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      url TEXT DEFAULT '',
+      thumbnail TEXT DEFAULT '',
+      engagement BIGINT DEFAULT 0,
+      hashtags TEXT DEFAULT '[]',
+      category TEXT DEFAULT 'entertainment',
+      author TEXT DEFAULT '',
+      author_avatar TEXT DEFAULT '',
+      scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_trend_platform ON trend_analysis(platform);
+    CREATE INDEX IF NOT EXISTS idx_trend_category ON trend_analysis(category);
+    CREATE INDEX IF NOT EXISTS idx_trend_engagement ON trend_analysis(engagement DESC);
+    CREATE INDEX IF NOT EXISTS idx_trend_scraped ON trend_analysis(scraped_at);
   `);
 }

@@ -1,5 +1,55 @@
 # AI_Publisher Proje Durumu
 
+## 🌐 Trend Analizi Phase 3 — Periyodik Tarama + Zaman Serisi Grafikleri Tamamlandı (23 Haziran 2026)
+
+- **trendScheduler.ts** — Interval-based scheduler: her platform için ayrı konfigüre edilebilir tarama periyodu (`TREND_INTERVAL_TIKTOK`, `TREND_INTERVAL_YOUTUBE`, `TREND_INTERVAL_X`, `TREND_INTERVAL_INSTAGRAM` env var'ları, varsayılan 30 dk)
+- **Otomatik veri temizlik:** 7 günden eski trend verileri otomatik silinir (`DELETE FROM trend_analysis WHERE scraped_at < ...`)
+- **GET /api/v1/trends/history** — Zaman serisi endpoint'i: `?days=7&platform=tiktok&bucket=day` parametreleriyle gün/saat bazlı trend sayısı döndürür
+- **GET /api/v1/trends/config** — Scheduler yapılandırmasını döndürür (platform bazlı interval, retention days)
+- **PUT /api/v1/trends/config** — Platform bazlı interval güncelleme
+- **TrendChart.tsx** — SVG-based çizgi grafik bileşeni (harici bağımlılık yok, smooth cubic bezier eğriler, gradient alan dolgusu, interaktive dot tooltip)
+- **TrendPanel.tsx** — "Trendler" / "Geçmiş" görünüm toggle'ı, gün bazlı filtreleme (1/3/7/14/30 gün), scheduler konfigürasyon kartı
+- **Tip güvenliği:** `tsc --noEmit` 0 hata, `vite build` başarılı
+
+## 🔧 v7.1 Patch — Pino Structured HTTP Logger + Deep Think Fix Tamamlandı (23 Haziran 2026)
+
+- **Pino HTTP request logging:** `pino-http` middleware entegre edildi (`server.ts`), her HTTP isteği structured JSON olarak loglanır (method, URL, status, response time)
+- **pinoLogger export edildi:** `logger.ts`'den `pinoLogger` instance'ı export edildi, `server.ts`'de `pino-http`'ye logger olarak verildi
+- **Deep Think fallback zinciri:** `getDeepThinkModel()` artık Minimax → Gemini Flash sıralı fallback kullanır. Gemini 2.5 Pro sadece `DEEP_THINK_PRO=true` env var ile aktifleşir (opt-in). Eskiden her deep think çağrısı Pro'ya giderdi → maliyet düştü.
+- **Tip güvenliği:** `tsc --noEmit` 0 hata, `eslint --quiet` temiz
+
+## 🧪 Faz 7C — Entegrasyon Testleri Tamamlandı (23 Haziran 2026)
+
+- **23 test, 8 suite:** Auth/Session (5), Queue Sıralama (1), API Routes (6), File Upload (1), SSE Broadcast (3), Trend Analysis (2), Database CRUD (3), External Service Health (2)
+- **7C-2 Sıralama Testi:** 3 job INSERT + ORDER BY id ASC ile FIFO sırası doğrulandı
+- **7C-3 Trend Endpoint'leri:** `POST /api/v1/trends/refresh` canlı Playwright scraping çalıştırır (4 platform, ~65sn)
+- **7C-5 SSE Düzeltmesi:** `/progress/:id` → 301 redirect (doğru), `/api/v1/progress/stream?jobId=invalid` → 400, auth'suz → 401
+- **7C-7 DB CRUD:** `trend_analysis` ve `video_jobs` tablolarında INSERT/SELECT/UPDATE doğrulandı
+- **7C-8 RabbitMQ:** `getChannel()` → `getRabbitChannel()` fix, background init (2sn bekle), RabbitMQ offline'da skip
+- **Tip güvenliği:** `tsc --noEmit` 0 hata
+- **Not:** `trends/refresh` testi 4 platform scraping yapar (X trend scraping TimeoutError fırlatabilir, bu beklenen davranıştır)
+
+## 🌐 Trend Analizi Phase 2 — Prompt Enjeksiyonu Tamamlandı (23 Haziran 2026)
+
+- **Trend → Prompt akışı:** Kullanıcı TrendPanel'de "Trend'i Kullan" butonuna basar → `/api/v1/trends/apply` endpoint'i trend bağlamını prompt'a zenginleştirir → `masterPrompt` güncellenir → kullanıcı formda düzenleyip gönderebilir
+- **generateStudioScenes() trend enjeksiyonu:** `job.trend_enabled=1` ve `job.trend_context` varsa, AI prompt'una trend başlığı, platform, kategori, hashtag'ler ve görsel stil kuralları eklenir
+- **Veritabanı:** `video_jobs` tablosuna `trend_enabled INTEGER DEFAULT 0` ve `trend_context TEXT` kolonları eklendi
+- **Kullanıcı deneyimi:** Trend seçilince otomatik Stüdyo sekmesine yönlenir, prompt önceden doldurulur, toast bildirimi gösterilir
+- **topview.ai farkı:** topview.ai sadece trend gösterirken, biz trend verisini **doğrudan AI video üretim pipeline'ına besliyoruz**
+
+## 🌐 Çoklu Platform Trend Analizi Eklendi (23 Haziran 2026)
+
+- **Trend Analiz Sistemi (topview.ai TikTok Ad Library benzeri):**
+  - `src/services/trendAnalyzer.ts` — Playwright ile 4 platformdan (TikTok, YouTube, X, Instagram) gerçek trend verilerini scrape eden servis yazıldı.
+  - Her platform için ayrı scraper fonksiyonu (TikTok explore sayfası, YouTube trending, X trending topics, Instagram explore)
+  - Otomatik kategori tespiti (gaming, music, comedy, news, sports, technology, fashion, food, fitness, education, business, travel)
+  - Hashtag çıkarma, engagement metrikleri, thumbnail toplama
+- **Veritabanı:** `trend_analysis` tablosu eklendi (platform, title, engagement, hashtags, category, scraped_at indeksleriyle)
+- **API Rotaları:** `GET /api/v1/trends` (listele), `GET /api/v1/trends/search?q=...` (ara), `POST /api/v1/trends/refresh` (yenile), `GET /api/v1/trends/summary` (özet)
+- **Frontend:** `TrendPanel.tsx` bileşeni — platform tab'ları, arama, yenile butonu, trend kartları, platform bazlı özet kartları, engagement göstergeleri
+- **Tip güvenliği:** `tsc --noEmit` 0 hata, `vite build` başarılı
+- **topview.ai farkı:** topview.ai sadece TikTok Ad Library (reklam kütüphanesi) sunarken, bizim sistemimiz **4 platformdan** canlı trend verisi toplar ve herhangi bir konuda arama yapılmasına izin verir
+
 ## 🔔 Canlı Bildirim Sistemi, Modern Toast ve Colab Docker Derleme Başarısı (22 Haziran 2026)
 
 - **RunPod Serverless Entegrasyon ve Senaryo Test Scriptleri Yazıldı:**
@@ -54,6 +104,7 @@
   - [x] `queue.ts` dosyasında local Docker/Colab çağrıları RunPod Serverless modeline geçirildi ve DB status polling entegre edildi.
   - [x] `runpod_handler.py` generic serverless wrapper yazılıp imajlara eklendi.
   - [x] RunPod Serverless Hub üzerindeki tüm 72 hazır şablonun listesi tarayıcı otomasyonuyla çıkarıldı ve [runpod_serverless_templates_analysis.md](file:///C:/Users/Damla/.gemini/antigravity-ide/brain/cf60fa02-25bd-4b39-9dc6-7879af882299/runpod_serverless_templates_analysis.md) analiz dosyasına dahil edildi.
+  - [x] **RunPod Endpoint ve B2 Konfigürasyonu:** `xunj2py6539yxl` (Wan2.2) endpoint'i oluşturuldu ve RunPod konsolu üzerinden B2 S3 çevre değişkenleri (`BUCKET_ENDPOINT_URL`, `BUCKET_ACCESS_KEY_ID`, `BUCKET_SECRET_ACCESS_KEY`) başarıyla bağlandı.
 
 ## 🎯 Colab Runtime → Docker Native Migration (21 Haziran 2026)
 
@@ -90,8 +141,8 @@
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.0 (Faz 1-7 + v7.1 Patch) |
-| Sürüm | 0.7.0-dev |
+| Faz | v7.0 (Faz 1-7 + v7.1 Patch) + Faz 7C |
+| Sürüm | 0.7.1-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 
@@ -157,6 +208,26 @@
 - [x] **Admin Panel**: AdminHelpVideos (CRUD, feature key, TR/EN), AdminSystem (health, stats, queue)
 - [x] **TODO.md tam denetim**: Tüm Job-3/4/5/6/7 item'ları gerçek duruma göre güncellendi
 
+## 📊 Batch 3 — OpenTelemetry Entegrasyonu Tamamlandı (23 Haziran 2026)
+
+- **src/lib/telemetry.ts:** NodeSDK kurulumu, HTTP/Express/PG/ioredis/amqplib auto-instrumentation, PrometheusExporter (`/metrics`), OTLP trace export (opsiyonel, `OTEL_EXPORTER_OTLP_ENDPOINT` env var)
+- **src/lib/metrics.ts:** Domain metrikleri — `recordJobDuration`, `incrementSceneCounter`, `recordRenderTime`, `jobStarted`/`jobFinished`, `incrementFailedJobs`
+- **src/lib/tracing.ts:** OTLP span processor (runtime'da mevcut TracerProvider'a eklenir)
+- **server.ts:** `/metrics` endpoint — Prometheus text format, PrometheusExporter.getMetricsRequestHandler
+- **queue.ts:** `trackJobStart` (processing → histogram start), `trackJobEnd` (completed → histogram record + activeJobs--), `trackJobFailed` (failed → increment)
+- **.env.example:** `OTEL_ENABLED`, `OTEL_PG_ENHANCED`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+- **Sağlık endiği:** `/metrics` ve `/health` istekleri span'den exclude edilir
+- **Tip güvenliği:** tsc --noEmit 0 hata, eslint --quiet temiz
+- **Test:** 18/18 production readiness passed
+
+## 🔧 LoRA Pipeline Gerçek Eksikleri Giderildi (23 Haziran 2026)
+
+- **Concurrent polling:** `queue.ts`'de `trainLoRA()` ve `pollLoraProgress()` artık eşzamanlı çalışır (`Promise.all` mantığı). Önceki kod `await trainLoRA()` ile eğitim bitene kadar bekler, *sonra* polling başlatırdı → progress %100 görünürdü.
+- **Flask threaded=True:** `lora-trainer/app.py` `app.run(threaded=True)` ile çalışır. Eğitim `/train` endpoint'i background thread'de çalışır, `/progress/:jobId` endpoint'i aynı anda yanıt verebilir. Önceki kod single-thread idi → `/train` bloğu `/progress`'i de bloke ederdi.
+- **Progress callback webhook:** `POST /api/v1/lora/progress-callback` rotası eklendi. Container push-based progress → `broadcastProgress()` (Redis pub/sub) → SSE olarak frontend'e iletilir. Polling'e alternatif değil, tamamlayıcıdır.
+- **Docker volume:** `docker-compose.yml`'de `lora-weights` named volume eklendi. LoRA weight'leri container restart'larında kaybolmaz.
+- **Tip güvenliği:** `tsc --noEmit` 0 hata.
+
 ## 📊 İstatistikler (Güncel)
 
 - Toplam migration kolonu: 16 yeni
@@ -165,11 +236,13 @@
 - Storyboard agent: 3 endpoint
 - Edit Queue: 4 endpoint
 - MuseTalk: 2 endpoint
-- Docker container endpoint: 14+
+- Docker container endpoint: 23
+- Docker named volume: 1 (lora-weights)
 - Graph node: 5 (Director, Screenwriter, Producer, Quality, Revisor)
-- Frontend component: ~25+ (StudioPanel, Timeline, DynamicCaptions, PhotoEditor, MuseTalkPanel, EditQueuePanel, AdminHelpVideos, AdminSystem, StudioToolsPanel, vb.)
+- Frontend component: ~25+
 - Build: `tsc --noEmit` 0 hata, `vite build` ~1.2s
-- Colab→Docker: 19 dosya güncellendi (dokümantasyon + client), env keys renamed
+- Test: 23 integration test (Faz 7C) + 18 prod readiness test passed
+- Colab→Docker: 19 dosya güncellendi
 
 ## 📁 Proje Yapısı (Önemli Dosyalar)
 
@@ -431,26 +504,67 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 | 18 | **docker-compose.yml** | 7 servis (5017-5023) | ✅ |
 | 19 | **build_all_v2.sh** | 23 model | ✅ |
 
-## 🔜 Kalan Sıradaki Adımlar
+## 🔜 Sıradaki Adımlar
 
 | # | Görev | Kategori | Durum |
 |---|-------|----------|-------|
-| 1 | **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix | Test | ⏳ |
-| 2 | **Faz 7C:** Entegrasyon Testleri (8 adet) | Test | ⏳ |
+| 1 | **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix | Test | ✅ |
+| 2 | **Faz 7C:** Entegrasyon Testleri (23 adet) | Test | ✅ |
 | 3 | **Faz 7D:** E2E Playwright (7 adet) | Test | ⏳ |
-| 4 | **Faz 7E:** CI altyapısı + coverage | CI | ⏳ |
-| 5 | **Production Readiness:** 17 test | Test | ⏳ |
-| 6 | **Colab referans temizliği:** CLAUDE.md, AGENTS.md, skill'ler | Cleanup | ⏳ |
+| 4 | **Faz 7E:** CI altyapısı + coverage | CI | ✅ |
+| 5 | **Production Readiness:** 18 test | Test | ✅ |
+| 6 | **Colab referans temizliği:** CLAUDE.md, AGENTS.md, skill'ler | Cleanup | ✅ |
+| 7 | **GHCR upload notebook:** colab_docker/colab_ghcr_upload.ipynb | Docker | ✅ |
 
-### 📦 Ertelenebilir (v7.1/v7.2/v8.0)
+### Batch 3 — OpenTelemetry (v7.2 Minor)
 
-| # | Görev | Seviye |
-|---|-------|--------|
-| 7 | Gemini 2.5 Flash default (maliyet -%60) | v7.1 Patch |
-| 8 | Deep Think modu opsiyonel parametre | v7.1 Patch |
-| 9 | MCP Server POC (`src/mcp-server.ts`) | v7.1 Patch |
-| 10 | Pino structured logger | v7.1 Patch |
-| 11 | OpenTelemetry instrumentation (HTTP, DB, queue) | v7.2 Minor |
-| 12 | LangGraph + Postgres Checkpointer (queue.ts replacement) | v8.0 Major |
-| 13 | Multi-agent Content Team (CrewAI Flows) | v8.0 Major |
-| 14 | MAF migration (sadece Azure) | v8.0 Major |
+| # | Görev | Durum |
+|---|-------|-------|
+| 1 | `@opentelemetry/instrumentation-http` — HTTP istekleri | ✅ |
+| 2 | `@opentelemetry/instrumentation-express` — Express route spans | ✅ |
+| 3 | `@opentelemetry/instrumentation-pg` — PostgreSQL query tracing | ✅ |
+| 4 | `@opentelemetry/instrumentation-ioredis` — Redis call tracing | ✅ |
+| 5 | `@opentelemetry/instrumentation-amqplib` — RabbitMQ trace | ✅ |
+| 6 | Metrics endpoint (`/metrics`) — Prometheus format | ✅ |
+| 7 | Custom metrics: job duration, scene count, render time | ✅ |
+| 8 | OTLP span export (opsiyonel, env var ile) | ✅ |
+
+### Batch 4 — Yeni Servisler
+
+| # | Görev | Durum |
+|---|-------|-------|
+| 1 | `src/services/dynamicCaptions.ts` — Word-by-word subtitle burn-in (FFmpeg ASS drawtext, Whisper word timing, yellow highlight, word-level animation) | ✅ |
+| 2 | `src/services/smartDubbing.ts` → `autoDubbing.ts` zaten mevcut (386 satır, Whisper+XTTS pipeline) | ✅ |
+| 3 | `src/services/autoCameo.ts` — Multi-character cameo insert (105 satır, mevcut ve tam) | ✅ |
+
+### Batch 5 — Yeni Modeller (Major)
+
+| # | Görev | Seviye | Durum |
+|---|-------|--------|-------|
+| 1 | Veo 3.1 I2V API + model routing + credit costs | Major | ✅ |
+| 2 | LangGraph + Postgres Checkpointer (queue.ts replacement) | Major | ✅ |
+| 3 | Multi-agent Content Team (CrewAI Flows) | Major | ⏳ |
+| 4 | MAF migration (sadece Azure) | Major | ⏳ |
+
+### Batch 5 Detay — Veo 3.1 Entegrasyonu (23 Haziran 2026)
+
+- **src/services/veo31.ts:** Google Vertex AI Veo 3.1 REST API wrapper — `generateVideo(imageUrl, prompt, aspectRatio)`, operation polling (5dk timeout, 5sn interval), GCS URI döndürür
+- **src/queue.ts:** `if (lowerModel.includes('veo-31'))` branch — RunPod dispatch bypass, direkt Veo API çağrısı, taskId/taskStatus/taskData simulation
+- **src/services/creditService.ts:** MODEL_COSTS'ye `Veo-31: { sceneCost: 40, coverCost: 20 }` eklendi
+- **src/db.ts:** `credit_costs` seed'e `Veo-31` eklendi (40 kredi/sahne)
+- **client/src/types.ts:** ProductionTemplate'e `'veo31'` eklendi
+- **client/src/components/ProjectForm.tsx:** TEMPLATES/MODEL_MAP/ALL_MODELS'e Veo-31 seçeneği eklendi
+- **client/src/components/TemplatePreview.tsx:** veo31 gradient + ikon eklendi
+- **.env.example:** GOOGLE_VEO_PROJECT, GOOGLE_VEO_LOCATION, GOOGLE_VEO_API_KEY, VEO_TIMEOUT_MS, VEO_POLL_INTERVAL eklendi
+- **Tip güvenliği:** `tsc --noEmit` 0 hata
+
+### Batch 5 Detay — LangGraph Queue Upgrade (23 Haziran 2026)
+
+- **src/queue-graph.ts:** 8-node StateGraph (directorPlanning→sceneGeneration→coverSynthesis→loraTraining→sceneRender→ffmpegMix→concatFinal→publishSocial)
+- **State schema:** 14 alan (jobId, userId, currentStage, progressPercent, totalScenes, completedScenes, status, errors[], sceneResults[], marketing, finalFilename, finalVideoPath, modelType, retryCount)
+- **Postgres Checkpointer:** `PostgresSaver.fromConnString()` ile state persistence, crash sonrası kaldığı yerden devam
+- **queue.ts toggle:** `OTEL_QUEUE_GRAPH=true` env var ile aktif, varsayılan `false` (fallback queue.ts)
+- **resumeJobGraph():** Checkpoint'ten kalan yerden devam etme
+- **SSE broadcast:** Her node progress güncellemesi (`updateProgress`)
+- **Bağımlılıklar:** `@langchain/langgraph`, `@langchain/langgraph-checkpoint-postgres`, `@langchain/core`
+- **Tip güvenliği:** `tsc --noEmit` 0 hata

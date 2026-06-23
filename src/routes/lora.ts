@@ -83,3 +83,28 @@ loraRouter.post('/train', requireAdmin, async (req, res) => {
     res.status(500).json({ success: false, error: 'Training failed' });
   }
 });
+
+/**
+ * POST /api/v1/lora/progress-callback
+ * Webhook for lora-trainer container to push training progress.
+ * Broadcasts via SSE so frontend sees real-time updates.
+ */
+loraRouter.post('/progress-callback', async (req, res) => {
+  try {
+    const { job_id, percent, status } = req.body;
+    if (!job_id) {
+      res.status(400).json({ success: false, error: 'job_id required' });
+      return;
+    }
+    const { broadcastProgress } = await import('../lib/redis.js');
+    await broadcastProgress(Number(job_id), {
+      stageKey: 'lora_training',
+      percent: percent ?? 0,
+      status: status ?? 'unknown',
+    });
+    res.json({ success: true });
+  } catch (err) {
+    Logger.warn('[LoRA] progress-callback error', err);
+    res.json({ success: false });
+  }
+});

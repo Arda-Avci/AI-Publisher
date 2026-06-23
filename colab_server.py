@@ -94,14 +94,21 @@ class ContainerManager:
         "animatediff": 5013,
         "wan25": 5014,
         "f5tts": 5015,
-        "lora-trainer": 5016
+        "lora-trainer": 5016,
+        "sadtalker": 5017,
+        "dynamicrafter": 5018,
+        "zeroscope": 5019,
+        "video-retalking": 5020,
+        "geneface": 5021,
+        "mochi": 5022,
+        "pyramid-flow": 5023
     }
     
     # GPU-heavy containers: only one can run at a time (T4 VRAM limit)
-    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts", "lora-trainer"]
+    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts", "lora-trainer", "sadtalker", "dynamicrafter", "video-retalking", "geneface", "mochi", "pyramid-flow"]
     
     # CPU-only containers: can run concurrently, no GPU reservation needed
-    CPU_ONLY = ["whisper", "kokorotts"]
+    CPU_ONLY = ["whisper", "kokorotts", "zeroscope"]
     
     def __init__(self):
         self.last_active = {name: time.time() for name in self.PORTS}

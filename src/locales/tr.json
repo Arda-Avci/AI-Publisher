@@ -294,6 +294,8 @@
   "templateSvdDesc": "Yerel L4 GPU üzerinde çalışan açık kaynaklı Stable Video Diffusion (SVD-XT) modelini kullanarak referans görsellerden akıcı videolar üretir.",
   "templateWan25": "Wan2.5 (3-4x Hızlı)",
   "templateWan25Desc": "Alibaba Wan2.5 ile 1080p, 5s/clip, 3-4x hız artışı",
+  "templateWan22Comfyui": "Wan2.2 (ComfyUI Serverless)",
+  "templateWan22ComfyuiDesc": "RunPod ComfyUI Serverless üzerinden Wan2.2 modeli ile yüksek kaliteli 1080p, 5s video sentezler.",
   "templateF5tts": "F5-TTS (Zero-Shot Klonlama)",
   "templateF5ttsDesc": "Zero-shot ses klonlama, 2x real-time, çok dilli",
   "templatePyramidflow": "Pyramid-Flow (Kademeli Video)",

@@ -75,6 +75,17 @@ def load_lora_weights(pipe, weights_path):
     pipe.fuse_lora(lora_scale=1.0)
     return pipe
 
+# ── Background training runner ─────────────────────────
+def _run_training(job_id, image_paths, character_name, output_dir, callback_url, use_cogvideo):
+    """Run training in background thread so /progress is responsive."""
+    import traceback
+    try:
+        _train_internal(job_id, image_paths, character_name, output_dir, callback_url, use_cogvideo)
+    except Exception as e:
+        training_progress[job_id] = {"percent": -1, "status": f"Error: {str(e)}"}
+        print(f"[LoRA] Training failed: {e}")
+        traceback.print_exc()
+
 # ── Health ──────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
@@ -146,7 +157,146 @@ def load_pretrained():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# ── Train (CogVideoX) ───────────────────────────────────
+# ── Training logic (extracted for background use) ──────
+def _train_internal(job_id, image_paths, character_name, output_dir, callback_url, use_cogvideo):
+    vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
+    _send_progress(job_id, 5, f"Training '{character_name}' (VRAM: {vram_gb:.1f}GB)", callback_url)
+
+    if use_cogvideo:
+        from diffusers import CogVideoXPipeline
+        from peft import LoraConfig, get_peft_model
+        import torch.nn.functional as F
+
+        pipe = CogVideoXPipeline.from_pretrained(
+            "THUDM/CogVideoX-5b",
+            torch_dtype=torch.bfloat16,
+        )
+        if vram_gb < 20.0:
+            pipe.enable_model_cpu_offload()
+        else:
+            pipe.to("cuda")
+        pipe.enable_gradient_checkpointing()
+
+        unet = pipe.transformer
+        lora_config = LoraConfig(
+            r=32, lora_alpha=64, target_modules=["to_q", "to_k", "to_v", "to_out"],
+            lora_dropout=0.1, bias="none",
+        )
+        unet = get_peft_model(unet, lora_config)
+        unet.train()
+        optimizer = torch.optim.AdamW(unet.parameters(), lr=1e-4)
+
+        train_steps = min(200, max(100, len(image_paths) * 50))
+        step = 0
+        for epoch in range(max(1, train_steps // max(1, len(image_paths)))):
+            for img_path in image_paths:
+                if step >= train_steps:
+                    break
+                if not os.path.exists(img_path):
+                    continue
+                try:
+                    pil_image = Image.open(img_path).convert("RGB")
+                    pixel_values = pipe.image_processor.preprocess(pil_image)
+                    pixel_values = pixel_values.to(device=unet.device, dtype=torch.bfloat16)
+                    latents = pipe.vae.encode(pixel_values).latent_dist.sample()
+                    latents = latents * pipe.vae.config.scaling_factor
+                    noise = torch.randn_like(latents)
+                    timesteps = torch.randint(0, pipe.scheduler.config.num_train_timesteps,
+                        (latents.shape[0],), device=latents.device).long()
+                    noisy_latents = pipe.scheduler.add_noise(latents, noise, timesteps)
+                    text_inputs = pipe.tokenizer(
+                        [f"portrait of {character_name}, high quality, detailed face"],
+                        return_tensors="pt", padding=True, truncation=True
+                    ).input_ids.to(unet.device)
+                    encoder_hidden_states = pipe.text_encoder(text_inputs)[0]
+                    noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                    loss = F.mse_loss(noise_pred, noise)
+                    loss.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    step += 1
+                    if step % 25 == 0:
+                        pct = 5 + int(85 * step / train_steps)
+                        _send_progress(job_id, pct, f"Training step {step}/{train_steps}", callback_url)
+                except Exception:
+                    continue
+        weights_path = os.path.join(output_dir, character_name)
+        os.makedirs(weights_path, exist_ok=True)
+        unet.save_pretrained(weights_path)
+        pipe.to("cpu")
+        del pipe
+    else:
+        from peft import LoraConfig, get_peft_model
+        import torch.nn.functional as F
+
+        pipe = get_pipeline()
+        pipe.enable_gradient_checkpointing()
+        vae = pipe.vae
+        text_encoder = pipe.text_encoder_2 if hasattr(pipe, "text_encoder_2") else pipe.text_encoder
+        unet = pipe.unet
+        lora_config = LoraConfig(
+            r=32, lora_alpha=64, target_modules=["to_q", "to_k", "to_v", "to_out"],
+            lora_dropout=0.1, bias="none",
+        )
+        unet = get_peft_model(unet, lora_config)
+        unet.train()
+        if vram_gb < 20.0:
+            vae.to("cpu")
+            text_encoder.to("cpu")
+        optimizer = torch.optim.AdamW(unet.parameters(), lr=1e-4)
+        train_steps = min(200, max(100, len(image_paths) * 50))
+        step = 0
+        for epoch in range(max(1, train_steps // max(1, len(image_paths)))):
+            for img_path in image_paths:
+                if step >= train_steps:
+                    break
+                if not os.path.exists(img_path):
+                    continue
+                try:
+                    pil_image = Image.open(img_path).convert("RGB")
+                    pil_image = pil_image.resize((1024, 1024))
+                    pixel_values = pipe.image_processor.preprocess(pil_image)
+                    pixel_values = pixel_values.to(device=unet.device, dtype=torch.float16)
+                    latents = vae.encode(pixel_values).latent_dist.sample()
+                    latents = latents * vae.config.scaling_factor
+                    noise = torch.randn_like(latents)
+                    timesteps = torch.randint(0, pipe.scheduler.config.num_train_timesteps,
+                        (latents.shape[0],), device=latents.device).long()
+                    noisy_latents = pipe.scheduler.add_noise(latents, noise, timesteps)
+                    encoder_hidden_states = text_encoder(
+                        pipe.tokenizer([f"portrait of {character_name}, high quality, detailed face"],
+                            return_tensors="pt", padding=True, truncation=True
+                        ).input_ids.to(unet.device)
+                    )[0]
+                    noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                    loss = F.mse_loss(noise_pred, noise)
+                    loss.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    step += 1
+                    if step % 25 == 0:
+                        pct = 5 + int(85 * step / train_steps)
+                        _send_progress(job_id, pct, f"Training step {step}/{train_steps}", callback_url)
+                except Exception:
+                    continue
+        weights_path = os.path.join(output_dir, character_name)
+        os.makedirs(weights_path, exist_ok=True)
+        unet.save_pretrained(weights_path)
+
+    drive_path = None
+    if os.path.isdir("/content/drive/MyDrive"):
+        drive_path = os.path.join(DRIVE_LORA_DIR, character_name)
+        os.makedirs(drive_path, exist_ok=True)
+        import shutil
+        for f in os.listdir(weights_path):
+            shutil.copy2(os.path.join(weights_path, f), os.path.join(drive_path, f))
+        print(f"[LoRA] Copied weights to Drive: {drive_path}")
+
+    flush_memory()
+    _send_progress(job_id, 100, "Training complete", callback_url)
+    return {"status": "success", "weights_path": weights_path, "drive_path": drive_path, "steps_completed": step}
+
+# ── Train (background thread) ──────────────────────────
 @app.route("/train", methods=["POST"])
 def train():
     data = request.get_json(force=True) or {}
@@ -160,179 +310,14 @@ def train():
     if not image_paths:
         return jsonify({"status": "error", "message": "image_paths required"}), 400
 
-    try:
-        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
-        _send_progress(job_id, 5, f"Training '{character_name}' (VRAM: {vram_gb:.1f}GB)", callback_url)
-
-        if use_cogvideo:
-            from diffusers import CogVideoXPipeline
-            from peft import LoraConfig, get_peft_model
-            import torch.nn.functional as F
-
-            pipe = CogVideoXPipeline.from_pretrained(
-                "THUDM/CogVideoX-5b",
-                torch_dtype=torch.bfloat16,
-            )
-            if vram_gb < 20.0:
-                pipe.enable_model_cpu_offload()
-            else:
-                pipe.to("cuda")
-            pipe.enable_gradient_checkpointing()
-
-            unet = pipe.transformer
-            lora_config = LoraConfig(
-                r=32,
-                lora_alpha=64,
-                target_modules=["to_q", "to_k", "to_v", "to_out"],
-                lora_dropout=0.1,
-                bias="none",
-            )
-            unet = get_peft_model(unet, lora_config)
-            unet.train()
-
-            try:
-                optimizer = torch.optim.AdamW(unet.parameters(), lr=1e-4)
-            except Exception:
-                optimizer = torch.optim.AdamW(unet.parameters(), lr=1e-4)
-
-            train_steps = min(200, max(100, len(image_paths) * 50))
-            step = 0
-            for epoch in range(max(1, train_steps // max(1, len(image_paths)))):
-                for img_path in image_paths:
-                    if step >= train_steps:
-                        break
-                    if not os.path.exists(img_path):
-                        continue
-                    try:
-                        pil_image = Image.open(img_path).convert("RGB")
-                        pixel_values = pipe.image_processor.preprocess(pil_image)
-                        pixel_values = pixel_values.to(device=unet.device, dtype=torch.bfloat16)
-
-                        latents = pipe.vae.encode(pixel_values).latent_dist.sample()
-                        latents = latents * pipe.vae.config.scaling_factor
-
-                        noise = torch.randn_like(latents)
-                        timesteps = torch.randint(0, pipe.scheduler.config.num_train_timesteps,
-                            (latents.shape[0],), device=latents.device).long()
-                        noisy_latents = pipe.scheduler.add_noise(latents, noise, timesteps)
-
-                        text_inputs = pipe.tokenizer(
-                            [f"portrait of {character_name}, high quality, detailed face"],
-                            return_tensors="pt", padding=True, truncation=True
-                        ).input_ids.to(unet.device)
-                        encoder_hidden_states = pipe.text_encoder(text_inputs)[0]
-
-                        noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
-                        loss = F.mse_loss(noise_pred, noise)
-                        loss.backward()
-                        optimizer.step()
-                        optimizer.zero_grad()
-                        step += 1
-
-                        if step % 25 == 0:
-                            pct = 5 + int(85 * step / train_steps)
-                            _send_progress(job_id, pct, f"Training step {step}/{train_steps}", callback_url)
-                    except Exception:
-                        continue
-
-            weights_path = os.path.join(output_dir, character_name)
-            os.makedirs(weights_path, exist_ok=True)
-            unet.save_pretrained(weights_path)
-            pipe.to("cpu")
-            del pipe
-        else:
-            from peft import LoraConfig, get_peft_model
-            import torch.nn.functional as F
-
-            pipe = get_pipeline()
-            pipe.enable_gradient_checkpointing()
-            vae = pipe.vae
-            text_encoder = pipe.text_encoder_2 if hasattr(pipe, "text_encoder_2") else pipe.text_encoder
-            unet = pipe.unet
-
-            lora_config = LoraConfig(
-                r=32, lora_alpha=64, target_modules=["to_q", "to_k", "to_v", "to_out"],
-                lora_dropout=0.1, bias="none",
-            )
-            unet = get_peft_model(unet, lora_config)
-            unet.train()
-
-            if vram_gb < 20.0:
-                vae.to("cpu")
-                text_encoder.to("cpu")
-
-            try:
-                optimizer = torch.optim.AdamW(unet.parameters(), lr=1e-4)
-            except Exception:
-                optimizer = torch.optim.AdamW(unet.parameters(), lr=1e-4)
-
-            train_steps = min(200, max(100, len(image_paths) * 50))
-            step = 0
-            for epoch in range(max(1, train_steps // max(1, len(image_paths)))):
-                for img_path in image_paths:
-                    if step >= train_steps:
-                        break
-                    if not os.path.exists(img_path):
-                        continue
-                    try:
-                        pil_image = Image.open(img_path).convert("RGB")
-                        pil_image = pil_image.resize((1024, 1024))
-                        pixel_values = pipe.image_processor.preprocess(pil_image)
-                        pixel_values = pixel_values.to(device=unet.device, dtype=torch.float16)
-
-                        latents = vae.encode(pixel_values).latent_dist.sample()
-                        latents = latents * vae.config.scaling_factor
-                        noise = torch.randn_like(latents)
-                        timesteps = torch.randint(0, pipe.scheduler.config.num_train_timesteps,
-                            (latents.shape[0],), device=latents.device).long()
-                        noisy_latents = pipe.scheduler.add_noise(latents, noise, timesteps)
-
-                        encoder_hidden_states = text_encoder(
-                            pipe.tokenizer([f"portrait of {character_name}, high quality, detailed face"],
-                                return_tensors="pt", padding=True, truncation=True
-                            ).input_ids.to(unet.device)
-                        )[0]
-
-                        noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
-                        loss = F.mse_loss(noise_pred, noise)
-                        loss.backward()
-                        optimizer.step()
-                        optimizer.zero_grad()
-                        step += 1
-
-                        if step % 25 == 0:
-                            pct = 5 + int(85 * step / train_steps)
-                            _send_progress(job_id, pct, f"Training step {step}/{train_steps}", callback_url)
-                    except Exception:
-                        continue
-
-            weights_path = os.path.join(output_dir, character_name)
-            os.makedirs(weights_path, exist_ok=True)
-            unet.save_pretrained(weights_path)
-
-        # Save to Drive if mounted
-        drive_path = None
-        if os.path.isdir("/content/drive/MyDrive"):
-            drive_path = os.path.join(DRIVE_LORA_DIR, character_name)
-            os.makedirs(drive_path, exist_ok=True)
-            import shutil
-            for f in os.listdir(weights_path):
-                shutil.copy2(os.path.join(weights_path, f), os.path.join(drive_path, f))
-            print(f"[LoRA] Copied weights to Drive: {drive_path}")
-
-        flush_memory()
-        _send_progress(job_id, 100, "Training complete", callback_url)
-        return jsonify({
-            "status": "success",
-            "weights_path": weights_path,
-            "drive_path": drive_path,
-            "steps_completed": step
-        }), 200
-
-    except Exception as e:
-        flush_memory()
-        _send_progress(job_id, -1, f"Error: {str(e)}", callback_url)
-        return jsonify({"status": "error", "message": str(e)}), 500
+    _send_progress(job_id, 1, "Queued", callback_url)
+    thread = threading.Thread(
+        target=_run_training,
+        args=(job_id, image_paths, character_name, output_dir, callback_url, use_cogvideo),
+        daemon=True,
+    )
+    thread.start()
+    return jsonify({"status": "accepted", "message": "Training started in background", "job_id": job_id}), 202
 
 # ── Infer ───────────────────────────────────────────────
 @app.route("/infer", methods=["POST"])
@@ -385,4 +370,4 @@ def get_progress(job_id):
     return jsonify(prog), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, threaded=True)

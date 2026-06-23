@@ -40,11 +40,24 @@ export function registerWebhookRoutes(app: Application): void {
       }
 
       if (status === 'COMPLETED' && output) {
-        const videoUrl =
+        let videoUrl =
           output.video_url ||
           (output.b2_urls && output.b2_urls['/content/current_scene.mp4']) ||
           (output.b2_urls && output.b2_urls['/content/raw_video.mp4']) ||
           '';
+
+        if (!videoUrl && output.images) {
+          for (const key of Object.keys(output.images)) {
+            const files = output.images[key];
+            if (Array.isArray(files) && files.length > 0) {
+              const file = files[0];
+              if (typeof file === 'string' && (file.endsWith('.mp4') || file.endsWith('.mkv') || file.endsWith('.avi') || file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))) {
+                videoUrl = file;
+                break;
+              }
+            }
+          }
+        }
         const speechUrl =
           output.speech_url ||
           (output.b2_urls && output.b2_urls['/content/speech.wav']) ||

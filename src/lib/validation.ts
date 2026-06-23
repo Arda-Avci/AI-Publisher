@@ -103,7 +103,7 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
 
   // production_template: optional, string, enum: cinematic, dynamic, simple
   if (body.production_template) {
-    const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar', 'animatediff', 'svd', 'wan25', 'cogvideox5b', 'cogvideox2b'];
+    const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar', 'animatediff', 'svd', 'wan25', 'cogvideox5b', 'cogvideox2b', 'wan2.2-comfyui'];
     if (
       typeof body.production_template !== 'string' ||
       !validTemplates.includes(body.production_template)
