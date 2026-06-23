@@ -50,5 +50,5 @@ RUN pip install --no-cache-dir --upgrade pip && \
     boto3 \
     torchaudio \
     torchvision \
-    xformers \
+    "xformers==0.0.32.post2" \
     opencv-python-headless
