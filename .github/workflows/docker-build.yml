@@ -12,6 +12,10 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   ORG: arda-avci
@@ -74,7 +78,6 @@ jobs:
           - whisper
           - xtts
           - zeroscope
-
     steps:
       - uses: actions/checkout@v4
 
@@ -114,7 +117,6 @@ jobs:
             dockerfile: geneface/Dockerfile
           - model: video-retalking
             dockerfile: video-retalking/Dockerfile
-
     steps:
       - uses: actions/checkout@v4
 
