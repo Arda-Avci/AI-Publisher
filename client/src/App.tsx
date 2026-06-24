@@ -30,6 +30,7 @@ import { ClipperPanel } from './components/ClipperPanel.js';
 import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
 import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
+import { ScriptWriterPanel } from './components/ScriptWriterPanel.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
 import { StudioToolsPanel } from './components/StudioToolsPanel.js';
 import { TrendPanel } from './components/TrendPanel.js';
@@ -132,6 +133,7 @@ export default function App() {
     'Talk-Show',
     'AI Asistan',
     'Karakterler',
+    'Senaryo',
     'Canvas',
     'API Keys',
     'Batch',
@@ -877,6 +879,9 @@ export default function App() {
                       }}
                     />
                   )}
+                  {mainTab === 'Senaryo' && (
+                    <ScriptWriterPanel language={language} />
+                  )}
                   {mainTab === 'Canvas' && (
                     <CanvasPanel
                       language={language}
@@ -937,13 +942,15 @@ export default function App() {
                             ? 'canvas'
                             : mainTab === 'Batch'
                               ? 'batch'
-                              : mainTab === 'Karakterler'
-                                ? 'characters'
-                                : mainTab === 'API Keys'
-                                  ? 'api_keys'
-                                  : mainTab === 'Trendler'
-                                    ? 'studio'
-                                    : 'studio'
+                  : mainTab === 'Karakterler'
+                    ? 'characters'
+                    : mainTab === 'Senaryo'
+                      ? 'studio'
+                      : mainTab === 'API Keys'
+                        ? 'api_keys'
+                        : mainTab === 'Trendler'
+                          ? 'studio'
+                          : 'studio'
                     }
                     language={language}
                   />

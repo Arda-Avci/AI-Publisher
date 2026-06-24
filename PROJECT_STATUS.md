@@ -1,34 +1,43 @@
 # AI_Publisher Proje Durumu
 
-## 📝 Aktif: CrewAI Writer Pipeline (24 Haziran 2026)
+## 🔴 Aktif — Script Writer Full Workflow (24 Haziran 2026)
 
-**Hedef:** Kullanıcının verdiği kısa konuyu 4-agent CrewAI pipeline ile endüstri standardı film senaryosuna dönüştürmek.
+**Hedef:** `Script_writer_is_akisi.txt`'deki profesyonel kısa film üretim iş akışının tamamını implement etmek.
+6 paralel backend workstream (A-F), ardından frontend (G-I).
 
-**Kütüphane:** `@crewai-ts/core` v0.2.3 (TypeScript-native, 0 bağımlılık) + `@crewai-ts/gemini`
+**Temel:** CrewAI 4-agent pipeline tamamlandı, üzerine katmanlar ekleniyor.
 
-### Faz Planı
+### Workstream İlerleme
 
-| Faz | Ne | Paralel |
-|-----|---|---------|
-| **A** | Altyapı: npm install + `crewaiService.ts` base wrapper | — |
-| **B** | 4 Agent: Outliner, Scene Architect, Scriptwriter, Reviewer | 🔄 Evet (4 dosya bağımsız) |
-| **C** | Pipeline: Crew tanımı + revision loop (max 3 iterasyon) | Faz B sonrası |
-| **D** | API: REST endpoint + DB + frontend + karakter referans | Faz C ile paralel |
+| # | Workstream | Durum |
+|---|-----------|-------|
+| **A** | Writer Tier System (3 tier config + pipeline entegrasyon) | 🔄 Aktif |
+| **B** | Document Parser (PDF/Word → text) | ⏳ |
+| **C** | Art Style Presets (10+ preset: Nolan, Blade Runner...) | ⏳ |
+| **D** | Beatsheet Duration (scene süre tahmini) | ⏳ |
+| **E** | Env/Prop Library (environment + prop CRUD) | ⏳ |
+| **F** | Storyboard Service (RunPod FLUX → 2K image per scene) | ⏳ |
+| **G** | Frontend (tier selector, style cards, doc upload, storyboard grid) | ⏳ |
+| **H** | Timeline + Post-Prod (drag-reorder, transition, 4K upscale, alt scene) | ⏳ |
+| **I** | Export Pipeline (concat/zip, FilmFreeway metadata) | ⏳ |
 
-### Agent Tanımları
+Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 
-| Agent | Rol | writer_plan.md Promptu |
-|-------|-----|----------------------|
-| Outliner | Konsept + karakter geliştirici | LOGLINE, TEMA, KARAKTERLER, SYNOPSIS (3-perde) |
-| Scene Architect | Sahne planlayıcı | Beat sheet: SAHNE [No], mekan, zaman, amaç, karakterler, olay |
-| Scriptwriter | Usta senarist | Endüstri formatı, sahne sahne döngü, diyalog + aksiyon |
-| Reviewer | Kalite kontrol / Script Doctor | Show-don't-tell, diyalog doğallığı, ONAYLANDI / REVİZE GEREKLİ |
+## ☁️ RunPod LTX-Video Entegrasyon Testi (24 Haziran 2026)
 
-### Çıktı Formatı
-- Markdown senaryo dosyası (okunabilir)
-- JSON yapı (sahneler, karakterler, diyaloglar ayrı ayrı — video pipeline'a beslenmek için)
+- **Aktif Durum:** LTX-Video modeli için RunPod Serverless worker'ında (`w572siswids6pk` endpoint'i) entegrasyon testleri gerçekleştirilmektedir.
+- **Karşılaşılan Sorunlar:**
+  1. `torch.nn` içerisinde `RMSNorm` kütüphanesinin bulunmaması (PyTorch 2.2.1 sürümünden kaynaklı).
+  2. `scaled_dot_product_attention()` içinde `enable_gqa` parametresinin eksik olması (PyTorch 2.5 öncesi sürümlerden kaynaklı).
+  3. PyTorch'u 2.4/2.5 sürümlerine güncellemenin worker başlangıç süresini 8+ dakikaya uzatarak zaman aşımına (timeout) sebep olması.
+- **Çözüm Yaklaşımı:** PyTorch kurulumunu tamamen devredışı bırakarak cold-start süresini minimuma indirdik. Bunun yerine:
+  1. Hem GQA (`scaled_dot_product_attention`) hem de eksik olan `torch.nn.RMSNorm` sınıfını Python üzerinden dinamik olarak **monkey-patch** ettik.
+  2. Sistem paket yöneticisi `apt-get` yerine, Python standart kütüphaneleriyle **ffbinaries** üzerinden GPL destekli static `ffmpeg` ikili dosyasını (20MB) doğrudan `/tmp/ffmpeg` yoluna saniyeler içinde indiren dinamik kod enjekte ettik.
+- **Test:** `node scripts/test_wan_serverless.js w572siswids6pk` scriptiyle test süreci yürütülmektedir.
+
 
 ## 🧠 ModelRouter + Karakter Sistemi (24 Haziran 2026)
+
 
 - **ModelRouter (`src/services/modelRouter.ts`):** Cost-priority routing — 23 model capability matrix, pool.sort en ucuz önce, 1.7x user cost (KDV %20 + iyzico), fallback chain, `routeForUser()` low/medium/high, `detectCinematicIntent()`, `checkAffordability()` → 27 test
 - **Character Profile (`src/types/characterProfile.ts`):** Zod schema — fiziksel ölçüler (boy/kilo/göğüs/bel/kalça/omuz/ayakkabı), görünüm (yaş/cinsiyet/ten/saç/göz/vücut tipi), stil (realistic/anime/3d-render/cinematic/oil-painting/watercolor), visualStyle
@@ -36,7 +45,7 @@
 - **Character Library (`src/services/characterLibraryService.ts`):** `character_profiles_v2` DB tablosu (user_id + name compound UNIQUE), user-scoped CRUD, REST routes `/api/v1/character-library/*`
 - **Full Body Generation (`src/services/characterGenerationService.ts`):** `buildCharacterReferencePrompt()` → SD/Flux prompt (portrait/fullbody/three-quarter view, fiziksel ölçüler + stil), `textToCharacterReference()` → SD/Flux generation, `photoToCharacterProfile()` → Gemini 2.5 Flash vision AI analiz (yaş/cinsiyet/vücut/outfit confidence score), `analysisToProfile()` dönüşümü, `buildCharacterReferenceText()` → @KarakterAdı referans → 12 test
 - **REST routes:** `/api/v1/character-gen/full-body`, `/api/v1/character-gen/from-photo`, `/api/v1/character-gen/prompt-preview`
-- **Toplam test:** 83 (modelRouter 27 + characterProfile 20 + characterPresets 24 + characterGeneration 12)
+- **Toplam test:** 113 (modelRouter 27 + characterProfile 20 + characterPresets 24 + characterGeneration 12 + CrewAI 13 + diğer 17)
 - **Tip güvenliği:** `tsc --noEmit` 0 hata
 
 ## 🔍 AI Framework Durumu (24 Haziran 2026)
@@ -46,7 +55,7 @@
 | LangChain (`@langchain/core`) | ✅ Kurulu | `agentGraph.ts`, `multiAgentPipeline.ts`, `queue-graph.ts` |
 | LangGraph (`@langchain/langgraph`) | ✅ Kurulu | `StateGraph` 8-node, `PostgresSaver` checkpointer |
 | RAG (`src/services/ragScriptGenerator.ts`) | ✅ Mevcut | Gemini ile Zod şemalı RAG script, `/api/v1/vimax/rag-script` |
-| CrewAI (`@crewai-ts/core`) | 🔄 **Kuruluyor** | `@crewai-ts/core` v0.2.3 + `@crewai-ts/gemini` ile entegrasyon başladı. 4-agent writer pipeline: Outliner → Scene Architect → Scriptwriter → Reviewer |
+| CrewAI (`@crewai-ts/core`) | ✅ **Kuruldu** | `@crewai-ts/core` v0.2.3 + `@crewai-ts/gemini` ile 4-agent writer pipeline tam. Outliner → Scene Architect → Scriptwriter → Reviewer + revision loop + REST API + Frontend ScriptWriterPanel |
 | AutoGen (npm) | ❌ **Yok** | Projede hiç referans bulunmaz |
 
 ## 🧹 Notebook Temizliği + GHCR Push Entegrasyonu (23 Haziran 2026)
@@ -681,3 +690,15 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 - **Yeniden kullanım:** `agents`, `directorPlan`, `producerOptimize`, `qualityInspect`, `generateMarketingCopy` bağımsız export edildi
 - **Bağımlılık:** Mevcut `multiAgentPipeline.ts`'nin 5 LangGraph node'u üzerine inşa edildi
 - **Tip güvenliği:** `tsc --noEmit` 0 hata
+
+## 🔧 v7.2 Patch — Wan Modeli Düzeltmeleri & Diğer Model Kontrolleri (24 Haziran 2026)
+
+- **Dockerfile Conda Path Güncellemeleri:** `wan`, `wan25`, `ltx`, `cogvideox`, `svd` ve `zeroscope` modellerinin `Dockerfile` dosyalarındaki `pip` ve `python` komutları, PyTorch conda ortamıyla tam uyumluluk ve `ImportError` almamak için `/opt/conda/bin/pip` ve `/opt/conda/bin/python` olarak güncellendi.
+- **Yazım Hataları ve Sınıf Onarımları:** 
+  - Wan 2.1 `app.py` içerisindeki hatalı `WanAnimatePipeline` sınıfı, Hugging Face Diffusers standardı olan `WanPipeline` ile değiştirildi.
+  - CogVideoX `app.py` dosyasındaki fallback kollarında yer alan hatalı `WanAnimatePipeline` sınıfları da proaktif olarak `WanPipeline` şeklinde düzeltildi.
+- **Alternatif Model Doğrulamaları:** `ltx`, `cogvideox`, `svd` ve `zeroscope` modellerinin `app.py` kod yapıları, Flask endpoint'leri (`/generate`), import sınıfları ve pipeline fonksiyonları detaylıca incelendi; Wan modelindeki gibi sınıf adı yazım hatasının bu modellerde bulunmadığı doğrulandı.
+- **RunPod Serverless Entegrasyon Notları:**
+  - `RUNPOD_SERVERLESS=true` ve `RUNPOD_ENDPOINT_PATH=/generate` çevre değişkenlerinin RunPod üzerinde tanımlanması gerektiği belgelendi.
+  - `test_wan_serverless.js` test betiği, custom Flask API imaj yapısına uygun düz formatta (`prompt` ve `b2_credentials` içeren) çalışacak şekilde kararlı hale getirildi.
+

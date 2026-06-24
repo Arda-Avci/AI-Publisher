@@ -1,30 +1,29 @@
 # Yapılacaklar Listesi (TODO)
 
-## 🟢 Aktif Oturum — CrewAI Senaryo Yazma Pipeline
+## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)
 
-### Faz A — Altyapı (🔄 Şu an)
-- [ ] `npm install @crewai-ts/core @crewai-ts/gemini`
-- [ ] `src/services/crewai/crewaiService.ts` — base wrapper, LLM provider binding
+Kaynak: `Script_writer_is_akisi.txt`
 
-### Faz B — Agent Tanımları (Faz A sonrası paralel)
-- [ ] `src/services/crewai/outlinerAgent.ts` — Konsept + karakter geliştirici
-- [ ] `src/services/crewai/sceneArchitectAgent.ts` — Sahne planlayıcı
-- [ ] `src/services/crewai/scriptwriterAgent.ts` — Diyalog/senaryo yazarı
-- [ ] `src/services/crewai/reviewerAgent.ts` — Kalite kontrol/editör
+### Paralel Workstream'ler (A-F backend, birbirini bloklamaz)
 
-### Faz C — Pipeline Orchestration
-- [ ] `src/services/crewai/writerCrew.ts` — CrewAI Crew tanımı + revision loop
-- [ ] `src/types/script.ts` — ScriptOutputSchema (Zod)
+| # | Workstream | Dosyalar | Durum |
+|---|-----------|----------|-------|
+| A | Writer Tier System | `services/crewai/writerTiers.ts`, `writerCrew.ts` güncelle, `routes/crewAI.ts` güncelle, `test_writerTiers.spec.ts` | 🔄 **Aktif** |
+| B | Document Parser | `services/documentParser.ts`, `routes/documentUpload.ts`, `test_documentParser.spec.ts` | ⏳ |
+| C | Art Style Presets | `types/artStyle.ts`, `services/artStylePresets.ts`, `outlinerAgent.ts` güncelle, `test_artStylePresets.spec.ts` | ⏳ |
+| D | Beatsheet Duration | `types/script.ts` güncelle, `sceneArchitectAgent.ts` güncelle | ⏳ |
+| E | Env/Prop Library | `db.ts` güncelle, `types/envProp.ts`, `services/envPropService.ts`, `routes/envProps.ts`, `test_envProp.spec.ts` | ⏳ |
+| F | Storyboard Service | `services/storyboardGenerator.ts`, `routes/storyboard.ts`, `test_storyboard.spec.ts` | ⏳ |
 
-### Faz D — API + Frontend
-- [x] `POST /api/v1/crew/write-script` endpoint
-- [x] `GET /api/v1/crew/scripts` endpoint
-- [x] `GET /api/v1/crew/scripts/:id` endpoint
-- [x] DB migration: scripts tablosuna topic, full_script, revision_count kolonlari
-- [ ] Frontend script form + preview (dashboard.ts)
-- [ ] @KarakterAdı referans entegrasyonu
+### A-F sonrası frontend + devam
 
-## 🟢 Tamamlanan Major Fazlar
+| # | Workstream | Bağımlılık | Durum |
+|---|-----------|-----------|-------|
+| G | Frontend (tier selector, style cards, doc upload, env/prop mgr, storyboard grid) | A-F API | ⏳ |
+| H | Timeline + Post-Prod (drag-reorder, transition, 4K upscale, alt scene) | G | ⏳ |
+| I | Export Pipeline (concat/zip, FilmFreeway metadata) | H | ⏳ |
+
+## ✅ Tamamlanan Major Fazlar
 
 | Faz | Tarih |
 |-----|-------|
@@ -46,87 +45,55 @@
 | iyzico Ödeme (Faz 4 backend + client JS + modal) | 23 Haz |
 | ModelRouter (cost-priority routing, 27 test) | 24 Haz |
 | Character Library + Full Body + Photo-to-Character (56 test) | 24 Haz |
-| **CrewAI Writer Pipeline** (Faz A-D) | 🔄 Aktif |
+| **CrewAI Writer Pipeline** (Faz A-D) | 24 Haz |
 
-## 🟢 Mevcut AI Framework Durumu
+## AI Framework Durumu
 
 | Framework | Durum | Açıklama |
 |-----------|-------|----------|
-| LangChain (`@langchain/core`) | ✅ Kurulu | `queue-graph.ts`, `agentGraph.ts`, `multiAgentPipeline.ts` |
-| LangGraph (`@langchain/langgraph`) | ✅ Kurulu | `StateGraph` 8-node, `PostgresSaver` checkpointer |
-| RAG (`ragScriptGenerator.ts`) | ✅ Mevcut | Gemini ile Zod şemalı RAG script üretimi, `/api/v1/vimax/rag-script` |
-| CrewAI (npm) | ❌ Kurulu Değil | `contentTeam.ts` **CrewAI-style custom implementasyon** — kendi agent rolleri, direkt Gemini çağrısı, CrewAI kütüphanesi kullanılmaz |
-| AutoGen (npm) | ❌ Yok | Projede hiç referans yok |
+| LangChain (`@langchain/core`) | ✅ | `queue-graph.ts`, `agentGraph.ts`, `multiAgentPipeline.ts` |
+| LangGraph (`@langchain/langgraph`) | ✅ | `StateGraph` 8-node, `PostgresSaver` checkpointer |
+| RAG (`ragScriptGenerator.ts`) | ✅ | Gemini + Zod şemalı RAG script, `/api/v1/vimax/rag-script` |
+| CrewAI (`@crewai-ts/core`) | ✅ | 4-agent writer pipeline tam. Writer Tiers ekleniyor |
+| AutoGen | ❌ | Projede yok |
 
-## 🟢 Test Dosyaları (24 adet)
+## Test Dosyaları
 
 | Dosya | Test Sayısı |
 |-------|------------|
+| test_crewai.spec.ts | 13 |
+| test_writerTiers.spec.ts | ⏳ |
+| test_documentParser.spec.ts | ⏳ |
+| test_artStylePresets.spec.ts | ⏳ |
+| test_envProp.spec.ts | ⏳ |
+| test_storyboard.spec.ts | ⏳ |
 | test_characterGeneration.spec.ts | 12 |
 | test_characterPresets.spec.ts | 24 |
 | test_characterProfile.spec.ts | 20 |
 | test_modelRouter.spec.ts | 27 |
-| test_ai_helper.spec.ts | ? |
-| test_beats.spec.ts | ? |
-| test_characters.spec.ts | ? |
-| test_clipper_services.spec.ts | ? |
-| test_clipper_v2.spec.ts | ? |
-| test_clipper_whisper.spec.ts | ? |
-| test_color_grade.spec.ts | ? |
-| test_core.spec.ts | ? |
-| test_credits.spec.ts | ? |
-| test_differentiation.spec.ts | ? |
-| test_dubbing_viral.spec.ts | ? |
-| test_e2e_features.spec.ts | ? |
-| test_editor_services.spec.ts | ? |
-| test_integration.spec.ts | ? |
-| test_production_readiness.spec.ts | ? |
-| test_prompt_services.spec.ts | ? |
-| test_scripts.spec.ts | ? |
-| test_split_screen.spec.ts | ? |
-| test_subtitle_render.spec.ts | ? |
-| test_videoutils.spec.ts | ? |
-| test_viral_hook.spec.ts | ? |
-
-### 📦 Docker İyileştirme Grubu (✅ Tamamlandı)
-- [x] Base image `-runtime` → `-devel` (nvcc için)
-- [x] `shared/utils.py` — upload_to_backblaze + vram_cleanup + download_from_b2
-- [x] Tüm app.py'lerde `/content/` → `/workspace/outputs/` çıktı yolu fix
-- [x] Tüm modellere `/preload` endpoint eklendi (cold start önleme)
-- [x] `runpod_handler.py` — utils import + dynamic path mapping
-- [x] Google Drive referansları temizlendi (lora-trainer)
-- [x] GitHub Actions workflow — base → matrix child build → GHCR push
-- [x] Tüm Dockerfile'lara `shared/` COPY eklendi
+| _diğer 15 test dosyası_ | — |
 
 ---
 
-## 🔴 Aktif Bekleyen İşler
+## Bekleyen İşler
 
-### ☁️ RunPod Altyapı + E2E Test (Faz 2)
+### ☁️ RunPod Altyapı + E2E Test
 - [ ] Network Volume'e model ağırlıklarını yükle (`/workspace/models`)
-- [ ] Port yönlendirme testi (5001-5012), lazy-loading / VRAM kontrol
+- [ ] Port yönlendirme testi (5001-5012)
 - [ ] RunPod callback (webhook) POST → diske yazma doğrulama
+- [ ] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
 
-### 💳 iyzico Ödeme — Canlı Test (Faz 4)
-- [ ] Sandbox merchant panel → API key + abonelik plan kodları oluştur
+### 💳 iyzico Ödeme — Canlı Test
+- [ ] Sandbox merchant panel → API key + abonelik plan kodları
 - [ ] Sanal kartla manuel checkout/webhook testi
 - [ ] Kredi blokajı (render başında bloke, bitince düş, iptalde refund)
-- [ ] Kredi sıfırlanınca form kilitleme
 
-### 🧪 E2E Playwright Test (Faz 7D)
-- [ ] 7 E2E test: login, yeni proje, galeri, başlık düzenleme, publish, progress bar, responsive
-
-### 📦 GHCR Docker Imajları → RunPod Bağlantısı
-- [ ] 7 model (SadTalker, DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow) Dockerfile'ları hazır, ContainerManager entegrasyonu + endpoint oluşturma kaldı
-
-### 🗑️ Teknik Borç (✅ Tamamlandı)
-- [x] `src/lib/tracing.ts` — OTLP span export → `telemetry.ts`'ye entegre edildi (`initTracing()` çağrısı)
-- [x] Eski test fixture'ları temizlik — 7 orphan dosya silindi (s.mp4, p.mp4, video_exists.mp4, test_video_exists.mp4, 2×whisper_audio, input_exists_hook_preview.mp4)
-- [x] Kırık/eskimiş testler onarımı — silent pass anti-pattern `it.runIf()` ile değiştirildi
+### 📦 GHCR → RunPod
+- [ ] 7 model (SadTalker, DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow) ContainerManager entegrasyonu + endpoint
 
 ---
 
-## 📝 Notlar
-- Docker Hub kullanılmaz. Tüm imajlar → GHCR (`ghcr.io/Arda-Avci/`) → GitHub Actions ile build → RunPod'da çalışır
-- Üretilen medya dosyaları Backblaze B2'de saklanır
-- Test için: `npx vitest run`, typecheck: `npm run check:types`, lint: `npm run check:lint`
+## Notlar
+- Docker Hub kullanılmaz. Tüm imajlar → GHCR (`ghcr.io/Arda-Avci/`)
+- Medya dosyaları Backblaze B2'de saklanır
+- Test: `npx vitest run`, typecheck: `npm run check:types`, lint: `npm run check:lint`
