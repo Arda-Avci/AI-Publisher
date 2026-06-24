@@ -56,6 +56,20 @@ export const CharacterProfileSchema = z.object({
   measurements: MeasurementSchema.optional(),
   appearance: AppearanceSchema.optional(),
   style: StyleSchema.optional(),
+  /** Görsel stil: realistic, anime, 3d render, illüstrasyon, yağlı boya, vb. */
+  visualStyle: z.enum([
+    'realistic',
+    'photorealistic',
+    'cinematic',
+    'anime',
+    '3d-render',
+    'cartoon',
+    'oil-painting',
+    'watercolor',
+    'illustration',
+    'comic-book',
+    'pixel-art',
+  ]).optional(),
   freeformDescription: z.string().max(2000).optional(),          // serbest metin, diger alanlara sigmayan
 });
 
@@ -63,6 +77,14 @@ export type CharacterProfile = z.infer<typeof CharacterProfileSchema>;
 export type CharacterMeasurements = z.infer<typeof MeasurementSchema>;
 export type CharacterAppearance = z.infer<typeof AppearanceSchema>;
 export type CharacterStyle = z.infer<typeof StyleSchema>;
+
+/** Profile alanlari opsiyonel - eksikse default degerlerle doldurulur */
+export function fillProfileDefaults(profile: CharacterProfile): CharacterProfile {
+  return {
+    ...profile,
+    visualStyle: profile.visualStyle ?? 'realistic',
+  };
+}
 
 /** Multi-character wrapper: job basina 1+ karakter olabilir. */
 export const CharacterProfilesSchema = z.array(CharacterProfileSchema).max(10);

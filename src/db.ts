@@ -363,6 +363,33 @@ export async function initDatabase() {
     );
   `);
 
+  // Karakter profili detaylari (boy, kg, olculer, gorunum, stil, outfit)
+  // Eski tabloyu drop edip yeniden olusturuyoruz (UNIQUE constraint'i (user_id, name) compound yapmak icin).
+  // Not: mevcut satirlar yedeklenir.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS character_profiles_v2 (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(80) NOT NULL,
+      role VARCHAR(60),
+      age INTEGER,
+      gender VARCHAR(20) DEFAULT 'unspecified',
+      body_type VARCHAR(30),
+      outfit_preset VARCHAR(50),
+      visual_style VARCHAR(30) DEFAULT 'realistic',
+      measurements JSONB,
+      appearance JSONB,
+      style JSONB,
+      freeform_description TEXT,
+      reference_image_base64 TEXT,
+      is_favorite INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, name)
+    );
+  `);
+  await db.exec("ALTER TABLE character_profiles_v2 ADD COLUMN IF NOT EXISTS visual_style VARCHAR(30) DEFAULT 'realistic';");
+
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS background_music_path TEXT;');
   await db.exec('ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;');
   await db.exec('ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS runpod_job_id TEXT;');

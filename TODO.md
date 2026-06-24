@@ -9,6 +9,11 @@
 - [x] Affordability check + downgrade onerileri
 - [x] Karakter Profil sistemi (boy, kg, gogus/bel/kalca, gorunum, stil) - 20 test
 - [x] character_profiles DB kolonu + JSON validation
+- [x] Karakter Library (user-owned, her user kendi karakteri) - 24 test
+- [x] Yas + cinsiyet bazli default fiziksel degerler + outfit preset
+- [x] visualStyle field (realistic/anime/3d-render/cinematic)
+- [x] Full body SD/Flux generation + photo-to-character (Gemini Vision AI)
+- [x] @KarakterAdi referansli zenginlestirilmis prompt text
 
 ## 🟢 Tamamlanan Major Fazlar
 
