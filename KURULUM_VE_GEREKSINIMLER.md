@@ -68,6 +68,16 @@ Ağır yapay zeka modelleri (HunyuanVideo, Wan2.1, LTX-Video, coqui-tts XTTS-v2,
 npm install
 ```
 
+### CrewAI AI Agent Altyapısı (v0.8.0+):
+Senaryo yazma pipeline'ı `@crewai-ts/core` üzerinde çalışır:
+```bash
+npm install @crewai-ts/core @crewai-ts/gemini
+```
+- **4-agent pipeline:** Outliner → Scene Architect → Scriptwriter → Reviewer
+- **LLM:** Mevcut Gemini client (`src/lib/ai-provider.ts`) fonksiyon olarak CrewAI'ya bağlanır
+- **Process:** `Process.sequential` ile sıralı çalışma, Scriptwriter ↔ Reviewer arası revision loop (max 3 iterasyon)
+- **Çıktı:** Markdown senaryo + JSON yapı (video pipeline'a beslenmek için)
+
 ### Google Colab Python Kurulumu (Otonom):
 Colab hücresi çalıştırıldığında `colab_setup.py` aşağıdaki kütüphaneleri otomatik olarak kurar:
 *   `diffusers`, `transformers`, `torch` (stabil v2.5.1).

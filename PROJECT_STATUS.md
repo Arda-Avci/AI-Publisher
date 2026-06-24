@@ -1,5 +1,33 @@
 # AI_Publisher Proje Durumu
 
+## 📝 Aktif: CrewAI Writer Pipeline (24 Haziran 2026)
+
+**Hedef:** Kullanıcının verdiği kısa konuyu 4-agent CrewAI pipeline ile endüstri standardı film senaryosuna dönüştürmek.
+
+**Kütüphane:** `@crewai-ts/core` v0.2.3 (TypeScript-native, 0 bağımlılık) + `@crewai-ts/gemini`
+
+### Faz Planı
+
+| Faz | Ne | Paralel |
+|-----|---|---------|
+| **A** | Altyapı: npm install + `crewaiService.ts` base wrapper | — |
+| **B** | 4 Agent: Outliner, Scene Architect, Scriptwriter, Reviewer | 🔄 Evet (4 dosya bağımsız) |
+| **C** | Pipeline: Crew tanımı + revision loop (max 3 iterasyon) | Faz B sonrası |
+| **D** | API: REST endpoint + DB + frontend + karakter referans | Faz C ile paralel |
+
+### Agent Tanımları
+
+| Agent | Rol | writer_plan.md Promptu |
+|-------|-----|----------------------|
+| Outliner | Konsept + karakter geliştirici | LOGLINE, TEMA, KARAKTERLER, SYNOPSIS (3-perde) |
+| Scene Architect | Sahne planlayıcı | Beat sheet: SAHNE [No], mekan, zaman, amaç, karakterler, olay |
+| Scriptwriter | Usta senarist | Endüstri formatı, sahne sahne döngü, diyalog + aksiyon |
+| Reviewer | Kalite kontrol / Script Doctor | Show-don't-tell, diyalog doğallığı, ONAYLANDI / REVİZE GEREKLİ |
+
+### Çıktı Formatı
+- Markdown senaryo dosyası (okunabilir)
+- JSON yapı (sahneler, karakterler, diyaloglar ayrı ayrı — video pipeline'a beslenmek için)
+
 ## 🧠 ModelRouter + Karakter Sistemi (24 Haziran 2026)
 
 - **ModelRouter (`src/services/modelRouter.ts`):** Cost-priority routing — 23 model capability matrix, pool.sort en ucuz önce, 1.7x user cost (KDV %20 + iyzico), fallback chain, `routeForUser()` low/medium/high, `detectCinematicIntent()`, `checkAffordability()` → 27 test
@@ -18,7 +46,7 @@
 | LangChain (`@langchain/core`) | ✅ Kurulu | `agentGraph.ts`, `multiAgentPipeline.ts`, `queue-graph.ts` |
 | LangGraph (`@langchain/langgraph`) | ✅ Kurulu | `StateGraph` 8-node, `PostgresSaver` checkpointer |
 | RAG (`src/services/ragScriptGenerator.ts`) | ✅ Mevcut | Gemini ile Zod şemalı RAG script, `/api/v1/vimax/rag-script` |
-| CrewAI (npm) | ❌ **Kurulu Değil** | `src/services/contentTeam.ts` kendi **CrewAI-style custom** implementasyonu — kendi agent rolleri, direkt Gemini çağrısı, npm paketi kullanılmaz |
+| CrewAI (`@crewai-ts/core`) | 🔄 **Kuruluyor** | `@crewai-ts/core` v0.2.3 + `@crewai-ts/gemini` ile entegrasyon başladı. 4-agent writer pipeline: Outliner → Scene Architect → Scriptwriter → Reviewer |
 | AutoGen (npm) | ❌ **Yok** | Projede hiç referans bulunmaz |
 
 ## 🧹 Notebook Temizliği + GHCR Push Entegrasyonu (23 Haziran 2026)

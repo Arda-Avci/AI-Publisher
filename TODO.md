@@ -1,19 +1,27 @@
 # Yapılacaklar Listesi (TODO)
 
-## 🟢 Bu Oturum
-- [x] Eski notebook temizligi: colab_setup.ipynb, colab_setup_v2.ipynb, Google_Colab_AI_Publisher.ipynb, colab_test_models.ipynb silindi
-- [x] colab_docker_build.ipynb: GHCR push cell eklendi (Build → Drive tgz → GHCR)
-- [x] GH Actions workflow fix: ORG Arda-Avci, matrix if step-level, base tag duzeltmesi
-- [x] ModelRouter (cost-priority + 1.7x user cost = KDV %20 + iyzico) - 27 test
-- [x] Kullanici dostu kalite secimi (low/medium/high) + cinematic auto-upgrade
-- [x] Affordability check + downgrade onerileri
-- [x] Karakter Profil sistemi (boy, kg, gogus/bel/kalca, gorunum, stil) - 20 test
-- [x] character_profiles DB kolonu + JSON validation
-- [x] Karakter Library (user-owned, her user kendi karakteri) - 24 test
-- [x] Yas + cinsiyet bazli default fiziksel degerler + outfit preset
-- [x] visualStyle field (realistic/anime/3d-render/cinematic)
-- [x] Full body SD/Flux generation + photo-to-character (Gemini Vision AI)
-- [x] @KarakterAdi referansli zenginlestirilmis prompt text
+## 🟢 Aktif Oturum — CrewAI Senaryo Yazma Pipeline
+
+### Faz A — Altyapı (🔄 Şu an)
+- [ ] `npm install @crewai-ts/core @crewai-ts/gemini`
+- [ ] `src/services/crewai/crewaiService.ts` — base wrapper, LLM provider binding
+
+### Faz B — Agent Tanımları (Faz A sonrası paralel)
+- [ ] `src/services/crewai/outlinerAgent.ts` — Konsept + karakter geliştirici
+- [ ] `src/services/crewai/sceneArchitectAgent.ts` — Sahne planlayıcı
+- [ ] `src/services/crewai/scriptwriterAgent.ts` — Diyalog/senaryo yazarı
+- [ ] `src/services/crewai/reviewerAgent.ts` — Kalite kontrol/editör
+
+### Faz C — Pipeline Orchestration
+- [ ] `src/services/crewai/writerCrew.ts` — CrewAI Crew tanımı + revision loop
+- [ ] `src/types/script.ts` — ScriptOutputSchema (Zod)
+
+### Faz D — API + Frontend
+- [ ] `POST /api/v1/crew/write-script` endpoint
+- [ ] `GET /api/v1/crew/scripts` endpoint
+- [ ] DB `scripts` tablosu migration
+- [ ] Frontend script form + preview
+- [ ] @KarakterAdı referans entegrasyonu
 
 ## 🟢 Tamamlanan Major Fazlar
 
@@ -37,6 +45,7 @@
 | iyzico Ödeme (Faz 4 backend + client JS + modal) | 23 Haz |
 | ModelRouter (cost-priority routing, 27 test) | 24 Haz |
 | Character Library + Full Body + Photo-to-Character (56 test) | 24 Haz |
+| **CrewAI Writer Pipeline** (Faz A-D) | 🔄 Aktif |
 
 ## 🟢 Mevcut AI Framework Durumu
 
