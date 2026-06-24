@@ -248,6 +248,7 @@ for i in "${!MODELS[@]}"; do
   # Copy shared files to model directory for context access during build
   cp -f runpod_handler.py "$MODEL/"
   cp -f download_weights.sh "$MODEL/"
+  if [ -d "shared" ]; then cp -rf shared "$MODEL/"; fi
   
   $KANIKO_BIN --context="$MODEL/" \
          --dockerfile="$MODEL/Dockerfile" \
@@ -269,6 +270,8 @@ for i in "${!MODELS[@]}"; do
   
   if [ $BUILD_STATUS -eq 0 ]; then
     echo "👉 Kaniko insa tamamlandi."
+    # HF cache temizle — disk alanı kazan
+    rm -rf /workspace/hf_cache/* 2>/dev/null || true
   fi
   
   if [ $BUILD_STATUS -ne 0 ]; then
