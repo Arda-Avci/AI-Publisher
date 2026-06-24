@@ -775,4 +775,30 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_trend_engagement ON trend_analysis(engagement DESC);
     CREATE INDEX IF NOT EXISTS idx_trend_scraped ON trend_analysis(scraped_at);
   `);
+
+  // CrewAI writer migration: scripts tablosuna ek kolonlar
+  await db.exec(`
+    DO $$ BEGIN
+      ALTER TABLE scripts ADD COLUMN topic TEXT;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+  await db.exec(`
+    DO $$ BEGIN
+      ALTER TABLE scripts ADD COLUMN full_script JSONB DEFAULT '{}';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+  await db.exec(`
+    DO $$ BEGIN
+      ALTER TABLE scripts ADD COLUMN revision_count INTEGER DEFAULT 0;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$;
+  `);
+  await db.exec(`
+    DO $$ BEGIN
+      ALTER TABLE scripts ALTER COLUMN show_id DROP NOT NULL;
+    EXCEPTION WHEN undefined_column THEN NULL;
+    END $$;
+  `);
 }

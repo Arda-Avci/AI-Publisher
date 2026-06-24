@@ -74,6 +74,7 @@ import { schedulePublishRouter } from './routes/schedulePublish.js';
 import { registerWebhookRoutes } from './routes/webhook.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import trendRouter from './routes/trends.js';
+import { crewRouter } from './routes/crewAI.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -223,6 +224,7 @@ app.use('/api/v1/lora', loraRouter);
 app.use('/api/v1/upload', uploadRouter);
 app.use('/api/v1/schedule-publish', schedulePublishRouter);
 app.use('/api/v1/trends', trendRouter);
+app.use('/api/v1/crew', crewRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

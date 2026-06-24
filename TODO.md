@@ -17,10 +17,11 @@
 - [ ] `src/types/script.ts` — ScriptOutputSchema (Zod)
 
 ### Faz D — API + Frontend
-- [ ] `POST /api/v1/crew/write-script` endpoint
-- [ ] `GET /api/v1/crew/scripts` endpoint
-- [ ] DB `scripts` tablosu migration
-- [ ] Frontend script form + preview
+- [x] `POST /api/v1/crew/write-script` endpoint
+- [x] `GET /api/v1/crew/scripts` endpoint
+- [x] `GET /api/v1/crew/scripts/:id` endpoint
+- [x] DB migration: scripts tablosuna topic, full_script, revision_count kolonlari
+- [ ] Frontend script form + preview (dashboard.ts)
 - [ ] @KarakterAdı referans entegrasyonu
 
 ## 🟢 Tamamlanan Major Fazlar
