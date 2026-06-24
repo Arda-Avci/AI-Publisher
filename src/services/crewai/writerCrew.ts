@@ -5,15 +5,18 @@ import { createScriptwriterAgent } from './scriptwriterAgent.js';
 import { createReviewerAgent } from './reviewerAgent.js';
 import { crewaiLogger } from './crewaiService.js';
 import type { ScriptOutput } from '../../types/script.js';
+import { getTierConfig, buildPromptWithTier } from './writerTiers.js';
+import type { WriterTier } from './writerTiers.js';
 
 const log = crewaiLogger('WriterCrew');
-const MAX_REVISIONS = 3;
 
-export async function runWriterPipeline(topic: string): Promise<ScriptOutput> {
-  log.info(`Writer pipeline basliyor. Konu: "${topic.slice(0, 80)}..."`);
+export async function runWriterPipeline(topic: string, writerTier?: WriterTier): Promise<ScriptOutput> {
+  const tier = getTierConfig(writerTier);
+  const MAX_REVISIONS = tier.maxRevisions;
+  log.info(`Writer pipeline basliyor. Tier: ${tier.tier} Konu: "${topic.slice(0, 80)}..."`);
 
   // 1. Outliner — konsept cikar
-  const concept = await runOutliner(topic);
+  const concept = await runOutliner(topic, tier.tier);
 
   // 2. Scene Architect — sahne plani
   const scenePlan = await runSceneArchitect(concept);
@@ -28,11 +31,11 @@ export async function runWriterPipeline(topic: string): Promise<ScriptOutput> {
 
     // Scriptwriter: tum sahneleri yaz
     const scriptInput = `KONSEPT:\n${concept}\n\nSAHNE PLANI:\n${scenePlan}\n\nREVIZYON GECMISI (${i}. deneme):\n${fullScript || 'Ilk yazim'}`;
-    fullScript = await runScriptwriter(scriptInput);
+    fullScript = await runScriptwriter(scriptInput, tier.tier);
 
     // Reviewer: kontrol et
     const reviewInput = `KONSEPT:\n${concept}\n\nSAHNE PLANI:\n${scenePlan}\n\nYAZILAN SENARYO:\n${fullScript}`;
-    const review = await runReviewer(reviewInput);
+    const review = await runReviewer(reviewInput, tier.tier);
 
     if (review.includes('ONAYLANDI')) {
       log.info(`Revizyon ${i + 1}: ONAYLANDI`);
@@ -66,10 +69,9 @@ export async function runWriterPipeline(topic: string): Promise<ScriptOutput> {
   };
 }
 
-async function runOutliner(topic: string): Promise<string> {
+async function runOutliner(topic: string, tier?: import('./writerTiers.js').WriterTier): Promise<string> {
   const agent = createOutlinerAgent();
-  const task = new Task({
-    description: `Kullanici Fikri: "${topic}"
+  const baseDesc = `Kullanici Fikri: "${topic}"
 
     Ciktini su bolumlerden olustur ve KATI JSON formatinda (veya isaretli yapiyla) don:
 
@@ -77,7 +79,10 @@ async function runOutliner(topic: string): Promise<string> {
     TEMA: Filmin ana temasi ve alt metni.
     TUR: Film turu (Gerilim, Komedi, Dram, Bilim-Kurgu vb.)
     KARAKTERLER: Ana karakter(ler) ve antagonist. Her biri icin: isim, yas, motivasyon, en buyuk zaaf, kisa aciklama.
-    HIKAYE OZETI (SYNOPSIS): 3 perdelik yapiya uygun (Baslangic, Gelisme/Kirilma noktalari, Sonuc) detayli ozet.`,
+    HIKAYE OZETI (SYNOPSIS): 3 perdelik yapiya uygun (Baslangic, Gelisme/Kirilma noktalari, Sonuc) detayli ozet.`;
+  const description = tier ? buildPromptWithTier(baseDesc, tier, 'outliner') : baseDesc;
+  const task = new Task({
+    description,
     expectedOutput:
       'Yapilandirilmis konsept dokumani: LOGLINE, TEMA, TUR, KARAKTERLER, SYNOPSIS.',
     agent,
@@ -118,16 +123,18 @@ async function runSceneArchitect(concept: string): Promise<string> {
   return result.raw;
 }
 
-async function runScriptwriter(input: string): Promise<string> {
+async function runScriptwriter(input: string, tier?: import('./writerTiers.js').WriterTier): Promise<string> {
   const agent = createScriptwriterAgent();
-  const task = new Task({
-    description: `Filmin Genel Konsepti ve Sahne Plani:\n${input}
+  const baseDesc = `Filmin Genel Konsepti ve Sahne Plani:\n${input}
 
     KURALLAR:
     - FORMAT: [IC/DIS] - [MEKAN] - [ZAMAN] basligi ile basla.
     - Aksiyonlari genis zaman kipiyle, gorsellestirilebilir sekilde yaz.
     - DIJALOGLAR: Dogal konusma. Karakter adini BUYUK HARF ve ortali yaz.
-    - Parantez ici eylemleri kisa tut.`,
+    - Parantez ici eylemleri kisa tut.`;
+  const description = tier ? buildPromptWithTier(baseDesc, tier, 'scriptwriter') : baseDesc;
+  const task = new Task({
+    description,
     expectedOutput:
       'Endustri standardinda senaryo metni. Tum sahneler yazilmis olmali.',
     agent,
@@ -143,10 +150,9 @@ async function runScriptwriter(input: string): Promise<string> {
   return result.raw;
 }
 
-async function runReviewer(input: string): Promise<string> {
+async function runReviewer(input: string, tier?: import('./writerTiers.js').WriterTier): Promise<string> {
   const agent = createReviewerAgent();
-  const task = new Task({
-    description: `Yazilan Senaryo:\n${input}
+  const baseDesc = `Yazilan Senaryo:\n${input}
 
     Su kriterlere gore degerlendir:
     1. "Show, Don't Tell" kuralina uyulmus mu?
@@ -154,7 +160,10 @@ async function runReviewer(input: string): Promise<string> {
     3. Sahnenin amacina ulasilmis mi?
 
     Eger sahne mukemmelse sadece "ONAYLANDI" don.
-    Sorun varsa "REVIZE GEREKLI:" yaz ve madde madde liste halinde duzeltilmesi gereken yerleri sirala.`,
+    Sorun varsa "REVIZE GEREKLI:" yaz ve madde madde liste halinde duzeltilmesi gereken yerleri sirala.`;
+  const description = tier ? buildPromptWithTier(baseDesc, tier, 'reviewer') : baseDesc;
+  const task = new Task({
+    description,
     expectedOutput: 'ONAYLANDI veya REVIZE GEREKLI: [madde listesi]',
     agent,
   });

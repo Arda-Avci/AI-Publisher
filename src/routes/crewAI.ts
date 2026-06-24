@@ -5,6 +5,8 @@ import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 import { runWriterPipeline } from '../services/crewai/index.js';
 import { ScriptOutputSchema } from '../types/script.js';
+import { WriterTierSchema } from '../services/crewai/writerTiers.js';
+import type { WriterTier } from '../services/crewai/writerTiers.js';
 
 export const crewRouter = Router();
 
@@ -15,11 +17,22 @@ crewRouter.post(
   heavyLimiter,
   async (req: Request, res: Response) => {
     const userId = req.session.userId as number;
-    const { topic, characterProfiles } = req.body as { topic?: string; characterProfiles?: string };
+    const { topic, characterProfiles, writerTier } = req.body as { topic?: string; characterProfiles?: string; writerTier?: string };
 
     if (!topic || typeof topic !== 'string' || topic.trim().length < 3) {
       res.status(400).json({ error: 'topic zorunlu (en az 3 karakter).' });
       return;
+    }
+
+    // Validate writerTier
+    let validatedTier: WriterTier | undefined;
+    if (writerTier) {
+      const parsed = WriterTierSchema.safeParse(writerTier);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Gecersiz writerTier. Secenekler: professional, creative, assistant' });
+        return;
+      }
+      validatedTier = parsed.data;
     }
 
     try {
@@ -29,8 +42,8 @@ crewRouter.post(
         enrichedTopic += `\n\nKarakter Profilleri:\n${characterProfiles}`;
       }
 
-      Logger.info(`[Crew] Writer pipeline baslatiliyor: user=${userId} topic="${enrichedTopic.slice(0, 100)}..."`);
-      const result = await runWriterPipeline(enrichedTopic);
+      Logger.info(`[Crew] Writer pipeline baslatiliyor: user=${userId} tier=${validatedTier || 'professional'} topic="${enrichedTopic.slice(0, 100)}..."`);
+      const result = await runWriterPipeline(enrichedTopic, validatedTier);
 
       // Zod ile dogrula
       const validated = ScriptOutputSchema.parse(result);
