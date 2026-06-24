@@ -10,6 +10,9 @@
 #   HF_TOKEN (optional) - for private/gated repos
 #   HF_HOME  - cache directory (default /workspace/models/hf_cache)
 #   HF_REVISION - branch/tag (default main)
+#
+# IMPORTANT: If weights already exist in HF_HOME (pre-downloaded via pre_download.sh),
+# snapshot_download will use the local cache and NOT re-download.
 
 set -e
 

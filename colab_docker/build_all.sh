@@ -270,9 +270,15 @@ for i in "${!MODELS[@]}"; do
   
   if [ $BUILD_STATUS -eq 0 ]; then
     echo "👉 Kaniko insa tamamlandi."
-    # HF cache temizle — disk alanı kazan
-    rm -rf /workspace/hf_cache/* 2>/dev/null || true
   fi
+
+  # Temizlik: HF cache + Kaniko artifact'lari
+  echo "[CLEANUP] Disk alani temizleniyor..."
+  rm -rf /workspace/hf_cache/* 2>/dev/null || true
+  rm -rf /workspace/kaniko-* 2>/dev/null || true   # Kaniko snapshot dizinleri
+  rm -f "$MODEL.tar" 2>/dev/null || true
+  rm -f /tmp/kaniko-* 2>/dev/null || true
+  sync  # Disk cache'ini flush et
   
   if [ $BUILD_STATUS -ne 0 ]; then
     echo "❌ Hata: $MODEL imaji insa edilemedi!"
