@@ -14,7 +14,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  ORG: Arda-Avci
+  ORG: arda-avci
   CONTEXT: colab_docker
 
 jobs:
