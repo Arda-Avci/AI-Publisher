@@ -33,8 +33,50 @@
 | v7.1 Patch (Deep Think fix, Pino logger, MCP) | 23 Haz |
 | Veo 3.1 I2V (Batch 5) | 23 Haz |
 | LangGraph Queue Upgrade (8-node StateGraph, Postgres Checkpointer) | 23 Haz |
-| Multi-agent Content Team (CrewAI Flows) | 23 Haz |
+| Multi-agent Content Team (CrewAI-style custom) | 23 Haz |
 | iyzico Ödeme (Faz 4 backend + client JS + modal) | 23 Haz |
+| ModelRouter (cost-priority routing, 27 test) | 24 Haz |
+| Character Library + Full Body + Photo-to-Character (56 test) | 24 Haz |
+
+## 🟢 Mevcut AI Framework Durumu
+
+| Framework | Durum | Açıklama |
+|-----------|-------|----------|
+| LangChain (`@langchain/core`) | ✅ Kurulu | `queue-graph.ts`, `agentGraph.ts`, `multiAgentPipeline.ts` |
+| LangGraph (`@langchain/langgraph`) | ✅ Kurulu | `StateGraph` 8-node, `PostgresSaver` checkpointer |
+| RAG (`ragScriptGenerator.ts`) | ✅ Mevcut | Gemini ile Zod şemalı RAG script üretimi, `/api/v1/vimax/rag-script` |
+| CrewAI (npm) | ❌ Kurulu Değil | `contentTeam.ts` **CrewAI-style custom implementasyon** — kendi agent rolleri, direkt Gemini çağrısı, CrewAI kütüphanesi kullanılmaz |
+| AutoGen (npm) | ❌ Yok | Projede hiç referans yok |
+
+## 🟢 Test Dosyaları (24 adet)
+
+| Dosya | Test Sayısı |
+|-------|------------|
+| test_characterGeneration.spec.ts | 12 |
+| test_characterPresets.spec.ts | 24 |
+| test_characterProfile.spec.ts | 20 |
+| test_modelRouter.spec.ts | 27 |
+| test_ai_helper.spec.ts | ? |
+| test_beats.spec.ts | ? |
+| test_characters.spec.ts | ? |
+| test_clipper_services.spec.ts | ? |
+| test_clipper_v2.spec.ts | ? |
+| test_clipper_whisper.spec.ts | ? |
+| test_color_grade.spec.ts | ? |
+| test_core.spec.ts | ? |
+| test_credits.spec.ts | ? |
+| test_differentiation.spec.ts | ? |
+| test_dubbing_viral.spec.ts | ? |
+| test_e2e_features.spec.ts | ? |
+| test_editor_services.spec.ts | ? |
+| test_integration.spec.ts | ? |
+| test_production_readiness.spec.ts | ? |
+| test_prompt_services.spec.ts | ? |
+| test_scripts.spec.ts | ? |
+| test_split_screen.spec.ts | ? |
+| test_subtitle_render.spec.ts | ? |
+| test_videoutils.spec.ts | ? |
+| test_viral_hook.spec.ts | ? |
 
 ### 📦 Docker İyileştirme Grubu (✅ Tamamlandı)
 - [x] Base image `-runtime` → `-devel` (nvcc için)

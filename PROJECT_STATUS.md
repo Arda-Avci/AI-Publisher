@@ -1,5 +1,26 @@
 # AI_Publisher Proje Durumu
 
+## 🧠 ModelRouter + Karakter Sistemi (24 Haziran 2026)
+
+- **ModelRouter (`src/services/modelRouter.ts`):** Cost-priority routing — 23 model capability matrix, pool.sort en ucuz önce, 1.7x user cost (KDV %20 + iyzico), fallback chain, `routeForUser()` low/medium/high, `detectCinematicIntent()`, `checkAffordability()` → 27 test
+- **Character Profile (`src/types/characterProfile.ts`):** Zod schema — fiziksel ölçüler (boy/kilo/göğüs/bel/kalça/omuz/ayakkabı), görünüm (yaş/cinsiyet/ten/saç/göz/vücut tipi), stil (realistic/anime/3d-render/cinematic/oil-painting/watercolor), visualStyle
+- **Character Presets (`src/services/characterPresets.ts`):** 6 age group × 3 gender default fiziksel değerler, 15 outfit preset (kadın/erkek/çocuk/unisex kategorili, yaş filtresi) → 24 test
+- **Character Library (`src/services/characterLibraryService.ts`):** `character_profiles_v2` DB tablosu (user_id + name compound UNIQUE), user-scoped CRUD, REST routes `/api/v1/character-library/*`
+- **Full Body Generation (`src/services/characterGenerationService.ts`):** `buildCharacterReferencePrompt()` → SD/Flux prompt (portrait/fullbody/three-quarter view, fiziksel ölçüler + stil), `textToCharacterReference()` → SD/Flux generation, `photoToCharacterProfile()` → Gemini 2.5 Flash vision AI analiz (yaş/cinsiyet/vücut/outfit confidence score), `analysisToProfile()` dönüşümü, `buildCharacterReferenceText()` → @KarakterAdı referans → 12 test
+- **REST routes:** `/api/v1/character-gen/full-body`, `/api/v1/character-gen/from-photo`, `/api/v1/character-gen/prompt-preview`
+- **Toplam test:** 83 (modelRouter 27 + characterProfile 20 + characterPresets 24 + characterGeneration 12)
+- **Tip güvenliği:** `tsc --noEmit` 0 hata
+
+## 🔍 AI Framework Durumu (24 Haziran 2026)
+
+| Framework | Durum | Detay |
+|-----------|-------|-------|
+| LangChain (`@langchain/core`) | ✅ Kurulu | `agentGraph.ts`, `multiAgentPipeline.ts`, `queue-graph.ts` |
+| LangGraph (`@langchain/langgraph`) | ✅ Kurulu | `StateGraph` 8-node, `PostgresSaver` checkpointer |
+| RAG (`src/services/ragScriptGenerator.ts`) | ✅ Mevcut | Gemini ile Zod şemalı RAG script, `/api/v1/vimax/rag-script` |
+| CrewAI (npm) | ❌ **Kurulu Değil** | `src/services/contentTeam.ts` kendi **CrewAI-style custom** implementasyonu — kendi agent rolleri, direkt Gemini çağrısı, npm paketi kullanılmaz |
+| AutoGen (npm) | ❌ **Yok** | Projede hiç referans bulunmaz |
+
 ## 🧹 Notebook Temizliği + GHCR Push Entegrasyonu (23 Haziran 2026)
 
 - **Eski notebooklar silindi:** `colab_setup.ipynb`, `colab_setup_v2.ipynb`, `Google_Colab_AI_Publisher.ipynb`, `colab_test_models.ipynb` — artık kullanılmıyordu
@@ -148,8 +169,8 @@
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.0 (Faz 1-7 + v7.1 Patch) + Faz 7C |
-| Sürüm | 0.7.1-dev |
+| Faz | v7.2 (ModelRouter + Karakter Sistemi) |
+| Sürüm | 0.7.2-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 
@@ -246,10 +267,12 @@
 - Docker container endpoint: 23 (tümünde /preload + /workspace çıktı yolu)
 - Docker named volume: 1 (lora-weights)
 - Graph node: 5 (Director, Screenwriter, Producer, Quality, Revisor)
-- Content team agent: 5 (Director, Screenwriter, Producer, Marketing, Quality)
+- LangGraph StateGraph node: 8 (directorPlanning→sceneGeneration→coverSynthesis→loraTraining→sceneRender→ffmpegMix→concatFinal→publishSocial)
+- Content team agent: 5 (Director, Screenwriter, Producer, Marketing, Quality) — CrewAI-style custom
 - Frontend component: ~25+
 - Build: `tsc --noEmit` 0 hata, `vite build` ~1.2s
-- Test: 23 integration test (Faz 7C) + 18 prod readiness test passed
+- Test: **83 unit test** (modelRouter 27 + characterProfile 20 + characterPresets 24 + characterGeneration 12) + 23 integration + 18 prod readiness
+- Test dosyası: 24 adet (`.spec.ts`)
 - Colab→Docker: 19 dosya güncellendi
 - Teknik borç: 7 orphan fixture silindi, silent-pass anti-pattern düzeltildi, OTLP telemetry'ye entegre
 - Docker iyileştirme: base→devel, 20 modele /preload, /content/→/workspace/, GH Actions workflow, shared/utils.py
@@ -261,13 +284,19 @@ src/
   services/
     agentGraph.ts              # Generic graph runtime (2A)
     multiAgentPipeline.ts       # 5-node LangGraph pipeline (2A)
-    contentTeam.ts             # CrewAI-style content team (yeni)
+    contentTeam.ts             # CrewAI-style content team (custom)
     editQueue.ts               # Edit queue service (2B)
     storyboardAgent/            # Storyboard agent (2C)
     aiStudio.ts                # AI Studio unified service (4C)
     museTalkService.ts         # MuseTalk talking head (3B)
     nicheProfile.ts            # Niche profile (1B)
     templatePromptService.ts   # 32 template (1A)
+    modelRouter.ts             # Cost-priority model routing (yeni)
+    characterProfileService.ts # Karakter profili CRUD + text format
+    characterPresets.ts        # Yas+cinsiyet default + outfit preset
+    characterLibraryService.ts # User-scoped karakter library DB
+    characterGenerationService.ts # Full body gen + photo-to-char + @ref
+    ragScriptGenerator.ts      # RAG script generation
   routes/
     editQueue.ts               # Edit queue routes (2B)
     storyboard.ts              # Storyboard routes (2C)
@@ -275,10 +304,15 @@ src/
     niche.ts                   # Niche routes (1B)
     museTalk.ts                # MuseTalk routes
     admin.ts                   # Admin system routes
-    payments.ts                # iyzico ödeme rotaları (yeni)
+    payments.ts                # iyzico ödeme rotaları
+    characterLibrary.ts        # /api/v1/character-library CRUD (yeni)
+    characterGeneration.ts     # /api/v1/character-gen (full-body, from-photo, prompt-preview) (yeni)
+    viMax.ts                   # Vimax + RAG script endpoint
+  types/
+    characterProfile.ts        # Zod schema (olculer/gorunum/stil/visualStyle) (yeni)
   queue.ts                     # Dubbing + edit + storyboard integration
-  queue-graph.ts               # 8-node LangGraph StateGraph (yeni)
-  db.ts                        # 16 migration kolonu
+  queue-graph.ts               # 8-node LangGraph StateGraph (Postgres checkpointer)
+  db.ts                        # 16 migration kolonu + character_profiles_v2 tablosu
 server.ts                      # Router kayıtları
 colab_server.py                # Docker Supervisor & Gateway (MuseTalk + AI Studio + STT)
 lib/
@@ -539,18 +573,12 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
 
 | # | Görev | Kategori | Durum |
 |---|-------|----------|-------|
-| 1 | **Test onarımları:** test_clipper_whisper fix, test_viral_hook fix | Test | ✅ |
-| 2 | **Faz 7C:** Entegrasyon Testleri (23 adet) | Test | ✅ |
-| 3 | **Faz 7D:** E2E Playwright (7 adet) | Test | ⏳ |
-| 4 | **Faz 7E:** CI altyapısı + coverage | CI | ✅ |
-| 5 | **Production Readiness:** 18 test | Test | ✅ |
-| 6 | **Colab referans temizliği:** CLAUDE.md, AGENTS.md, skill'ler | Cleanup | ✅ |
-| 7 | **GHCR upload notebook:** colab_docker/colab_ghcr_upload.ipynb | Docker | ✅ |
-| 8 | **Teknik borç:** tracing OTLP entegrasyonu + fixture temizliği + test onarımları | Bakım | ✅ |
-| 9 | **Docker iyileştirme:** base→devel, /preload, /workspace, GH Actions workflow | Docker | ✅ |
-| 10 | **RunPod Network Volume** — model ağırlığı yükleme, port testi, webhook doğrulama | Altyapı | ⏳ |
-| 11 | **iyzico canlı test** — sandbox checkout + abonelik + kredi blokajı | Ödeme | ⏳ |
-| 12 | **GHCR imaj → RunPod** — 7 model ContainerManager entegrasyonu | Docker | ⏳ |
+| 1 | **E2E Playwright test (Faz 7D):** login, yeni proje, galeri, başlık düzenleme, publish, progress bar, responsive | Test | ⏳ |
+| 2 | **RunPod Network Volume** — model ağırlığı yükleme, port testi, webhook doğrulama | Altyapı | ⏳ |
+| 3 | **iyzico canlı test** — sandbox checkout + abonelik + kredi blokajı | Ödeme | ⏳ |
+| 4 | **GHCR imaj → RunPod** — 7 model ContainerManager entegrasyonu | Docker | ⏳ |
+| 5 | **ModelRouter wire** — queue.ts / queue-graph.ts / aiStudio.ts / browserUseService.ts'e entegrasyon | Backend | ⏳ |
+| 6 | **Character route frontend** — dashboard.ts form entegrasyon (profil secimi + full body + photo upload) | Frontend | ⏳ |
 
 ### Batch 3 — OpenTelemetry (v7.2 Minor)
 
