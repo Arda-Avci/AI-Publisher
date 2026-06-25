@@ -1,5 +1,10 @@
 # AI_Publisher Proje Durumu
 
+## 🟡 Docker İmaj Derleme Düzeltmeleri ve Sıralı Build Süreci (25 Haziran 2026)
+
+- **`cogvideox`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/cogvideox:latest`). Devasa model ağırlıklarının build-time indirilmesi iptal edilerek runtime'a çekildi.
+- **`dynamicrafter`**: Build-time weights indirmesi iptal edildi ve `.github/workflows/docker-build.yml` matrix listesine eklendi. Derleme süreci tetikleniyor.
+
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 
 - **Sorun:** GitHub Actions / CI üzerinde `test_split_screen.spec.ts` testleri çalışırken FFmpeg'in inputless ses filtresi (`anullsrc`) `filter_complex` içinde kullanıldığından glibc memory corruption (`corrupted double-linked list`) hatası ile sonlanıyordu.

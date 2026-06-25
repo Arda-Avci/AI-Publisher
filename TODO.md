@@ -1,5 +1,20 @@
 # Yapılacaklar Listesi (TODO)
 
+## 🔴 Aktif — Docker İmajlarının Sıralı Derlenmesi (25 Haz 2026)
+- [x] `cogvideox` Docker build ve push (Hata giderildi, disk prune eklendi)
+- [/] `dynamicrafter` Docker build ve push (Build-time weights iptal edildi, workflow matrix'e eklendi)
+- [ ] `hunyuan` Docker build ve push
+- [ ] `lora-trainer` Docker build ve push
+- [ ] `ltx` Docker build ve push
+- [ ] `mochi` Docker build ve push
+- [ ] `musetalk` Docker build ve push
+- [ ] `pyramid-flow` Docker build ve push
+- [ ] `sadtalker` Docker build ve push
+- [ ] `svd` Docker build ve push
+- [ ] `wan` Docker build ve push
+- [ ] `wan25` Docker build ve push
+- [ ] `wav2lip` Docker build ve push
+
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)
 
 Kaynak: `Script_writer_is_akisi.txt`
@@ -104,10 +119,9 @@ Kaynak: `Script_writer_is_akisi.txt`
 ## Bekleyen İşler
 
 ### ☁️ RunPod Altyapı + E2E Test
-- [ ] Network Volume'e model ağırlıklarını yükle (`/workspace/models`)
 - [ ] Port yönlendirme testi (5001-5012)
 - [ ] RunPod callback (webhook) POST → diske yazma doğrulama
-- [ ] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
+- [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
 
 ### 💳 iyzico Ödeme — Canlı Test
 - [ ] Sandbox merchant panel → API key + abonelik plan kodları
@@ -115,7 +129,7 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [x] Kredi blokajı (render başında bloke, bitince düş, iptalde refund)
 
 ### 📦 GHCR → RunPod
-- [ ] 7 model (SadTalker, DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow) ContainerManager entegrasyonu + endpoint
+- [x] 7 model ContainerManager entegrasyonu + endpoint (SadTalker, DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow)
 
 ---
 
