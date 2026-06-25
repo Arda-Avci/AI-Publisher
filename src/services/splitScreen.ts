@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { runFFmpegWithFallback } from './videoService.js';
+import { runFFmpegWithFallback, getVideoDuration } from './videoService.js';
 import { Logger } from '../lib/logger.js';
 
 export type SplitLayout = '50/50' | '70/30' | '60/40' | '30/70' | '40/60';
@@ -120,7 +120,8 @@ export async function applySplitScreen(
     finalFilterComplex += ';[1:a]anull[aout]';
     maps.push('-map', '[aout]');
   } else {
-    finalFilterComplex += ';anullsrc=channel_layout=stereo:sample_rate=44100[aout]';
+    const duration = await getVideoDuration(primaryVideo);
+    finalFilterComplex += `;anullsrc=channel_layout=stereo:sample_rate=44100,atrim=duration=${duration || 1.0}[aout]`;
     maps.push('-map', '[aout]');
   }
 
