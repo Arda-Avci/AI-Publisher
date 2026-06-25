@@ -53,7 +53,6 @@ export async function applySplitScreen(
   if (!ratios) {
     throw new Error(`Unknown layout: ${layout}`);
   }
-
   const primaryPct = ratios.primaryPct;
   const secondaryPct = ratios.secondaryPct;
 
@@ -69,7 +68,6 @@ export async function applySplitScreen(
     'csv=p=0',
     primaryVideo,
   ];
-
   const { execFile } = await import('child_process');
   const probeResult = await new Promise<string>((resolve, reject) => {
     execFile('ffprobe', probeArgs, { timeout: 10000 }, (err, stdout) => {
@@ -86,18 +84,22 @@ export async function applySplitScreen(
   }
   const width = parseInt(wStr, 10);
   const height = parseInt(hStr, 10);
-
   if (!width || !height) {
     throw new Error(`Could not probe video dimensions: ${primaryVideo}`);
   }
 
   const isVertical = position === 'top' || position === 'bottom';
-  const primarySize = isVertical
-    ? `${width}:${Math.floor((height * primaryPct) / 100)}`
-    : `${Math.floor((width * primaryPct) / 100)}:${height}`;
-  const secondarySize = isVertical
-    ? `${width}:${Math.floor((height * secondaryPct) / 100)}`
-    : `${Math.floor((width * secondaryPct) / 100)}:${height}`;
+  const makeEven = (val: number) => {
+    const floor = Math.floor(val);
+    return floor % 2 === 0 ? floor : floor - 1;
+  };
+  const primaryW = isVertical ? width : makeEven((width * primaryPct) / 100);
+  const primaryH = isVertical ? makeEven((height * primaryPct) / 100) : height;
+  const secondaryW = isVertical ? width : makeEven((width * secondaryPct) / 100);
+  const secondaryH = isVertical ? makeEven((height * secondaryPct) / 100) : height;
+
+  const primarySize = `${primaryW}:${primaryH}`;
+  const secondarySize = `${secondaryW}:${secondaryH}`;
 
   const stackType = isVertical ? 'vstack' : 'hstack';
   const filterComplex = isVertical
@@ -109,7 +111,6 @@ export async function applySplitScreen(
 
   let finalFilterComplex = filterComplex;
   const maps: string[] = ['-map', '[vout]'];
-
   const inputs: string[] = ['-i', primaryVideo, '-i', secondaryVideo];
 
   if (primaryHasAudio && secondaryHasAudio) {
