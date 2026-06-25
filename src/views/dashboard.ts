@@ -1179,6 +1179,18 @@ export function buildDashboardHTML(params: DashboardParams): string {
                   <input type="file" name="material" class="form-input" accept="image/*" style="padding: 0.5rem;">
                 </div>
               </div>
+              <!-- Character Profile Selector -->
+              <div style="margin-top:0.35rem; border-top:1px solid hsla(var(--primary),0.08); padding-top:0.5rem;">
+                <label class="form-label" style="font-size:0.72rem; opacity:0.8;">Karakter Profili (opsiyonel)</label>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                  <select id="characterProfileSelect" class="form-select" style="flex:1;">
+                    <option value="">-- Karakter Seçin --</option>
+                  </select>
+                  <button type="button" id="newCharBtn" class="btn-secondary" style="white-space:nowrap; font-size:0.75rem; padding:0.4rem 0.8rem;">+ Yeni</button>
+                </div>
+                <input type="hidden" name="character_profiles" id="characterProfilesInput" value="">
+                <div id="selectedCharacterDisplay" style="margin-top:0.3rem; display:flex; flex-wrap:wrap; gap:0.3rem;"></div>
+              </div>
               <div class="form-grid-2">
                 <div>
                   <label class="form-label">Arka Plan Müziği (Background Music)</label>
@@ -1353,6 +1365,51 @@ export function buildDashboardHTML(params: DashboardParams): string {
         </div>
       </main>
     </div>
+
+    <!-- Character Creation Modal -->
+    <div id="charModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+      <div class="glass-card" style="max-width:480px; width:90%; max-height:90vh; overflow-y:auto; padding:1.5rem; margin:auto; position:relative; top:50%; transform:translateY(-50%); border:1px solid hsla(var(--primary),0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h3 style="margin:0; font-size:1rem;">Yeni Karakter Oluştur</h3>
+          <button type="button" onclick="closeCharModal()" style="background:transparent; border:none; color:hsl(var(--muted-foreground)); font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div>
+            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.2rem;">Karakter Adı *</label>
+            <input type="text" id="charName" class="form-input" placeholder="örn: Ayşe Yılmaz" style="width:100%;">
+          </div>
+          <div style="display:flex; gap:0.75rem;">
+            <div style="flex:1;">
+              <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.2rem;">Cinsiyet</label>
+              <select id="charGender" class="form-select" style="width:100%;">
+                <option value="female">Kadın</option>
+                <option value="male">Erkek</option>
+                <option value="unspecified">Belirtilmemiş</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.2rem;">Yaş</label>
+              <input type="number" id="charAge" class="form-input" value="30" min="1" max="120" style="width:100%;">
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.75rem;font-weight:600;margin-bottom:0.2rem;">Referans Fotoğraf (opsiyonel)</label>
+            <input type="file" id="charPhoto" class="form-input" accept="image/*" style="padding:0.4rem; width:100%;">
+            <small style="opacity:0.6;font-size:0.6rem;">Yüklenirse AI fotoğrafı analiz edip karakter profilini otomatik doldurur.</small>
+            <div id="charPhotoPreview" style="margin-top:0.3rem; display:none;">
+              <img id="charPhotoImg" style="max-width:120px; border-radius:8px; border:1px solid hsla(var(--primary),0.2);">
+            </div>
+          </div>
+          <div id="charAnalysisResult" style="display:none; padding:0.5rem; background:hsla(var(--primary),0.05); border-radius:0.5rem; font-size:0.7rem;"></div>
+          <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.5rem;">
+            <button type="button" onclick="closeCharModal()" class="btn-secondary" style="font-size:0.75rem; padding:0.4rem 1rem;">İptal</button>
+            <button type="button" id="charSaveBtn" class="btn-publish" style="font-size:0.75rem; padding:0.4rem 1rem;">💾 Kaydet &amp; Seç</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Character Modal -->
+
     ${getDashboardScripts({ t, queueJobs, currentLang, currentTheme, HELP_PAGES_DATA, csrfToken, cspNonce })}
   </body>
   </html>

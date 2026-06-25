@@ -149,6 +149,159 @@ export function getDashboardScripts(params: {
         document.querySelector('form[action="/create-job"]').scrollIntoView({ behavior: 'smooth' });
       }
 
+      // === Character Profile Functions ===
+      let charLibrary = [];
+
+      async function loadCharacterLibrary() {
+        try {
+          const res = await fetch('/api/v1/character-library');
+          const data = await res.json();
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            charLibrary = data.data;
+            const sel = document.getElementById('characterProfileSelect');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">-- Karakter Seçin --</option>';
+            charLibrary.forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = c.id;
+              const label = c.name + (c.role ? ' (' + c.role + ')' : '');
+              opt.textContent = label + (c.is_favorite ? ' ⭐' : '');
+              sel.appendChild(opt);
+            });
+          }
+        } catch (e) {
+          console.error('Karakter yükleme hatası:', e);
+        }
+      }
+
+      function getCharProfileJson(charId) {
+        const c = charLibrary.find(x => x.id === Number(charId));
+        if (!c) return null;
+        return {
+          name: c.name,
+          age: c.age || 30,
+          gender: c.gender || 'unspecified',
+          measurements: c.measurements || {},
+          appearance: c.appearance || {},
+          style: c.style || {},
+          visualStyle: c.visual_style || 'realistic',
+          freeformDescription: c.freeform_description || ''
+        };
+      }
+
+      function updateCharacterDisplay() {
+        const display = document.getElementById('selectedCharacterDisplay');
+        const hidden = document.getElementById('characterProfilesInput');
+        const sel = document.getElementById('characterProfileSelect');
+        if (!display || !hidden || !sel) return;
+        const val = sel.value;
+        if (!val) {
+          display.innerHTML = '';
+          hidden.value = '';
+          return;
+        }
+        const profile = getCharProfileJson(val);
+        if (!profile) { display.innerHTML = ''; hidden.value = ''; return; }
+        hidden.value = JSON.stringify([profile]);
+        const c = charLibrary.find(x => x.id === Number(val));
+        const refImg = c && c.reference_image_base64;
+        display.innerHTML = '<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;background:hsla(var(--primary),0.1);border:1px solid hsla(var(--primary),0.2);border-radius:99px;font-size:0.72rem;">' +
+          (refImg ? '<img src="' + refImg + '" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">' : '🧑') +
+          ' ' + (c ? c.name : profile.name) +
+          (c && c.role ? ' <span style="opacity:0.6;">(' + c.role + ')</span>' : '') +
+          '<button type="button" onclick="removeCharacterSelection()" style="background:transparent;border:none;color:hsl(var(--muted-foreground));cursor:pointer;font-size:0.9rem;line-height:1;padding:0;">&times;</button></span>';
+      }
+
+      function removeCharacterSelection() {
+        const sel = document.getElementById('characterProfileSelect');
+        if (sel) sel.value = '';
+        updateCharacterDisplay();
+      }
+
+      // Character Modal
+      window.openCharModal = function() {
+        document.getElementById('charModal').style.display = 'block';
+      };
+
+      window.closeCharModal = function() {
+        document.getElementById('charModal').style.display = 'none';
+        document.getElementById('charPhotoPreview').style.display = 'none';
+        document.getElementById('charAnalysisResult').style.display = 'none';
+        document.getElementById('charName').value = '';
+        document.getElementById('charGender').value = 'female';
+        document.getElementById('charAge').value = '30';
+        document.getElementById('charPhoto').value = '';
+      };
+
+      // Photo preview + AI analysis
+      document.getElementById('charPhoto').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) { document.getElementById('charPhotoPreview').style.display = 'none'; return; }
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          const img = document.getElementById('charPhotoImg');
+          img.src = ev.target.result;
+          document.getElementById('charPhotoPreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('charSaveBtn').addEventListener('click', async function() {
+        const name = document.getElementById('charName').value.trim();
+        if (!name) { showToast('Karakter adı zorunludur.', 'error'); return; }
+        const gender = document.getElementById('charGender').value;
+        const age = parseInt(document.getElementById('charAge').value) || 30;
+        const photoFile = document.getElementById('charPhoto').files[0];
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('gender', gender);
+        formData.append('age', String(age));
+        if (photoFile) formData.append('reference_image', photoFile);
+
+        try {
+          const btn = document.getElementById('charSaveBtn');
+          btn.disabled = true;
+          btn.textContent = '⏳ Kaydediliyor...';
+
+          const res = await fetch('/api/v1/character-library', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.status === 'success') {
+            showToast('Karakter kaydedildi: ' + name, 'success');
+            closeCharModal();
+            await loadCharacterLibrary();
+            const sel = document.getElementById('characterProfileSelect');
+            if (sel) {
+              sel.value = String(data.data.id);
+              updateCharacterDisplay();
+            }
+          } else {
+            showToast(data.message || 'Kayıt hatası', 'error');
+          }
+        } catch (err) {
+          showToast('Bağlantı hatası', 'error');
+        } finally {
+          const btn = document.getElementById('charSaveBtn');
+          btn.disabled = false;
+          btn.textContent = '💾 Kaydet & Seç';
+        }
+      });
+
+      // New Char button
+      document.getElementById('newCharBtn').addEventListener('click', function() {
+        openCharModal();
+      });
+
+      // Character select change
+      document.getElementById('characterProfileSelect').addEventListener('change', function() {
+        updateCharacterDisplay();
+      });
+
+      // Init character library
+      (function initChar() {
+        loadCharacterLibrary();
+      })();
+
       function openModal(id) {
         document.getElementById('modalBackdrop').style.display = 'block';
         document.getElementById(id).style.display = 'block';
@@ -1395,6 +1548,9 @@ export function getDashboardScripts(params: {
               submitBtn.innerHTML = origText;
             }
           } else {
+            // Remove empty character_profiles from FormData
+            const cp = formData.get('character_profiles');
+            if (!cp || cp === '' || cp === '[]') formData.delete('character_profiles');
             res = await fetch('/create-job', {
               method: 'POST',
               body: formData
