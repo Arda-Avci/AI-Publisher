@@ -110,6 +110,8 @@ export async function applySplitScreen(
   let finalFilterComplex = filterComplex;
   const maps: string[] = ['-map', '[vout]'];
 
+  const inputs: string[] = ['-i', primaryVideo, '-i', secondaryVideo];
+
   if (primaryHasAudio && secondaryHasAudio) {
     finalFilterComplex += ';[0:a][1:a]amix=inputs=2:duration=first[aout]';
     maps.push('-map', '[aout]');
@@ -120,17 +122,16 @@ export async function applySplitScreen(
     finalFilterComplex += ';[1:a]anull[aout]';
     maps.push('-map', '[aout]');
   } else {
-    const duration = await getVideoDuration(primaryVideo);
-    finalFilterComplex += `;anullsrc=channel_layout=stereo:sample_rate=44100,atrim=duration=${duration || 1.0}[aout]`;
+    inputs.push('-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100');
+    finalFilterComplex += ';[2:a]anull[aout]';
     maps.push('-map', '[aout]');
   }
 
   const args = [
     '-y',
-    '-i',
-    primaryVideo,
-    '-i',
-    secondaryVideo,
+    '-threads',
+    '1',
+    ...inputs,
     '-filter_complex',
     finalFilterComplex,
     ...maps,

@@ -102,4 +102,39 @@ describe('SaaS Kredi Sistemi Birim Testleri', () => {
     expect(history[0].amount).toBe(20);
     expect(history[0].description).toBe('İade testi');
   });
+
+  it('holdCredits bakiyeyi düşürmeli ve transaction tipi hold olmalı', async () => {
+    await db.run('UPDATE users SET credits = 100 WHERE id = ?', [testUserId]);
+
+    const success = await CreditService.holdCredits(testUserId, 40, 'Test blokaji');
+    expect(success).toBe(true);
+
+    const info = await CreditService.getUserCredits(testUserId);
+    expect(info.credits).toBe(60);
+
+    const history = await CreditService.getTransactionHistory(testUserId);
+    expect(history[0].transaction_type).toBe('hold');
+    expect(history[0].amount).toBe(-40);
+  });
+
+  it('holdCredits yetersiz bakiyede false donmeli', async () => {
+    await db.run('UPDATE users SET credits = 5 WHERE id = ?', [testUserId]);
+
+    const success = await CreditService.holdCredits(testUserId, 50, 'Yetersiz test');
+    expect(success).toBe(false);
+
+    const info = await CreditService.getUserCredits(testUserId);
+    expect(info.credits).toBe(5);
+  });
+
+  it('confirmHold transaction tipi usage olmali', async () => {
+    await db.run('UPDATE users SET credits = 80 WHERE id = ?', [testUserId]);
+
+    const success = await CreditService.confirmHold(testUserId, 30, 'Test onay');
+    expect(success).toBe(true);
+
+    const history = await CreditService.getTransactionHistory(testUserId);
+    expect(history[0].transaction_type).toBe('usage');
+    expect(history[0].amount).toBe(-30);
+  });
 });

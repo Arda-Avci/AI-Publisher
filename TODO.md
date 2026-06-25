@@ -40,6 +40,8 @@ Kaynak: `Script_writer_is_akisi.txt`
 
 | Faz | Tarih |
 |---|---|
+| Split Screen FFmpeg & Glibc Fix | 25 Haz |
+| Kredi Blokajı Sistemi | 25 Haz |
 | Actions Runner Disk Alanı Optimizasyonu (Free disk space) | 25 Haz |
 | Colab→Docker Migration | 21 Haz |
 | SVD-XT + Sıralı Derleme | 19 Haz |
@@ -110,7 +112,7 @@ Kaynak: `Script_writer_is_akisi.txt`
 ### 💳 iyzico Ödeme — Canlı Test
 - [ ] Sandbox merchant panel → API key + abonelik plan kodları
 - [ ] Sanal kartla manuel checkout/webhook testi
-- [ ] Kredi blokajı (render başında bloke, bitince düş, iptalde refund)
+- [x] Kredi blokajı (render başında bloke, bitince düş, iptalde refund)
 
 ### 📦 GHCR → RunPod
 - [ ] 7 model (SadTalker, DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow) ContainerManager entegrasyonu + endpoint

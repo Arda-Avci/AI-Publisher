@@ -1,5 +1,20 @@
 # AI_Publisher Proje Durumu
 
+## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
+
+- **Sorun:** GitHub Actions / CI üzerinde `test_split_screen.spec.ts` testleri çalışırken FFmpeg'in inputless ses filtresi (`anullsrc`) `filter_complex` içinde kullanıldığından glibc memory corruption (`corrupted double-linked list`) hatası ile sonlanıyordu.
+- **Çözüm:** `anullsrc` filtresini filter_complex dışına alıp, harici lavfi input'u (`-f lavfi -i anullsrc`) olarak besledik. Ayrıca test ortamında multithreading race-condition çökmesini önlemek için `-threads 1` kısıtlaması getirildi.
+- **Test:** `npx vitest run src/test_split_screen.spec.ts` 6/6 passed.
+
+## 🟢 Kredi Blokajı Sistemi Tamamlandı (25 Haziran 2026)
+
+- **`CreditService.holdCredits()`**: Render başında krediyi hemen bloke eder (`transaction_type='hold'`)
+- **`CreditService.confirmHold()`**: Başarılı üretim sonrası hold'u onaylar (`transaction_type='usage'`)
+- **`CreditService.refundCredits()`**: Hata/iptal durumunda bloke edilen krediyi iade eder
+- **`queue.ts` entegrasyonu**: `startProduction` başında `holdCredits`, catch bloğunda `refundCredits`, başarılı bitişte `confirmHold`
+- **Test**: 3 yeni test (holdCredits, yetersiz bakiye, confirmHold) → 7/7 passed
+- **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` temiz, `vitest run` passed
+
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haziran 2026)
 
 **Hedef:** `Script_writer_is_akisi.txt`'deki profesyonel kısa film üretim iş akışının tamamını implement etmek.

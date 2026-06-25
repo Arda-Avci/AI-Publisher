@@ -105,6 +105,57 @@ export class CreditService {
     return { ok: credits >= requiredCredits, balance: credits };
   }
 
+  /** Hold (block) credits at production start. Deducts immediately. */
+  static async holdCredits(
+    userId: number,
+    amount: number,
+    description: string,
+  ): Promise<boolean> {
+    try {
+      const { credits } = await this.getUserCredits(userId);
+      if (credits < amount) {
+        Logger.warn(`[CREDIT] Yetersiz bakiye hold icin: userId=${userId}, gerekli=${amount}, mevcut=${credits}`);
+        return false;
+      }
+      const newCredits = credits - amount;
+      await db.run('UPDATE users SET credits = ? WHERE id = ?', [newCredits, userId]);
+      await db.run(
+        `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
+         VALUES (?, ?, 'hold', ?)`,
+        [userId, -amount, description],
+      );
+      Logger.info(
+        `[CREDIT] Kredi bloke edildi: userId=${userId}, bloke=${amount}, kalan=${newCredits}`,
+      );
+      return true;
+    } catch (err) {
+      Logger.error('holdCredits error:', err);
+      return false;
+    }
+  }
+
+  /** Confirm held credits after successful production (hold → usage). */
+  static async confirmHold(
+    userId: number,
+    amount: number,
+    description: string,
+  ): Promise<boolean> {
+    try {
+      await db.run(
+        `INSERT INTO credit_transactions (user_id, amount, transaction_type, description)
+         VALUES (?, ?, 'usage', ?)`,
+        [userId, -amount, description],
+      );
+      Logger.info(
+        `[CREDIT] Hold onaylandi (usage): userId=${userId}, tutar=${amount}`,
+      );
+      return true;
+    } catch (err) {
+      Logger.error('confirmHold error:', err);
+      return false;
+    }
+  }
+
   /** Deduct credits AFTER successful production. */
   static async deductAfterProduction(
     userId: number,

@@ -353,7 +353,7 @@ async function startProduction(job: VideoJob) {
       };
     }
 
-    // ── Kredi Kontrolü (sadece bakiye kontrolü, henüz düşme) ──
+    // ── Kredi Blokajı (render başında hold) ──
     const modelType = job.model_type || 'CogVideoX-5b';
     const modelCost = getModelCost(modelType);
     requiredCredits = totalScenes * modelCost.sceneCost + modelCost.coverCost;
@@ -371,7 +371,21 @@ async function startProduction(job: VideoJob) {
       broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
       throw new Error('INSUFFICIENT_CREDITS');
     }
-    // Kredi daha sonra (üretim başarıyla tamamlanınca) düşülecek
+
+    const holdSuccess = await CreditService.holdCredits(
+      job.user_id,
+      requiredCredits,
+      `Video Projesi #${job.id} blokaji (Sahneler: ${totalScenes}, Model: ${modelType})`,
+    );
+    if (!holdSuccess) {
+      const errorMsg = 'Kredi blokaji basarisiz! Yetersiz bakiye.';
+      await db.run(
+        "UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?",
+        [errorMsg, job.id],
+      );
+      broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
+      throw new Error('HOLD_FAILED');
+    }
 
     broadcast(job.id, {
       stageKey: 'stageScenesPreparing',
@@ -2323,17 +2337,23 @@ async function startProduction(job: VideoJob) {
     const { trackJobEnd } = await import('./lib/metrics.js');
     trackJobEnd(job.id!, { model_type: job.model_type || 'unknown' });
 
-    // Kredi düşme — sadece üretim başarıyla tamamlanınca (kullanıcının istediği davranış)
+    // Kredi onayı — hold zaten düşmüştü, sadece transaction kaydı ekle
     if (requiredCredits > 0) {
-      await CreditService.deductAfterProduction(
+      await CreditService.confirmHold(
         job.user_id,
         requiredCredits,
-        `Video Projesi #${job.id} üretimi (Sahneler: ${totalScenes}, Model: ${job.model_type || 'CogVideoX-5b'})`,
+        `Video Projesi #${job.id} uretimi basarili (Sahneler: ${totalScenes}, Model: ${job.model_type || 'CogVideoX-5b'})`,
       );
     }
   } catch (error) {
-    // Artık önceden düşülmüş kredi olmadığı için refund mantığı kalktı.
-    // (Kredi kontrolü sadece bakiye sorgusuydu, gerçek düşme başarılı üretim sonrası.)
+    // Hata/iptal durumunda bloke edilen krediyi iade et
+    if (requiredCredits > 0) {
+      await CreditService.refundCredits(
+        job.user_id,
+        requiredCredits,
+        `Video Projesi #${job.id} iade - hata/iptal (${(error as any)?.message || 'bilinmeyen hata'})`,
+      );
+    }
 
     if (error && (error as any).message === 'JOB_CANCELLED') {
       Logger.info(`Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);
