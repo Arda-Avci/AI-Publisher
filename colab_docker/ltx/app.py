@@ -1,6 +1,44 @@
 import os
 import gc
 import torch
+import torch.nn.functional as F
+_orig_sdpa = F.scaled_dot_product_attention
+def _patched_sdpa(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, **kwargs):
+    kwargs.pop('enable_gqa', None)
+    if query.ndim == 4 and query.size(1) != key.size(1):
+        r = query.size(1) // key.size(1)
+        key = key.repeat_interleave(r, dim=1)
+        value = value.repeat_interleave(r, dim=1)
+    return _orig_sdpa(query, key, value, attn_mask=attn_mask, dropout_p=dropout_p, is_causal=is_causal, scale=scale, **kwargs)
+F.scaled_dot_product_attention = _patched_sdpa
+
+import torch.nn as nn
+if not hasattr(nn, "RMSNorm"):
+    class RMSNorm(nn.Module):
+        def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True, device=None, dtype=None):
+            super().__init__()
+            if isinstance(normalized_shape, int):
+                normalized_shape = (normalized_shape,)
+            self.normalized_shape = tuple(normalized_shape)
+            self.eps = eps
+            self.elementwise_affine = elementwise_affine
+            if self.elementwise_affine:
+                self.weight = nn.Parameter(torch.ones(self.normalized_shape, device=device, dtype=dtype))
+            else:
+                self.register_parameter("weight", None)
+
+        def forward(self, x):
+            dims = tuple(range(-len(self.normalized_shape), 0))
+            variance = x.pow(2).mean(dims, keepdim=True)
+            x_normed = x * torch.rsqrt(variance + self.eps)
+            if self.elementwise_affine:
+                return self.weight * x_normed
+            return x_normed
+            
+    nn.RMSNorm = RMSNorm
+
+
+
 import numpy as np
 from flask import Flask, request, jsonify
 import subprocess
@@ -70,7 +108,7 @@ def frames_to_mp4(frames, path, fps=8):
     frames_arr = np.stack(frame_arr)
     h, w = frames_arr.shape[1:3]
     cmd = [
-        'ffmpeg', '-y',
+        '/usr/bin/ffmpeg', '-y',
         '-f', 'rawvideo',
         '-vcodec', 'rawvideo',
         '-s', f'{w}x{h}',

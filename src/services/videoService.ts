@@ -491,10 +491,39 @@ export async function getVideoDuration(videoPath: string): Promise<number> {
   }
 }
 
+export const XFADE_TRANSITION_MAP: Record<string, string> = {
+  fade: 'fade',
+  fadeblack: 'fadeblack',
+  fadewhite: 'fadewhite',
+  distance: 'distance',
+  wipeleft: 'wipeleft',
+  wiperight: 'wiperight',
+  wipeup: 'wipeup',
+  wipedown: 'wipedown',
+  slideleft: 'slideleft',
+  slideright: 'slideright',
+  slideup: 'slideup',
+  slidedown: 'slidedown',
+  smoothleft: 'smoothleft',
+  smoothright: 'smoothright',
+  smoothup: 'smoothup',
+  smoothdown: 'smoothdown',
+  circleopen: 'circleopen',
+  circleclose: 'circleclose',
+  clock: 'clock',
+  dissolve: 'dissolve',
+  pixelize: 'pixelize',
+  radial: 'radial',
+  random: 'random',
+  hblur: 'hblur',
+  zoomin: 'zoomin',
+};
+
 export async function concatVideosWithCrossfade(
   videoPaths: string[],
   outputPath: string,
   transDur = 1.0,
+  transitionTypes?: string | string[],
 ): Promise<void> {
   if (videoPaths.length === 0) {
     throw new Error('concatVideosWithCrossfade: Video listesi bos');
@@ -569,14 +598,30 @@ export async function concatVideosWithCrossfade(
   }
   let runningDur = runningDurVal;
 
+  // Determine transition types for each gap
+  const getTransType = (gapIndex: number): string => {
+    if (Array.isArray(transitionTypes)) {
+      const t = transitionTypes[gapIndex];
+      if (t && XFADE_TRANSITION_MAP[t]) return XFADE_TRANSITION_MAP[t];
+      const t2 = transitionTypes[gapIndex + 1];
+      if (t2 && XFADE_TRANSITION_MAP[t2]) return XFADE_TRANSITION_MAP[t2];
+      return 'fade';
+    }
+    if (typeof transitionTypes === 'string' && XFADE_TRANSITION_MAP[transitionTypes]) {
+      return XFADE_TRANSITION_MAP[transitionTypes];
+    }
+    return 'fade';
+  };
+
   // Video xfade chain
   let lastVideoLabel = '0:v';
   for (let i = 0; i < videoPaths.length - 1; i++) {
     const nextVideoLabel = `${i + 1}:v`;
     const outVideoLabel = `v_xfade_${i}`;
     const offset = runningDur - transDur;
+    const xfadeType = getTransType(i);
     filterParts.push(
-      `[${lastVideoLabel}][${nextVideoLabel}]xfade=transition=fade:duration=${transDur}:offset=${offset.toFixed(3)}[${outVideoLabel}]`,
+      `[${lastVideoLabel}][${nextVideoLabel}]xfade=transition=${xfadeType}:duration=${transDur}:offset=${offset.toFixed(3)}[${outVideoLabel}]`,
     );
     lastVideoLabel = outVideoLabel;
     const nextDur = durations[i + 1];

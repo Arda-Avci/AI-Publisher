@@ -114,6 +114,9 @@ export interface VideoScene {
   sort_order: number;
   music_volume?: number;
   speaker?: string;
+  transition_type?: string;
+  alt_scene_video_path?: string;
+  parent_scene_id?: number;
 }
 
 import { z } from 'zod';

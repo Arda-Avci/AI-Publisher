@@ -36,8 +36,9 @@ export type DockerService =
   | 'zeroscope'
   | 'pyramid-flow'
   | 'video-retalking'
-  | 'geneface'
-  | 'mochi';
+   | 'geneface'
+   | 'mochi'
+   | 'realesrgan';
 
 export interface ServiceInfo {
   port: number;
@@ -68,7 +69,8 @@ const SERVICE_REGISTRY: Record<DockerService, ServiceInfo> = {
   dynamicrafter:  { port: 5018, description: 'Image-to-Video (DynamiCrafter)',     healthUrl: '/health' },
   mochi:          { port: 5022, description: 'Video Generation (Mochi-1)',           healthUrl: '/health' },
   'pyramid-flow': { port: 5023, description: 'Video Generation (Pyramid-Flow)',    healthUrl: '/health' },
-  geneface:       { port: 5021, description: '3D Talking Head (GeneFace++)',       healthUrl: '/health' },
+   geneface:       { port: 5021, description: '3D Talking Head (GeneFace++)',       healthUrl: '/health' },
+   realesrgan:     { port: 5024, description: '4K Upscale (Real-ESRGAN)',           healthUrl: '/health' },
 };
 
 export interface DockerHostState {

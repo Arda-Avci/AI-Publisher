@@ -614,7 +614,7 @@ async function publishSocial(state: GraphState): Promise<Partial<GraphState>> {
         Logger.info('[Graph] Publishing to Meta...');
         const { uploadToMeta } = await import('./publisher.js');
         const ok = await uploadToMeta(finalPath, job.meta_desc || '', job.meta_tags || '', jobId);
-        if (ok || true) { await db.run("UPDATE video_jobs SET meta_status = 'completed' WHERE id = ?", [jobId]); }
+        if (ok) { await db.run("UPDATE video_jobs SET meta_status = 'completed' WHERE id = ?", [jobId]); }
       }
       await updateProgress(jobId, 'stagePublishing', basePct, { platform: p });
     } catch (err) {

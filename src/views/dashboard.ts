@@ -17,7 +17,7 @@ export function escapeHtml(str: string): string {
 }
 
 export interface DashboardParams {
-  currentLang: 'tr' | 'en';
+  currentLang: 'tr' | 'en' | 'de' | 'fr' | 'es' | 'ar';
   currentTheme: string;
   t: Record<string, string>;
   user: any;
@@ -791,6 +791,38 @@ export function buildDashboardHTML(params: DashboardParams): string {
                     </div>
                     <div class="language-check">${currentLang === 'en' ? '✓' : ''}</div>
                   </button>
+                  <button class="language-card ${currentLang === 'de' ? 'active' : ''}" onclick="setLanguage('de')">
+                    <div class="language-flag">🇩🇪</div>
+                    <div class="language-info">
+                      <div class="language-name">Deutsch</div>
+                      <div class="language-native">German interface</div>
+                    </div>
+                    <div class="language-check">${currentLang === 'de' ? '✓' : ''}</div>
+                  </button>
+                  <button class="language-card ${currentLang === 'fr' ? 'active' : ''}" onclick="setLanguage('fr')">
+                    <div class="language-flag">🇫🇷</div>
+                    <div class="language-info">
+                      <div class="language-name">Français</div>
+                      <div class="language-native">French interface</div>
+                    </div>
+                    <div class="language-check">${currentLang === 'fr' ? '✓' : ''}</div>
+                  </button>
+                  <button class="language-card ${currentLang === 'es' ? 'active' : ''}" onclick="setLanguage('es')">
+                    <div class="language-flag">🇪🇸</div>
+                    <div class="language-info">
+                      <div class="language-name">Español</div>
+                      <div class="language-native">Spanish interface</div>
+                    </div>
+                    <div class="language-check">${currentLang === 'es' ? '✓' : ''}</div>
+                  </button>
+                  <button class="language-card ${currentLang === 'ar' ? 'active' : ''}" onclick="setLanguage('ar')">
+                    <div class="language-flag">🇸🇦</div>
+                    <div class="language-info">
+                      <div class="language-name">العربية</div>
+                      <div class="language-native">Arabic interface</div>
+                    </div>
+                    <div class="language-check">${currentLang === 'ar' ? '✓' : ''}</div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1025,23 +1057,47 @@ export function buildDashboardHTML(params: DashboardParams): string {
         </div>
         
         <!-- Options Grid -->
-        <div class="form-grid-2" style="gap: 15px; margin-bottom:1.5rem;" id="paymentOptions">
-          <!-- Option A: Single credit package -->
-          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 1px solid hsla(var(--border), 0.4); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="initiateIyzicoPayment('pro')">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🪙</div>
-            <h4 style="font-size:1rem; font-weight:700; margin-bottom:0.25rem;">250 Kredi Paketi</h4>
-            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">450 TL</div>
-            <p style="font-size:0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 1rem;">Tek seferlik alım. Kredileriniz anında hesabınıza yüklenir.</p>
-            <button class="btn-publish" style="width: 100%;">Satın Al</button>
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 12px; margin-bottom:1.5rem;" id="paymentOptions">
+          <!-- Paket 1: Başlangıç (50 Kredi) -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 1px solid hsla(var(--border), 0.4); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="initiateIyzicoPayment('basic')">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🌱</div>
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.25rem;">Başlangıç</h4>
+            <div style="font-size: 0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 0.25rem;">50 Kredi</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">100 TL</div>
+            <button class="btn-publish" style="width: 100%; font-size:0.8rem;">Satın Al</button>
           </div>
-          <!-- Option B: Subscription -->
-          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 2px solid hsl(var(--primary)); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; position:relative;" onclick="initiateIyzicoPayment('sub_silver')">
-            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: hsl(var(--primary)); color: #000; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;">EN POPÜLER</span>
+          <!-- Paket 2: Profesyonel (250 Kredi) -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 2px solid hsl(var(--primary)); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; position:relative;" onclick="initiateIyzicoPayment('pro')">
+            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: hsl(var(--primary)); color: #000; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;">POPÜLER</span>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🪙</div>
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.25rem;">Profesyonel</h4>
+            <div style="font-size: 0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 0.25rem;">250 Kredi</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">450 TL</div>
+            <button class="btn-publish" style="width: 100%; font-size:0.8rem;">Satın Al</button>
+          </div>
+          <!-- Paket 3: Kurumsal (1000 Kredi) -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 1px solid hsla(var(--border), 0.4); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="initiateIyzicoPayment('enterprise')">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🏢</div>
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.25rem;">Kurumsal</h4>
+            <div style="font-size: 0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 0.25rem;">1000 Kredi</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">1.500 TL</div>
+            <button class="btn-publish" style="width: 100%; font-size:0.8rem;">Satın Al</button>
+          </div>
+          <!-- Paket 4: Gümüş Abonelik -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 1px solid hsla(var(--border), 0.4); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="initiateIyzicoPayment('sub_silver')">
             <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🚀</div>
-            <h4 style="font-size:1rem; font-weight:700; margin-bottom:0.25rem;">Gümüş Abonelik</h4>
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.25rem;">Gümüş Abonelik</h4>
+            <div style="font-size: 0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 0.25rem;">300 Kredi / ay</div>
             <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">299 TL / ay</div>
-            <p style="font-size:0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 1rem;">Her ay 300 kredi. Bir sonraki ay otomatik yenilenir.</p>
-            <button class="btn-primary" style="width: 100%;">Abone Ol</button>
+            <button class="btn-primary" style="width: 100%; font-size:0.8rem;">Abone Ol</button>
+          </div>
+          <!-- Paket 5: Altın Abonelik -->
+          <div class="glass-card payment-package-card" style="padding: 1.25rem; text-align: center; border: 1px solid hsla(var(--border), 0.4); border-radius: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="initiateIyzicoPayment('sub_gold')">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👑</div>
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.25rem;">Altın Abonelik</h4>
+            <div style="font-size: 0.75rem; color:hsl(var(--muted-foreground)); margin-bottom: 0.25rem;">1000 Kredi / ay</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: hsl(var(--primary)); margin-bottom: 0.5rem;">799 TL / ay</div>
+            <button class="btn-primary" style="width: 100%; font-size:0.8rem;">Abone Ol</button>
           </div>
         </div>
 

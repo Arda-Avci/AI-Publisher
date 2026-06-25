@@ -51,10 +51,15 @@ export async function cleanText(raw: string): Promise<string> {
 }
 
 // ── 2. Translate to the target language ───────────────────────────────────
-export async function translateText(text: string, targetLang: SupportedLang): Promise<string> {
+export async function translateText(text: string, targetLang: SupportedLang, _depth = 0): Promise<string> {
   if (!text || !text.trim()) return '';
   if (!isSupportedLang(targetLang)) {
     throw new Error('translateText: unsupported target language: ' + targetLang);
+  }
+  if (_depth > 5) {
+    Logger.warn(`[AI] translateText recursion depth exceeded (${_depth}), joining as-is`);
+    const raw = splitTextIntoChunks(text, 2000);
+    return raw.join(' ');
   }
 
   // Metin uzunsa (2000 karakterden fazla), parçalara bölerek çeviriyoruz.
@@ -66,7 +71,7 @@ export async function translateText(text: string, targetLang: SupportedLang): Pr
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i]!;
       Logger.info(`[AI] Translating chunk ${i + 1}/${chunks.length}...`);
-      const translated = await translateText(chunk, targetLang);
+      const translated = await translateText(chunk, targetLang, _depth + 1);
       translatedChunks.push(translated);
     }
     return translatedChunks.join(' ');

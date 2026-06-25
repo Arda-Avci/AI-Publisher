@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type React from 'react';
 import {
   RefreshCw,
@@ -13,6 +13,8 @@ import {
   Monitor,
   Video,
   TrendingUp,
+  ImageUp,
+  Download,
 } from 'lucide-react';
 import { CoverSelector } from './CoverSelector.js';
 import type { Job, UserCredits } from '../types.js';
@@ -51,6 +53,12 @@ interface GalleryPanelProps {
   metaYtTitle: string;
   metaYtDesc: string;
   metaYtTags: string;
+  metaTtDesc: string;
+  metaTtTags: string;
+  metaXDesc: string;
+  metaXTags: string;
+  metaMetaDesc: string;
+  metaMetaTags: string;
   isMetaSaving: boolean;
   progressMsg: string;
   progressPercent: number;
@@ -62,6 +70,12 @@ interface GalleryPanelProps {
   onSetMetaYtTitle: (v: string) => void;
   onSetMetaYtDesc: (v: string) => void;
   onSetMetaYtTags: (v: string) => void;
+  onSetMetaTtDesc: (v: string) => void;
+  onSetMetaTtTags: (v: string) => void;
+  onSetMetaXDesc: (v: string) => void;
+  onSetMetaXTags: (v: string) => void;
+  onSetMetaMetaDesc: (v: string) => void;
+  onSetMetaMetaTags: (v: string) => void;
   onSaveMetaAndPublish: () => void;
   onAnalyzeViralScore?: (jobId: number) => void;
   onSelectCover?: (jobId: number, path: string) => void;
@@ -85,6 +99,12 @@ export function GalleryPanel({
   metaYtTitle,
   metaYtDesc,
   metaYtTags,
+  metaTtDesc,
+  metaTtTags,
+  metaXDesc,
+  metaXTags,
+  metaMetaDesc,
+  metaMetaTags,
   isMetaSaving,
   progressMsg,
   progressPercent,
@@ -96,6 +116,12 @@ export function GalleryPanel({
   onSetMetaYtTitle,
   onSetMetaYtDesc,
   onSetMetaYtTags,
+  onSetMetaTtDesc,
+  onSetMetaTtTags,
+  onSetMetaXDesc,
+  onSetMetaXTags,
+  onSetMetaMetaDesc,
+  onSetMetaMetaTags,
   onSaveMetaAndPublish,
   onAnalyzeViralScore,
   onSelectCover,
@@ -217,23 +243,77 @@ export function GalleryPanel({
             onCancel={() => onCancelJob(selectedJob.id)}
           />
         )}
-        {showMeta && (
-          <MetaEditor
-            job={selectedJob}
-            ytTitle={metaYtTitle}
-            ytDesc={metaYtDesc}
-            ytTags={metaYtTags}
-            isSaving={isMetaSaving}
-            onSetYtTitle={onSetMetaYtTitle}
-            onSetYtDesc={onSetMetaYtDesc}
-            onSetYtTags={onSetMetaYtTags}
-            onSave={onSaveMetaAndPublish}
-            onAnalyzeViralScore={onAnalyzeViralScore}
-            onSelectCover={onSelectCover}
-            onRefreshJobs={onRefreshJobs}
-          />
-        )}
+{showMeta && (
+            <MetaEditor
+              job={selectedJob}
+              ytTitle={metaYtTitle}
+              ytDesc={metaYtDesc}
+              ytTags={metaYtTags}
+              ttDesc={metaTtDesc}
+              ttTags={metaTtTags}
+              xDesc={metaXDesc}
+              xTags={metaXTags}
+              metaDesc={metaMetaDesc}
+              metaTags={metaMetaTags}
+              isSaving={isMetaSaving}
+              onSetYtTitle={onSetMetaYtTitle}
+              onSetYtDesc={onSetMetaYtDesc}
+              onSetYtTags={onSetMetaYtTags}
+              onSetTtDesc={onSetMetaTtDesc}
+              onSetTtTags={onSetMetaTtTags}
+              onSetXDesc={onSetMetaXDesc}
+              onSetXTags={onSetMetaXTags}
+              onSetMetaDesc={onSetMetaMetaDesc}
+              onSetMetaTags={onSetMetaMetaTags}
+              onSave={onSaveMetaAndPublish}
+              onAnalyzeViralScore={onAnalyzeViralScore}
+              onSelectCover={onSelectCover}
+              onRefreshJobs={onRefreshJobs}
+            />
+          )}
       </div>
+
+      {selectedJob?.status === 'completed' && selectedJob.final_filename && (
+        <div style={{ padding: '0 16px', marginTop: 12 }}>
+          <div
+            style={{
+              aspectRatio: '16/9',
+              borderRadius: 10,
+              overflow: 'hidden',
+              background: '#000',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <video
+              src={`/videolar/${selectedJob.final_filename}`}
+              controls
+              style={{ width: '100%', height: '100%', display: 'block' }}
+              preload="metadata"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <a
+              href={`/videolar/${selectedJob.final_filename}`}
+              download
+              style={{
+                flex: 1,
+                padding: '6px 12px',
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-surface)',
+                color: 'var(--text-primary)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              ⬇ İndir
+            </a>
+          </div>
+        </div>
+      )}
 
       {selectedJob ? (
         <>
@@ -623,15 +703,29 @@ function ProgressTracker({
   );
 }
 
+type PlatformTab = 'youtube' | 'tiktok' | 'x' | 'meta';
+
 function MetaEditor({
   job,
   ytTitle,
   ytDesc,
   ytTags,
+  ttDesc,
+  ttTags,
+  xDesc,
+  xTags,
+  metaDesc,
+  metaTags,
   isSaving,
   onSetYtTitle,
   onSetYtDesc,
   onSetYtTags,
+  onSetTtDesc,
+  onSetTtTags,
+  onSetXDesc,
+  onSetXTags,
+  onSetMetaDesc,
+  onSetMetaTags,
   onSave,
   onAnalyzeViralScore,
   onSelectCover,
@@ -641,15 +735,28 @@ function MetaEditor({
   ytTitle: string;
   ytDesc: string;
   ytTags: string;
+  ttDesc: string;
+  ttTags: string;
+  xDesc: string;
+  xTags: string;
+  metaDesc: string;
+  metaTags: string;
   isSaving: boolean;
   onSetYtTitle: (v: string) => void;
   onSetYtDesc: (v: string) => void;
   onSetYtTags: (v: string) => void;
+  onSetTtDesc: (v: string) => void;
+  onSetTtTags: (v: string) => void;
+  onSetXDesc: (v: string) => void;
+  onSetXTags: (v: string) => void;
+  onSetMetaDesc: (v: string) => void;
+  onSetMetaTags: (v: string) => void;
   onSave: () => void;
   onAnalyzeViralScore?: (jobId: number) => void;
   onSelectCover?: (jobId: number, path: string) => void;
   onRefreshJobs: () => void;
 }) {
+  const [platformTab, setPlatformTab] = useState<PlatformTab>('youtube');
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [selectedCover, setSelectedCover] = useState('');
   const [kurguLoading, setKurguLoading] = useState(false);
@@ -661,6 +768,8 @@ function MetaEditor({
   const [maskY, setMaskY] = useState('0.2');
   const [maskW, setMaskW] = useState('0.3');
   const [maskH, setMaskH] = useState('0.4');
+  const [upscaleLoading, setUpscaleLoading] = useState(false);
+  const upscaleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (job.cover_images) {
@@ -757,6 +866,55 @@ function MetaEditor({
     }
   };
 
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const handleExportZip = async () => {
+    if (!job.id) return;
+    setExportLoading(true);
+    try {
+      const res = await fetch(`/api/v1/export/${job.id}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        const link = document.createElement('a');
+        link.href = data.url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.showToast?.('success', 'Dışa Aktar', 'Export ZIP başarıyla oluşturuldu!');
+      } else {
+        window.showToast?.('error', 'Export Hatası', data.error || 'Bilinmeyen hata');
+      }
+    } catch (err: any) {
+      window.showToast?.('error', 'Export Hatası', err.message);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleUpscale = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUpscaleLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('scale', '4');
+      const res = await fetch('/api/v1/editor/upscale', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        window.showToast?.('success', '4K Upscale', 'Görsel başarıyla 4K çözünürlüğe yükseltildi!');
+      } else {
+        window.showToast?.('error', 'Upscale Hatası', data.error || 'Bilinmeyen hata');
+      }
+    } catch (err: any) {
+      window.showToast?.('error', 'Upscale Hatası', err.message);
+    } finally {
+      setUpscaleLoading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleInpaintVideo = async () => {
     if (!job.final_filename) return;
     setKurguLoading(true);
@@ -790,6 +948,13 @@ function MetaEditor({
       setKurguLoading(false);
     }
   };
+
+  const platTabs: { key: PlatformTab; label: string; icon: string }[] = [
+    { key: 'youtube', label: 'YouTube', icon: '▶' },
+    { key: 'tiktok', label: 'TikTok', icon: '♪' },
+    { key: 'x', label: 'X (Twitter)', icon: '𝕏' },
+    { key: 'meta', label: 'Meta', icon: 'ⓕ' },
+  ];
 
   return (
     <div
@@ -873,29 +1038,81 @@ function MetaEditor({
         />
       )}
 
-      <MetaField label="Video Başlığı (YouTube)">
-        <input
-          type="text"
-          value={ytTitle}
-          onChange={(e) => onSetYtTitle(e.target.value)}
-          style={inputStyle}
-        />
-      </MetaField>
-      <MetaField label="Video Açıklaması">
-        <textarea
-          value={ytDesc}
-          onChange={(e) => onSetYtDesc(e.target.value)}
-          style={{ ...inputStyle, height: '80px', resize: 'none' }}
-        />
-      </MetaField>
-      <MetaField label="Etiketler / Hashtags (virgülle ayırın)">
-        <input
-          type="text"
-          value={ytTags}
-          onChange={(e) => onSetYtTags(e.target.value)}
-          style={inputStyle}
-        />
-      </MetaField>
+      {/* Platform Tabs */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+        {platTabs.map(({ key, label, icon }) => (
+          <button
+            key={key}
+            onClick={() => setPlatformTab(key)}
+            style={{
+              flex: 1,
+              padding: '6px 8px',
+              borderRadius: 6,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 10,
+              fontWeight: platformTab === key ? 700 : 400,
+              background: platformTab === key ? 'var(--accent-light)' : 'transparent',
+              color: platformTab === key ? 'var(--accent)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-sans)',
+              transition: 'all 0.2s',
+            }}
+          >
+            {icon} {label}
+          </button>
+        ))}
+      </div>
+
+      {/* YouTube Fields */}
+      {platformTab === 'youtube' && (
+        <>
+          <MetaField label="Video Başlığı (YouTube)">
+            <input type="text" value={ytTitle} onChange={(e) => onSetYtTitle(e.target.value)} style={inputStyle} />
+          </MetaField>
+          <MetaField label="Video Açıklaması">
+            <textarea value={ytDesc} onChange={(e) => onSetYtDesc(e.target.value)} style={{ ...inputStyle, height: '80px', resize: 'none' }} />
+          </MetaField>
+          <MetaField label="Etiketler / Hashtags (virgülle ayırın)">
+            <input type="text" value={ytTags} onChange={(e) => onSetYtTags(e.target.value)} style={inputStyle} />
+          </MetaField>
+        </>
+      )}
+
+      {/* TikTok Fields */}
+      {platformTab === 'tiktok' && (
+        <>
+          <MetaField label="TikTok Açıklaması (max 150 karakter)">
+            <textarea value={ttDesc} onChange={(e) => onSetTtDesc(e.target.value)} style={{ ...inputStyle, height: '60px', resize: 'none' }} maxLength={150} />
+          </MetaField>
+          <MetaField label="Etiketler / Hashtags">
+            <input type="text" value={ttTags} onChange={(e) => onSetTtTags(e.target.value)} style={inputStyle} />
+          </MetaField>
+        </>
+      )}
+
+      {/* X (Twitter) Fields */}
+      {platformTab === 'x' && (
+        <>
+          <MetaField label="X (Twitter) Açıklaması (max 200 karakter)">
+            <textarea value={xDesc} onChange={(e) => onSetXDesc(e.target.value)} style={{ ...inputStyle, height: '60px', resize: 'none' }} maxLength={200} />
+          </MetaField>
+          <MetaField label="Hashtags">
+            <input type="text" value={xTags} onChange={(e) => onSetXTags(e.target.value)} style={inputStyle} />
+          </MetaField>
+        </>
+      )}
+
+      {/* Meta (Facebook/Instagram) Fields */}
+      {platformTab === 'meta' && (
+        <>
+          <MetaField label="Meta (Facebook/Instagram) Açıklaması">
+            <textarea value={metaDesc} onChange={(e) => onSetMetaDesc(e.target.value)} style={{ ...inputStyle, height: '80px', resize: 'none' }} />
+          </MetaField>
+          <MetaField label="Hashtags">
+            <input type="text" value={metaTags} onChange={(e) => onSetMetaTags(e.target.value)} style={inputStyle} />
+          </MetaField>
+        </>
+      )}
 
       {/* AI PREMIUM KURGU VE DÜZELTME ARAÇLARI */}
       <div
@@ -942,6 +1159,37 @@ function MetaEditor({
             }}
           >
             {kurguLoading ? <Loader size={12} className="spin" /> : '👁️'} Göz Temasını Düzelt
+          </button>
+        </div>
+
+        {/* 4K Upscale */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <input
+            ref={upscaleInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleUpscale}
+            style={{ display: 'none' }}
+          />
+          <button
+            onClick={() => upscaleInputRef.current?.click()}
+            disabled={upscaleLoading}
+            style={{
+              padding: '8px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: upscaleLoading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            {upscaleLoading ? <Loader size={12} className="spin" /> : <ImageUp size={12} />} 4K Upscale (Real-ESRGAN)
           </button>
         </div>
 
@@ -1127,14 +1375,38 @@ function MetaEditor({
           gap: '6px',
         }}
       >
-        {isSaving ? <Loader size={12} className="pulse" /> : <Share2 size={12} />}
-        {isSaving
-          ? 'Kaydediliyor...'
-          : job.status === 'awaiting_approval'
-            ? 'Onayla ve Yayınla'
-            : 'Metinleri Kaydet ve Paylaş'}
-      </button>
-    </div>
+          {isSaving ? <Loader size={12} className="pulse" /> : <Share2 size={12} />}
+          {isSaving
+            ? 'Kaydediliyor...'
+            : job.status === 'awaiting_approval'
+              ? 'Onayla ve Yayınla'
+              : 'Metinleri Kaydet ve Paylaş'}
+        </button>
+
+        <button
+          onClick={handleExportZip}
+          disabled={exportLoading || (job.status !== 'completed' && job.status !== 'awaiting_approval')}
+          style={{
+            width: '100%',
+            padding: '8px',
+            borderRadius: '6px',
+            border: '1px solid var(--border)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: 'white',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: exportLoading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            opacity: (job.status !== 'completed' && job.status !== 'awaiting_approval') ? 0.4 : 1,
+          }}
+        >
+          {exportLoading ? <Loader size={12} className="spin" /> : <Download size={12} />}
+          {exportLoading ? 'ZIP Oluşturuluyor...' : 'Export ZIP (FilmFreeway)'}
+        </button>
+      </div>
   );
 }
 

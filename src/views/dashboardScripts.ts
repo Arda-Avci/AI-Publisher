@@ -1558,6 +1558,52 @@ export function getDashboardScripts(params: {
         document.getElementById('paymentOptions').style.display = '';
         document.getElementById('iyzico-iframe-wrapper').style.display = 'none';
         openModal('paymentModal');
+        fetchSubscriptionStatus();
+      }
+
+      async function fetchSubscriptionStatus() {
+        try {
+          const res = await fetch('/api/v1/subscriptions/status');
+          const data = await res.json();
+          let subHtml = '';
+          if (data.success && data.data) {
+            const sub = data.data;
+            subHtml = '<div style="margin-top:1rem;padding:1rem;border:1px solid hsla(var(--primary),0.3);border-radius:0.75rem;background:hsla(var(--primary),0.05);">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">' +
+              '<div><strong>Aktif Abonelik:</strong> ' + trMsg('G\u00fcm\u00fc\u015f', 'Silver') + '</div>' +
+              '<span style="display:inline-block;background:hsl(142,70%,50%);color:#000;font-size:0.7rem;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:0.4rem;">' + trMsg('Aktif', 'Active') + '</span>' +
+              '<button class="btn-publish" style="font-size:0.75rem;padding:0.3rem 0.8rem;background:hsla(0,70%,50%,0.15);color:hsl(0,70%,60%);border:1px solid hsla(0,70%,50%,0.3);" onclick="cancelSubscription()">' + trMsg('\u0130ptal Et', 'Cancel') + '</button>' +
+              '</div></div>';
+          } else {
+            subHtml = '<div style="margin-top:0.8rem;font-size:0.8rem;color:hsl(var(--muted-foreground));text-align:center;">' + trMsg('Aktif aboneli\u011finiz bulunmuyor.', 'No active subscription.') + '</div>';
+          }
+          // Eski status varsa replace, yoksa append
+          let existing = document.getElementById('sub-status-bar');
+          if (!existing) {
+            existing = document.createElement('div');
+            existing.id = 'sub-status-bar';
+            document.getElementById('paymentOptions').after(existing);
+          }
+          existing.innerHTML = subHtml;
+        } catch (err) {
+          console.error('Abonelik sorgulama hatası:', err);
+        }
+      }
+
+      async function cancelSubscription() {
+        if (!confirm(trMsg('Aboneliğiniz iptal edilecek. Emin misiniz?', 'Your subscription will be cancelled. Are you sure?'))) return;
+        try {
+          const res = await fetch('/api/v1/subscriptions/cancel', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            showToast(trMsg('Abonelik iptal edildi.', 'Subscription cancelled.'), 'success');
+            fetchSubscriptionStatus();
+          } else {
+            showToast(data.error || trMsg('İptal başarısız.', 'Cancel failed.'), 'error');
+          }
+        } catch (err) {
+          showToast(trMsg('Bağlantı hatası.', 'Connection error.'), 'error');
+        }
       }
 
       async function initiateIyzicoPayment(packageId) {

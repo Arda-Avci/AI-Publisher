@@ -111,6 +111,23 @@ export async function getSignedDownloadUrl(key: string, expiresInSeconds = 3600)
   }
 }
 
+export async function uploadToB2(buffer: Buffer, key: string, contentType?: string): Promise<boolean> {
+  if (!isConfigured()) return false;
+  try {
+    await getClient().send(new PutObjectCommand({
+      Bucket: B2_BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType || 'application/octet-stream',
+    }));
+    Logger.info(`[B2] Uploaded buffer: ${key} (${(buffer.length / 1024 / 1024).toFixed(1)} MB)`);
+    return true;
+  } catch (err) {
+    Logger.error(`[B2] Upload failed: ${key}`, err);
+    return false;
+  }
+}
+
 export async function checkHealth(): Promise<boolean> {
   try {
     await getClient().send(new ListObjectsV2Command({ Bucket: B2_BUCKET, MaxKeys: 1 }));

@@ -9,6 +9,7 @@ import {
   markAsRead,
   markAllAsRead,
   getUnreadCount,
+  deleteNotification,
 } from '../services/notificationService.js';
 
 function handleNotificationSseConnection(
@@ -87,7 +88,7 @@ export function registerNotificationRoutes(app: Application): void {
     }
   });
 
-  // Son bildirimleri listele
+  // Son bildirimleri listele (opsiyonel type filtresi ile)
   app.get('/api/v1/notifications', requireAuth, async (req: Request, res: Response) => {
     const userId = req.session.userId;
     if (!userId) {
@@ -96,11 +97,54 @@ export function registerNotificationRoutes(app: Application): void {
 
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
-      const list = await getNotifications(userId, limit);
+      const type = req.query.type as string | undefined;
+      const list = await getNotifications(userId, limit, type);
       const unreadCount = await getUnreadCount(userId);
       res.json({ success: true, notifications: list, unreadCount });
     } catch (err: any) {
       Logger.error(`Error fetching notifications for user ${userId}`, err);
+      res.status(500).json({ success: false, error: err.message || 'database_error' });
+    }
+  });
+
+  // Okunmamış bildirim sayısı
+  app.get('/api/v1/notifications/unread-count', requireAuth, async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Oturum açmanız gerekiyor' });
+    }
+
+    try {
+      const unreadCount = await getUnreadCount(userId);
+      res.json({ success: true, unreadCount });
+    } catch (err: any) {
+      Logger.error(`Error fetching unread count for user ${userId}`, err);
+      res.status(500).json({ success: false, error: err.message || 'database_error' });
+    }
+  });
+
+  // Bildirimi sil
+  app.delete('/api/v1/notifications/:id', requireAuth, async (req: Request, res: Response) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Oturum açmanız gerekiyor' });
+    }
+
+    try {
+      const idParam = req.params.id;
+      const idStr = Array.isArray(idParam) ? idParam[0] : idParam;
+      const notificationId = parseInt(idStr || '', 10);
+      if (isNaN(notificationId)) {
+        return res.status(400).json({ success: false, error: 'Geçersiz bildirim ID' });
+      }
+
+      const deleted = await deleteNotification(notificationId, userId);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: 'Bildirim bulunamadı veya silme yetkiniz yok' });
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      Logger.error(`Error deleting notification for user ${userId}`, err);
       res.status(500).json({ success: false, error: err.message || 'database_error' });
     }
   });

@@ -23,7 +23,7 @@ export function registerSettingsRoutes(app: Application): void {
 
   app.post('/api/v1/set-language', (req, res) => {
     const { lang } = req.body;
-    if (lang === 'tr' || lang === 'en') {
+    if (lang === 'tr' || lang === 'en' || lang === 'de' || lang === 'fr' || lang === 'es' || lang === 'ar') {
       req.session.lang = lang;
       req.session.save((err) => {
         if (err) return res.status(500).json({ success: false });

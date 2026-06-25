@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Sparkles, Clock, Copy, Check, ChevronDown, ChevronUp, Loader, BookOpen, User, RefreshCw } from 'lucide-react';
+import { Send, Sparkles, Clock, Copy, Check, ChevronDown, ChevronUp, Loader, BookOpen, User, RefreshCw, FileText, Upload, Palette, Image } from 'lucide-react';
+import { StoryboardGrid } from './StoryboardGrid.js';
 
 type Quality = 'low' | 'medium' | 'high';
+type WriterTier = 'professional' | 'creative' | 'assistant';
+
+interface ArtStylePreset {
+  id: string;
+  name: string;
+  description: string;
+  style: string;
+  moodTags: string[];
+  colorPalette: string[];
+  referenceDirectors?: string[];
+}
 
 interface ScriptOutput {
   id?: number;
@@ -50,12 +62,22 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
   const [characters, setCharacters] = useState<LibraryCharacter[]>([]);
   const [showCharDropdown, setShowCharDropdown] = useState(false);
   const [charSearch, setCharSearch] = useState('');
+  const [writerTier, setWriterTier] = useState<WriterTier>('professional');
+  const [artStyles, setArtStyles] = useState<ArtStylePreset[]>([]);
+  const [loadingStyles, setLoadingStyles] = useState(false);
+  const [selectedArtStyle, setSelectedArtStyle] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedText, setUploadedText] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const charInputRef = useRef<HTMLTextAreaElement>(null);
   const charDropdownRef = useRef<HTMLDivElement>(null);
 
   const t = useCallback((tr: string, en: string) => isTr ? tr : en, [isTr]);
 
-  useEffect(() => { fetchScripts(); fetchCharacters(); }, []);
+  useEffect(() => { fetchScripts(); fetchCharacters(); fetchArtStyles(); }, []);
 
   useEffect(() => {
     if (!showCharDropdown) return;
@@ -84,6 +106,78 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
       const d = await res.json();
       if (d.status === 'success') setCharacters(d.data || []);
     } catch { /* ignore */ }
+  };
+
+  const fetchArtStyles = async () => {
+    setLoadingStyles(true);
+    try {
+      const res = await fetch('/api/v1/crew/art-styles');
+      const d = await res.json();
+      if (d.status === 'success') setArtStyles(d.data || []);
+    } catch { /* ignore */ }
+    setLoadingStyles(false);
+  };
+
+  const uploadDocument = async (file: File) => {
+    setUploading(true);
+    setUploadProgress(0);
+    const formData = new FormData();
+    formData.append('document', file);
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      });
+      const result = await new Promise<{ text: string; fullLength: number }>((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const d = JSON.parse(xhr.responseText);
+            if (d.status === 'success') resolve(d.data);
+            else reject(new Error(d.error || 'Upload failed'));
+          } else {
+            try { const d = JSON.parse(xhr.responseText); reject(new Error(d.error || 'Upload failed')); }
+            catch { reject(new Error('Upload failed')); }
+          }
+        };
+        xhr.onerror = () => reject(new Error('Upload failed'));
+        xhr.open('POST', '/api/v1/crew/upload-doc');
+        xhr.send(formData);
+      });
+      setUploadedFileName(file.name);
+      setUploadedText(result.text);
+    } catch (err: any) {
+      setError(err.message || t('Dosya yüklenemedi.', 'File upload failed.'));
+    }
+    setUploading(false);
+    setUploadProgress(0);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) uploadDocument(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadDocument(file);
+  };
+
+  const clearUploadedDoc = () => {
+    setUploadedText('');
+    setUploadedFileName('');
+    setUploadProgress(0);
   };
 
   const loadScriptDetail = async (id: number) => {
@@ -145,13 +239,17 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
     setError('');
     setGenerating(true);
     setScript(null);
+    let enrichedTopic = topic.trim();
+    if (uploadedText) enrichedTopic += '\n\n[Doküman Metni]\n' + uploadedText;
     try {
       const res = await fetch('/api/v1/crew/write-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          topic: topic.trim(),
+          topic: enrichedTopic,
           characterProfiles: characterProfiles.trim() || undefined,
+          writerTier,
+          artStyle: selectedArtStyle || undefined,
         }),
       });
       const d = await res.json();
@@ -402,6 +500,174 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
           )}
         </div>
 
+        {/* Art Style Presets */}
+        <div style={{ marginBottom: 16 }}>
+          {sectionTitle(<Palette size={13} />, t('GÖRSEL STİL', 'ART STYLE'))}
+          {loadingStyles ? (
+            <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)' }}>
+              <Loader size={14} className="spin" />
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 10,
+              maxHeight: 320,
+              overflowY: 'auto',
+            }}>
+              {artStyles.map(p => {
+                const selected = selectedArtStyle === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSelectedArtStyle(selected ? '' : p.id)}
+                    style={{
+                      minHeight: 200,
+                      background: selected ? 'hsla(var(--primary),0.1)' : 'var(--bg-primary)',
+                      border: selected ? '2px solid hsl(var(--primary))' : '1px solid var(--border)',
+                      borderRadius: 10,
+                      padding: 14,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {p.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                      {p.description.length > 100 ? p.description.slice(0, 100) + '...' : p.description}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {p.colorPalette.map((c, i) => (
+                        <div
+                          key={i}
+                          title={c}
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            background: c,
+                            border: '1px solid var(--border)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 'auto' }}>
+                      {p.moodTags.slice(0, 4).map(m => (
+                        <span key={m} style={s.chip}>{m}</span>
+                      ))}
+                    </div>
+                    {p.referenceDirectors && p.referenceDirectors.length > 0 && (
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                        {p.referenceDirectors.join(', ')}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Document Upload */}
+        <div style={{ marginBottom: 16 }}>
+          {sectionTitle(<FileText size={13} />, t('DOKÜMAN YÜKLE (OPSİYONEL)', 'DOCUMENT UPLOAD (OPTIONAL)'))}
+          {uploading ? (
+            <div style={{
+              padding: 20,
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                {t('Yükleniyor...', 'Uploading...')}
+              </div>
+              <div style={{
+                width: '100%',
+                height: 6,
+                background: 'var(--border)',
+                borderRadius: 3,
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${uploadProgress}%`,
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #7F00FF, #FF007F)',
+                  borderRadius: 3,
+                  transition: 'width 0.3s',
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{uploadProgress}%</div>
+            </div>
+          ) : uploadedText ? (
+            <div style={{
+              padding: 14,
+              background: 'var(--bg-primary)',
+              border: '1px solid hsl(var(--primary))',
+              borderRadius: 8,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <FileText size={12} />
+                  {uploadedFileName}
+                </div>
+                <button
+                  type="button"
+                  onClick={clearUploadedDoc}
+                  style={{
+                    ...s.btn,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    color: 'hsl(0,70%,60%)',
+                    background: 'transparent',
+                    border: '1px solid hsla(0,70%,50%,0.2)',
+                  }}
+                >
+                  {t('Kaldır', 'Remove')}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, maxHeight: 80, overflowY: 'auto' }}>
+                {uploadedText.slice(0, 200)}
+                {uploadedText.length > 200 && <span style={{ color: 'hsl(var(--primary))' }}>...</span>}
+              </div>
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              style={{
+                padding: 28,
+                border: `2px dashed ${dragOver ? 'hsl(var(--primary))' : 'var(--border)'}`,
+                borderRadius: 8,
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: dragOver ? 'hsla(var(--primary),0.05)' : 'var(--bg-primary)',
+                transition: 'all 0.15s',
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={20} style={{ color: 'var(--text-muted)', marginBottom: 6 }} />
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {t('PDF, DOCX veya TXT dosyasını sürükleyin veya tıklayın', 'Drag & drop a PDF, DOCX or TXT file, or click to browse')}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt"
+                style={{ display: 'none' }}
+                onChange={handleFileSelect}
+              />
+            </div>
+          )}
+        </div>
+
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', marginBottom: 16 }}>
           <div>
             <label style={s.label}>
@@ -415,6 +681,20 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
               <option value="low">{t('Düşük (Hızlı)', 'Low (Fast)')}</option>
               <option value="medium">{t('Orta (Dengeli)', 'Medium (Balanced)')}</option>
               <option value="high">{t('Yüksek (Detaylı)', 'High (Detailed)')}</option>
+            </select>
+          </div>
+          <div>
+            <label style={s.label}>
+              {t('YAZAR SEVİYESİ', 'WRITER TIER')}
+            </label>
+            <select
+              style={s.select}
+              value={writerTier}
+              onChange={e => setWriterTier(e.target.value as WriterTier)}
+            >
+              <option value="professional">{t('Profesyonel (3 revizyon)', 'Professional (3 revisions)')}</option>
+              <option value="creative">{t('Yaratıcı (5 revizyon)', 'Creative (5 revisions)')}</option>
+              <option value="assistant">{t('Asistan (1 revizyon)', 'Assistant (1 revision)')}</option>
             </select>
           </div>
           <button
@@ -589,6 +869,15 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
               {t('Revizyon', 'Revision')} #{script.revisionCount}
             </span>
           </div>
+
+          {/* Storyboard */}
+          {script.id && script.scenes && script.scenes.length > 0 && (
+            <>
+              <div style={{ marginTop: 24 }}>
+                <StoryboardGrid scriptId={script.id} scenes={script.scenes} />
+              </div>
+            </>
+          )}
         </div>
       )}
 

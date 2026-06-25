@@ -1,7 +1,7 @@
 FROM ai-publisher-base:latest
 
 # Install Wan 2.1 specific video generation dependencies
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
     decord \
     open_clip_torch
@@ -18,5 +18,4 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
-
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

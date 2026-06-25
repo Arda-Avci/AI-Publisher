@@ -32,8 +32,8 @@ def get_pipeline(video_model, is_i2v):
     
     if is_i2v:
         if "wan" in video_model.lower():
-            from diffusers import WanAnimatePipeline
-            pipe = WanAnimatePipeline.from_pretrained("Wan-AI/Wan2.1-I2V-14B-480P", torch_dtype=torch.bfloat16)
+            from diffusers import WanPipeline
+            pipe = WanPipeline.from_pretrained("Wan-AI/Wan2.1-I2V-14B-480P", torch_dtype=torch.bfloat16)
         elif "ltx" in video_model.lower():
             from diffusers import LTXImageToVideoPipeline
             pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video", torch_dtype=torch.bfloat16)
@@ -46,8 +46,8 @@ def get_pipeline(video_model, is_i2v):
             pipe = CogVideoXImageToVideoPipeline.from_pretrained(model_name, torch_dtype=torch.float16)
     else:
         if "wan" in video_model.lower():
-            from diffusers import WanAnimatePipeline
-            pipe = WanAnimatePipeline.from_pretrained("Wan-AI/Wan2.1-T2V-1.3B", torch_dtype=torch.bfloat16)
+            from diffusers import WanPipeline
+            pipe = WanPipeline.from_pretrained("Wan-AI/Wan2.1-T2V-1.3B", torch_dtype=torch.bfloat16)
         elif "ltx" in video_model.lower():
             from diffusers import LTXPipeline
             pipe = LTXPipeline.from_pretrained("Lightricks/LTX-Video", torch_dtype=torch.bfloat16)

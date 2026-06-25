@@ -53,6 +53,24 @@ export const ScenePlanSchema = z.object({
   purpose: z.string(),
   characters: z.array(z.string()),
   plot: z.string(),
+  durationSeconds: z.number().positive().min(3).max(300).default(20),
+});
+
+export const BeatSheetSchema = z.object({
+  totalDurationSeconds: z.number().positive(),
+  estimatedVideoLengthMinutes: z.number(),
+  sceneCount: z.number(),
+  scenes: z.array(z.object({
+    sceneNumber: z.number(),
+    durationSeconds: z.number(),
+    cumulativeTime: z.string(), // "MM:SS" format
+  })),
+});
+
+export type BeatSheet = z.infer<typeof BeatSheetSchema>;
+
+export const ScenePlanWithDurationSchema = ScenePlanSchema.extend({
+  durationSeconds: z.number().min(3).max(300),
 });
 
 export const ReviewResultSchema = z.object({

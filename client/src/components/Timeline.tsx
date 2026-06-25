@@ -25,6 +25,9 @@ export interface Scene {
   status: 'pending' | 'generating' | 'completed' | 'failed';
   music_volume?: number;
   speaker?: string;
+  transition_type?: string;
+  alt_scene_video_path?: string;
+  parent_scene_id?: number;
 }
 
 interface TimelineProps {
@@ -187,7 +190,7 @@ const s: Record<string, React.CSSProperties> = {
     bottom: '4px',
     borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'all 0.12s',
+    transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), all 0.12s',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -296,6 +299,34 @@ export const Timeline: React.FC<TimelineProps> = ({
       .catch(() => {});
   }, []);
 
+  // H1: Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (!selectedScene) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        onDeleteScene(selectedScene.id);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const idx = scenes.findIndex((s) => s.id === selectedScene.id);
+        if (idx === -1) return;
+        const nextIdx = e.key === 'ArrowRight' ? Math.min(idx + 1, scenes.length - 1) : Math.max(idx - 1, 0);
+        onSelectScene(scenes[nextIdx]);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        const idx = scenes.findIndex((s) => s.id === selectedScene.id);
+        if (idx === -1) return;
+        const dup: Scene = { ...selectedScene, id: Date.now() };
+        const newScenes = [...scenes];
+        newScenes.splice(idx + 1, 0, { ...dup, scene_number: idx + 2 });
+        onUpdateScenes(newScenes.map((s, i) => ({ ...s, scene_number: i + 1 })));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedScene, scenes, onDeleteScene, onSelectScene, onUpdateScenes]);
+
   const totalDuration = scenes.length * SCENE_DURATION;
   const totalWidth = Math.max(totalDuration * PX_PER_SEC, 800);
 
@@ -307,7 +338,7 @@ export const Timeline: React.FC<TimelineProps> = ({
     bottom: '4px',
     borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'all 0.12s',
+    transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), all 0.12s',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -509,9 +540,53 @@ export const Timeline: React.FC<TimelineProps> = ({
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                   >
                     Sahne #{scene.scene_number}
+                    {scene.alt_scene_video_path && (
+                      <span
+                        style={{
+                          fontSize: '8px',
+                          padding: '1px 4px',
+                          borderRadius: '3px',
+                          background: 'rgba(34,197,94,0.2)',
+                          color: 'var(--success)',
+                          fontWeight: 700,
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        ALT
+                      </span>
+                    )}
+                    {scene.parent_scene_id && scene.parent_scene_id > 0 && (
+                      <span
+                        style={{
+                          fontSize: '8px',
+                          padding: '1px 4px',
+                          borderRadius: '3px',
+                          background: 'rgba(200,164,92,0.2)',
+                          color: 'var(--gold)',
+                          fontWeight: 700,
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        VAR
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: '8px',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        background: 'rgba(0,242,254,0.1)',
+                        color: 'var(--primary)',
+                      }}
+                    >
+                      {scene.transition_type || 'fade'}
+                    </span>
                   </div>
                   <div
                     style={{
@@ -781,6 +856,65 @@ export const Timeline: React.FC<TimelineProps> = ({
                 <option value="pan_right">Pan Right</option>
                 <option value="breathing">Breathing</option>
               </select>
+            </div>
+
+            <div style={s.fieldGroup}>
+              <span style={s.fieldLabel}>Geçiş</span>
+              <select
+                value={selectedScene.transition_type || 'fade'}
+                onChange={(e) =>
+                  updateSceneField(selectedScene.id, 'transition_type', e.target.value)
+                }
+                style={s.select}
+              >
+                <option value="fade">Fade</option>
+                <option value="dissolve">Dissolve</option>
+                <option value="smoothleft">Smooth Left</option>
+                <option value="smoothright">Smooth Right</option>
+                <option value="smoothup">Smooth Up</option>
+                <option value="smoothdown">Smooth Down</option>
+                <option value="slideleft">Slide Left</option>
+                <option value="slideright">Slide Right</option>
+                <option value="slideup">Slide Up</option>
+                <option value="slidedown">Slide Down</option>
+                <option value="wipeleft">Wipe Left</option>
+                <option value="wiperight">Wipe Right</option>
+                <option value="circleopen">Circle Open</option>
+                <option value="circleclose">Circle Close</option>
+                <option value="clock">Clock</option>
+                <option value="radial">Radial</option>
+                <option value="zoomin">Zoom In</option>
+                <option value="pixelize">Pixelize</option>
+                <option value="hblur">Blur</option>
+                <option value="distance">Distance</option>
+              </select>
+            </div>
+
+            <div style={{ ...s.fieldGroup, marginLeft: 'auto' }}>
+              <span style={s.fieldLabel}>Alt</span>
+              {selectedScene.alt_scene_video_path ? (
+                <span style={{ fontSize: '10px', color: 'var(--success)', fontWeight: 600 }}>
+                  Alt var
+                </span>
+              ) : (
+                <button
+                  style={{
+                    ...s.btn,
+                    padding: '3px 8px',
+                    fontSize: '10px',
+                    color: 'var(--gold)',
+                    borderColor: 'rgba(200,164,92,0.3)',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetch(`/api/v1/jobs/0/scenes/${selectedScene.id}/alt`, { method: 'POST' })
+                      .catch(() => {});
+                  }}
+                  title="Alternatif sahne oluştur"
+                >
+                  Üret
+                </button>
+              )}
             </div>
 
             <div style={s.fieldGroup}>

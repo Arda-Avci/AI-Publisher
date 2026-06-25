@@ -294,7 +294,52 @@ export function registerEditorRoutes(app: Application): void {
     }
   });
 
-  // 7. Inpainting (nesne/maske silme)
+  // 8. 4K Upscale (Real-ESRGAN)
+  app.post(
+    '/api/v1/editor/upscale',
+    mediumLimiter,
+    requireAuth,
+    upload.single('image'),
+    async (req: any, res: Response) => {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'Görsel dosyası gerekli' });
+      }
+      const scale = parseInt(req.body.scale as string, 10) || 4;
+      if (scale !== 2 && scale !== 4) {
+        return res.status(400).json({ success: false, error: 'scale 2 veya 4 olmalıdır' });
+      }
+      try {
+        Logger.info(`4K Upscale isteği: ${req.file.originalname} (${scale}x)`);
+        const fs = await import('fs-extra');
+        const fileBuffer = await fs.readFile(req.file.path);
+        const blob = new Blob([fileBuffer], { type: req.file.mimetype });
+        const formData = new FormData();
+        formData.append('image', blob, req.file.originalname);
+        formData.append('scale', String(scale));
+        const response = await fetch(
+          dockerHost.getServiceUrl('realesrgan', '/upscale'),
+          { method: 'POST', body: formData },
+        );
+        if (!response.ok) {
+          const errMsg = await response.text();
+          Logger.error(`Upscale başarısız: ${errMsg}`);
+          return res.status(response.status).json({ success: false, error: 'Upscale hatası' });
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const outputFilename = `upscaled_${Date.now()}_${req.file.filename}.png`;
+        const outputPath = `/uploads/${outputFilename}`;
+        await fs.writeFile(`${process.cwd()}${outputPath}`, buffer);
+        await fs.remove(req.file.path);
+        return res.json({ success: true, url: outputPath, filename: outputFilename });
+      } catch (err: any) {
+        Logger.error('Upscale proxy hatası:', err);
+        return res.status(500).json({ success: false, error: err.message || 'UPSCALE_HATASI' });
+      }
+    },
+  );
+
+  // 9. Inpainting (nesne/maske silme)
   app.post('/api/v1/editor/inpaint-video', mediumLimiter, requireAuth, async (req, res) => {
     const { videoPath, masks = [], strength = 0.8 } = req.body;
     if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });

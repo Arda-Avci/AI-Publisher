@@ -42,6 +42,9 @@ export interface Scene {
   videoPath?: string;
   audioPath?: string;
   sort_order?: number;
+  transition_type?: string;
+  alt_scene_video_path?: string;
+  parent_scene_id?: number;
 }
 
 export interface OpportunityVideo {
@@ -150,7 +153,7 @@ export interface TrendSummary {
 export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar' | 'cogvideox5b' | 'cogvideox2b' | 'sadtalker' | 'dynamicrafter' | 'zeroscope' | 'geneface' | 'pyramid-flow' | 'video-retalking' | 'mochi' | 'veo31';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
-export type Language = 'tr' | 'en';
+export type Language = 'tr' | 'en' | 'de' | 'fr' | 'es' | 'ar';
 export type Tab = 'create' | 'gallery' | 'opportunities' | 'groupchat' | 'canvas' | 'apikeys' | 'batch';
 
 export interface Script {

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Header } from './components/Header.js';
 import { ProjectForm } from './components/ProjectForm.js';
 import { StudioPanel } from './components/StudioPanel.js';
+import { Dashboard } from './components/Dashboard.js';
 import { GalleryPanel } from './components/GalleryPanel.js';
 import { PhotoEditor } from './components/PhotoEditor.js';
 import { LandingPage } from './components/LandingPage.js';
@@ -31,6 +32,7 @@ import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
 import { HelpVideoPanel } from './components/HelpVideoPanel.js';
 import { AIStoryAssistant } from './components/AIStoryAssistant.js';
 import { ScriptWriterPanel } from './components/ScriptWriterPanel.js';
+import { EnvPropManager } from './components/EnvPropManager.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
 import { StudioToolsPanel } from './components/StudioToolsPanel.js';
 import { TrendPanel } from './components/TrendPanel.js';
@@ -41,6 +43,7 @@ import AdminHelpVideos from './components/admin/AdminHelpVideos.js';
 import AdminSystem from './components/admin/AdminSystem.js';
 import type { AdminPage } from './components/admin/AdminLayout.js';
 import { NotificationToast } from './components/NotificationToast.js';
+import { NotificationCenter } from './components/NotificationCenter.js';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -75,6 +78,12 @@ export default function App() {
   const [metaYtTitle, setMetaYtTitle] = useState('');
   const [metaYtDesc, setMetaYtDesc] = useState('');
   const [metaYtTags, setMetaYtTags] = useState('');
+  const [metaTtDesc, setMetaTtDesc] = useState('');
+  const [metaTtTags, setMetaTtTags] = useState('');
+  const [metaXDesc, setMetaXDesc] = useState('');
+  const [metaXTags, setMetaXTags] = useState('');
+  const [metaMetaDesc, setMetaMetaDesc] = useState('');
+  const [metaMetaTags, setMetaMetaTags] = useState('');
   const [isMetaSaving, setIsMetaSaving] = useState(false);
   const [editingImageScene, setEditingImageScene] = useState<Scene | null>(null);
   const [charModalOpen, setCharModalOpen] = useState(false);
@@ -127,6 +136,7 @@ export default function App() {
   const [trendEnabled, setTrendEnabled] = useState(false);
 
   const mainTabs = [
+    'Dashboard',
     'Örnekler',
     'Stüdyo',
     'Galeri',
@@ -134,6 +144,7 @@ export default function App() {
     'AI Asistan',
     'Karakterler',
     'Senaryo',
+    'Ortam/Nesne',
     'Canvas',
     'API Keys',
     'Batch',
@@ -142,7 +153,7 @@ export default function App() {
     'Trendler',
     'AI Stüdyo',
   ] as const;
-  const [mainTab, setMainTab] = useState<(typeof mainTabs)[number]>('Örnekler');
+  const [mainTab, setMainTab] = useState<(typeof mainTabs)[number]>('Dashboard');
 
   const t = useCallback(
     (key: string, params?: Record<string, any>) => {
@@ -282,9 +293,21 @@ export default function App() {
           if (d.etaSeconds !== undefined) setEtaSeconds(d.etaSeconds);
         }
         if (d.stageKey === 'stageCompleted') {
-          fetchJobs();
-          fetchScenes(jobId);
           closeProgressStream();
+          fetchScenes(jobId);
+          fetchJobs().then(() => {
+            fetch(`/api/v1/jobs/${jobId}`).then(async (r) => {
+              try {
+                const d2 = await r.json();
+                if (d2.success && d2.job) {
+                  setSelectedJob(d2.job);
+                } else if (d2.success && d2.jobs?.length > 0) {
+                  setSelectedJob(d2.jobs[0]);
+                }
+              } catch {}
+            });
+          });
+          setTimeout(() => triggerAutoDownload(), 1000);
         }
       } catch (e) {
         console.error('[SSE] parse error', e, e.data);
@@ -512,12 +535,12 @@ export default function App() {
           yt_title: metaYtTitle,
           yt_desc: metaYtDesc,
           yt_tags: metaYtTags,
-          tt_desc: metaYtDesc.slice(0, 150),
-          tt_tags: metaYtTags,
-          x_desc: metaYtDesc.slice(0, 200),
-          x_tags: metaYtTags,
-          meta_desc: metaYtDesc,
-          meta_tags: metaYtTags,
+          tt_desc: metaTtDesc || metaYtDesc.slice(0, 150),
+          tt_tags: metaTtTags || metaYtTags,
+          x_desc: metaXDesc || metaYtDesc.slice(0, 200),
+          x_tags: metaXTags || metaYtTags,
+          meta_desc: metaMetaDesc || metaYtDesc,
+          meta_tags: metaMetaTags || metaYtTags,
         }),
       });
       const ds = await rs.json();
@@ -537,6 +560,16 @@ export default function App() {
     } finally {
       setIsMetaSaving(false);
     }
+  };
+
+  const triggerAutoDownload = () => {
+    if (!selectedJob?.final_filename) return;
+    const a = document.createElement('a');
+    a.href = `/videolar/${selectedJob.final_filename}`;
+    a.download = selectedJob.final_filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleCancelJob = async (id: number) => {
@@ -578,6 +611,12 @@ export default function App() {
     setMetaYtTitle(job.yt_title || '');
     setMetaYtDesc(job.yt_desc || '');
     setMetaYtTags(job.yt_tags || '');
+    setMetaTtDesc(job.tt_desc || '');
+    setMetaTtTags(job.tt_tags || '');
+    setMetaXDesc(job.x_desc || '');
+    setMetaXTags(job.x_tags || '');
+    setMetaMetaDesc(job.meta_desc || '');
+    setMetaMetaTags(job.meta_tags || '');
   };
   const togglePlatform = (p: Platform) =>
     setTargetPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -665,6 +704,7 @@ export default function App() {
                 flexDirection: 'column',
                 height: '100vh',
                 background: 'var(--bg-primary)',
+                position: 'relative',
               }}
             >
               <Header
@@ -675,13 +715,31 @@ export default function App() {
                 userCredits={userCredits}
                 onSetTheme={setTheme}
                 onToggleDark={() => setIsDark(!isDark)}
-                onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+                onToggleLanguage={() => {
+                  const langs: Language[] = ['tr', 'en', 'de', 'fr', 'es', 'ar'];
+                  const idx = langs.indexOf(language);
+                  setLanguage(langs[(idx + 1) % langs.length]);
+                }}
                 onSetActiveTab={setActiveTab}
                 onLogout={handleLogout}
                 t={t}
                 isAdmin={isAdmin}
                 onNavigateAdmin={() => (window.location.href = '/admin')}
               />
+
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 8,
+                  height: 56,
+                  display: 'flex',
+                  alignItems: 'center',
+                  zIndex: 100,
+                }}
+              >
+                <NotificationCenter t={t} />
+              </div>
 
               <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {(mainTab === 'Stüdyo' || mainTab === 'Galeri') && (
@@ -870,6 +928,16 @@ export default function App() {
                     mainTab={mainTab}
                   />
 
+                  {mainTab === 'Dashboard' && (
+                    <Dashboard
+                      jobs={jobs}
+                      userCredits={userCredits}
+                      onSelectJob={(job) => { handleSelectJob(job); setMainTab('Galeri'); }}
+                      onNewProject={() => setMainTab('Stüdyo')}
+                      onOpenGallery={() => setMainTab('Galeri')}
+                      t={t}
+                    />
+                  )}
                   {mainTab === 'Örnekler' && <ExamplesPanel language={language} t={t} />}
                   {mainTab === 'AI Asistan' && (
                     <AIStoryAssistant
@@ -881,6 +949,9 @@ export default function App() {
                   )}
                   {mainTab === 'Senaryo' && (
                     <ScriptWriterPanel language={language} />
+                  )}
+                  {mainTab === 'Ortam/Nesne' && (
+                    <EnvPropManager language={language} />
                   )}
                   {mainTab === 'Canvas' && (
                     <CanvasPanel
@@ -946,7 +1017,9 @@ export default function App() {
                     ? 'characters'
                     : mainTab === 'Senaryo'
                       ? 'studio'
-                      : mainTab === 'API Keys'
+                      : mainTab === 'Ortam/Nesne'
+                        ? 'studio'
+                        : mainTab === 'API Keys'
                         ? 'api_keys'
                         : mainTab === 'Trendler'
                           ? 'studio'
@@ -973,6 +1046,12 @@ export default function App() {
                       metaYtTitle={metaYtTitle}
                       metaYtDesc={metaYtDesc}
                       metaYtTags={metaYtTags}
+                      metaTtDesc={metaTtDesc}
+                      metaTtTags={metaTtTags}
+                      metaXDesc={metaXDesc}
+                      metaXTags={metaXTags}
+                      metaMetaDesc={metaMetaDesc}
+                      metaMetaTags={metaMetaTags}
                       isMetaSaving={isMetaSaving}
                       progressMsg={progressMsg}
                       progressPercent={progressPercent}
@@ -983,6 +1062,12 @@ export default function App() {
                       onSetMetaYtTitle={setMetaYtTitle}
                       onSetMetaYtDesc={setMetaYtDesc}
                       onSetMetaYtTags={setMetaYtTags}
+                      onSetMetaTtDesc={setMetaTtDesc}
+                      onSetMetaTtTags={setMetaTtTags}
+                      onSetMetaXDesc={setMetaXDesc}
+                      onSetMetaXTags={setMetaXTags}
+                      onSetMetaMetaDesc={setMetaMetaDesc}
+                      onSetMetaMetaTags={setMetaMetaTags}
                       onSaveMetaAndPublish={handleSaveMetaAndPublish}
                       userCredits={userCredits}
                       t={t}
@@ -1033,7 +1118,11 @@ export default function App() {
                 csrfToken={csrfToken}
                 onSetTheme={setTheme}
                 onToggleDark={() => setIsDark(!isDark)}
-                onToggleLanguage={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+                onToggleLanguage={() => {
+                  const langs: Language[] = ['tr', 'en', 'de', 'fr', 'es', 'ar'];
+                  const idx = langs.indexOf(language);
+                  setLanguage(langs[(idx + 1) % langs.length]);
+                }}
                 t={t}
               />
               <NotificationToast />

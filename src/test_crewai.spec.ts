@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getCrewaiGemini, crewaiLogger, createOutlinerAgent, createSceneArchitectAgent, createScriptwriterAgent, createReviewerAgent } from './services/crewai/index.js';
-import { ScriptOutputSchema, ReviewResultSchema } from './types/script.js';
+import { ScriptOutputSchema, ReviewResultSchema, ScenePlanSchema, BeatSheetSchema, ScenePlanWithDurationSchema } from './types/script.js';
 import { Agent, Task, Crew, Process } from '@crewai-ts/core';
+import { skipAITests } from './test-utils/ai-guard.js';
 
 describe('CrewAI Core', () => {
   it('Agent olusturma', () => {
@@ -49,7 +50,7 @@ describe('CrewAI Core', () => {
     expect(crew).toBeDefined();
   });
 
-  it('Gemini provider uretimi', () => {
+  it.skipIf(skipAITests)('Gemini provider uretimi', () => {
     const llm = getCrewaiGemini('gemini-2.5-flash');
     expect(llm).toBeDefined();
   });
@@ -92,7 +93,7 @@ describe('CrewAI Core', () => {
       genre: 'Dram',
       characters: [{ name: 'Ali', age: 30, motivation: 'Intikam', flaw: 'Kibir' }],
       synopsis: '3 perdeli ozet',
-      scenes: [{ sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece', interior: true, purpose: 'Tanitim', characters: ['Ali'], plot: 'Ali eve gelir' }],
+      scenes: [{ sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece', interior: true, purpose: 'Tanitim', characters: ['Ali'], plot: 'Ali eve gelir', durationSeconds: 20 }],
       fullScript: 'IC - EV - GECE\nAli iceri girer.',
       revisionCount: 0,
       status: 'approved',
@@ -106,6 +107,87 @@ describe('CrewAI Core', () => {
   it('ScriptOutputSchema gecersiz veriyi reddeder', () => {
     expect(() => ScriptOutputSchema.parse({})).toThrow();
     expect(() => ScriptOutputSchema.parse({ logline: 'test', status: 'invalid' })).toThrow();
+  });
+
+  it('ScenePlanSchema durationSeconds dogrular', () => {
+    const valid = ScenePlanSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: 30,
+    });
+    expect(valid.durationSeconds).toBe(30);
+  });
+
+  it('ScenePlanSchema negatif duration reddeder', () => {
+    expect(() => ScenePlanSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: -5,
+    })).toThrow();
+  });
+
+  it('ScenePlanSchema sifir duration reddeder', () => {
+    expect(() => ScenePlanSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: 0,
+    })).toThrow();
+  });
+
+  it('ScenePlanSchema default duration 20 sn', () => {
+    const parsed = ScenePlanSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir',
+    });
+    expect(parsed.durationSeconds).toBeGreaterThan(0);
+  });
+
+  it('ScenePlanWithDurationSchema limit 3-300', () => {
+    const low = ScenePlanWithDurationSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: 3,
+    });
+    expect(low.durationSeconds).toBe(3);
+    const high = ScenePlanWithDurationSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: 300,
+    });
+    expect(high.durationSeconds).toBe(300);
+    expect(() => ScenePlanWithDurationSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: 301,
+    })).toThrow();
+    expect(() => ScenePlanWithDurationSchema.parse({
+      sceneNumber: 1, location: 'Ev', timeOfDay: 'Gece',
+      interior: true, purpose: 'Tanitim', characters: ['Ali'],
+      plot: 'Ali eve gelir', durationSeconds: 2,
+    })).toThrow();
+  });
+
+  it('BeatSheetSchema dogru hesaplama', () => {
+    const beatSheet = BeatSheetSchema.parse({
+      totalDurationSeconds: 120,
+      estimatedVideoLengthMinutes: 2,
+      sceneCount: 4,
+      scenes: [
+        { sceneNumber: 1, durationSeconds: 30, cumulativeTime: '00:30' },
+        { sceneNumber: 2, durationSeconds: 30, cumulativeTime: '01:00' },
+        { sceneNumber: 3, durationSeconds: 30, cumulativeTime: '01:30' },
+        { sceneNumber: 4, durationSeconds: 30, cumulativeTime: '02:00' },
+      ],
+    });
+    expect(beatSheet.totalDurationSeconds).toBe(120);
+    expect(beatSheet.scenes).toHaveLength(4);
+    expect(beatSheet.scenes[3]!.cumulativeTime).toBe('02:00');
+  });
+
+  it('BeatSheetSchema gecersiz veriyi reddeder', () => {
+    expect(() => BeatSheetSchema.parse({})).toThrow();
+    expect(() => BeatSheetSchema.parse({ totalDurationSeconds: -1, estimatedVideoLengthMinutes: 0, sceneCount: 0, scenes: [] })).toThrow();
   });
 
   it('ReviewResultSchema dogrulama', () => {

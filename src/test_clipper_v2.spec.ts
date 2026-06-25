@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import type { TranscriptionResult } from './services/clipper/types.js';
 import { tokenTracker } from './lib/token-tracker.js';
+import { skipAITests } from './test-utils/ai-guard.js';
 
 // ── Test Verileri ─────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ const mockTranscription: TranscriptionResult = {
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('ViralAnalyzer v2 (Gemini Structured)', () => {
+describe.skipIf(skipAITests)('ViralAnalyzer v2 (Gemini Structured)', () => {
   let viralAnalyzer: any;
 
   beforeAll(async () => {

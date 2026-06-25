@@ -6,6 +6,7 @@ import { FIXTURES } from './__fixtures__/index.js';
 import { stretchAudioToDuration, replaceAudioTrack } from './services/autoDubbing.js';
 import { generateViralTitles, generateHashtags } from './services/viralHook.js';
 import { generateHighlightSrt } from './services/emotionCaptions.js';
+import { skipAITests } from './test-utils/ai-guard.js';
 import { generateBroll } from './services/aiBroll.js';
 import { enhanceAudio } from './services/studioSound.js';
 import { correctEyeContact } from './services/eyeContact.js';
@@ -35,15 +36,8 @@ describe('AutoDubbing', () => {
 });
 
 describe('ViralHook', () => {
-  const hasKeys = !!(
-    process.env.GEMINI_API_KEY ||
-    process.env.MINIMAX_API_KEY ||
-    process.env.ZEN_API_KEY
-  );
-
   describe('generateViralTitles()', () => {
-    it('should return array of viral title suggestions', async () => {
-      if (!hasKeys) return;
+    it.runIf(!skipAITests)('should return array of viral title suggestions', async () => {
       const result = await generateViralTitles('Test topic', 5);
       expect(result).toHaveProperty('titles');
       expect(Array.isArray(result.titles)).toBe(true);
@@ -51,8 +45,7 @@ describe('ViralHook', () => {
   });
 
   describe('generateHashtags()', () => {
-    it('should return hashtag suggestions for platform', async () => {
-      if (!hasKeys) return;
+    it.runIf(!skipAITests)('should return hashtag suggestions for platform', async () => {
       const result = await generateHashtags('Test content', 'youtube');
       expect(result).toHaveProperty('hashtags');
       expect(Array.isArray(result.hashtags)).toBe(true);

@@ -49,6 +49,8 @@ __pycache__/
 # Compiled JS outputs (TypeScript build artifacts)
 src/**/*.js
 src/**/*.js.map
+src/**/*.d.ts
+src/**/*.d.ts.map
 
 # Generated documentation artifacts
 C4-Documentation/

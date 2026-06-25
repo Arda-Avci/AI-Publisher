@@ -529,9 +529,11 @@ export function registerJobRoutes(app: Application): void {
             sort_order,
             music_volume,
             speaker,
+            transition_type,
           } = scene;
           const volume = typeof music_volume === 'number' ? music_volume : 0.2;
           const spk = speaker || null;
+          const transType = transition_type || 'fade';
           if (id) {
             // Güncelleme
             await db.run(
@@ -543,7 +545,8 @@ export function registerJobRoutes(app: Application): void {
               camera_motion = ?,
               sort_order = ?,
               music_volume = ?,
-              speaker = ?
+              speaker = ?,
+              transition_type = ?
              WHERE id = ? AND job_id = ?`,
               [
                 scene_number,
@@ -554,6 +557,7 @@ export function registerJobRoutes(app: Application): void {
                 sort_order,
                 volume,
                 spk,
+                transType,
                 id,
                 jobId,
               ],
@@ -561,8 +565,8 @@ export function registerJobRoutes(app: Application): void {
           } else {
             // Yeni ekleme
             await db.run(
-              `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order, music_volume, speaker)
-             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+              `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order, music_volume, speaker, transition_type)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
               [
                 jobId,
                 scene_number,
@@ -573,6 +577,7 @@ export function registerJobRoutes(app: Application): void {
                 sort_order,
                 volume,
                 spk,
+                transType,
               ],
             );
           }
@@ -750,7 +755,61 @@ export function registerJobRoutes(app: Application): void {
     },
   );
 
-  // ── YENİ: AI Viralite Skoru Analiz Rotası ──
+  // ── ALT SCENE: POST /api/v1/jobs/:jobId/scenes/:sceneId/alt (Alternatif Sahne Üret) ──
+  app.post(
+    '/api/v1/jobs/:jobId/scenes/:sceneId/alt',
+    mediumLimiter,
+    requireAuth,
+    async (req, res) => {
+      const jobId = parseInt(req.params.jobId as string, 10);
+      const sceneId = parseInt(req.params.sceneId as string, 10);
+      try {
+        const scene = await db.get('SELECT * FROM video_scenes WHERE id = ? AND job_id = ?', [
+          sceneId,
+          jobId,
+        ]);
+        if (!scene) {
+          return res.status(404).json({ success: false, error: 'Sahne bulunamadı.' });
+        }
+        const altNumber = (scene.scene_number || 0) * 1000 + Date.now() % 1000;
+        await db.run(
+          `INSERT INTO video_scenes (job_id, scene_number, video_prompt, speech_text, sfx_prompt, camera_motion, status, sort_order, parent_scene_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+          [jobId, altNumber, scene.video_prompt, scene.speech_text || '', scene.sfx_prompt || '', scene.camera_motion || 'none', altNumber, sceneId],
+        );
+        const countRes = await db.get('SELECT COUNT(*) as count FROM video_scenes WHERE job_id = ?', [jobId]);
+        const actualCount = countRes?.count || 0;
+        await db.run('UPDATE video_jobs SET total_scenes = ? WHERE id = ?', [actualCount, jobId]);
+        res.json({ success: true, message: 'Alternatif sahne oluşturuldu.' });
+      } catch (err: any) {
+        Logger.error('POST /api/v1/jobs/:jobId/scenes/:sceneId/alt failed', err);
+        res.status(500).json({ success: false, error: err.message });
+      }
+    },
+  );
+
+  // ── ALT SCENE: POST /api/v1/jobs/:jobId/scenes/:sceneId/select-alt (Alternatifi Ana Sahne Yap) ──
+  app.post(
+    '/api/v1/jobs/:jobId/scenes/:sceneId/select-alt',
+    mediumLimiter,
+    requireAuth,
+    async (req, res) => {
+      const jobId = parseInt(req.params.jobId as string, 10);
+      const sceneId = parseInt(req.params.sceneId as string, 10);
+      const { altVideoPath } = req.body;
+      try {
+        await db.run('UPDATE video_scenes SET video_path = ?, status = ? WHERE id = ? AND job_id = ?', [
+          altVideoPath, 'completed', sceneId, jobId,
+        ]);
+        res.json({ success: true, message: 'Alternatif video ana sahneye atandı.' });
+      } catch (err: any) {
+        Logger.error('POST /api/v1/jobs/:jobId/scenes/:sceneId/select-alt failed', err);
+        res.status(500).json({ success: false, error: err.message });
+      }
+    },
+  );
+
+  // ── AI Viralite Skoru Analiz Rotası ──
   app.post('/api/v1/jobs/:jobId/viral-score', requireAuth, async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
     const userId = req.session.userId;
@@ -780,6 +839,37 @@ export function registerJobRoutes(app: Application): void {
       });
     } catch (err: any) {
       Logger.error('predictViralScore failed', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // React SPA icin tum job'lari listele (metadata alanlari dahil)
+  app.get('/api/v1/jobs', requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const rows = await db.all(
+        `SELECT * FROM video_jobs WHERE user_id = ? ORDER BY id DESC`,
+        [userId],
+      );
+      res.json({ success: true, jobs: rows });
+    } catch (err: any) {
+      Logger.error('GET /api/v1/jobs failed', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // React SPA icin tek bir job detayi
+  app.get('/api/v1/jobs/:id', requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const { id } = req.params;
+      const job = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [id, userId]);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job bulunamadı.' });
+      }
+      res.json({ success: true, job });
+    } catch (err: any) {
+      Logger.error('GET /api/v1/jobs/:id failed', err);
       res.status(500).json({ success: false, error: err.message });
     }
   });

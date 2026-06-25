@@ -1,6 +1,6 @@
 FROM ai-publisher-base:latest
 
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
     "accelerate==0.30.0" \
     "scipy==1.11.1" \
@@ -19,5 +19,4 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
-
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

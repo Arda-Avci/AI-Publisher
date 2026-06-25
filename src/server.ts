@@ -66,15 +66,21 @@ import dubbingRouter from './routes/dubbing.js';
 import viralRouter from './routes/viral.js';
 import transcriptEditorRouter from './routes/transcriptEditor.js';
 import aiStudioRouter from './routes/aiStudio.js';
-import storyboardRouter from './routes/storyboard.js';
+import oldStoryboardRouter from './routes/storyboard.js';
 import editQueueRouter from './routes/editQueue.js';
 import { loraRouter } from './routes/lora.js';
 import { uploadRouter } from './routes/upload.js';
 import { schedulePublishRouter } from './routes/schedulePublish.js';
 import { registerWebhookRoutes } from './routes/webhook.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
+import { registerExportRoutes } from './routes/export.js';
+import { registerAnalyticsRoutes } from './routes/analytics.js';
+import { registerSubscriptionRoutes } from './routes/subscriptions.js';
 import trendRouter from './routes/trends.js';
 import { crewRouter } from './routes/crewAI.js';
+import { documentRouter } from './routes/documentUpload.js';
+import { storyboardRouter } from './services/storyboardRoutes.js';
+import { envPropsRouter } from './routes/envProps.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -165,6 +171,7 @@ app.use(themeMiddleware);
 // Uploads ve videolar dizinlerini statik olarak sun
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/videolar', express.static(path.join(process.cwd(), 'videolar')));
+app.use('/exports', express.static(path.join(process.cwd(), 'exports')));
 
 // React build çıktısını serve et
 const clientDist = path.join(process.cwd(), 'client', 'dist');
@@ -189,6 +196,9 @@ registerViMaxRoutes(app);
 registerPipecatRoutes(app);
 registerWebhookRoutes(app);
 registerNotificationRoutes(app);
+registerExportRoutes(app);
+registerAnalyticsRoutes(app);
+registerSubscriptionRoutes(app);
 
 // API Rotaları
 app.use('/api/v1/broll', bRollRouter);
@@ -217,7 +227,7 @@ app.use('/api/v1/dubbing', dubbingRouter);
 app.use('/api/v1/viral', viralRouter);
 app.use('/api/v1/transcript', transcriptEditorRouter);
 app.use('/api/v1/studio', aiStudioRouter);
-app.use('/api/v1/storyboard', storyboardRouter);
+app.use('/api/v1/storyboard', oldStoryboardRouter);
 app.use('/api/v1/edit-queue', editQueueRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/lora', loraRouter);
@@ -225,6 +235,9 @@ app.use('/api/v1/upload', uploadRouter);
 app.use('/api/v1/schedule-publish', schedulePublishRouter);
 app.use('/api/v1/trends', trendRouter);
 app.use('/api/v1/crew', crewRouter);
+app.use('/api/v1', storyboardRouter);
+app.use('/api/v1', documentRouter);
+app.use('/api/v1', envPropsRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

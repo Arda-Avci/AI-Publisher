@@ -328,6 +328,24 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_credit_tr_user ON credit_transactions(user_id);
   `);
 
+  // subscriptions tablosu kurulumu
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+      plan VARCHAR(50) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'active',
+      iyzico_token TEXT,
+      iyzico_subscription_reference TEXT,
+      start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      next_billing_date TIMESTAMP,
+      cancelled_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+  `);
+
   // video_scenes tablosu kurulumu
   await db.exec(`
     CREATE TABLE IF NOT EXISTS video_scenes (
@@ -722,6 +740,21 @@ export async function initDatabase() {
     );
   `);
 
+  // Storyboard görselleri tablosu — Workstream F
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS storyboard_images (
+      id SERIAL PRIMARY KEY,
+      script_id INTEGER NOT NULL REFERENCES scripts(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      scene_number INTEGER NOT NULL,
+      image_url TEXT NOT NULL,
+      width INTEGER DEFAULT 2048,
+      height INTEGER DEFAULT 2048,
+      prompt_used TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS canvases (
       id TEXT PRIMARY KEY,
@@ -746,6 +779,47 @@ export async function initDatabase() {
       is_read BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+  `);
+
+  // env_environments tablosu — Script Writer ortam kütüphanesi
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS env_environments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(100) NOT NULL,
+      category VARCHAR(30) NOT NULL DEFAULT 'custom',
+      description TEXT DEFAULT '',
+      mood_tags JSONB DEFAULT '[]'::jsonb,
+      color_palette JSONB DEFAULT '[]'::jsonb,
+      lighting_notes TEXT DEFAULT '',
+      reference_image_url TEXT,
+      is_favorite INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_environments_user_cat ON env_environments(user_id, category);
+    CREATE INDEX IF NOT EXISTS idx_env_environments_user_fav ON env_environments(user_id, is_favorite);
+  `);
+
+  // env_props tablosu — Script Writer aksesuar/nesne kütüphanesi
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS env_props (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(100) NOT NULL,
+      category VARCHAR(30) NOT NULL DEFAULT 'custom',
+      description TEXT DEFAULT '',
+      environment_id INTEGER REFERENCES env_environments(id) ON DELETE SET NULL,
+      interaction_notes TEXT DEFAULT '',
+      reference_image_url TEXT,
+      is_favorite INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_props_user_cat ON env_props(user_id, category);
+    CREATE INDEX IF NOT EXISTS idx_env_props_user_fav ON env_props(user_id, is_favorite);
   `);
 
   // video_jobs'a trend context kolonları
@@ -801,4 +875,21 @@ export async function initDatabase() {
     EXCEPTION WHEN undefined_column THEN NULL;
     END $$;
   `);
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE H: Timeline + Post-Production
+  // ═══════════════════════════════════════════════════════════════
+
+  // H2 — Scene transition type (fade for backward compat)
+  await db.exec(
+    "ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS transition_type VARCHAR(50) DEFAULT 'fade';",
+  );
+
+  // H4 — Alternative scene support
+  await db.exec(
+    'ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS alt_scene_video_path TEXT;',
+  );
+  await db.exec(
+    'ALTER TABLE video_scenes ADD COLUMN IF NOT EXISTS parent_scene_id INTEGER DEFAULT 0;',
+  );
 }

@@ -185,6 +185,19 @@ paymentsRouter.post('/checkout', requireAuth, async (req: Request, res: Response
 });
 
 /**
+ * Idempotency: aynı token'in iki kere işlenmesini engelle
+ */
+async function isTokenProcessed(token: string): Promise<boolean> {
+  const existing = await db.get(
+    "SELECT id FROM credit_transactions WHERE description LIKE ? LIMIT 1",
+    [`%token:${token}%`],
+  );
+  if (existing) return true;
+  const sub = await db.get('SELECT id FROM subscriptions WHERE iyzico_token = ? LIMIT 1', [token]);
+  return !!sub;
+}
+
+/**
  * iyzico ödeme sonucu callback webhook rotası
  * POST /api/v1/payments/webhook
  */
@@ -201,12 +214,19 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
   }
 
   try {
+    // Idempotency kontrolü
+    if (await isTokenProcessed(token)) {
+      Logger.warn(`iyzico tekrar eden webhook engellendi: token=${token}, userId=${userId}`);
+      res.redirect('/?payment=success');
+      return;
+    }
+
     if (isSub) {
       // Abonelik durumunu doğrula
       iyzipay.subscriptionCheckoutForm.retrieve(
         {
           locale: 'tr',
-          conversationId: `conv_sub_verify_${Date.now()}`,
+          conversationId: `conv_sub_verify_${Date.now()}_${userId}`,
           token: token,
         },
         async (err: any, result: any) => {
@@ -216,7 +236,6 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
             return;
           }
 
-          // Kredi ve Abonelik Kaydı
           const dbUser = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
           if (!dbUser) {
             Logger.error('iyzico abonelik basarili ancak kullanıcı bulunamadı:', { userId });
@@ -224,6 +243,10 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
             return;
           }
 
+          const subRef = result.subscriptionReferenceCode || result.referenceCode || '';
+          const nextBilling = result.endDate || null;
+
+          // Kredi ve Abonelik Kaydı
           const newCredits = (dbUser.credits || 0) + creditsToAdd;
           await db.run(
             'UPDATE users SET credits = ?, monthly_credit_limit = ?, credit_reset_date = CURRENT_TIMESTAMP WHERE id = ?',
@@ -231,17 +254,31 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
           );
 
           await db.run(
-            'INSERT INTO credit_transactions (user_id, amount, transaction_type, description) VALUES (?, ?, ?, ?)',
+            `INSERT INTO credit_transactions (user_id, amount, transaction_type, description) VALUES (?, ?, ?, ?)`,
             [
               userId,
               creditsToAdd,
               'subscription',
-              `iyzico Abonelik (${creditsToAdd} kredi/ay) başlatıldı.`,
+              `iyzico Abonelik (${creditsToAdd} kredi/ay) başlatıldı. token:${token}`,
             ],
           );
 
+          // subscriptions tablosuna kaydet (upsert)
+          await db.run(
+            `INSERT INTO subscriptions (user_id, plan, status, iyzico_token, iyzico_subscription_reference, next_billing_date)
+             VALUES (?, ?, 'active', ?, ?, ?)
+             ON CONFLICT (user_id) DO UPDATE SET
+               plan = EXCLUDED.plan,
+               status = 'active',
+               iyzico_token = EXCLUDED.iyzico_token,
+               iyzico_subscription_reference = EXCLUDED.iyzico_subscription_reference,
+               next_billing_date = EXCLUDED.next_billing_date,
+               cancelled_at = NULL`,
+            [userId, result.pricingPlanCode || 'sub_silver', token, subRef, nextBilling],
+          );
+
           Logger.info(
-            `Kullanıcıya abonelik sonrası kredi yüklendi: userId=${userId}, credits=+${creditsToAdd}`,
+            `Abonelik başarıyla başlatıldı: userId=${userId}, credits=+${creditsToAdd}, ref=${subRef}`,
           );
           res.redirect('/?payment=success');
         },
@@ -251,7 +288,7 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
       iyzipay.checkoutForm.retrieve(
         {
           locale: 'tr',
-          conversationId: `conv_verify_${Date.now()}`,
+          conversationId: `conv_verify_${Date.now()}_${userId}`,
           token: token,
         },
         async (err: any, result: any) => {
@@ -272,17 +309,17 @@ paymentsRouter.post('/webhook', async (req: Request, res: Response) => {
           await db.run('UPDATE users SET credits = ? WHERE id = ?', [newCredits, userId]);
 
           await db.run(
-            'INSERT INTO credit_transactions (user_id, amount, transaction_type, description) VALUES (?, ?, ?, ?)',
+            `INSERT INTO credit_transactions (user_id, amount, transaction_type, description) VALUES (?, ?, ?, ?)`,
             [
               userId,
               creditsToAdd,
               'purchase',
-              `iyzico sanal POS ile ${creditsToAdd} kredi satın alındı.`,
+              `iyzico sanal POS ile ${creditsToAdd} kredi satın alındı. token:${token}`,
             ],
           );
 
           Logger.info(
-            `Kullanıcıya ödeme sonrası kredi başarıyla yüklendi: userId=${userId}, credits=+${creditsToAdd}`,
+            `Tek seferlik ödeme başarılı: userId=${userId}, credits=+${creditsToAdd}`,
           );
           res.redirect('/?payment=success');
         },

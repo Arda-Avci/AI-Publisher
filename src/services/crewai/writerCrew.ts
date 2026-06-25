@@ -7,16 +7,19 @@ import { crewaiLogger } from './crewaiService.js';
 import type { ScriptOutput } from '../../types/script.js';
 import { getTierConfig, buildPromptWithTier } from './writerTiers.js';
 import type { WriterTier } from './writerTiers.js';
+import type { ArtStylePreset } from '../artStylePresets.js';
+import { getPresetById } from '../artStylePresets.js';
 
 const log = crewaiLogger('WriterCrew');
 
-export async function runWriterPipeline(topic: string, writerTier?: WriterTier): Promise<ScriptOutput> {
+export async function runWriterPipeline(topic: string, writerTier?: WriterTier, artStyle?: string): Promise<ScriptOutput> {
   const tier = getTierConfig(writerTier);
+  const preset = artStyle ? getPresetById(artStyle) : undefined;
   const MAX_REVISIONS = tier.maxRevisions;
-  log.info(`Writer pipeline basliyor. Tier: ${tier.tier} Konu: "${topic.slice(0, 80)}..."`);
+  log.info(`Writer pipeline basliyor. Tier: ${tier.tier} Stil: ${preset?.name || 'yok'} Konu: "${topic.slice(0, 80)}..."`);
 
   // 1. Outliner — konsept cikar
-  const concept = await runOutliner(topic, tier.tier);
+  const concept = await runOutliner(topic, tier.tier, preset);
 
   // 2. Scene Architect — sahne plani
   const scenePlan = await runSceneArchitect(concept);
@@ -69,8 +72,8 @@ export async function runWriterPipeline(topic: string, writerTier?: WriterTier):
   };
 }
 
-async function runOutliner(topic: string, tier?: import('./writerTiers.js').WriterTier): Promise<string> {
-  const agent = createOutlinerAgent();
+async function runOutliner(topic: string, tier?: import('./writerTiers.js').WriterTier, artStyle?: ArtStylePreset): Promise<string> {
+  const agent = createOutlinerAgent(artStyle);
   const baseDesc = `Kullanici Fikri: "${topic}"
 
     Ciktini su bolumlerden olustur ve KATI JSON formatinda (veya isaretli yapiyla) don:
@@ -108,7 +111,8 @@ async function runSceneArchitect(concept: string): Promise<string> {
     SAHNE [Numara]: [IC/DIS] - [MEKAN] - [ZAMAN]
     SAHNE AMACI: Bu sahnede hikaye acisindan ne degisiyor?
     BULUNAN KARAKTERLER: Kimler var?
-    OLAY ORGUSU: Sahnede yasanacak eylemin kisa tarifi.`,
+    OLAY ORGUSU: Sahnede yasanacak eylemin kisa tarifi.
+    TAHMINI SURE: Saniye cinsinden sahne suresi (3-300 arasi, tipik 15-30 sn).`,
     expectedOutput: 'Sahne sahne planlama. Her sahne yukaridaki formatta.',
     agent,
   });
@@ -190,6 +194,8 @@ function parseScenePlan(raw: string): ScriptOutput['scenes'] {
   const scenes: ScriptOutput['scenes'] = [];
   const blocks = raw.split(/SAHNE\s+\d+/i).slice(1).filter((b): b is string => !!b);
   for (const block of blocks) {
+    const durationMatch = block.match(/TAHMINI\s*SURE\s*[:]?\s*(\d+)/i);
+    const durationSeconds = durationMatch ? Math.min(300, Math.max(3, parseInt(durationMatch[1]!, 10))) : 20;
     scenes.push({
       sceneNumber: scenes.length + 1,
       location: extractSection(block, 'MEKAN') || 'Bilinmiyor',
@@ -198,6 +204,7 @@ function parseScenePlan(raw: string): ScriptOutput['scenes'] {
       purpose: extractSection(block, 'SAHNE AMACI') || '',
       characters: (extractSection(block, 'BULUNAN KARAKTERLER') || '').split(',').map((c) => c.trim()).filter(Boolean),
       plot: extractSection(block, 'OLAY ORGUSU') || '',
+      durationSeconds,
     });
   }
   return scenes;

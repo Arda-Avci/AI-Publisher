@@ -10,10 +10,11 @@ export function createSceneArchitectAgent(): Agent {
     role: 'Sahne Planlayici (Scene Architect)',
     goal:
       'Verilen hikaye ozeti ve karakter profillerini kullanarak filmin sahne planlamasini (Beat Sheet) cikar. ' +
-      'Her sahne: SAHNE NUMARASI, IÇ/DIŞ - MEKAN - ZAMAN, SAHNE AMACI, BULUNAN KARAKTERLER, OLAY ÖRGÜSÜ.',
+      'Her sahne: SAHNE NUMARASI, IÇ/DIŞ - MEKAN - ZAMAN, SAHNE AMACI, BULUNAN KARAKTERLER, OLAY ÖRGÜSÜ, TAHMINI SURE (saniye).',
     backstory:
       'Usta bir yonetmen ve senaryo mimarisin. ' +
       'Hikayenin ritmini belirler, her sahnenin amacini sorgularsin. ' +
+      'Tempo ve zamanlama konusunda titizsin: her sahnenin tahmini suresini saniye cinsinden belirlersin. ' +
       'Gereksiz sahneleri ayiklar, hikaye akisini kusursuz kurarsin.',
     llm: getCrewaiGemini('gemini-2.5-flash'),
   });

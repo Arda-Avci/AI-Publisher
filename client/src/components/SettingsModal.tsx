@@ -640,6 +640,102 @@ export function SettingsModal({
                       <span style={{ color: 'var(--accent)', fontSize: 18 }}>✓</span>
                     )}
                   </div>
+                  <div
+                    style={langCardStyle(language === 'de')}
+                    onClick={() => {
+                      if (language !== 'de') {
+                        onToggleLanguage();
+                        fetch('/api/v1/set-language', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ lang: 'de' }),
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: 24 }}>🇩🇪</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Deutsch</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        German interface
+                      </div>
+                    </div>
+                    {language === 'de' && (
+                      <span style={{ color: 'var(--accent)', fontSize: 18 }}>✓</span>
+                    )}
+                  </div>
+                  <div
+                    style={langCardStyle(language === 'fr')}
+                    onClick={() => {
+                      if (language !== 'fr') {
+                        onToggleLanguage();
+                        fetch('/api/v1/set-language', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ lang: 'fr' }),
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: 24 }}>🇫🇷</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Français</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        French interface
+                      </div>
+                    </div>
+                    {language === 'fr' && (
+                      <span style={{ color: 'var(--accent)', fontSize: 18 }}>✓</span>
+                    )}
+                  </div>
+                  <div
+                    style={langCardStyle(language === 'es')}
+                    onClick={() => {
+                      if (language !== 'es') {
+                        onToggleLanguage();
+                        fetch('/api/v1/set-language', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ lang: 'es' }),
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: 24 }}>🇪🇸</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Español</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        Spanish interface
+                      </div>
+                    </div>
+                    {language === 'es' && (
+                      <span style={{ color: 'var(--accent)', fontSize: 18 }}>✓</span>
+                    )}
+                  </div>
+                  <div
+                    style={langCardStyle(language === 'ar')}
+                    onClick={() => {
+                      if (language !== 'ar') {
+                        onToggleLanguage();
+                        fetch('/api/v1/set-language', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ lang: 'ar' }),
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: 24 }}>🇸🇦</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>العربية</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        Arabic interface
+                      </div>
+                    </div>
+                    {language === 'ar' && (
+                      <span style={{ color: 'var(--accent)', fontSize: 18 }}>✓</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

@@ -37,12 +37,17 @@ export async function createNotification(
   }
 }
 
-export async function getNotifications(userId: number, limit = 20): Promise<Notification[]> {
+export async function getNotifications(userId: number, limit = 20, type?: string): Promise<Notification[]> {
   try {
-    return await db.all(
-      'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
-      [userId, limit],
-    );
+    let query = 'SELECT * FROM notifications WHERE user_id = ?';
+    const params: any[] = [userId];
+    if (type && ['info', 'success', 'warning', 'error'].includes(type)) {
+      query += ' AND type = ?';
+      params.push(type);
+    }
+    query += ' ORDER BY created_at DESC LIMIT ?';
+    params.push(limit);
+    return await db.all(query, params);
   } catch (err) {
     Logger.error('[NOTIFICATION] getNotifications error:', err);
     return [];
@@ -51,7 +56,7 @@ export async function getNotifications(userId: number, limit = 20): Promise<Noti
 
 export async function markAsRead(notificationId: number): Promise<void> {
   try {
-    await db.run('UPDATE notifications SET is_read = 1 WHERE id = ?', [notificationId]);
+    await db.run('UPDATE notifications SET is_read = TRUE WHERE id = ?', [notificationId]);
   } catch (err) {
     Logger.error('[NOTIFICATION] markAsRead error:', err);
   }
@@ -59,7 +64,7 @@ export async function markAsRead(notificationId: number): Promise<void> {
 
 export async function markAllAsRead(userId: number): Promise<void> {
   try {
-    await db.run('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [userId]);
+    await db.run('UPDATE notifications SET is_read = TRUE WHERE user_id = ?', [userId]);
   } catch (err) {
     Logger.error('[NOTIFICATION] markAllAsRead error:', err);
   }
@@ -67,11 +72,24 @@ export async function markAllAsRead(userId: number): Promise<void> {
 
 export async function getUnreadCount(userId: number): Promise<number> {
   try {
-    const row = await db.get('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0', [userId]);
-    return row?.count ?? 0;
+    const row = await db.get('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE', [userId]);
+    return row?.count != null ? Number(row.count) : 0;
   } catch (err) {
     Logger.error('[NOTIFICATION] getUnreadCount error:', err);
     return 0;
+  }
+}
+
+export async function deleteNotification(notificationId: number, userId: number): Promise<boolean> {
+  try {
+    const result = await db.run(
+      'DELETE FROM notifications WHERE id = ? AND user_id = ?',
+      [notificationId, userId],
+    );
+    return (result?.changes ?? 0) > 0;
+  } catch (err) {
+    Logger.error('[NOTIFICATION] deleteNotification error:', err);
+    return false;
   }
 }
 

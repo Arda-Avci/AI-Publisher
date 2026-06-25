@@ -31,14 +31,14 @@ def get_pipeline(is_i2v):
     print(f"[CONTAINER - WAN] Loading Wan 2.1 {model_type} (VRAM: {vram_gb:.2f} GB)")
     
     if is_i2v:
-        from diffusers import WanAnimatePipeline
-        pipe = WanAnimatePipeline.from_pretrained(
+        from diffusers import WanPipeline
+        pipe = WanPipeline.from_pretrained(
             "Wan-AI/Wan2.1-I2V-14B-480P", 
             torch_dtype=torch.bfloat16
         )
     else:
-        from diffusers import WanAnimatePipeline
-        pipe = WanAnimatePipeline.from_pretrained(
+        from diffusers import WanPipeline
+        pipe = WanPipeline.from_pretrained(
             "Wan-AI/Wan2.1-T2V-1.3B", 
             torch_dtype=torch.bfloat16
         )

@@ -6,8 +6,9 @@ import { initDatabase, db } from './db.js';
 import { encryptUsername } from './lib/crypto.js';
 import bcrypt from 'bcrypt';
 import aiHelperRouter from './routes/aiHelper.js';
+import { skipAITests } from './test-utils/ai-guard.js';
 
-describe('AI Helper API Routes Integration Tests', () => {
+describe.skipIf(skipAITests)('AI Helper API Routes Integration Tests', () => {
   let app: express.Application;
   let authCookie: string = '';
 

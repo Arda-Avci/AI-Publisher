@@ -7,7 +7,7 @@ export function registerLocalesRoutes(app: Application): void {
   // Dil paketlerini dinamik olarak döner
   app.get('/api/v1/locales', async (req, res) => {
     let lang = (req.query.lang as string) || 'tr';
-    if (lang !== 'tr' && lang !== 'en') {
+    if (lang !== 'tr' && lang !== 'en' && lang !== 'de' && lang !== 'fr' && lang !== 'es' && lang !== 'ar') {
       lang = 'tr';
     }
 

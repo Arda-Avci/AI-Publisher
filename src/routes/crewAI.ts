@@ -6,6 +6,7 @@ import { db } from '../db.js';
 import { runWriterPipeline } from '../services/crewai/index.js';
 import { ScriptOutputSchema } from '../types/script.js';
 import { WriterTierSchema } from '../services/crewai/writerTiers.js';
+import { ArtStylePresetIdSchema, getAllPresets } from '../services/artStylePresets.js';
 import type { WriterTier } from '../services/crewai/writerTiers.js';
 
 export const crewRouter = Router();
@@ -17,7 +18,7 @@ crewRouter.post(
   heavyLimiter,
   async (req: Request, res: Response) => {
     const userId = req.session.userId as number;
-    const { topic, characterProfiles, writerTier } = req.body as { topic?: string; characterProfiles?: string; writerTier?: string };
+    const { topic, characterProfiles, writerTier, artStyle } = req.body as { topic?: string; characterProfiles?: string; writerTier?: string; artStyle?: string };
 
     if (!topic || typeof topic !== 'string' || topic.trim().length < 3) {
       res.status(400).json({ error: 'topic zorunlu (en az 3 karakter).' });
@@ -35,6 +36,17 @@ crewRouter.post(
       validatedTier = parsed.data;
     }
 
+    // Validate artStyle
+    let validatedArtStyle: string | undefined;
+    if (artStyle) {
+      const parsed = ArtStylePresetIdSchema.safeParse(artStyle);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Gecersiz artStyle preset ID.' });
+        return;
+      }
+      validatedArtStyle = parsed.data;
+    }
+
     try {
       // Karakter referansi varsa konuya ekle
       let enrichedTopic = topic.trim();
@@ -42,8 +54,8 @@ crewRouter.post(
         enrichedTopic += `\n\nKarakter Profilleri:\n${characterProfiles}`;
       }
 
-      Logger.info(`[Crew] Writer pipeline baslatiliyor: user=${userId} tier=${validatedTier || 'professional'} topic="${enrichedTopic.slice(0, 100)}..."`);
-      const result = await runWriterPipeline(enrichedTopic, validatedTier);
+      Logger.info(`[Crew] Writer pipeline baslatiliyor: user=${userId} tier=${validatedTier || 'professional'} style=${validatedArtStyle || 'none'} topic="${enrichedTopic.slice(0, 100)}..."`);
+      const result = await runWriterPipeline(enrichedTopic, validatedTier, validatedArtStyle);
 
       // Zod ile dogrula
       const validated = ScriptOutputSchema.parse(result);
@@ -118,3 +130,17 @@ crewRouter.get(
     }
   },
 );
+
+/** GET /api/v1/crew/art-styles — stil preset listesi */
+crewRouter.get('/art-styles', (_req: Request, res: Response) => {
+  const presets = getAllPresets().map(p => ({
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    style: p.style,
+    moodTags: p.moodTags,
+    colorPalette: p.colorPalette,
+    referenceDirectors: p.referenceDirectors,
+  }));
+  res.json({ status: 'success', data: presets });
+});
