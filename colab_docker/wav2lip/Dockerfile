@@ -21,15 +21,7 @@ RUN sed -i "s/args = parser.parse_args()/if __name__ == '__main__':\n    args = 
 COPY download_weights.sh /tmp/download_weights.sh
 RUN chmod +x /tmp/download_weights.sh && \
     mkdir -p /workspace/models/Wav2Lip/checkpoints && \
-    python -c "
-from huggingface_hub import hf_hub_download
-import shutil, os
-os.makedirs('/workspace/models/Wav2Lip/checkpoints', exist_ok=True)
-for fname in ['wav2lip.pth', 'wav2lip_gan.pth', 'visual_quality_disc.pth']:
-    p = hf_hub_download(repo_id='Rudrabha/Wav2Lip', filename=fname, cache_dir='/workspace/models/hf_cache', token=os.environ.get('HF_TOKEN') or None)
-    shutil.copy(p, f'/workspace/models/Wav2Lip/checkpoints/{fname}')
-    print(f'[WAV2LIP] OK: {fname}')
-"
+    python -c "import os, shutil; from huggingface_hub import hf_hub_download; os.makedirs('/workspace/models/Wav2Lip/checkpoints', exist_ok=True); [shutil.copy(hf_hub_download(repo_id='Rudrabha/Wav2Lip', filename=f, cache_dir='/workspace/models/hf_cache'), f'/workspace/models/Wav2Lip/checkpoints/{f}') for f in ['wav2lip.pth', 'wav2lip_gan.pth', 'visual_quality_disc.pth']]"
 
 COPY app.py /app/app.py
 WORKDIR /app
@@ -38,4 +30,3 @@ EXPOSE 5000
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
 CMD ["python", "-u", "runpod_handler.py"]
-
