@@ -26,7 +26,8 @@ Kaynak: `Script_writer_is_akisi.txt`
 ## ✅ Tamamlanan Major Fazlar
 
 | Faz | Tarih |
-|-----|-------|
+|---|---|
+| Actions Runner Disk Alanı Optimizasyonu (Free disk space) | 25 Haz |
 | Colab→Docker Migration | 21 Haz |
 | SVD-XT + Sıralı Derleme | 19 Haz |
 | v6.0 Core (32 Template, LangGraph 5-node, MuseTalk, Storyboard) | 15-20 Haz |
