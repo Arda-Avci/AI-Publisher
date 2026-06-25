@@ -6,12 +6,8 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     decord \
     open_clip_torch
 
-# Build-time weight download (CogVideoX 2b/5b + T2V/I2V)
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "THUDM/CogVideoX-2b" && \
-    /tmp/download_weights.sh "THUDM/CogVideoX-5b" && \
-    /tmp/download_weights.sh "THUDM/CogVideoX-5b-I2V"
+# Build-time weight download disabled to prevent disk space issues on GH Actions.
+# Models will be downloaded at runtime when the container starts.
 
 COPY app.py /app/app.py
 WORKDIR /app
