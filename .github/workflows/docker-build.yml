@@ -148,9 +148,15 @@ jobs:
         run: |
           MODEL_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:latest"
           SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:${{ github.sha }}"
+          
+          # Copy shared files to model directory to match Colab/Kaniko context behavior
+          cp -f ${{ env.CONTEXT }}/runpod_handler.py ${{ env.CONTEXT }}/${{ matrix.model }}/
+          cp -f ${{ env.CONTEXT }}/download_weights.sh ${{ env.CONTEXT }}/${{ matrix.model }}/
+          cp -rf ${{ env.CONTEXT }}/shared ${{ env.CONTEXT }}/${{ matrix.model }}/
+          
           docker build -f ${{ env.CONTEXT }}/${{ matrix.model }}/Dockerfile \
             -t "$MODEL_TAG" -t "$SHA_TAG" \
-            ${{ env.CONTEXT }}
+            ${{ env.CONTEXT }}/${{ matrix.model }}
           docker push "$MODEL_TAG"
           docker push "$SHA_TAG"
 
@@ -207,8 +213,17 @@ jobs:
         run: |
           MODEL_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:latest"
           SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:${{ github.sha }}"
+          
+          # Extract directory path of the Dockerfile
+          DIR=$(dirname "${{ env.CONTEXT }}/${{ matrix.dockerfile }}")
+          
+          # Copy shared files to model directory for context access during build
+          cp -f ${{ env.CONTEXT }}/runpod_handler.py "$DIR"/
+          cp -f ${{ env.CONTEXT }}/download_weights.sh "$DIR"/
+          cp -rf ${{ env.CONTEXT }}/shared "$DIR"/
+          
           docker build -f ${{ env.CONTEXT }}/${{ matrix.dockerfile }} \
             -t "$MODEL_TAG" -t "$SHA_TAG" \
-            ${{ env.CONTEXT }}
+            "$DIR"
           docker push "$MODEL_TAG"
           docker push "$SHA_TAG"

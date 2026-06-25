@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir \
     && playwright install-deps chromium
 
 # Copy Flask app
-COPY browser-use/app.py /app/
+COPY app.py /app/
 
 ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=5000
