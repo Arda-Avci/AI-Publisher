@@ -292,7 +292,7 @@ export async function cropVideo(
   outputWidth = 1080,
   outputHeight = 1920,
   duration?: number,
-): Promise<void> {
+): Promise<string> {
   await fs.ensureDir(path.dirname(outputPath));
 
   const { x, y, width, height } = cropRegion;
@@ -322,6 +322,7 @@ export async function cropVideo(
 
   await runFFmpeg('ffmpeg', args, 180000);
   Logger.info(`[SmartCropper] Cropped video saved: ${outputPath}`);
+  return outputPath;
 }
 
 // ── Main smart cropper class ──────────────────────────────────────────────────
