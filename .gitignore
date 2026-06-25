@@ -54,4 +54,5 @@ src/**/*.d.ts.map
 
 # Generated documentation artifacts
 C4-Documentation/
+tmp/
 
