@@ -2,8 +2,8 @@
 
 ## 🔴 Aktif — Docker İmajlarının Sıralı Derlenmesi (25 Haz 2026)
 - [x] `cogvideox` Docker build ve push (Hata giderildi, disk prune eklendi)
-- [/] `dynamicrafter` Docker build ve push (Build-time weights iptal edildi, workflow matrix'e eklendi)
-- [ ] `hunyuan` Docker build ve push
+- [x] `dynamicrafter` Docker build ve push (Build-time weights iptal edildi, workflow matrix'e eklendi)
+- [/] `hunyuan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [ ] `lora-trainer` Docker build ve push
 - [ ] `ltx` Docker build ve push
 - [ ] `mochi` Docker build ve push
