@@ -23,6 +23,12 @@
 
 Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 
+## ☁️ GitHub Actions Workflow Disk Space Optimization (25 Haziran 2026)
+
+- **Sorun:** GitHub Actions runner disk limitinin (~14GB free space) aşılması nedeniyle büyük Docker imajlarının (özellikle base ve GPU-heavy modeller) derlenirken "No space left on device" hatası vermesi.
+- **Çözüm:** GitHub Actions workflow'una (`docker-build.yml`) `Free disk space` adımı eklendi. Bu adımda `/usr/share/dotnet`, `/usr/local/lib/android`, `/opt/ghc`, `/usr/local/share/boost` gibi büyük sistem kütüphaneleri ve gereksiz araçlar silinerek runner üzerinde yaklaşık **35GB ek disk alanı** serbest bırakıldı.
+- **Sonuç:** Docker base image ve whisper gibi modellerin derlenmesi ve GHCR'a pushlanması artık disk alanı hatasına takılmadan başarıyla gerçekleşmektedir.
+
 ## ☁️ RunPod LTX-Video Entegrasyon Testi (24 Haziran 2026)
 
 - **Aktif Durum:** LTX-Video modeli için RunPod Serverless worker'ında (`w572siswids6pk` endpoint'i) entegrasyon testleri gerçekleştirilmektedir.
