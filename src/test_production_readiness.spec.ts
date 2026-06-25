@@ -48,6 +48,7 @@ const TEST_USER = 'prod.readiness@test.com';
 const TEST_PASS = 'prodtest123';
 
 beforeAll(async () => {
+  await fs.ensureDir(path.join(process.cwd(), 'uploads'));
   await initDatabase();
 
   app = express();
