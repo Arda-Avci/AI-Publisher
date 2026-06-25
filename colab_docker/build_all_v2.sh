@@ -53,13 +53,7 @@ if [ "$REGISTRY_UP" = "true" ] && curl -s -f http://localhost:5000/v2/ai-publish
   echo "✅ Base image registry'de mevcut. Build atlandi."
 elif [ -f "Dockerfile.base" ]; then
   echo "[INFO] Base registry'de yok, Dockerfile.base Kaniko ile build ediliyor..."
-  $KANIKO_BIN --context=. \
-         --dockerfile=Dockerfile.base \
-         --destination=localhost:5000/ai-publisher-base:latest \
-         --tarPath=base.tar \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
+  $KANIKO_BIN --context=.          --dockerfile=Dockerfile.base          --destination=localhost:5000/ai-publisher-base:latest          --tarPath=base.tar          --whitelist-var-run=false          --ignore-var-run          --snapshot-mode=redo
   if [ $? -eq 0 ]; then
     DURATION=$((SECONDS - START_TIME))
     echo "✅ Base Docker Imajı basariyla olusturuldu. Sure: ${DURATION}s"
@@ -125,13 +119,14 @@ for i in "${!MODELS[@]}"; do
   echo "👉 Dogrulama basarili."
   
   # Kaniko ile build (daemonless -> cgroup hatasi olmaz)
-  # Faz 2: Dockerfile FROM satırını localhost registry'ye yönlendirme
-  echo "[FAZ 2/4] Dockerfile local registry icin yamalaniyor..."
-  YAMALANDI=false
-  if grep -q "FROM ai-publisher-base:latest" "$MODEL/Dockerfile"; then
-    sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-    YAMALANDI=true
-  fi
+  # Faz 2: Dockerfile'a build-arg ve registry yamaları uygulanıyor
+  echo "[FAZ 2/4] Dockerfile local registry ve HF_TOKEN icin yamalaniyor..."
+  
+  # 1. Base image registry'ye yonlendir
+  sed -i 's|FROM ai-publisher-base:latest|FROM localhost:5000/ai-publisher-base:latest|g' "$MODEL/Dockerfile"
+  
+  # 2. FROM satırından sonra ARG HF_TOKEN ekle (HuggingFace Hub gated model yetkilendirmesi icin)
+  sed -i '/^FROM /a ARG HF_TOKEN' "$MODEL/Dockerfile"
   
   # Faz 3: Kaniko Build
   echo "[FAZ 3/4] Kaniko ile model imaji insa ediliyor..."
@@ -140,15 +135,7 @@ for i in "${!MODELS[@]}"; do
   cp -f runpod_handler.py "$MODEL/"
   cp -f download_weights.sh "$MODEL/"
   
-  $KANIKO_BIN --context="$MODEL/" \
-         --dockerfile="$MODEL/Dockerfile" \
-         --destination="localhost:5000/ai-publisher-$MODEL:latest" \
-         --tarPath="$MODEL.tar" \
-         --insecure \
-         --skip-tls-verify \
-         --whitelist-var-run=false \
-         --ignore-var-run \
-         --snapshot-mode=redo
+  $KANIKO_BIN --context="$MODEL/"          --dockerfile="$MODEL/Dockerfile"          --destination="localhost:5000/ai-publisher-$MODEL:latest"          --tarPath="$MODEL.tar"          --build-arg HF_TOKEN="$HF_TOKEN"          --insecure          --skip-tls-verify          --whitelist-var-run=false          --ignore-var-run          --snapshot-mode=redo
   
   BUILD_STATUS=$?
   
@@ -156,9 +143,7 @@ for i in "${!MODELS[@]}"; do
   rm -f "$MODEL/runpod_handler.py" "$MODEL/download_weights.sh"
   
   # Dockerfile'ı eski haline geri döndür
-  if [ "$YAMALANDI" = "true" ]; then
-    sed -i 's|FROM localhost:5000/ai-publisher-base:latest|FROM ai-publisher-base:latest|g' "$MODEL/Dockerfile"
-  fi
+  git checkout -- "$MODEL/Dockerfile"
   
   if [ $BUILD_STATUS -eq 0 ]; then
     echo "👉 Kaniko insa tamamlandi."
@@ -191,7 +176,7 @@ for i in "${!MODELS[@]}"; do
   
   SAVE_DURATION=$((SECONDS - SAVE_START))
   FILE_SIZE=$(stat -c%s "$DRIVE_DIR/$MODEL.tar.gz" 2>/dev/null || echo 0)
-  echo "💾 Sıkıştırılmış İmaj Boyutu: $((FILE_SIZE / 1024 / 1024)) MB"
+  echo "💾 Sıkıştırılmış İmaj Boyutu: $(($FILE_SIZE / 1024 / 1024)) MB"
   echo "✅ Basarili! $MODEL.tar.gz Google Drive'a eklendi."
   
   if command -v docker &> /dev/null; then
