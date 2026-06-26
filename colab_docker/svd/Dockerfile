@@ -7,9 +7,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     open_clip_torch
 
 # Build-time weight download
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "stabilityai/stable-video-diffusion-img2vid-xt"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "stabilityai/stable-video-diffusion-img2vid-xt"
 
 COPY app.py /app/app.py
 WORKDIR /app

@@ -61,12 +61,13 @@
 
 - **`cogvideox`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/cogvideox:latest`).
 - **`dynamicrafter`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/dynamicrafter:latest`).
-- **`hunyuan`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
+- **`hunyuan`**: Başarıyla derlendi og ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
 - **`lora-trainer`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/lora-trainer:latest`).
 - **`ltx`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/ltx:latest`).
 - **`mochi`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/mochi:latest`).
 - **`pyramid-flow`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/pyramid-flow:latest`).
-- **`sadtalker`**: Build-time weights indirmesi iptal edildi, app.py içerisine Hugging Face Space üzerinden runtime checkpoint indirme ve tar çıkarma adımları entegre edildi. Derleme süreci tetikleniyor.
+- **`sadtalker`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/sadtalker:latest`).
+- **`svd`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
 
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 

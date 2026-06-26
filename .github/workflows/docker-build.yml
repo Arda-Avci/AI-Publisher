@@ -82,7 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         model:
-          - sadtalker
+          - svd
     steps:
       - uses: actions/checkout@v4
 
