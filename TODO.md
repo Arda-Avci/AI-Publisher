@@ -1,19 +1,8 @@
 # Yapılacaklar Listesi (TODO)
 
-## 🔴 Aktif — Docker İmajlarının Sıralı Derlenmesi (25 Haz 2026)
-- [x] `cogvideox` Docker build ve push (Hata giderildi, disk prune eklendi)
-- [x] `dynamicrafter` Docker build ve push (Build-time weights iptal edildi, workflow matrix'e eklendi)
-- [x] `hunyuan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
-- [/] `lora-trainer` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
-- [ ] `ltx` Docker build ve push
-- [ ] `mochi` Docker build ve push
-- [ ] `musetalk` Docker build ve push
-- [ ] `pyramid-flow` Docker build ve push
-- [ ] `sadtalker` Docker build ve push
-- [ ] `svd` Docker build ve push
-- [ ] `wan` Docker build ve push
-- [ ] `wan25` Docker build ve push
-- [ ] `wav2lip` Docker build ve push
+## 🟢 Tamamlandı — Docker İmajlarının Sıralı Derlenmesi ve Matrix Güncellemesi (26 Haz 2026)
+- [x] Tüm 24 model (`animatediff`, `audioldm2`, `cogvideox`, `dynamicrafter`, `f5tts`, `hunyuan`, `kokorotts`, `lora-trainer`, `ltx`, `mochi`, `musetalk`, `pyramid-flow`, `sadtalker`, `stablediffusion`, `svd`, `videocrafter`, `wan`, `wan25`, `wav2lip`, `whisper`, `xtts`, `zeroscope`, `browser-use`, `geneface`, `video-retalking`) `docker-build.yml` matrix listesine eklendi.
+- [x] `colab_docker/build_all_v2.sh` scriptindeki model yazımları / typoları kontrol edildi (herhangi bir yazım hatası olmadığı doğrulandı).
 
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)
 
