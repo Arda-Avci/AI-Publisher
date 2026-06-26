@@ -1,3 +1,4 @@
+# Trigger rebuild of wan image
 import os
 import sys
 import time
