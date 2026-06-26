@@ -9,9 +9,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     --extra-index-url https://download.pytorch.org/whl/cu121
 
 # Build-time weight download
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "Wan-AI/Wan2.5-I2V-14B"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "Wan-AI/Wan2.5-I2V-14B"
 
 COPY app.py /app/app.py
 WORKDIR /app
