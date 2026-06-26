@@ -26,11 +26,36 @@ jobs:
     name: Build base image
     runs-on: ubuntu-latest
     outputs:
-      base_tag: ${{ steps.build_base.outputs.base_tag }}
+      base_tag: ${{ steps.check_base.outputs.base_tag }}
+      build_needed: ${{ steps.check_base.outputs.build_needed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if Dockerfile.base changed
+        id: check_base
+        run: |
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:latest"
+          echo "base_tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
+          
+          # Git diff ile colab_docker/Dockerfile.base degisti mi kontrol et
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build_needed=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch triggered. Base image build is required."
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
+            if echo "$CHANGED_FILES" | grep -q "^colab_docker/Dockerfile.base$"; then
+              echo "build_needed=true" >> "$GITHUB_OUTPUT"
+              echo "Dockerfile.base changed. Base image build is required."
+            else
+              echo "build_needed=false" >> "$GITHUB_OUTPUT"
+              echo "Dockerfile.base did not change. Skipping base image build."
+            fi
+          fi
 
       - name: Free disk space
+        if: steps.check_base.outputs.build_needed == 'true'
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
@@ -56,6 +81,7 @@ jobs:
           df -h
 
       - name: Login to GHCR
+        if: steps.check_base.outputs.build_needed == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -63,6 +89,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push base image
+        if: steps.check_base.outputs.build_needed == 'true'
         id: build_base
         run: |
           BASE_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:latest"
@@ -72,7 +99,6 @@ jobs:
             ${{ env.CONTEXT }}
           docker push "$BASE_TAG"
           docker push "$SHA_TAG"
-          echo "base_tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
 
   models:
     name: Build ${{ matrix.model }}
@@ -82,8 +108,16 @@ jobs:
       fail-fast: false
       matrix:
         model:
-          - wan
-          - wan25
+          - animatediff
+          - audioldm2
+          - f5tts
+          - kokorotts
+          - stablediffusion
+          - videocrafter
+          - wav2lip
+          - whisper
+          - xtts
+          - zeroscope
     steps:
       - uses: actions/checkout@v4
 

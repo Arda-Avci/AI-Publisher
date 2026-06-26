@@ -51,4 +51,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
     torchaudio \
     torchvision \
     "xformers==0.0.32.post2" \
-    opencv-python-headless
+    opencv-python-headless \
+    "diffusers>=0.35,<0.36" \
+    "sentencepiece>=0.2.0" \
+    "einops>=0.8.0" \
+    decord \
+    open_clip_torch \
+    av
