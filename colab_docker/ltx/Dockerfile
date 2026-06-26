@@ -15,9 +15,9 @@ RUN apt-get update && apt-get install -y wget unzip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Build-time weight download
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "Lightricks/LTX-Video"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "Lightricks/LTX-Video"
 
 COPY app.py /app/app.py
 WORKDIR /app
