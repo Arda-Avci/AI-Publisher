@@ -8,7 +8,7 @@ RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.g
       curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/master.tar.gz -o /tmp/musetalk.tar.gz; \
     fi; \
     if gzip -t /tmp/musetalk.tar.gz 2>/dev/null; then \
-      echo "[OK] Gecerli tar.gz, ayiklamiyor..."; \
+      echo "[OK] Gecerli tar.gz, ayiklamaya baslaniyor..."; \
       tar -xzf /tmp/musetalk.tar.gz -C /tmp/ && \
       rm -rf /app/MuseTalk && \
       mkdir -p /app/MuseTalk && \
@@ -19,46 +19,33 @@ RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.g
       fi && \
       rm -rf /tmp/musetalk.tar.gz /tmp/MuseTalk-main /tmp/MuseTalk-master; \
     else \
-      echo "[WARN] tar.gz hala gecersiz, HTML yaniti:"; \
-      cat /tmp/musetalk.tar.gz | head -c 500; \
-      echo ""; \
-      echo "[INFO] zip deneniyor..."; \
-      curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/master.zip -o /tmp/musetalk.zip; \
-      rm -rf /app/MuseTalk && \
-      mkdir -p /app/MuseTalk && \
-      unzip -q /tmp/musetalk.zip -d /tmp/ && \
-      cp -a /tmp/MuseTalk-master/. /app/MuseTalk/ && \
-      rm -rf /tmp/musetalk.zip /tmp/MuseTalk-master; \
+      echo "[ERROR] MuseTalk repository indirilemedi!" && exit 1; \
     fi && \
     ls -la /app/MuseTalk/
 
 # Install MuseTalk-specific dependencies (pytorch3d conda-only, hata verir -> skip)
 RUN pip install --no-cache-dir \
-    opencv-python-headless \
-    omegaconf \
-    einops \
-    diffusers \
-    librosa \
-    trimesh
-RUN pip install --no-cache-dir pytorch3d 2>/dev/null || true
+    "diffusers>=0.35,<0.36" \
+    "transformers>=4.39.3" \
+    "accelerate==0.30.0" \
+    "webdataset" \
+    "omegaconf" \
+    "safetensors" \
+    "diffusers" \
+    "einops" \
+    "av" \
+    "yacs" \
+    "gfpgan" \
+    "face-alignment" \
+    "facexlib"
 
-# Download MuseTalk model weights (required for inference) - build-time bake
+# Build-time weight download (inline python script block to avoid standalone file dependency issues in Kaniko)
 COPY download_weights.sh /tmp/download_weights.sh
 RUN chmod +x /tmp/download_weights.sh && \
     mkdir -p /app/MuseTalk/models && \
     cd /app/MuseTalk && \
     HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \
-    python -c "
-from huggingface_hub import snapshot_download
-import os
-snapshot_download(
-    'TMElyralab/MuseTalk',
-    local_dir='models',
-    cache_dir=os.environ['HF_HOME'],
-    ignore_patterns=['*.git*', 'docs/*'],
-    token=os.environ.get('HF_TOKEN') or None,
-)
-" || echo "[WARN] MuseTalk model weights will be downloaded at runtime"
+    python -c "from huggingface_hub import snapshot_download; import os; snapshot_download('TMElyralab/MuseTalk', local_dir='models', cache_dir=os.environ['HF_HOME'], ignore_patterns=['*.git*', 'docs/*'], token=os.environ.get('HF_TOKEN') or None)"
 
 COPY app.py /app/app.py
 WORKDIR /app
@@ -67,4 +54,3 @@ EXPOSE 5000
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
 CMD ["python", "-u", "runpod_handler.py"]
-
