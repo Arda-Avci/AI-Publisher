@@ -83,6 +83,7 @@ jobs:
       matrix:
         model:
           - wan
+          - wan25
     steps:
       - uses: actions/checkout@v4
 
