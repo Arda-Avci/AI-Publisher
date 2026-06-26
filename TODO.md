@@ -126,7 +126,7 @@ Kaynak: `Script_writer_is_akisi.txt`
 
 ### Bekleyen (Açık İşler)
 - [x] `docker-compose.yml` (root) — PostgreSQL + Redis + Neo4j + RabbitMQ (26 Haz)
-- [ ] Docker build: wan25, wav2lip
+- [x] Docker build: wan25, wav2lip
 - [x] Faz H: Frontend — StoryboardPanel (tab), CameraControlPanel, App.tsx entegrasyon (26 Haz)
 - [x] Faz H: Timeline drag-reorder tum track + transition strip (26 Haz)
 - [ ] Faz K: Kapsamlı integration test full pipeline (3 test dosyası planlı)
@@ -212,6 +212,8 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [ ] Port yönlendirme testi (5001-5012)
 - [ ] RunPod callback (webhook) POST → diske yazma doğrulama
 - [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
+- [x] RunPod serverless endpoint sorgusu (Hesapta aktif endpoint bulunmadığı doğrulandı, 404 durumu netleşti)
+- [ ] RunPod üzerinde yeni serverless endpoint oluşturulduktan sonra `test_wan_serverless.js` ve `test-runpod-models.ts` ile video üretim doğrulaması
 
 ### 💳 iyzico Ödeme — Canlı Test
 - [ ] Sandbox merchant panel → API key + abonelik plan kodları

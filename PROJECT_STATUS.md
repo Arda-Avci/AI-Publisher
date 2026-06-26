@@ -1,4 +1,10 @@
 # AI_Publisher Proje Durumu
+
+## ✅ Faz I - RunPod Serverless Test Script Kontrolü ve Endpoint Durumu (27 Haz 2026)
+- **Test Scriptleri Doğrulaması**: `scripts/test_wan_serverless.js` ve `scripts/test-runpod-models.ts` dosyaları kontrol edildi. `.env` üzerindeki `RUNPOD_API_KEY` ve endpoint tanımlamalarını otomatik okuma mimarisi sorunsuz çalışıyor.
+- **Hesap Endpoint Kontrolü**: RunPod API üzerinden GraphQL ile yapılan sorgulamada, kullanıcının hesabında (`arda.avci@gmail.com`) aktif serverless endpoint bulunmadığı (`endpoints: []`) saptandı.
+- **Durum**: Kod tabanı test için hazır; kullanıcının RunPod panelinde yeni bir Serverless Endpoint tanımlamasının ardından test başlatılabilir.
+
 ## ✅ Faz I - Base Imaj, Actions Workflow ve Çoklu Model Derleme Başarısı (26 Haz 2026)
 - **`Dockerfile.base`**: Modellerin ortak ihtiyaç duyduğu referans python paketleri (`diffusers`, `sentencepiece`, `einops`, `decord`, `open_clip_torch`, `av`) base imaja taşındı. Böylece her model derlemesinde bu kütüphanelerin tekrar indirilip kurulması engellenerek derleme süreleri kısaltıldı.
 - **`docker-build.yml`**: Base imajın her çalıştırmada sıfırdan derlenmesi engellendi. `git diff` kontrolü eklenerek sadece `Dockerfile.base` dosyasında bir değişiklik olduğunda derleme yapılacak şekilde optimize edildi. Base imaj değişmediğinde derleme adımları saniyeler içinde skip edilmekte ve modeller doğrudan GHCR'daki mevcut latest imajı kullanarak derlenmektedir.
