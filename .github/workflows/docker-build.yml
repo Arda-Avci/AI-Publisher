@@ -82,7 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         model:
-          - pyramid-flow
+          - sadtalker
     steps:
       - uses: actions/checkout@v4
 
