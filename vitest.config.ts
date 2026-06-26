@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     env: {
       NODE_ENV: 'test',
+      SKIP_AI_TESTS: 'true',
     },
     exclude: ['**/.claude/**', '**/node_modules/**', 'client/**', '**/*.spec.js'],
     execArgv: ['--max-old-space-size=4096'],

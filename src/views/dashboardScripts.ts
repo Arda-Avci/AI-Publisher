@@ -1536,7 +1536,8 @@ export function getDashboardScripts(params: {
               body: JSON.stringify({
                  master_prompt: data.master_prompt,
                  production_notes: data.production_notes,
-                 transcript_translated: data.transcript_text
+                 transcript_translated: data.transcript_text,
+                 production_mode: data.production_mode || 'short'
               })
             });
             const result = await res.json();

@@ -61,6 +61,7 @@
   dubbing_output_path?: string;
 
   storyboard_enabled?: number;
+  production_mode?: 'short' | 'film' | 'series';
 
   deep_think?: number;
 

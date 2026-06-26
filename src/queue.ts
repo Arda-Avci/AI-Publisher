@@ -17,7 +17,7 @@ import { applySplitScreen } from './services/splitScreen.js';
 import { generateTalkingHead } from './services/museTalkService.js';
 import { VideoJob } from './types/job.js';
 import { generateStudioScenes } from './services/aiService.js';
-import { CreditService, getModelCost } from './services/creditService.js';
+import { CreditService, getModelCost, SCRIPT_COST, ENHANCE_COST } from './services/creditService.js';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -213,7 +213,29 @@ async function startProduction(job: VideoJob) {
           },
         };
       } else {
-        if (job.storyboard_enabled === 1) {
+        const prodMode = job.production_mode || 'short';
+        const isFilmOrSeries = prodMode === 'film' || prodMode === 'series';
+
+        if (isFilmOrSeries) {
+          Logger.info('[PRODUCTION] Film/Series mode — mandatory storyboard pipeline...');
+          try {
+            const { runFilmStoryboard } = await import('./services/agents/storyboardIntegration.js');
+            const filmResult = await runFilmStoryboard(job, (stage, pct) => {
+              broadcast(job.id, {
+                stageKey: 'stageStoryboard',
+                storyboardStage: stage,
+                percent: 5 + Math.floor(pct * 0.05),
+              });
+            });
+            object = filmResult;
+            Logger.info('[PRODUCTION] Film storyboard succeeded', {
+              sceneCount: object.scenes.length,
+            });
+          } catch (sbErr) {
+            Logger.error('Film storyboard HATASI, generateStudioScenes fallback:', sbErr);
+            object = await generateStudioScenes(job);
+          }
+        } else if (job.storyboard_enabled === 1) {
           Logger.info('[PRODUCTION] Using Storyboard Agent pipeline...');
           try {
             const { integrateWithJob } = await import('./services/storyboardAgent/index.js');
@@ -252,7 +274,18 @@ async function startProduction(job: VideoJob) {
             object = await generateStudioScenes(job);
           }
         } else {
-          Logger.info('[PRODUCTION] Calling AI generateStudioScenes...');
+          const isShortMode = prodMode === 'short';
+          Logger.info('[PRODUCTION] Calling AI generateStudioScenes...', { mode: isShortMode ? 'short' : 'default' });
+
+          if (isShortMode) {
+            const { enhanceShortFormPrompt, getShortFormConfig } = await import('./services/promptEnhancer.js');
+            const cfg = getShortFormConfig();
+            const enhanced = enhanceShortFormPrompt(job.master_prompt || '', job.production_notes || '', cfg);
+            job.master_prompt = enhanced.masterPrompt;
+            job.production_notes = enhanced.productionNotes;
+            Logger.info('[PRODUCTION] Short form prompt enhanced:', { constraints: enhanced.constraints.length });
+          }
+
           try {
             object = await generateStudioScenes(job, job.deep_think === 1);
             Logger.info('[PRODUCTION] AI generateStudioScenes succeeded', {
@@ -353,12 +386,18 @@ async function startProduction(job: VideoJob) {
       };
     }
 
-    // ── Kredi Blokajı (render başında hold) ──
+    // ── Kredi Hesaplama: Script + Enhance + Render ──
     const modelType = job.model_type || 'CogVideoX-5b';
     const modelCost = getModelCost(modelType);
     requiredCredits = totalScenes * modelCost.sceneCost + modelCost.coverCost;
     if (job.differentiation_layout === 1) {
       requiredCredits += 15;
+    }
+    if (!job.scene_prompts && job.status === 'processing') {
+      requiredCredits += SCRIPT_COST; // Yeni senaryo oluşturma maliyeti
+    }
+    if (job.yt_title || job.yt_desc) {
+      requiredCredits += ENHANCE_COST; // SEO/prompt geliştirme maliyeti
     }
 
     const balanceCheck = await CreditService.checkSufficientCredits(job.user_id, requiredCredits);
@@ -372,19 +411,22 @@ async function startProduction(job: VideoJob) {
       throw new Error('INSUFFICIENT_CREDITS');
     }
 
-    const holdSuccess = await CreditService.holdCredits(
-      job.user_id,
-      requiredCredits,
-      `Video Projesi #${job.id} blokaji (Sahneler: ${totalScenes}, Model: ${modelType})`,
-    );
-    if (!holdSuccess) {
-      const errorMsg = 'Kredi blokaji basarisiz! Yetersiz bakiye.';
-      await db.run(
-        "UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?",
-        [errorMsg, job.id],
+    const isRetry = (job.retry_count || 0) > 0;
+    if (!isRetry) {
+      const holdSuccess = await CreditService.holdCredits(
+        job.user_id,
+        requiredCredits,
+        `Video Projesi #${job.id} blokaji (Sahneler: ${totalScenes}, Model: ${modelType})`,
       );
-      broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
-      throw new Error('HOLD_FAILED');
+      if (!holdSuccess) {
+        const errorMsg = 'Kredi blokaji basarisiz! Yetersiz bakiye.';
+        await db.run(
+          "UPDATE video_jobs SET status = 'failed', current_stage = ?, progress_percent = 0 WHERE id = ?",
+          [errorMsg, job.id],
+        );
+        broadcast(job.id, { stageKey: 'stageError', percent: 0, stage: errorMsg });
+        throw new Error('HOLD_FAILED');
+      }
     }
 
     broadcast(job.id, {
@@ -2346,22 +2388,21 @@ async function startProduction(job: VideoJob) {
       );
     }
   } catch (error) {
-    // Hata/iptal durumunda bloke edilen krediyi iade et
-    if (requiredCredits > 0) {
-      await CreditService.refundCredits(
-        job.user_id,
-        requiredCredits,
-        `Video Projesi #${job.id} iade - hata/iptal (${(error as any)?.message || 'bilinmeyen hata'})`,
-      );
-    }
-
+    // ── Cancel handling — refund, no retry ──
     if (error && (error as any).message === 'JOB_CANCELLED') {
+      if (requiredCredits > 0) {
+        await CreditService.refundCredits(
+          job.user_id,
+          requiredCredits,
+          `Video Projesi #${job.id} iade - iptal`,
+        );
+      }
       Logger.info(`Is #${job.id} kullanici tarafindan iptal edildi, montaj adimi atlandi.`);
       broadcast(job.id, { stageKey: 'stageCancelled', percent: 0 });
       return;
     }
 
-    // --- Retry logic for transient Docker errors ---
+    // --- Retry logic for transient Docker errors — KEEP credits held (no refund) ---
     const errMsg = (error as any)?.message || '';
     const transientPatterns = [
       'COLAB_NOT_READY',
@@ -2393,6 +2434,15 @@ async function startProduction(job: VideoJob) {
         message: `Yeniden deneniyor (${nextRetry}/3)`,
       });
       return; // checkQueue will pick it up on next tick
+    }
+
+    // ── Permanent failure — refund held credits ──
+    if (requiredCredits > 0) {
+      await CreditService.refundCredits(
+        job.user_id,
+        requiredCredits,
+        `Video Projesi #${job.id} iade - hata (${(error as any)?.message || 'bilinmeyen hata'})`,
+      );
     }
 
     Logger.error(`İş sırasında kritik hata (ID=${job.id})`, error);

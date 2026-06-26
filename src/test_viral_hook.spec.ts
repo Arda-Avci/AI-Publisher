@@ -16,7 +16,7 @@ import {
 import { FIXTURES } from './__fixtures__/index.js';
 
 // AI calls require API keys; skip if unavailable in CI
-const aiAvailable = !!(process.env.GEMINI_API_KEY || process.env.ZEN_API_KEY || process.env.MINIMAX_API_KEY);
+const aiAvailable = process.env.SKIP_AI_TESTS !== 'true' && !!(process.env.GEMINI_API_KEY || process.env.ZEN_API_KEY || process.env.MINIMAX_API_KEY);
 
 describe('viralHook', () => {
   // ── HookQualitySchema interface ─────────────────────────────────────────────

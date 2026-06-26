@@ -14,6 +14,7 @@ import {
   addCalloutPings,
   concatVideosWithCrossfade,
 } from './services/videoService.js';
+import { CreditService, getModelCost } from './services/creditService.js';
 import type { VideoJob } from './types/job.js';
 
 // ── Shared Types ──
@@ -663,7 +664,51 @@ export async function runJobGraph(jobId: number): Promise<void> {
     Logger.warn('[Graph] No DATABASE_URL set, falling back to in-memory graph (no checkpoint)');
   }
 
+  // ── Load job for credit check ──
+  const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
+  if (!job) {
+    Logger.error(`[Graph] Job #${jobId} not found in DB`);
+    throw new Error(`Job #${jobId} not found`);
+  }
+
+  let requiredCredits = 0;
+  const modelType = (job as any).model_type || 'CogVideoX-5b';
+  const modelCost = getModelCost(modelType);
+
   try {
+    // Estimate scene count: use scenes JSON if available, else default 8
+    let totalScenes = 8;
+    const scenesRaw = (job as any).scene_prompts || (job as any).scenes;
+    if (scenesRaw) {
+      try {
+        const parsed = typeof scenesRaw === 'string' ? JSON.parse(scenesRaw) : scenesRaw;
+        if (Array.isArray(parsed)) totalScenes = parsed.length;
+      } catch { /* ignore */ }
+    }
+    requiredCredits = totalScenes * modelCost.sceneCost + modelCost.coverCost;
+    if ((job as any).differentiation_layout === 1) {
+      requiredCredits += 15;
+    }
+
+    // Check + hold (skip on retry)
+    const balanceCheck = await CreditService.checkSufficientCredits(
+      (job as any).user_id, requiredCredits,
+    );
+    if (!balanceCheck.ok) {
+      throw new Error('INSUFFICIENT_CREDITS');
+    }
+
+    const isRetry = ((job as any).retry_count || 0) > 0;
+    if (!isRetry) {
+      const holdOk = await CreditService.holdCredits(
+        (job as any).user_id,
+        requiredCredits,
+        `Video Projesi #${jobId} blokaji (Sahneler: ${totalScenes}, Model: ${modelType})`,
+      );
+      if (!holdOk) throw new Error('HOLD_FAILED');
+    }
+
+    // ── Build & run graph ──
     const graph = buildGraph();
 
     let checkpointer: PostgresSaver | undefined;
@@ -676,38 +721,57 @@ export async function runJobGraph(jobId: number): Promise<void> {
     const threadId = `job_${jobId}`;
     const config = { configurable: { thread_id: threadId } };
 
-    Logger.info(`[Graph] Starting job #${jobId} via LangGraph StateGraph`, { threadId });
+    Logger.info(`[Graph] Starting job #${jobId} via LangGraph StateGraph`, { threadId, requiredCredits });
 
     await (app as any).invoke(
       {
         jobId,
-        userId: 0,
+        userId: (job as any).user_id || 0,
         currentStage: 'starting',
         progressPercent: 0,
-        totalScenes: 0,
+        totalScenes,
         completedScenes: 0,
-        status: 'pending',
+        status: 'processing',
         errors: [],
         sceneResults: [],
         marketing: { ytTitle: '', ytDesc: '', ytTags: '', ttDesc: '', ttTags: '', xDesc: '', xTags: '', metaDesc: '', metaTags: '' },
         finalFilename: '',
         finalVideoPath: '',
-        modelType: '',
+        modelType,
         retryCount: 0,
       },
       config,
     );
 
+    // ── Success — confirm hold ──
+    if (requiredCredits > 0) {
+      await CreditService.confirmHold(
+        (job as any).user_id,
+        requiredCredits,
+        `Video Projesi #${jobId} uretimi basarili (Sahneler: ${totalScenes}, Model: ${modelType})`,
+      );
+    }
     Logger.info(`[Graph] Job #${jobId} completed via LangGraph`);
   } catch (err) {
     Logger.error(`[Graph] Job #${jobId} failed`, err);
+
+    // ── Refund on permanent failure (skip if cancelled or transient) ──
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errMsg !== 'JOB_CANCELLED' && requiredCredits > 0) {
+      await CreditService.refundCredits(
+        (job as any).user_id,
+        requiredCredits,
+        `Video Projesi #${jobId} iade - graph hatasi (${errMsg})`,
+      );
+    }
+
     await db.run(
       "UPDATE video_jobs SET status = 'failed', current_stage = 'graph_error' WHERE id = ?",
       [jobId],
     );
     await broadcastProgress(jobId, {
       stageKey: 'stageError', percent: 0,
-      error: err instanceof Error ? err.message : String(err),
+      error: errMsg,
     });
     throw err;
   }

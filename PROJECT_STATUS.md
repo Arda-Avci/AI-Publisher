@@ -1,4 +1,9 @@
 # AI_Publisher Proje Durumu
+## ✅ Faz I - Base Imaj ve GitHub Actions Workflow Optimizasyonu (26 Haz 2026)
+- **`Dockerfile.base`**: Modellerin ortak ihtiyaç duyduğu referans python paketleri (`diffusers`, `sentencepiece`, `einops`, `decord`, `open_clip_torch`, `av`) base imaja taşındı. Böylece her model derlemesinde bu kütüphanelerin tekrar indirilip kurulması engellenerek derleme süreleri kısaltıldı.
+- **`docker-build.yml`**: Base imajın her çalıştırmada sıfırdan derlenmesi engellendi. `git diff` kontrolü eklenerek sadece `Dockerfile.base` dosyasında bir değişiklik olduğunda derleme yapılacak şekilde optimize edildi. Base imaj değişmediğinde derleme adımları saniyeler içinde skip edilmekte ve modeller doğrudan GHCR'daki mevcut latest imajı kullanarak derlenmektedir.
+- **`wan`/`wan25` Derlemesi**: Son GitHub Actions çalıştırmalarında (Run #47) `wan`, `wan25` standart modelleri ile `browser-use`, `geneface`, `video-retalking` özel modelleri başarıyla derlenip GHCR'a pushlanmıştır.
+
 ## Faz I - Colab Docker Build Agirliklari Optimizasyonu (26 Haz 2026)
 - SVD modelinin build-time agirlik indirme islemi iptal edildi.
  - Kaniko imaj derleme suresi 22 saniyeye dusurulerek optimize edildi.

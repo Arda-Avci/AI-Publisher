@@ -1321,6 +1321,17 @@ export function buildDashboardHTML(params: DashboardParams): string {
                 </div>
               </div>
               <div>
+                <label class="form-label">Üretim Modu</label>
+                <select name="production_mode" class="form-select">
+                  <option value="short">📱 Short Video (≤60sn, hook & loop)</option>
+                  <option value="film">🎬 Film / Uzun Video</option>
+                  <option value="series" class="admin-only">📺 Dizi (yalnızca admin)</option>
+                </select>
+                <small style="opacity:0.6;font-size:0.65rem;display:block;margin-top:4px;" id="mode-hint">
+                  Short: hızlı kanca + ölçek şoku + kusursuz döngü. Film/seri: storyboard + sinematik anlatım.
+                </small>
+              </div>
+              <div>
                 <label class="form-label">${t.publishPlatforms}</label>
                 <div class="checkbox-grid">
                   <label class="checkbox-item"><input type="checkbox" name="platforms" value="youtube" checked> 📺 YouTube</label>

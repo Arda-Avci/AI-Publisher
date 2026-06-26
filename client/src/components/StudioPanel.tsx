@@ -10,6 +10,7 @@ import { DynamicCaptions } from './DynamicCaptions.js';
 import type { CaptionWord } from './DynamicCaptions.js';
 import { MuseTalkPanel } from './MuseTalkPanel.js';
 import { EditQueuePanel } from './EditQueuePanel.js';
+import { CameraControlPanel } from './CameraControlPanel.js';
 
 interface StudioPanelProps {
   activeTab: Tab;
@@ -60,6 +61,7 @@ export function StudioPanel({
   const [selectedSceneId, setSelectedSceneId] = useState<number | undefined>();
   const [showMuseTalk, setShowMuseTalk] = useState(false);
   const [showEditQueue, setShowEditQueue] = useState(false);
+  const [showCameraControl, setShowCameraControl] = useState(false);
   if (mainTab === 'Galeri') {
     return (
       <div
@@ -214,6 +216,25 @@ export function StudioPanel({
             >
               ✏️ AI Edit Queue
             </button>
+            <button
+              onClick={() => setShowCameraControl(!showCameraControl)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 600,
+                border: `1px solid ${showCameraControl ? 'var(--gold)' : 'var(--border)'}`,
+                background: showCameraControl ? 'rgba(200,164,92,0.12)' : 'rgba(255,255,255,0.04)',
+                color: showCameraControl ? 'var(--gold)' : 'var(--text-primary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s',
+              }}
+            >
+              📷 Kamera Kontrol
+            </button>
           </div>
         )}
         {selectedJob &&
@@ -239,6 +260,23 @@ export function StudioPanel({
             onClose={() => setShowEditQueue(false)}
           />
         )}
+        {selectedJob && showCameraControl && selectedSceneId && (() => {
+          const scene = scenes.find((s) => s.id === selectedSceneId);
+          if (!scene) return null;
+          return (
+            <CameraControlPanel
+              scene={scene}
+              scenes={scenes}
+              onUpdateSceneField={(sceneId, field, value) => {
+                const updated = scenes.map((s) =>
+                  s.id === sceneId ? { ...s, [field]: value } : s
+                );
+                _onUpdateScenes(updated);
+              }}
+              onClose={() => setShowCameraControl(false)}
+            />
+          );
+        })()}
       </div>
       <FloatingPrompt
         masterPrompt={masterPrompt}

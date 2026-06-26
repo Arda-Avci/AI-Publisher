@@ -36,6 +36,7 @@ import { EnvPropManager } from './components/EnvPropManager.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
 import { StudioToolsPanel } from './components/StudioToolsPanel.js';
 import { TrendPanel } from './components/TrendPanel.js';
+import { StoryboardPanel } from './components/StoryboardPanel.js';
 import AdminLayout from './components/admin/AdminLayout.js';
 import AdminDashboard from './components/admin/AdminDashboard.js';
 import AdminUsers from './components/admin/AdminUsers.js';
@@ -141,6 +142,7 @@ export default function App() {
     'Stüdyo',
     'Galeri',
     'Talk-Show',
+    'Hikaye Tahtası',
     'AI Asistan',
     'Karakterler',
     'Senaryo',
@@ -989,6 +991,9 @@ export default function App() {
                     />
                   )}
                   {mainTab === 'Trendler' && <TrendPanel onApplyTrend={handleApplyTrend} />}
+                  {mainTab === 'Hikaye Tahtası' && (
+                    <StoryboardPanel language={language} />
+                  )}
                   {mainTab === 'AI Stüdyo' && (
                     <StudioToolsPanel
                       studioSoundEnabled={studioSoundEnabled}
@@ -1019,9 +1024,11 @@ export default function App() {
                       ? 'studio'
                       : mainTab === 'Ortam/Nesne'
                         ? 'studio'
-                        : mainTab === 'API Keys'
-                        ? 'api_keys'
-                        : mainTab === 'Trendler'
+                  : mainTab === 'API Keys'
+                    ? 'api_keys'
+                    : mainTab === 'Hikaye Tahtası'
+                    ? 'studio'
+                    : mainTab === 'Trendler'
                           ? 'studio'
                           : 'studio'
                     }

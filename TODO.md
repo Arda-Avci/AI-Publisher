@@ -12,7 +12,8 @@
 - [x] `sadtalker` Docker build ve push (Build-time weights iptal edildi, app.py checkpoints indirmesi entegre edildi)
 - [x] `svd` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `wan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
-- [/] `wan25` Docker build ve push
+- [x] `wan25` Docker build ve push
+- [x] Base imaj ve GitHub Actions workflow optimizasyonu (Dockerfile.base path filter + referans paketlerin base'e taşınması) (26 Haz)
 - [ ] `wav2lip` Docker build ve push
 
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)

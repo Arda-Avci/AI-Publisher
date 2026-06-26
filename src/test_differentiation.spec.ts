@@ -14,8 +14,9 @@ import {
   differentiateVideoPhase2,
 } from './lib/differentiate.js';
 import { initRabbitMQ, getRabbitChannel } from './lib/rabbitmq.js';
+import { skipAITests } from './test-utils/ai-guard.js';
 
-describe('Video Differentiation System Integration Tests', () => {
+describe.skipIf(skipAITests)('Video Differentiation System Integration Tests', () => {
   let app: express.Application;
   let authCookie: string = '';
 

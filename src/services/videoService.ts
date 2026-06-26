@@ -1033,6 +1033,10 @@ const COLOR_PRESETS: Record<string, string> = {
   desaturated: 'eq=brightness=0.0:contrast=1.0:saturation=0.3:gamma_r=1.0:gamma_g=1.0:gamma_b=1.0',
   high_contrast:
     'eq=brightness=0.0:contrast=1.6:saturation=1.2,colorbalance=rh=0.05:gh=0.02:bh=-0.02:rm=0.03:gm=0.01:bm=-0.01',
+  bleach_bypass:
+    'eq=brightness=0.05:contrast=1.5:saturation=0.4:gamma_r=1.3:gamma_g=1.15:gamma_b=1.1,colorbalance=rh=0.1:gh=0.05:bh=0.0,curves=r="0/0 0.5/0.55 1/0.95":g="0/0 0.5/0.5 1/0.9":b="0/0 0.5/0.45 1/0.85"',
+  day_for_night:
+    'eq=brightness=-0.35:contrast=2.0:saturation=0.3:gamma_r=0.6:gamma_g=0.7:gamma_b=1.2,colorbalance=rh=-0.2:gh=-0.15:bh=0.25:hue=h=-30:s=0.4,curves=r="0/0 0.5/0.3 1/0.7":g="0/0 0.5/0.4 1/0.75":b="0/0 0.5/0.5 1/0.9"',
 };
 
 export async function applyColorGradeFilter(
@@ -1243,4 +1247,64 @@ export async function applyBeatSyncCutsWithFilters(
   } finally {
     await fs.remove(tempDir);
   }
+}
+
+// ── v6.1 Post-Production: Time Ramping (Speed Ramp) ──
+export async function applyTimeRamp(
+  inputPath: string,
+  outputPath: string,
+  segments: { startSec: number; endSec: number; speed: number }[],
+): Promise<string> {
+  const filterParts: string[] = [];
+  let lastEnd = 0;
+
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    if (!seg) continue;
+    if (seg.startSec > lastEnd) {
+      filterParts.push(`between(t,${lastEnd},${seg.startSec})*1`);
+    }
+    filterParts.push(`between(t,${seg.startSec},${seg.endSec})*${seg.speed}`);
+    lastEnd = seg.endSec;
+  }
+
+  const expr = filterParts.join('+');
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-filter_complex', `setpts=PTS*(${expr})[v];atempo=eq(1,1)[a]`,
+    '-map', '[v]',
+    '-map', '[a]',
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    outputPath,
+  ];
+
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+  return outputPath;
+}
+
+// ── v6.2 Post-Production: Apply External LUT (3D LUT via lut3d filter) ──
+export async function applyLut(
+  inputPath: string,
+  outputPath: string,
+  lutPath: string,
+  strength?: number,
+): Promise<string> {
+  const lutFilter = strength !== undefined && strength < 1.0
+    ? `lut3d=${lutPath}:interp=tetrahedral,colorchannelmixer=rr=${strength}:gg=${strength}:bb=${strength}`
+    : `lut3d=${lutPath}:interp=tetrahedral`;
+
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-vf', lutFilter,
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'copy',
+    outputPath,
+  ];
+
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+  return outputPath;
 }

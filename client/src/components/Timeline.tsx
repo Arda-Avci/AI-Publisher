@@ -283,6 +283,7 @@ export const Timeline: React.FC<TimelineProps> = ({
   playheadTime = 0,
 }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [dbCharacters, setDbCharacters] = useState<any[]>([]);
   const [uploadedAudio, setUploadedAudio] = useState<{ name: string; url: string } | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -348,19 +349,39 @@ export const Timeline: React.FC<TimelineProps> = ({
     boxShadow: isSelected ? '0 0 16px rgba(200,164,92,0.2)' : 'none',
   });
 
-  const handleDragStart = (index: number) => setDraggedIndex(index);
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+    setDropIndex(index);
+  };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, index?: number) => {
     e.preventDefault();
+    if (index !== undefined && index !== dropIndex) {
+      setDropIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDropIndex(null);
   };
 
   const handleDrop = (index: number) => {
-    if (draggedIndex === null || draggedIndex === index) return;
+    if (draggedIndex === null || draggedIndex === index) {
+      setDraggedIndex(null);
+      setDropIndex(null);
+      return;
+    }
     const newScenes = [...scenes];
     const [draggedScene] = newScenes.splice(draggedIndex, 1);
     newScenes.splice(index, 0, draggedScene);
     onUpdateScenes(newScenes.map((s, i) => ({ ...s, scene_number: i + 1 })));
     setDraggedIndex(null);
+    setDropIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDropIndex(null);
   };
 
   const updateSceneField = (id: number, field: keyof Scene, value: any) => {
@@ -414,18 +435,58 @@ export const Timeline: React.FC<TimelineProps> = ({
           return (
             <div
               key={scene.id}
-              draggable={trackId === 'video'}
-              onDragStart={() => trackId === 'video' && handleDragStart(idx)}
-              onDragOver={handleDragOver}
-              onDrop={() => trackId === 'video' && handleDrop(idx)}
+              draggable={true}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragLeave={handleDragLeave}
+              onDrop={() => handleDrop(idx)}
+              onDragEnd={handleDragEnd}
               onClick={() => onSelectScene(scene)}
               style={{
                 ...getSceneBlockStyle(idx, isSelected),
                 width: `${blockWidth}px`,
-                cursor: trackId === 'video' ? 'grab' : 'pointer',
+                cursor: 'grab',
+                opacity: draggedIndex === idx ? 0.4 : 1,
+                outline: dropIndex === idx && draggedIndex !== idx ? '2px dashed var(--gold)' : 'none',
+                outlineOffset: '-2px',
               }}
             >
               {renderBlock(scene, idx)}
+              {trackId === 'video' && idx < scenes.length - 1 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: '-6px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '8px',
+                    height: '20px',
+                    borderRadius: '3px',
+                    background: 'rgba(200,164,92,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '6px',
+                    color: 'var(--gold)',
+                    fontWeight: 700,
+                    border: '1px solid rgba(200,164,92,0.15)',
+                    pointerEvents: 'none',
+                    zIndex: 5,
+                  }}
+                  title={scene.transition_type || 'fade'}
+                >
+                  {scene.transition_type === 'fade' ? 'F' :
+                   scene.transition_type === 'dissolve' ? 'D' :
+                   scene.transition_type === 'smoothleft' ? '←' :
+                   scene.transition_type === 'smoothright' ? '→' :
+                   scene.transition_type === 'smoothup' ? '↑' :
+                   scene.transition_type === 'smoothdown' ? '↓' :
+                   scene.transition_type === 'slideleft' ? '◀' :
+                   scene.transition_type === 'slideright' ? '▶' :
+                   scene.transition_type === 'zoomin' ? '+' :
+                   scene.transition_type === 'hblur' ? '⊙' : 'T'}
+                </div>
+              )}
             </div>
           );
         })}

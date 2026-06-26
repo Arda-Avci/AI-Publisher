@@ -283,7 +283,10 @@ export async function initDatabase() {
     "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS model_type TEXT DEFAULT 'CogVideoX-5b';",
   );
   await db.exec(
-    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS production_template TEXT DEFAULT 'cinematic';",
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS production_template TEXT DEFAULT 'cinematic';"
+  );
+  await db.exec(
+    "ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS production_mode TEXT DEFAULT 'short';"
   );
   await db.exec(
     'ALTER TABLE video_jobs ADD COLUMN IF NOT EXISTS brand_kit_enabled INTEGER DEFAULT 0;',
@@ -874,6 +877,27 @@ export async function initDatabase() {
       ALTER TABLE scripts ALTER COLUMN show_id DROP NOT NULL;
     EXCEPTION WHEN undefined_column THEN NULL;
     END $$;
+  `);
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE E: Brand Books
+  // ═══════════════════════════════════════════════════════════════
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS brand_books (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(200) NOT NULL,
+      description TEXT,
+      colors JSONB DEFAULT '[]'::jsonb,
+      fonts JSONB DEFAULT '[]'::jsonb,
+      logo_url TEXT,
+      voice_guidelines TEXT,
+      visual_guidelines TEXT,
+      do_donts JSONB DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_brand_books_user ON brand_books(user_id);
   `);
 
   // ═══════════════════════════════════════════════════════════════

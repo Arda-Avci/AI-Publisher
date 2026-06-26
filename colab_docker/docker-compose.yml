@@ -434,6 +434,28 @@ services:
     networks:
       - ai-pub-net
 
+  # ── Neo4j Graph Database (Canon Auditor) ─────────────────
+  neo4j:
+    image: neo4j:5-community
+    container_name: ai-pub-neo4j
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    environment:
+      - NEO4J_AUTH=neo4j/ai_publisher_2026
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "ai_publisher_2026", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
   # ── Pyramid-Flow (Cascaded Video) ────────────────────────
   pyramid-flow:
     build: ./pyramid-flow
@@ -618,6 +640,7 @@ services:
 
 volumes:
   lora-weights:
+  neo4j-data:
 
 networks:
   ai-pub-net:

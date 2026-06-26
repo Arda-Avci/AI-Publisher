@@ -1,6 +1,9 @@
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
 
+export const SCRIPT_COST = 5;   // Senaryo/storyboard oluşturma
+export const ENHANCE_COST = 3; // Prompt geliştirme (enhance)
+
 /** Model bazlı kredi maliyetleri: scene_cost (sahne başı) + cover_cost */
 const MODEL_COSTS: Record<string, { sceneCost: number; coverCost: number }> = {
   'CogVideoX-5b': { sceneCost: 15, coverCost: 8 },

@@ -57,6 +57,7 @@ export function registerJobRoutes(app: Application): void {
         tts_provider,
         tts_voice,
         production_template,
+        production_mode,
         trend_enabled,
         trend_context,
       } = req.body;
@@ -84,6 +85,15 @@ export function registerJobRoutes(app: Application): void {
       const differentiationDurationMode = differentiation_duration_mode || 'same';
 
       try {
+        const finalProductionMode = production_mode || 'short';
+
+        if (finalProductionMode === 'series') {
+          const isAdmin = await CreditService.isAdmin(userId);
+          if (!isAdmin) {
+            return res.status(403).json({ success: false, error: 'Dizi modu sadece admin kullanımına açıktır.' });
+          }
+        }
+
         const finalTtsProvider = tts_provider || 'xtts';
         const finalTtsVoice =
           tts_voice || (finalTtsProvider === 'openai' ? 'alloy' : 'Claribel Dervla');
@@ -101,8 +111,8 @@ export function registerJobRoutes(app: Application): void {
 
         const insertResult: any = await db.run(
           `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context, character_profiles
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context, character_profiles, production_mode
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             userId,
             master_prompt,
@@ -123,6 +133,7 @@ export function registerJobRoutes(app: Application): void {
             trendEnabled,
             trend_context || '',
             characterProfilesJson,
+            finalProductionMode,
           ],
         );
 
