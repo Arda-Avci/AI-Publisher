@@ -11,8 +11,8 @@
 - [x] `pyramid-flow` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `sadtalker` Docker build ve push (Build-time weights iptal edildi, app.py checkpoints indirmesi entegre edildi)
 - [x] `svd` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
-- [/] `wan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
-- [ ] `wan25` Docker build ve push
+- [x] `wan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
+- [/] `wan25` Docker build ve push
 - [ ] `wav2lip` Docker build ve push
 
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)
@@ -116,7 +116,7 @@ Kaynak: `Script_writer_is_akisi.txt`
 
 ### Bekleyen (Açık İşler)
 - [x] `docker-compose.yml` (root) — PostgreSQL + Redis + Neo4j + RabbitMQ (26 Haz)
-- [ ] Docker build: musetalk, pyramid-flow, sadtalker, svd, wan, wan25, wav2lip
+- [ ] Docker build: wan25, wav2lip
 - [x] Faz H: Frontend — StoryboardPanel (tab), CameraControlPanel, App.tsx entegrasyon (26 Haz)
 - [x] Faz H: Timeline drag-reorder tum track + transition strip (26 Haz)
 - [ ] Faz K: Kapsamlı integration test full pipeline (3 test dosyası planlı)
