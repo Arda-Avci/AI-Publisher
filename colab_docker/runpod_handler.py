@@ -1,4 +1,4 @@
-# Trigger rebuild of wan image
+# Trigger rebuild of wan and ltx image
 import os
 import sys
 import time

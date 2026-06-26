@@ -110,6 +110,7 @@ jobs:
         model:
           - wav2lip
           - wan
+          - ltx
     steps:
       - uses: actions/checkout@v4
 
