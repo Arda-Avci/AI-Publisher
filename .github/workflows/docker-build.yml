@@ -82,7 +82,28 @@ jobs:
       fail-fast: false
       matrix:
         model:
+          - animatediff
+          - audioldm2
+          - cogvideox
+          - dynamicrafter
+          - f5tts
+          - hunyuan
+          - kokorotts
           - lora-trainer
+          - ltx
+          - mochi
+          - musetalk
+          - pyramid-flow
+          - sadtalker
+          - stablediffusion
+          - svd
+          - videocrafter
+          - wan
+          - wan25
+          - wav2lip
+          - whisper
+          - xtts
+          - zeroscope
     steps:
       - uses: actions/checkout@v4
 
