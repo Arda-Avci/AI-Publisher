@@ -213,7 +213,8 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [ ] RunPod callback (webhook) POST → diske yazma doğrulama
 - [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
 - [x] RunPod serverless endpoint sorgusu (Hesapta aktif endpoint bulunmadığı doğrulandı, 404 durumu netleşti)
-- [ ] RunPod üzerinde yeni serverless endpoint oluşturulduktan sonra `test_wan_serverless.js` ve `test-runpod-models.ts` ile video üretim doğrulaması
+- [x] RunPod üzerinde yeni serverless endpoint (`rojgtzuf3nztup`) oluşturulduktan sonra `test_wan_serverless.js` ile video üretim doğrulaması (Başarıyla tamamlandı, `/content/raw_video.mp4` üretildi)
+- [ ] `test-runpod-models.ts` ile diğer hazır şablon modellerin doğrulanması
 
 ### 💳 iyzico Ödeme — Canlı Test
 - [ ] Sandbox merchant panel → API key + abonelik plan kodları

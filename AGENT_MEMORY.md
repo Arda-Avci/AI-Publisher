@@ -21,6 +21,6 @@
 - **Sonuç:** 24 modelin tamamı ve Base imaj başarıyla derlenerek GHCR (`ghcr.io/anomalyco/` veya `ghcr.io/arda-avci/`) altına pushlandı. `wav2lip` modelindeki indirme hatası comment-out edilerek bypass edildi.
 
 ## 4. Aktif Durum ve Sonraki Adımlar
-- **Endpoint Durumu:** GraphQL sorgusu sonucunda kullanıcının RunPod hesabında aktif serverless endpoint bulunmadığı doğrulandı (`endpoints: []`). `.env` üzerindeki `paga2u5nmv4nvo` artık aktif değil.
-- **Hedef:** Kullanıcı RunPod panelinde yeni bir endpoint tanımladıktan sonra `node scripts/test_wan_serverless.js <YENI_ENDPOINT_ID>` komutuyla video üretim doğrulaması yapılacaktır.
-
+- **Endpoint Durumu:** Kullanıcı tarafından yeni oluşturulan `rojgtzuf3nztup` serverless endpoint'i üzerinden test başarıyla yapıldı.
+- **Test Sonucu:** `node scripts/test_wan_serverless.js rojgtzuf3nztup` komutuyla iş başarıyla tetiklendi, sırasıyla `IN_QUEUE` ve `IN_PROGRESS` aşamalarını geçip `COMPLETED` oldu ve `/content/raw_video.mp4` başarıyla üretildi.
+- **Hedef:** Diğer şablon modellerin de entegrasyonu ve e2e süreçlerinin doğrulanması.
