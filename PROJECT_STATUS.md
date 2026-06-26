@@ -67,13 +67,14 @@
 
 - **`cogvideox`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/cogvideox:latest`).
 - **`dynamicrafter`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/dynamicrafter:latest`).
-- **`hunyuan`**: Başarıyla derlendi og ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
+- **`hunyuan`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
 - **`lora-trainer`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/lora-trainer:latest`).
 - **`ltx`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/ltx:latest`).
 - **`mochi`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/mochi:latest`).
 - **`pyramid-flow`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/pyramid-flow:latest`).
 - **`sadtalker`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/sadtalker:latest`).
-- **`svd`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
+- **`svd`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/svd:latest`).
+- **`wan`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki TypeError ve NameError bug'ları (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
 
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 

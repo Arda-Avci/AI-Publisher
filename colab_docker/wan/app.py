@@ -136,8 +136,8 @@ def health():
 def preload():
     """Pre-load model into VRAM to avoid cold start latency."""
     try:
-        pipe = get_pipeline()
-        vram_cleanup()
+        pipe = get_pipeline(is_i2v=False)
+        flush_memory()
         return jsonify({"status": "ok", "model_loaded": pipe is not None})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

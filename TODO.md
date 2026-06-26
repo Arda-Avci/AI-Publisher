@@ -11,7 +11,7 @@
 - [x] `pyramid-flow` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `sadtalker` Docker build ve push (Build-time weights iptal edildi, app.py checkpoints indirmesi entegre edildi)
 - [x] `svd` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
-- [ ] `wan` Docker build ve push
+- [/] `wan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
 - [ ] `wan25` Docker build ve push
 - [ ] `wav2lip` Docker build ve push
 

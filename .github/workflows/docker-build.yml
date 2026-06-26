@@ -82,7 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         model:
-          - svd
+          - wan
     steps:
       - uses: actions/checkout@v4
 
