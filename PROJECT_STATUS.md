@@ -1,13 +1,46 @@
 # AI_Publisher Proje Durumu
 
-## 🟢 Bug Check & Frontend-Backend Entegrasyon Doğrulaması (25 Haziran 2026)
+## ✅ Faz B/D/E/F/G Tamamlandı - Kapsamlı Integration Testler (26 Haziran 2026)
+
+- **Faz B** (Canon & Continuity): `canonAuditor.ts`, `continuityManager.ts`, `characterPsychologist.ts` — Neo4j tabanlı entity extraction + plant/payoff + karakter psikolojisi
+- **Faz D** (Post-Production): `postProductionAgent.ts`, `soundDesigner.ts`, `videoService.ts` — Rough→Fine→Picture Lock + ADR/Foley + color presets
+- **Faz E** (Competitive Features): 9 dosya — brandGuideService, memoryVaultService, multiTurnEditor, draftToHiFi, inpaintingService, plainLanguageEdit, physicsAdvisor, videoToVideoService, hdrPipeline
+- **Faz F** (Mode Management): `promptEnhancer.ts` — short/film mode prompt injection, `queue.ts` mode branch, `dashboard.ts` mode selector
+- **Faz G** (Extra Techniques): `narrativeDeviceAgent.ts` (10 devices), `timeStructureAgent.ts` (6 structures), `transitionDesignerAgent.ts` (11 transitions)
+- **Test Suite Hangi Fix**: `vitest.config.ts` → `SKIP_AI_TESTS=true`; AI guard standardizasyonu
+- **Bug Fixes**: `promptEnhancer.ts` `maxDurationSec` hardcoded 60 → `config?.maxDurationSec ?? 60`; `multiTurnEditor` testlerinde çift `generateObject` mock + `importOriginal` partial mock; `timeStructureAgent` mock `structure` değeri correction
+- **Yeni Test Dosyaları**: `test_promptEnhancer.spec.ts` (10), `test_narrativeAgents.spec.ts` (15), `test_competitive_features.spec.ts` 13→29
+- **Test Sonuç**: **481 ✅ / 34 ⏸️ (515 total), 150sn**, 0 hata (tsc 0, eslint 0 warning-only)
+
+## ✅ Paralel Workstream Faz A/C/G — Agent Katmanı + Altyapı (26 Haziran 2026)
 
 - **TypeScript**: `tsc --noEmit` → 0 hata ✅
 - **ESLint**: `eslint src --quiet` → 0 hata ✅
-- **Testler**: 435+ test (AI servisleri sandbox'ta çalışmadığı için timeout beklenen davranış)
-- **Frontend-Backend**: Tüm API endpoint'leri doğru eşleşiyor (~60+ endpoint aktif)
-- **Kredi blokajı**: hold → confirmHold → refund akışı tamamlandı ve test edildi
-- **iyzico altyapısı**: Backend + frontend hazır, sandbox key girilip test edilecek
+- **Kredi testleri**: 7/7 passed ✅
+- **Yeni dosyalar**: 9 agent/service dosyası oluşturuldu
+- **Değiştirilen dosyalar**: db.ts, queue.ts, routes/jobs.ts, creditService.ts, types/job.ts
+
+### Faz A — Altyapı
+- `src/services/neo4jService.ts` — Neo4j driver singleton, dynamic import (graceful fallback), Cypher query helper, 5-node şema (Character/Location/Object/Event/PlotLine)
+- `colab_docker/docker-compose.yml` — Colab build ortamı için compose (root'ta yok)
+- `src/db.ts` — `production_mode` kolonu eklendi (short/film/series)
+- ⚠️ Root `docker-compose.yml` hala eksik — Neo4j servisi elle eklenmeli
+
+### Faz C — Sinematik Zeka (DB gerektirmez, A ile paralel)
+- `src/services/agents/editingTheoryAgent.ts` — Walter Murch Rule of Six (Emotion %51, Story %23, Rhythm %10, Eye-trace %7, Planarity %5, Spatial %4)
+- `src/services/agents/auteurSignatureAgent.ts` — 6 yönetmen stili (Tarantino, Anderson, Fincher, Kubrick, Spielberg, Nolan)
+
+### Faz G — Ekstra Teknik Ajanları (DB gerektirmez, A ile paralel)
+- `src/services/agents/narrativeDeviceAgent.ts` — 10 anlatı cihazı (false protagonist, frame story, 4th wall, stream of consciousness, unreliable narrator, Rashomon, MacGuffin, red herring, dramatic irony, cliffhanger)
+- `src/services/agents/timeStructureAgent.ts` — 6 zaman yapısı (linear, non-linear, reverse, parallel, time loop, anthology)
+- `src/services/agents/transitionDesignerAgent.ts` — 11 geçiş türü (invisible cut, smash cut, J/L-cut, match cut, whip pan, iris)
+
+### Kullanıcı Feature'ları
+- **Film/Dizi modu storyboard zorunluluğu**: `queue.ts`'de `production_mode='film'|'series'` → `runFilmStoryboard()` (karakter referansları dahil)
+- **Karakter referans entegrasyonu**: `src/services/agents/characterReferenceService.ts` — `character_profiles` JSON → prompt enjeksiyonu
+- **Storyboard integrasyonu**: `src/services/agents/storyboardIntegration.ts` — film/dizi pipeline'ı
+- **Dizi modu admin-only**: `routes/jobs.ts`'de `production_mode='series'` → `CreditService.isAdmin()` kontrolü
+- **Senaryo + prompt geliştirme kredi kesintisi**: `SCRIPT_COST=5`, `ENHANCE_COST=3` eklendi, `requiredCredits` hesabına eklendi
 
 ## 🟢 Tüm Modeller GitHub Actions Matrix Listesine Eklendi (26 Haziran 2026)
 
@@ -23,7 +56,8 @@
 - **`hunyuan`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
 - **`lora-trainer`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/lora-trainer:latest`).
 - **`ltx`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/ltx:latest`).
-- **`mochi`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
+- **`mochi`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/mochi:latest`).
+- **`pyramid-flow`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi. Derleme süreci tetikleniyor.
 
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 
@@ -31,13 +65,17 @@
 - **Çözüm:** `anullsrc` filtresini filter_complex dışına alıp, harici lavfi input'u (`-f lavfi -i anullsrc`) olarak besledik. Ayrıca test ortamında multithreading race-condition çökmesini önlemek için `-threads 1` kısıtlaması getirildi.
 - **Test:** `npx vitest run src/test_split_screen.spec.ts` 6/6 passed.
 
-## 🟢 Kredi Blokajı Sistemi Tamamlandı (25 Haziran 2026)
+## 🟢 Kredi Blokajı Sistemi Tamamlandı (26 Haziran 2026)
 
 - **`CreditService.holdCredits()`**: Render başında krediyi hemen bloke eder (`transaction_type='hold'`)
 - **`CreditService.confirmHold()`**: Başarılı üretim sonrası hold'u onaylar (`transaction_type='usage'`)
 - **`CreditService.refundCredits()`**: Hata/iptal durumunda bloke edilen krediyi iade eder
-- **`queue.ts` entegrasyonu**: `startProduction` başında `holdCredits`, catch bloğunda `refundCredits`, başarılı bitişte `confirmHold`
-- **Test**: 3 yeni test (holdCredits, yetersiz bakiye, confirmHold) → 7/7 passed
+- **`queue.ts` entegrasyonu**: `startProduction` başında `holdCredits`, başarılı bitişte `confirmHold`, kalıcı hata/iptalde `refundCredits`
+- **🔧 Refinements (26 Haz)**: 
+  - `retry_count > 0` guard — tekrar denenirken kredi yeniden bloke edilmez
+  - Geçici hatalarda (transient) **iade yapılmaz** — kredi retry boyunca bloke kalır
+  - `queue-graph.ts` `runJobGraph` — credit check + hold + confirm/refund eklendi
+- **Test**: 7/7 passed (holdCredits, yetersiz bakiye, confirmHold)
 - **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` temiz, `vitest run` passed
 
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haziran 2026)

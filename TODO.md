@@ -7,8 +7,8 @@
 - [x] `lora-trainer` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `ltx` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
 - [x] `mochi` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
-- [ ] `musetalk` Docker build ve push
-- [ ] `pyramid-flow` Docker build ve push
+- [x] `musetalk` Docker build ve push (Hata yok, başarıyla derlendi)
+- [/] `pyramid-flow` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [ ] `sadtalker` Docker build ve push
 - [ ] `svd` Docker build ve push
 - [ ] `wan` Docker build ve push
@@ -51,12 +51,82 @@ Kaynak: `Script_writer_is_akisi.txt`
 | K | **Test Altyapısı** — AI guard standardizasyonu, Phase J test dosyaları | J | ✅ |
 | K1 | Test Altyapısı — `skipAITests` guard, 4 yeni test dosyası (notif/analytics/export/email), PG boolean fix | — | ✅ |
 
+## ✅ Tamamlanan Fazlar
+
+### Faz A — Altyapı
+- [x] `neo4jService.ts` — Driver singleton + Cypher helper
+- [x] `db.ts` — `production_mode` kolonu
+
+### Faz B — Canon & Continuity (Neo4j tabanlı)
+- [x] `canonAuditor.ts` — Scene entity extraction → Neo4j MERGE, death/timeline/location validation
+- [x] `continuityManager.ts` — Plant & Payoff AI analysis + Neo4j object tracking + character state
+- [x] `characterPsychologist.ts` — Relationship edges (affection/trust/animosity), slow-burn max 10pt/scene
+
+### Faz C — Sinematik Zeka
+- [x] `editingTheoryAgent.ts` — Walter Murch Rule of Six (Emotion 51% + Story 23% + Rhythm 10% + Eye-trace 7% + Planarity 5% + Spatial 4%)
+- [x] `auteurSignatureAgent.ts` — 6 yönetmen stili (Tarantino/Anderson/Fincher/Kubrick/Spielberg/Nolan)
+
+### Faz D — Post-Production Pipeline
+- [x] `postProductionAgent.ts` — Rough→Fine→Picture Lock AI agent + timeline builder
+- [x] `soundDesigner.ts` — ADR/Foley/room tone/sound bridge/score direction AI agent
+- [x] `videoService.ts` — bleach_bypass/day_for_night presets, applyTimeRamp(), applyLut()
+- [x] 11 unit test geçiyor
+
+### Faz E — Rekabetçi Feature'lar (9 dosya)
+- [x] `brandGuideService.ts` — Brand book CRUD + Zod schema + PostgreSQL tablosu
+- [x] `memoryVaultService.ts` — Neo4j cross-session creative memory (7 types)
+- [x] `multiTurnEditor.ts` — Iterative refinement + undo history + intent classification
+- [x] `draftToHiFi.ts` — Draft→4K upscale (Lanczos + denoise + deinterlace)
+- [x] `inpaintingService.ts` — FLUX inpainting via RunPod + B2 upload + polling
+- [x] `plainLanguageEdit.ts` — Doğal dil→FFmpeg AI translation + execution
+- [x] `physicsAdvisor.ts` — Gravity/optics/mechanics constraint injection
+- [x] `videoToVideoService.ts` — Style transfer (10 preset: cinematic/anime/noir/vaporwave vs.)
+- [x] `hdrPipeline.ts` — 10-bit HDR tonemapping PQ/HLG/HDR10/HDR10+
+- [x] 13 test geçiyor
+
+### Faz F — Mod Yönetimi
+- [x] `promptEnhancer.ts` — Short-form hook/loop/retention enhancer + film cultural/subtext/DoP enhancer
+- [x] `queue.ts` — Short mode → `enhanceShortFormPrompt()` injection → `generateStudioScenes()`
+- [x] `dashboard.ts` — Üretim Modu selectörü (Short/Film/Series) + hint text
+- [x] `dashboardScripts.ts` — Edit modal'a `production_mode` eklendi
+
+### Faz G — Ekstra Teknik Ajanları
+- [x] `narrativeDeviceAgent.ts` — 10 anlatı cihazı (false protagonist, frame story, 4th wall, vs.)
+- [x] `timeStructureAgent.ts` — 6 zaman yapısı (linear/non-linear/reverse/parallel/time-loop/anthology)
+- [x] `transitionDesignerAgent.ts` — 11 geçiş türü (invisible cut, smash cut, J/L-cut, match cut, vs.)
+
+### Kullanıcı Feature'ları
+- [x] Film/Dizi modu storyboard zorunluluğu (`queue.ts` + `storyboardIntegration.ts`)
+- [x] Karakter referans entegrasyonu (`characterReferenceService.ts`)
+- [x] Dizi modu admin-only (`routes/jobs.ts`)
+- [x] Senaryo/prompt geliştirme kredi kesintisi (`creditService.ts` + `queue.ts`)
+
+### Test Suite Onarımları (26 Haz)
+- [x] Test suite hanging fix — `vitest.config.ts`'ye `SKIP_AI_TESTS=true`, AI guard standardizasyonu
+- [x] promptEnhancer.ts `maxDurationSec` bug fix — hardcoded 60 yerine `config?.maxDurationSec ?? 60`
+- [x] multiTurnEditor test fix — çift generateObject mock'u + videoService importOriginal partial mock
+- [x] getCreativeContext assertion fix — string return tipine uygun toContain
+- [x] timeStructureAgent mock fix — `structureMap` anahtarına uygun değer (`non-linear`)
+- [x] **481 test geçiyor, 34 skip, 150sn tam süre** (0 hata)
+
+### Yeni Test Dosyaları
+- [x] `test_promptEnhancer.spec.ts` — 10 test, Phase F pure functions
+- [x] `test_narrativeAgents.spec.ts` — 15 test, Phase B (canonAuditor/continuityManager/characterPsychologist) + Phase G (narrativeDeviceAgent/timeStructureAgent/transitionDesignerAgent)
+- [x] `test_competitive_features.spec.ts` — 13 → 29 test (brandGuide CRUD, memoryVault, multiTurnEditor, draftToHiFi FFmpeg, hdrPipeline)
+
+### Bekleyen (Açık İşler)
+- [ ] `docker-compose.yml` (root) — Neo4j servisi ekle (şu an sadece `colab_docker/` altında var)
+- [ ] Docker build: musetalk, pyramid-flow, sadtalker, svd, wan, wan25, wav2lip
+- [ ] Faz H: Frontend (storyboard UI, camera control, timeline)
+- [ ] Faz K: Kapsamlı integration test full pipeline (3 test dosyası planlı)
+
 ## ✅ Tamamlanan Major Fazlar
 
 | Faz | Tarih |
 |---|---|
 | Split Screen FFmpeg & Glibc Fix | 25 Haz |
-| Kredi Blokajı Sistemi | 25 Haz |
+| Kredi Blokajı Sistemi (hold/confirm/refund + retry guard + queue-graph) | 26 Haz |
+| Credit Blocking Refinements (retry_count guard, no refund on transient, queue-graph) | 26 Haz |
 | Actions Runner Disk Alanı Optimizasyonu (Free disk space) | 25 Haz |
 | Colab→Docker Migration | 21 Haz |
 | SVD-XT + Sıralı Derleme | 19 Haz |
@@ -111,8 +181,17 @@ Kaynak: `Script_writer_is_akisi.txt`
 | test_analytics.spec.ts | 7 | ✅ |
 | test_export.spec.ts | 4 | ✅ |
 | test_email.spec.ts | 1 | ✅ |
-| _diğer 15 test dosyası_ | ~100 | ✅ |
-| **Toplam** | **~435+** (149 non-AI ✅, kalan AI-guarded) | |
+| test_postproduction.spec.ts | 11 | ✅ |
+| test_competitive_features.spec.ts | 29 | ✅ |
+| test_narrativeAgents.spec.ts | 15 | ✅ |
+| test_promptEnhancer.spec.ts | 10 | ✅ |
+| test_color_grade.spec.ts | 9 | ✅ |
+| test_differentiation.spec.ts | 6 | ⏸️ (AI-guarded, SKIP_AI_TESTS) |
+| test_ai_helper.spec.ts | 4 | ⏸️ (AI-guarded) |
+| test_prompt_services.spec.ts | 4 | ⏸️ (AI-guarded) |
+| test_clipper_v2.spec.ts | 8 | ⏸️ (AI-guarded) |
+| _diğer 22 test dosyası_ | ~280 | ✅ |
+| **Toplam** | **481 ✅ / 34 ⏸️** (515 total) | |
 
 ---
 
