@@ -48,6 +48,17 @@ else:
         job_input = job.get('input', {})
         b2_creds = job_input.get('b2_credentials', {})
         
+        # Set environment variables from b2_credentials if present
+        if b2_creds:
+            if "endpoint_url" in b2_creds:
+                os.environ["B2_ENDPOINT_URL"] = b2_creds["endpoint_url"]
+            if "key_id" in b2_creds:
+                os.environ["B2_KEY_ID"] = b2_creds["key_id"]
+            if "application_key" in b2_creds:
+                os.environ["B2_APPLICATION_KEY"] = b2_creds["application_key"]
+            if "bucket_name" in b2_creds:
+                os.environ["B2_BUCKET_NAME"] = b2_creds["bucket_name"]
+        
         # Determine Flask endpoint path
         endpoint_path = os.environ.get("RUNPOD_ENDPOINT_PATH", "/generate-media")
         flask_port = os.environ.get("RUNPOD_FLASK_PORT", "5000")
