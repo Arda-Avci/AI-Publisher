@@ -1,5 +1,12 @@
 # AI_Publisher Proje Durumu
 
+## 🟢 Tüm Modeller GitHub Actions Matrix Listesine Eklendi (26 Haziran 2026)
+
+- **`docker-build.yml`**: GitHub Actions iş akışındaki matrix listesi, `colab_docker/build_all_v2.sh` scriptinde yer alan 24 modelin tamamını (22 standart model matrix'e, 2 özel model `special` matrix'e) içerecek şekilde güncellendi.
+- **Standart Modeller:** `animatediff`, `audioldm2`, `cogvideox`, `dynamicrafter`, `f5tts`, `hunyuan`, `kokorotts`, `lora-trainer`, `ltx`, `mochi`, `musetalk`, `pyramid-flow`, `sadtalker`, `stablediffusion`, `svd`, `videocrafter`, `wan`, `wan25`, `wav2lip`, `whisper`, `xtts`, `zeroscope`.
+- **Özel Modeller (Special):** `browser-use`, `geneface`, `video-retalking`.
+- `animatediff` ve diğer modellerin isimleri / yazılımları kontrol edildi, herhangi bir yazım hatası (typo) bulunmadığı doğrulandı.
+
 ## 🟡 Docker İmaj Derleme Düzeltmeleri ve Sıralı Build Süreci (25 Haziran 2026)
 
 - **`cogvideox`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/cogvideox:latest`).
