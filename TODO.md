@@ -10,7 +10,7 @@
 - [x] `musetalk` Docker build ve push (Hata yok, başarıyla derlendi)
 - [x] `pyramid-flow` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `sadtalker` Docker build ve push (Build-time weights iptal edildi, app.py checkpoints indirmesi entegre edildi)
-- [/] `svd` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
+- [x] `svd` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [ ] `wan` Docker build ve push
 - [ ] `wan25` Docker build ve push
 - [ ] `wav2lip` Docker build ve push
