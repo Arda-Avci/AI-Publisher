@@ -6,7 +6,7 @@
 - [x] `hunyuan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `lora-trainer` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `ltx` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
-- [/] `mochi` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
+- [x] `mochi` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [ ] `musetalk` Docker build ve push
 - [ ] `pyramid-flow` Docker build ve push
 - [ ] `sadtalker` Docker build ve push

@@ -1,5 +1,14 @@
 # AI_Publisher Proje Durumu
 
+## 🟢 Bug Check & Frontend-Backend Entegrasyon Doğrulaması (25 Haziran 2026)
+
+- **TypeScript**: `tsc --noEmit` → 0 hata ✅
+- **ESLint**: `eslint src --quiet` → 0 hata ✅
+- **Testler**: 435+ test (AI servisleri sandbox'ta çalışmadığı için timeout beklenen davranış)
+- **Frontend-Backend**: Tüm API endpoint'leri doğru eşleşiyor (~60+ endpoint aktif)
+- **Kredi blokajı**: hold → confirmHold → refund akışı tamamlandı ve test edildi
+- **iyzico altyapısı**: Backend + frontend hazır, sandbox key girilip test edilecek
+
 ## 🟢 Tüm Modeller GitHub Actions Matrix Listesine Eklendi (26 Haziran 2026)
 
 - **`docker-build.yml`**: GitHub Actions iş akışındaki matrix listesi, `colab_docker/build_all_v2.sh` scriptinde yer alan 24 modelin tamamını (22 standart model matrix'e, 2 özel model `special` matrix'e) içerecek şekilde güncellendi.
