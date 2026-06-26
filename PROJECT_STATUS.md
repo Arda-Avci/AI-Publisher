@@ -13,7 +13,8 @@
 - **`dynamicrafter`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/dynamicrafter:latest`).
 - **`hunyuan`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
 - **`lora-trainer`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/lora-trainer:latest`).
-- **`ltx`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki TypeError (parametre eksikliği) ve NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
+- **`ltx`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/ltx:latest`).
+- **`mochi`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
 
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 

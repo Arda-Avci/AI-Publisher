@@ -82,7 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         model:
-          - ltx
+          - mochi
     steps:
       - uses: actions/checkout@v4
 
