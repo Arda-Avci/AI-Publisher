@@ -14,7 +14,16 @@
 - [x] `wan` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
 - [x] `wan25` Docker build ve push
 - [x] Base imaj ve GitHub Actions workflow optimizasyonu (Dockerfile.base path filter + referans paketlerin base'e taşınması) (26 Haz)
-- [ ] `wav2lip` Docker build ve push
+- [x] `animatediff` Docker build ve push (26 Haz)
+- [x] `audioldm2` Docker build ve push (26 Haz)
+- [x] `f5tts` Docker build ve push (26 Haz)
+- [x] `kokorotts` Docker build ve push (26 Haz)
+- [x] `stablediffusion` Docker build ve push (26 Haz)
+- [x] `videocrafter` Docker build ve push (26 Haz)
+- [x] `whisper` Docker build ve push (26 Haz)
+- [x] `xtts` Docker build ve push (26 Haz)
+- [x] `zeroscope` Docker build ve push (26 Haz)
+- [x] `wav2lip` Docker build ve push (Hata giderildi, başarıyla derlendi) (26 Haz)
 
 ## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)
 
