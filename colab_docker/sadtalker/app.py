@@ -29,6 +29,49 @@ def get_model():
         )
     sys.path.insert(0, MODEL_DIR)
 
+    if not os.path.exists(CHECKPOINT_DIR) or not os.listdir(CHECKPOINT_DIR):
+        print("[SadTalker] Checkpoints not found. Downloading checkpoints from Hugging Face Space...")
+        os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+        try:
+            from huggingface_hub import snapshot_download
+            snapshot_download(
+                repo_id="vinthony/SadTalker",
+                repo_type="space",
+                allow_patterns=["checkpoints/**/*"],
+                local_dir="/app"
+            )
+            print("[SadTalker] Checkpoints download complete.")
+            # Ensure mapping files are correctly extracted or linked if needed
+            for filename in os.listdir(CHECKPOINT_DIR):
+                if "mapping_00229" in filename and filename.endswith(".tar"):
+                    src_file = os.path.join(CHECKPOINT_DIR, filename)
+                    dst_file = os.path.join(CHECKPOINT_DIR, "mapping_00229.pth")
+                    if not os.path.exists(dst_file):
+                        try:
+                            import tarfile
+                            with tarfile.open(src_file) as tar:
+                                tar.extractall(path=CHECKPOINT_DIR)
+                        except Exception:
+                            try:
+                                os.symlink(src_file, dst_file)
+                            except Exception:
+                                pass
+                if "mapping_00109" in filename and filename.endswith(".tar"):
+                    src_file = os.path.join(CHECKPOINT_DIR, filename)
+                    dst_file = os.path.join(CHECKPOINT_DIR, "mapping_00109.pth")
+                    if not os.path.exists(dst_file):
+                        try:
+                            import tarfile
+                            with tarfile.open(src_file) as tar:
+                                tar.extractall(path=CHECKPOINT_DIR)
+                        except Exception:
+                            try:
+                                os.symlink(src_file, dst_file)
+                            except Exception:
+                                pass
+        except Exception as e:
+            print(f"[SadTalker - ERROR] Failed to download checkpoints: {e}")
+
     from src.test_audio2coeff import Audio2Coeff
     from src.facerender.animate import AnimateFromCoeff
     from src.generate_batch import get_data

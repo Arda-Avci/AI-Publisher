@@ -1,5 +1,13 @@
 # AI_Publisher Proje Durumu
 
+## ✅ Faz H Frontend — StoryboardPanel + CameraControlPanel (26 Haziran 2026)
+
+- **`StoryboardPanel.tsx`** — Yeni "Hikaye Tahtası" tab paneli: proje secimi, sahne goruntuleri grid, kamera/gecis badge'leri, inline kamera/gecis editoru
+- **`CameraControlPanel.tsx`** — Gorsel kamera preset secici (6 preset: Static/Zoom In/Zoom Out/Pan Left/Pan Right/Breathing), intensity slider, tum sahnelerine batch uygulama, StudioPanel entegrasyonu
+- **`App.tsx`** — mainTabs'a 'Hikaye Tahtası' eklendi, HelpVideoPanel mapping, StoryboardPanel rendering
+- **`StudioPanel.tsx`** — CameraControl toggle button + rendering (MuseTalk/EditQueue pattern'inda)
+- **Build:** `tsc --noEmit` 0 hata, `vite build` 2.25s basarili
+
 ## ✅ Faz B/D/E/F/G Tamamlandı - Kapsamlı Integration Testler (26 Haziran 2026)
 
 - **Faz B** (Canon & Continuity): `canonAuditor.ts`, `continuityManager.ts`, `characterPsychologist.ts` — Neo4j tabanlı entity extraction + plant/payoff + karakter psikolojisi
@@ -24,7 +32,7 @@
 - `src/services/neo4jService.ts` — Neo4j driver singleton, dynamic import (graceful fallback), Cypher query helper, 5-node şema (Character/Location/Object/Event/PlotLine)
 - `colab_docker/docker-compose.yml` — Colab build ortamı için compose (root'ta yok)
 - `src/db.ts` — `production_mode` kolonu eklendi (short/film/series)
-- ⚠️ Root `docker-compose.yml` hala eksik — Neo4j servisi elle eklenmeli
+- ✅ Root `docker-compose.yml` olusturuldu — PostgreSQL + Redis + Neo4j + RabbitMQ
 
 ### Faz C — Sinematik Zeka (DB gerektirmez, A ile paralel)
 - `src/services/agents/editingTheoryAgent.ts` — Walter Murch Rule of Six (Emotion %51, Story %23, Rhythm %10, Eye-trace %7, Planarity %5, Spatial %4)
@@ -57,7 +65,8 @@
 - **`lora-trainer`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/lora-trainer:latest`).
 - **`ltx`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/ltx:latest`).
 - **`mochi`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/mochi:latest`).
-- **`pyramid-flow`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi. Derleme süreci tetikleniyor.
+- **`pyramid-flow`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/pyramid-flow:latest`).
+- **`sadtalker`**: Build-time weights indirmesi iptal edildi, app.py içerisine Hugging Face Space üzerinden runtime checkpoint indirme ve tar çıkarma adımları entegre edildi. Derleme süreci tetikleniyor.
 
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 
@@ -290,8 +299,8 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.2 (ModelRouter + Karakter Sistemi) |
-| Sürüm | 0.7.2-dev |
+| Faz | v7.3 (Root docker-compose + Altyapi Servisleri) |
+| Sürüm | 0.7.3-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 

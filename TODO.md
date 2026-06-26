@@ -8,8 +8,8 @@
 - [x] `ltx` Docker build ve push (Build-time weights iptal edildi, app.py bug'ları düzeltildi)
 - [x] `mochi` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
 - [x] `musetalk` Docker build ve push (Hata yok, başarıyla derlendi)
-- [/] `pyramid-flow` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
-- [ ] `sadtalker` Docker build ve push
+- [x] `pyramid-flow` Docker build ve push (Build-time weights iptal edildi, app.py bug'ı düzeltildi)
+- [/] `sadtalker` Docker build ve push (Build-time weights iptal edildi, app.py checkpoints indirmesi entegre edildi)
 - [ ] `svd` Docker build ve push
 - [ ] `wan` Docker build ve push
 - [ ] `wan25` Docker build ve push
@@ -115,9 +115,10 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [x] `test_competitive_features.spec.ts` — 13 → 29 test (brandGuide CRUD, memoryVault, multiTurnEditor, draftToHiFi FFmpeg, hdrPipeline)
 
 ### Bekleyen (Açık İşler)
-- [ ] `docker-compose.yml` (root) — Neo4j servisi ekle (şu an sadece `colab_docker/` altında var)
+- [x] `docker-compose.yml` (root) — PostgreSQL + Redis + Neo4j + RabbitMQ (26 Haz)
 - [ ] Docker build: musetalk, pyramid-flow, sadtalker, svd, wan, wan25, wav2lip
-- [ ] Faz H: Frontend (storyboard UI, camera control, timeline)
+- [x] Faz H: Frontend — StoryboardPanel (tab), CameraControlPanel, App.tsx entegrasyon (26 Haz)
+- [x] Faz H: Timeline drag-reorder tum track + transition strip (26 Haz)
 - [ ] Faz K: Kapsamlı integration test full pipeline (3 test dosyası planlı)
 
 ## ✅ Tamamlanan Major Fazlar
@@ -133,7 +134,7 @@ Kaynak: `Script_writer_is_akisi.txt`
 | v6.0 Core (32 Template, LangGraph 5-node, MuseTalk, Storyboard) | 15-20 Haz |
 | Dockerfile Bağımlılık Düzeltmeleri (7 model, CUDA 11.x) | 21 Haz |
 | GHCR Upload Notebook | 22 Haz |
-| Phase H (Timeline + Post-Prod) | 25 Haz |
+| Phase H (Timeline + Post-Prod + StoryboardPanel + CameraControl) | 25-26 Haz |
 | Phase I (Export Pipeline) | 25 Haz |
 | Phase J (Analytics, Multi-Lang, Notification, Refactor) | 25 Haz |
 | Phase K1 (Test Altyapısı, AI guard, 4 yeni test) | 25 Haz |
