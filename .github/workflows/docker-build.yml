@@ -82,7 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         model:
-          - hunyuan
+          - lora-trainer
     steps:
       - uses: actions/checkout@v4
 

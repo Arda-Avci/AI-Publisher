@@ -4,7 +4,8 @@
 
 - **`cogvideox`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/cogvideox:latest`).
 - **`dynamicrafter`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/dynamicrafter:latest`).
-- **`hunyuan`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
+- **`hunyuan`**: Başarıyla derlendi ve GHCR'a pushlandı (`ghcr.io/arda-avci/hunyuan:latest`).
+- **`lora-trainer`**: Build-time weights indirmesi iptal edildi, app.py içerisindeki NameError bug'ı (vram_cleanup yerine flush_memory kullanımı) giderildi ve matrix listesine eklendi. Derleme süreci tetikleniyor.
 
 ## 🟢 Split Screen FFmpeg & Glibc Çökmesi Düzeltildi (25 Haziran 2026)
 
