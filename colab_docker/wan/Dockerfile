@@ -7,10 +7,10 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     open_clip_torch
 
 # Build-time weight download (T2V + I2V)
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "Wan-AI/Wan2.1-T2V-1.3B" && \
-    /tmp/download_weights.sh "Wan-AI/Wan2.1-I2V-14B-480P"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "Wan-AI/Wan2.1-T2V-1.3B" && \
+#     /tmp/download_weights.sh "Wan-AI/Wan2.1-I2V-14B-480P"
 
 COPY app.py /app/app.py
 WORKDIR /app
