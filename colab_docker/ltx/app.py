@@ -172,7 +172,30 @@ def generate():
     image_path = data.get("image_path", "")
     output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
     
+    # Make sure output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Handle image URL download if necessary
+    if image_path and (image_path.startswith("http://") or image_path.startswith("https://")):
+        try:
+            local_image_path = "/tmp/input_image.png"
+            import requests
+            r = requests.get(image_path, stream=True)
+            r.raise_for_status()
+            with open(local_image_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            image_path = local_image_path
+            print(f"[CONTAINER - LTX] Successfully downloaded input image URL to: {image_path}")
+        except Exception as download_err:
+            print(f"[CONTAINER - LTX] Error downloading image URL: {download_err}")
+            
     is_i2v = bool(image_path and os.path.exists(image_path))
+    
+    # Parse dynamic parameters
+    num_frames = int(data.get("num_frames", 65))
+    num_inference_steps = int(data.get("num_inference_steps", 25))
+    fps = int(data.get("fps", 8))
     
     if import_error:
         return jsonify({"status": "error", "message": "T5 Import Failed", "traceback": import_error}), 500
@@ -187,18 +210,18 @@ def generate():
                 output = pipe(
                     image=init_image, 
                     prompt=prompt, 
-                    num_frames=65, 
-                    num_inference_steps=25
+                    num_frames=num_frames, 
+                    num_inference_steps=num_inference_steps
                 )
             else:
                 output = pipe(
                     prompt=prompt, 
-                    num_frames=65, 
-                    num_inference_steps=25
+                    num_frames=num_frames, 
+                    num_inference_steps=num_inference_steps
                 )
             frames = output.frames[0]
             
-        frames_to_mp4(frames, output_path, fps=8)
+        frames_to_mp4(frames, output_path, fps=fps)
         return jsonify({"status": "success", "output_path": output_path}), 200
         
     except torch.cuda.OutOfMemoryError as exc:
