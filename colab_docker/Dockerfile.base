@@ -43,6 +43,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     requests \
     scipy \
     "numpy<2.0.0" \
+    "torch==2.2.1" \
+    "torchvision==0.17.1" \
+    "torchaudio==2.2.1" \
     accelerate \
     "transformers>=4.46" \
     pillow \
