@@ -221,8 +221,6 @@ def generate():
     output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
     
     if prompt == "diagnose":
-        import sys
-        import os
         import subprocess
         pip_list = subprocess.run(["pip", "list"], capture_output=True, text=True).stdout
         
