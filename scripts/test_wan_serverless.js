@@ -20,7 +20,9 @@ if (!ENDPOINT_ID || ENDPOINT_ID.includes('endpoint_id')) {
 // Format for our custom Flask API (ghcr.io/arda-avci/ai-publisher-wan)
 const payload = {
   input: {
-    prompt: "A slow-motion cinematic shot. The camera begins outside a cozy wooden cabin in the cold winter with heavy snow falling, moving smoothly through the frost-dusted window into a warm, dim-lit living room. In the background, a rustic fireplace crackles with bright orange flames. In the foreground on a wooden table, a single ice cube drops into a heavy crystal glass of amber whiskey, causing dynamic liquid splashes and droplets flying in highly detailed slow-motion. Photorealistic, warm color grading, volumetric lighting, 8k resolution.",
+    prompt: "A slow-motion cinematic shot of Cozy wooden cabin in the cold winter with heavy snow falling.",
+    num_frames: 17,
+    num_inference_steps: 5,
     b2_credentials: {
       endpoint_url: process.env.B2_ENDPOINT_URL,
       key_id: process.env.B2_KEY_ID,

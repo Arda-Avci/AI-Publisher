@@ -5,8 +5,11 @@
 
 ## ✅ Faz I - RunPod Serverless Test Script Kontrolü ve Endpoint Doğrulaması (27 Haz 2026)
 - **Test Scriptleri Doğrulaması**: `scripts/test_wan_serverless.js` ve `scripts/test-runpod-models.ts` dosyaları kontrol edildi. `.env` üzerindeki `RUNPOD_API_KEY` ve endpoint tanımlamalarını otomatik okuma mimarisi sorunsuz çalışıyor.
-- **Canlı Test Başarısı**: Yeni oluşturulan `rojgtzuf3nztup` serverless endpoint'i üzerinden `node scripts/test_wan_serverless.js rojgtzuf3nztup` komutuyla video üretimi başarıyla tetiklendi. İş sırasıyla `IN_QUEUE` ve `IN_PROGRESS` aşamalarını geçerek başarıyla `COMPLETED` statüsüne ulaştı. `/content/raw_video.mp4` dosyası üretildi.
-- **Durum**: Entegrasyon ve serverless video üretim hattı canlıda başarıyla doğrulandı.
+- **Canlı Test Sorun Giderme ve Çözümler**:
+  - **Özyineleme (Recursion) Hatası Giderildi**: LTX-Video'nun `scaled_dot_product_attention` monkey-patch'inin Flask reimport/reload süreçlerinde üst üste bindirilmesi nedeniyle oluşan sonsuz özyineleme döngüsü (`RecursionError`), yamanın idempotent (`if not hasattr(F, "_is_patched")`) yapılması ile çözüldü.
+  - **Eksik Bağımlılıklar (Dependency Fix) Giderildi**: LTX-Video tokenizer'ının HuggingFace weights okuması sırasında ihtiyaç duyduğu `tiktoken` ve `protobuf` paketlerinin base imajda eksik olması sebebiyle oluşan hatalar, `colab_docker/Dockerfile.base` dosyasına bu paketler eklenerek ve base imaj (`28282974034` nolu Actions run) sıfırdan derlenerek giderildi.
+  - **RunPod Worker Cache Bypass**: RunPod'un `:latest` etiketli imajları lokal önbellekten yüklemesini engellemek için şablon imajı doğrudan en son git commit SHA'sı (`ghcr.io/arda-avci/ltx:6b8788504a0e22d0ea0a4f45da1434bb328a8c72`) ile güncellendi ve worker'lar scale-down (0) -> scale-up (3) adımlarıyla sıfırlanarak tetiklendi.
+- **Durum**: Entegrasyon ve serverless video üretim hattı canlıda hata gidermeleriyle birlikte başarıyla test ediliyor.
 
 ## ✅ Faz I - Base Imaj, Actions Workflow ve Çoklu Model Derleme Başarısı (26 Haz 2026)
 - **`Dockerfile.base`**: Modellerin ortak ihtiyaç duyduğu referans python paketleri (`diffusers`, `sentencepiece`, `einops`, `decord`, `open_clip_torch`, `av`) base imaja taşındı. Böylece her model derlemesinde bu kütüphanelerin tekrar indirilip kurulması engellenerek derleme süreleri kısaltıldı.

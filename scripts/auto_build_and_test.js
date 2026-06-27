@@ -6,7 +6,7 @@ dotenv.config();
 
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
 const ENDPOINT_ID = 'rojgtzuf3nztup';
-const RUN_ID = '28280822145';
+const RUN_ID = '28290992291';
 
 if (!RUNPOD_API_KEY) {
   console.error('❌ RUNPOD_API_KEY is not defined in .env');

@@ -203,8 +203,11 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [ ] RunPod callback (webhook) POST → diske yazma doğrulama
 - [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
 - [x] RunPod serverless endpoint sorgusu (Hesapta aktif endpoint bulunmadığı doğrulandı, 404 durumu netleşti)
-- [x] RunPod üzerinde yeni serverless endpoint (`rojgtzuf3nztup`) oluşturulduktan sonra `test_wan_serverless.js` ile video üretim doğrulaması (Başarıyla tamamlandı, `/content/raw_video.mp4` üretildi)
-- [x] Wan/LTX modellerinde local import çakışması (UnboundLocalError) giderildi
+- [x] RunPod üzerinde yeni serverless endpoint (`rojgtzuf3nztup`) oluşturulduktan sonra `test_wan_serverless.js` ile video üretim doğrulaması
+  - [x] LTX-Video `scaled_dot_product_attention` özyineleme (recursion) hatası giderildi (yamalar idempotent yapıldı)
+  - [x] LTX-Video tokenizer'ı için eksik `tiktoken` ve `protobuf` bağımlılıkları base imaja eklendi ve base imaj yeniden derlendi
+  - [x] Hugging Face `transformers` lazy-loading Placeholder hatasını çözmek için T5 modülleri force-import edildi
+  - [x] RunPod template'i en son commit hash etiketli imajla güncellenip worker'lar sıfırlanarak test edildi
 - [ ] `test-runpod-models.ts` ile diğer hazır şablon modellerin doğrulanması
 
 ### 💳 iyzico Ödeme — Canlı Test

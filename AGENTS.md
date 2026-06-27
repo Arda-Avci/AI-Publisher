@@ -160,7 +160,7 @@ Hassas bilgileri log'a veya koda gömmek
 ## Developer Komutları
 
 ```bash
-npm run dev        # Geliştirme sunucusu (port 3010)
+npm run dev        # Geliştirme sunucusu (backend 3016, frontend 4000)
 npm run build     # Production build
 npm run check    # typecheck + test + lint (NOT: Windows'ta check:test grep hata verir)
 npm run check:types  # sadece tsc typecheck
