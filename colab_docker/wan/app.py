@@ -9,6 +9,10 @@ import torch.nn as nn
 builtins.nn = nn
 builtins.torch = torch
 
+# Workaround for PyTorch < 2.3 where torch.uint16 does not exist
+if not hasattr(torch, "uint16"):
+    torch.uint16 = torch.int16
+
 # Workaround for transformers circular/lazy import of GenerationMixin
 try:
     from transformers.generation.utils import GenerationMixin
