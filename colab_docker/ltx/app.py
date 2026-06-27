@@ -1,6 +1,14 @@
 import os
 import sys
 sys.setrecursionlimit(10000)
+
+# Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
+try:
+    import transformers
+    from transformers import T5Tokenizer, T5TokenizerFast, T5EncoderModel
+except Exception as e:
+    print(f"[CONTAINER - LTX] Warning during T5 force-import: {e}")
+
 import gc
 import torch
 import torch.nn.functional as F
