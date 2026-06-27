@@ -9,6 +9,14 @@ import torch.nn as nn
 builtins.nn = nn
 builtins.torch = torch
 
+# Workaround for transformers circular/lazy import of GenerationMixin
+try:
+    from transformers.generation.utils import GenerationMixin
+    import transformers.generation
+    transformers.generation.GenerationMixin = GenerationMixin
+except Exception as e:
+    print(f"[CONTAINER - WAN] Warning during GenerationMixin preload: {e}")
+
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
 import_error = None
 try:
