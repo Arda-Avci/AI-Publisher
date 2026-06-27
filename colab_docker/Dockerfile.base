@@ -55,6 +55,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     opencv-python-headless \
     "diffusers>=0.35,<0.36" \
     "sentencepiece>=0.2.0" \
+    tiktoken \
+    protobuf \
     "einops>=0.8.0" \
     decord \
     open_clip_torch \
