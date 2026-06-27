@@ -2,11 +2,12 @@ import os
 import sys
 sys.setrecursionlimit(10000)
 
-# Workaround for HuggingFace transformers accelerate integration NameError: 'nn' is not defined bug
+# Workaround for HuggingFace transformers accelerate integration NameError: 'nn' and 'torch' is not defined bug
 import builtins
 import torch
 import torch.nn as nn
 builtins.nn = nn
+builtins.torch = torch
 
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
 import_error = None
