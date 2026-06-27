@@ -9,9 +9,13 @@ import torch.nn as nn
 builtins.nn = nn
 builtins.torch = torch
 
-# Workaround for PyTorch < 2.3 where torch.uint16 does not exist
+# Workaround for PyTorch < 2.3 where torch.uint16/32/64 do not exist
 if not hasattr(torch, "uint16"):
     torch.uint16 = torch.int16
+if not hasattr(torch, "uint32"):
+    torch.uint32 = torch.int32
+if not hasattr(torch, "uint64"):
+    torch.uint64 = torch.int64
 
 # Workaround for transformers circular/lazy import of GenerationMixin
 try:
