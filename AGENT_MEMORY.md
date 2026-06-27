@@ -21,6 +21,8 @@
 - **Sonuç:** 24 modelin tamamı ve Base imaj başarıyla derlenerek GHCR (`ghcr.io/anomalyco/` veya `ghcr.io/arda-avci/`) altına pushlandı. `wav2lip` modelindeki indirme hatası comment-out edilerek bypass edildi.
 
 ## 4. Aktif Durum ve Sonraki Adımlar
-- **Endpoint Durumu:** Kullanıcı tarafından yeni oluşturulan `rojgtzuf3nztup` serverless endpoint'i üzerinden test başarıyla yapıldı.
-- **Test Sonucu:** `node scripts/test_wan_serverless.js rojgtzuf3nztup` komutuyla iş başarıyla tetiklendi, sırasıyla `IN_QUEUE` ve `IN_PROGRESS` aşamalarını geçip `COMPLETED` oldu ve `/content/raw_video.mp4` başarıyla üretildi.
-- **Hedef:** Diğer şablon modellerin de entegrasyonu ve e2e süreçlerinin doğrulanması.
+- **Düzeltilen Hatalar:**
+  - **`torchvision::nms` Hatası:** Base imaj derlenirken pip'in torchvision sürümünü otomatik olarak uyumsuz bir sürüme yükseltmesi sebebiyle oluşan `operator torchvision::nms does not exist` hatası, `colab_docker/Dockerfile.base` dosyasında `torch==2.2.1`, `torchvision==0.17.1`, `torchaudio==2.2.1` ve `xformers==0.0.25` sürümleri sabitlenerek (pin) giderildi.
+  - **`RecursionError` Hatası:** Model yükleme sırasında diffusers kütüphanesinin modül repr loglama/derinlik sınırı nedeniyle verdiği `maximum recursion depth exceeded while calling a Python object` hatası, `colab_docker/wan/app.py` ve `colab_docker/ltx/app.py` dosyalarına `sys.setrecursionlimit(10000)` eklenerek çözüldü.
+- **Son Derleme Durumu:** GitHub Actions üzerindeki yeni `28281285315` derlemesi (Docker Build & Push) tüm modeller (`wan`, `ltx`, `wav2lip` dahil) için başarıyla tamamlandı.
+- **Hedef:** RunPod üzerinde yeni derlenen imajlar ile testleri tekrar tetikleyerek video üretimini uçtan uca doğrulamak.
