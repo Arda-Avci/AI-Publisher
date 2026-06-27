@@ -4,15 +4,17 @@ sys.setrecursionlimit(10000)
 import gc
 import torch
 import torch.nn.functional as F
-_orig_sdpa = F.scaled_dot_product_attention
-def _patched_sdpa(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, **kwargs):
-    kwargs.pop('enable_gqa', None)
-    if query.ndim == 4 and query.size(1) != key.size(1):
-        r = query.size(1) // key.size(1)
-        key = key.repeat_interleave(r, dim=1)
-        value = value.repeat_interleave(r, dim=1)
-    return _orig_sdpa(query, key, value, attn_mask=attn_mask, dropout_p=dropout_p, is_causal=is_causal, scale=scale, **kwargs)
-F.scaled_dot_product_attention = _patched_sdpa
+if not hasattr(F, "_is_patched"):
+    _orig_sdpa = F.scaled_dot_product_attention
+    def _patched_sdpa(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, **kwargs):
+        kwargs.pop('enable_gqa', None)
+        if query.ndim == 4 and query.size(1) != key.size(1):
+            r = query.size(1) // key.size(1)
+            key = key.repeat_interleave(r, dim=1)
+            value = value.repeat_interleave(r, dim=1)
+        return _orig_sdpa(query, key, value, attn_mask=attn_mask, dropout_p=dropout_p, is_causal=is_causal, scale=scale, **kwargs)
+    F.scaled_dot_product_attention = _patched_sdpa
+    F._is_patched = True
 
 import torch.nn as nn
 if not hasattr(nn, "RMSNorm"):
