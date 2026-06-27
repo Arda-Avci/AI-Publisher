@@ -20,6 +20,15 @@ import torch.nn as nn
 builtins.nn = nn
 builtins.torch = torch
 
+# Workaround for accelerate GradScaler import error in PyTorch < 2.4.0
+import torch.amp
+if not hasattr(torch.amp, "GradScaler"):
+    try:
+        from torch.cuda.amp import GradScaler
+        torch.amp.GradScaler = GradScaler
+    except ImportError:
+        pass
+
 # Workaround for PyTorch < 2.3 where torch.uint16/32/64 do not exist
 if not hasattr(torch, "uint16"):
     torch.uint16 = torch.int16
