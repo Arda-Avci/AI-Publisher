@@ -3,11 +3,13 @@ import sys
 sys.setrecursionlimit(10000)
 
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
+import_error = None
 try:
     import transformers
     from transformers import T5Tokenizer, T5TokenizerFast, T5EncoderModel
 except Exception as e:
-    print(f"[CONTAINER - WAN] Warning during T5 force-import: {e}")
+    import traceback
+    import_error = traceback.format_exc()
 
 import gc
 import torch
@@ -107,6 +109,9 @@ def generate():
     
     is_i2v = bool(image_path and os.path.exists(image_path))
     
+    if import_error:
+        return jsonify({"status": "error", "message": "T5 Import Failed", "traceback": import_error}), 500
+        
     try:
         pipe = get_pipeline(is_i2v)
         
