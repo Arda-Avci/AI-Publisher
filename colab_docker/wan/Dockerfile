@@ -4,7 +4,8 @@ FROM ai-publisher-base:latest
 RUN /opt/conda/bin/pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
     decord \
-    open_clip_torch
+    open_clip_torch \
+    tokenizers
 
 # Build-time weight download (T2V + I2V)
 # COPY download_weights.sh /tmp/download_weights.sh
