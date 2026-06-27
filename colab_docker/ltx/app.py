@@ -165,8 +165,12 @@ def generate():
         flush_memory()
         return jsonify({"status": "error", "message": "GPU Out Of Memory", "error": str(exc)}), 500
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print("[CONTAINER - LTX] Exception during generate:")
+        print(tb)
         flush_memory()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": str(e), "traceback": tb}), 500
 
 @app.route("/health", methods=["GET"])
 def health():
