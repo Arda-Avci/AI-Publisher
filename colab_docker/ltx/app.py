@@ -28,10 +28,8 @@ except Exception as e:
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
 import_error = None
 try:
-    # Bypass lazy loader by importing directly from the implementation modules
-    from transformers.models.t5.modeling_t5 import T5EncoderModel
-    from transformers.models.t5.tokenization_t5 import T5Tokenizer
-    from transformers.models.t5.tokenization_t5_fast import T5TokenizerFast
+    # Import from transformers directly to leverage the official lazy loading system
+    from transformers import T5EncoderModel, T5Tokenizer, T5TokenizerFast
 except Exception as e:
     import traceback
     import_error = traceback.format_exc()
@@ -182,11 +180,11 @@ def generate():
         except Exception as e:
             tok_msg = f"tokenizers import failed: {str(e)}"
         try:
-            from transformers.models.t5 import tokenization_t5_fast
-            t5_msg = f"tokenization_t5_fast imported successfully: {tokenization_t5_fast.__file__}"
+            from transformers import T5TokenizerFast
+            t5_msg = f"T5TokenizerFast imported directly: {T5TokenizerFast}"
         except Exception as e:
             import traceback
-            t5_msg = f"tokenization_t5_fast import failed: {str(e)}\n{traceback.format_exc()}"
+            t5_msg = f"T5TokenizerFast direct import failed: {str(e)}\n{traceback.format_exc()}"
         return jsonify({
             "status": "diagnose",
             "pip_list": pip_list,
