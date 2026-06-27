@@ -204,6 +204,7 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
 - [x] RunPod serverless endpoint sorgusu (Hesapta aktif endpoint bulunmadığı doğrulandı, 404 durumu netleşti)
 - [x] RunPod üzerinde yeni serverless endpoint (`rojgtzuf3nztup`) oluşturulduktan sonra `test_wan_serverless.js` ile video üretim doğrulaması (Başarıyla tamamlandı, `/content/raw_video.mp4` üretildi)
+- [x] Wan/LTX modellerinde local import çakışması (UnboundLocalError) giderildi
 - [ ] `test-runpod-models.ts` ile diğer hazır şablon modellerin doğrulanması
 
 ### 💳 iyzico Ödeme — Canlı Test
