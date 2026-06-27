@@ -28,12 +28,27 @@ except Exception as e:
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
 import_error = None
 try:
+    import sys
+    import types
+    import importlib
     import transformers
     import transformers.models.t5
     
-    # 1. Import real classes directly from implementation files
-    from transformers.models.t5.modeling_t5 import T5EncoderModel
-    from transformers.models.t5.tokenization_t5 import T5Tokenizer
+    def get_t5_submodule(name):
+        module_name = f"transformers.models.t5.{name}"
+        if hasattr(transformers.models.t5, "_get_module"):
+            try:
+                return transformers.models.t5._get_module(name)
+            except Exception:
+                pass
+        return importlib.import_module(module_name)
+
+    # 1. Load the physical modules bypassing lazy placeholders
+    real_modeling_t5 = get_t5_submodule("modeling_t5")
+    real_tokenization_t5 = get_t5_submodule("tokenization_t5")
+    
+    T5EncoderModel = getattr(real_modeling_t5, "T5EncoderModel")
+    T5Tokenizer = getattr(real_tokenization_t5, "T5Tokenizer")
     
     # We define T5TokenizerFast dynamically since it was removed in transformers v5+
     from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
@@ -71,12 +86,25 @@ try:
                 **kwargs,
             )
             
-    # 2. Bind them to transformers root to override any lazy placeholders
+    # Set the modules attributes on the real modules
+    real_modeling_t5.T5EncoderModel = T5EncoderModel
+    real_tokenization_t5.T5Tokenizer = T5Tokenizer
+    real_tokenization_t5.T5TokenizerFast = T5TokenizerFast
+    
+    # Register real modules in sys.modules to satisfy import lookups
+    sys.modules["transformers.models.t5.modeling_t5"] = real_modeling_t5
+    sys.modules["transformers.models.t5.tokenization_t5"] = real_tokenization_t5
+    
+    # Create mock module for tokenization_t5_fast and register it in sys.modules
+    mock_tok_fast = types.ModuleType("transformers.models.t5.tokenization_t5_fast")
+    mock_tok_fast.T5TokenizerFast = T5TokenizerFast
+    sys.modules["transformers.models.t5.tokenization_t5_fast"] = mock_tok_fast
+    
+    # Bind classes to transformers root and models.t5 lazy module namespaces
     transformers.T5EncoderModel = T5EncoderModel
     transformers.T5Tokenizer = T5Tokenizer
     transformers.T5TokenizerFast = T5TokenizerFast
     
-    # 3. Bind them to transformers.models.t5 namespace
     transformers.models.t5.T5EncoderModel = T5EncoderModel
     transformers.models.t5.T5Tokenizer = T5Tokenizer
     transformers.models.t5.T5TokenizerFast = T5TokenizerFast
@@ -230,6 +258,20 @@ def generate():
         except Exception as e:
             tok_msg = f"tokenizers import failed: {str(e)}"
             
+        t5_model_info = {}
+        try:
+            import transformers
+            t5_model_info["t5_encoder_attr"] = str(getattr(transformers, "T5EncoderModel", None))
+            from transformers import T5EncoderModel
+            t5_model_info["imported_class"] = str(T5EncoderModel)
+            t5_model_info["bases"] = [str(b) for b in T5EncoderModel.__bases__]
+            t5_model_info["class_name"] = T5EncoderModel.__name__
+            t5_model_info["module"] = T5EncoderModel.__module__
+        except Exception as t5_err:
+            import traceback
+            t5_model_info["error"] = str(t5_err)
+            t5_model_info["traceback"] = traceback.format_exc()
+
         import transformers
         t5_dir = os.path.dirname(transformers.__file__) + "/models/t5"
         t5_files = os.listdir(t5_dir) if os.path.exists(t5_dir) else []
@@ -241,6 +283,7 @@ def generate():
             "t5_dir": t5_dir,
             "t5_files": t5_files,
             "import_error": import_error,
+            "t5_model_info": t5_model_info,
             "sys_path": sys.path
         }), 200
     
