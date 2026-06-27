@@ -35,13 +35,13 @@ def get_pipeline(is_i2v):
     if is_i2v:
         from diffusers import WanPipeline
         pipe = WanPipeline.from_pretrained(
-            "Wan-AI/Wan2.1-I2V-14B-480P", 
+            "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers", 
             torch_dtype=torch.bfloat16
         )
     else:
         from diffusers import WanPipeline
         pipe = WanPipeline.from_pretrained(
-            "Wan-AI/Wan2.1-T2V-1.3B", 
+            "Wan-AI/Wan2.1-T2V-1.3B-Diffusers", 
             torch_dtype=torch.bfloat16
         )
 
