@@ -28,8 +28,23 @@ except Exception as e:
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
 import_error = None
 try:
-    # Import from transformers directly to leverage the official lazy loading system
-    from transformers import T5EncoderModel, T5Tokenizer, T5TokenizerFast
+    import transformers
+    import transformers.models.t5
+    
+    # 1. Import real classes directly from implementation files
+    from transformers.models.t5.modeling_t5 import T5EncoderModel
+    from transformers.models.t5.tokenization_t5 import T5Tokenizer
+    from transformers.models.t5.tokenization_t5_fast import T5TokenizerFast
+    
+    # 2. Bind them to transformers root to override any lazy placeholders
+    transformers.T5EncoderModel = T5EncoderModel
+    transformers.T5Tokenizer = T5Tokenizer
+    transformers.T5TokenizerFast = T5TokenizerFast
+    
+    # 3. Bind them to transformers.models.t5 namespace
+    transformers.models.t5.T5EncoderModel = T5EncoderModel
+    transformers.models.t5.T5Tokenizer = T5Tokenizer
+    transformers.models.t5.T5TokenizerFast = T5TokenizerFast
 except Exception as e:
     import traceback
     import_error = traceback.format_exc()
