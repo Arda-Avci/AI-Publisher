@@ -2,9 +2,20 @@ import os
 import sys
 sys.setrecursionlimit(10000)
 
+# Monkey-patch importlib.metadata.version to report PyTorch >= 2.4.0
+# to prevent transformers v5+ from disabling PyTorch support on torch < 2.4.0
+import importlib.metadata
+_orig_metadata_version = importlib.metadata.version
+def _patched_metadata_version(distribution_name):
+    if distribution_name.lower() == "torch":
+        return "2.4.0"
+    return _orig_metadata_version(distribution_name)
+importlib.metadata.version = _patched_metadata_version
+
 # Workaround for HuggingFace transformers accelerate integration NameError: 'nn' and 'torch' is not defined bug
 import builtins
 import torch
+torch.__version__ = "2.4.0"
 import torch.nn as nn
 builtins.nn = nn
 builtins.torch = torch
