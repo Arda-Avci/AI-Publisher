@@ -132,6 +132,29 @@ def generate():
     image_path = data.get("image_path", "")
     output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
     
+    if prompt == "diagnose":
+        import sys
+        import subprocess
+        pip_list = subprocess.run(["pip", "list"], capture_output=True, text=True).stdout
+        try:
+            import tokenizers
+            tok_msg = f"tokenizers imported successfully: {tokenizers.__file__}"
+        except Exception as e:
+            tok_msg = f"tokenizers import failed: {str(e)}"
+        try:
+            from transformers.models.t5 import tokenization_t5_fast
+            t5_msg = f"tokenization_t5_fast imported successfully: {tokenization_t5_fast.__file__}"
+        except Exception as e:
+            import traceback
+            t5_msg = f"tokenization_t5_fast import failed: {str(e)}\n{traceback.format_exc()}"
+        return jsonify({
+            "status": "diagnose",
+            "pip_list": pip_list,
+            "tok_msg": tok_msg,
+            "t5_msg": t5_msg,
+            "sys_path": sys.path
+        }), 200
+    
     # Make sure output directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
