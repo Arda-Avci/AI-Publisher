@@ -34,8 +34,43 @@ try:
     # 1. Import real classes directly from implementation files
     from transformers.models.t5.modeling_t5 import T5EncoderModel
     from transformers.models.t5.tokenization_t5 import T5Tokenizer
-    from transformers.models.t5.tokenization_t5_fast import T5TokenizerFast
     
+    # We define T5TokenizerFast dynamically since it was removed in transformers v5+
+    from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+    
+    class T5TokenizerFast(PreTrainedTokenizerFast):
+        vocab_files_names = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.json"}
+        model_input_names = ["input_ids", "attention_mask"]
+        slow_tokenizer_class = T5Tokenizer
+        
+        def __init__(
+            self,
+            vocab_file=None,
+            tokenizer_file=None,
+            eos_token="</s>",
+            unk_token="<unk>",
+            pad_token="<pad>",
+            extra_ids=100,
+            additional_special_tokens=None,
+            **kwargs,
+        ):
+            if extra_ids > 0 and additional_special_tokens is None:
+                additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
+            elif extra_ids > 0 and additional_special_tokens is not None:
+                for i in range(extra_ids):
+                    token = f"<extra_id_{i}>"
+                    if token not in additional_special_tokens:
+                        additional_special_tokens.append(token)
+            super().__init__(
+                vocab_file=vocab_file,
+                tokenizer_file=tokenizer_file,
+                eos_token=eos_token,
+                unk_token=unk_token,
+                pad_token=pad_token,
+                additional_special_tokens=additional_special_tokens,
+                **kwargs,
+            )
+            
     # 2. Bind them to transformers root to override any lazy placeholders
     transformers.T5EncoderModel = T5EncoderModel
     transformers.T5Tokenizer = T5Tokenizer
