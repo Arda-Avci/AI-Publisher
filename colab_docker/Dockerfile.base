@@ -51,7 +51,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pillow \
     runpod \
     boto3 \
-    "xformers==0.0.32.post2" \
+    "xformers==0.0.25" \
     opencv-python-headless \
     "diffusers>=0.35,<0.36" \
     "sentencepiece>=0.2.0" \
