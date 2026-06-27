@@ -236,9 +236,10 @@ def generate():
         try:
             import importlib.machinery
             import importlib.util
-            loader = importlib.machinery.SourceFileLoader("t5_modeling_test", "/opt/conda/lib/python3.10/site-packages/transformers/models/t5/modeling_t5.py")
-            spec = importlib.util.spec_from_loader("t5_modeling_test", loader)
+            loader = importlib.machinery.SourceFileLoader("transformers.models.t5.modeling_t5", "/opt/conda/lib/python3.10/site-packages/transformers/models/t5/modeling_t5.py")
+            spec = importlib.util.spec_from_loader("transformers.models.t5.modeling_t5", loader)
             test_module = importlib.util.module_from_spec(spec)
+            test_module.__package__ = "transformers.models.t5"
             loader.exec_module(test_module)
             eager_info["status"] = "success"
             eager_info["t5_encoder_class"] = str(getattr(test_module, "T5EncoderModel", None))
@@ -247,6 +248,12 @@ def generate():
             eager_info["status"] = "error"
             eager_info["error"] = str(eager_err)
             eager_info["traceback"] = traceback.format_exc()
+            
+        try:
+            import transformers.models.t5
+            t5_model_info["t5_missing_backends"] = getattr(transformers.models.t5, "_object_missing_backend", {})
+        except Exception as e:
+            t5_model_info["t5_missing_backends_error"] = str(e)
 
         import transformers
         t5_dir = os.path.dirname(transformers.__file__) + "/models/t5"
