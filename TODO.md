@@ -25,6 +25,14 @@
 - [x] `zeroscope` Docker build ve push (26 Haz)
 - [x] `wav2lip` Docker build ve push (Hata giderildi, başarıyla derlendi) (26 Haz)
 
+## ✅ RunPod Serverless Hata Giderimi ve Entegrasyonu (27 Haz 2026)
+- [x] LTX/Wan model `diagnose` modundaki `UnboundLocalError` hatasının giderilmesi
+- [x] HuggingFace `transformers` v5+ sürümünün PyTorch >= 2.4.0 zorunluluğunu aşmak için sürüm taklit yaması
+- [x] `accelerate` paketinin `torch.amp.GradScaler` içe aktarım hatasının giderilmesi
+- [x] `transformers` v5+ model kayıt süreçlerindeki `torch.compiler.is_compiling` AttributeError hatasının giderilmesi
+- [x] Mixture of Experts (`moe.py`) içindeki `torch.library.custom_op` AttributeError hatasının giderilmesi ve register_fake/register_autograd uyumluluk yamasının yazılması
+- [x] RunPod worker'larının yeni yamalı imaj etiketleri ile cycle edilip `test_wan_serverless.js` ile %100 başarılı doğrulanması
+
 ## ✅ Script Writer Full Workflow Tamamlandı (27 Haz 2026)
 
 Kaynak: `Script_writer_is_akisi.txt`
