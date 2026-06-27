@@ -147,24 +147,27 @@ def generate():
     
     if prompt == "diagnose":
         import sys
+        import os
         import subprocess
         pip_list = subprocess.run(["pip", "list"], capture_output=True, text=True).stdout
+        
         try:
             import tokenizers
             tok_msg = f"tokenizers imported successfully: {tokenizers.__file__}"
         except Exception as e:
             tok_msg = f"tokenizers import failed: {str(e)}"
-        try:
-            from transformers import T5TokenizerFast
-            t5_msg = f"T5TokenizerFast imported directly: {T5TokenizerFast}"
-        except Exception as e:
-            import traceback
-            t5_msg = f"T5TokenizerFast direct import failed: {str(e)}\n{traceback.format_exc()}"
+            
+        import transformers
+        t5_dir = os.path.dirname(transformers.__file__) + "/models/t5"
+        t5_files = os.listdir(t5_dir) if os.path.exists(t5_dir) else []
+        
         return jsonify({
             "status": "diagnose",
             "pip_list": pip_list,
             "tok_msg": tok_msg,
-            "t5_msg": t5_msg,
+            "t5_dir": t5_dir,
+            "t5_files": t5_files,
+            "import_error": import_error,
             "sys_path": sys.path
         }), 200
     
