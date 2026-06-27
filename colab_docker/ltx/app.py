@@ -29,6 +29,13 @@ if not hasattr(torch.amp, "GradScaler"):
     except ImportError:
         pass
 
+# Workaround for torch.compiler.is_compiling AttributeError in PyTorch < 2.3.0
+import torch.compiler
+if not hasattr(torch.compiler, "is_compiling"):
+    torch.compiler.is_compiling = lambda: False
+if not hasattr(torch.compiler, "is_dynamo_compiling"):
+    torch.compiler.is_dynamo_compiling = lambda: False
+
 # Workaround for PyTorch < 2.3 where torch.uint16/32/64 do not exist
 if not hasattr(torch, "uint16"):
     torch.uint16 = torch.int16
