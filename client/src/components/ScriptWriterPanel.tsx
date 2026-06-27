@@ -874,7 +874,7 @@ export function ScriptWriterPanel({ language }: { language: 'tr' | 'en' }) {
           {script.id && script.scenes && script.scenes.length > 0 && (
             <>
               <div style={{ marginTop: 24 }}>
-                <StoryboardGrid scriptId={script.id} scenes={script.scenes} />
+                <StoryboardGrid scriptId={script.id} scenes={script.scenes} language={language} />
               </div>
             </>
           )}

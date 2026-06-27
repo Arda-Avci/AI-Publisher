@@ -39,6 +39,16 @@
 - **Yeni Test Dosyaları**: `test_promptEnhancer.spec.ts` (10), `test_narrativeAgents.spec.ts` (15), `test_competitive_features.spec.ts` 13→29
 - **Test Sonuç**: **481 ✅ / 34 ⏸️ (515 total), 150sn**, 0 hata (tsc 0, eslint 0 warning-only)
 
+## ✅ Faz K — Kapsamlı Pipeline Integration Testleri (27 Haziran 2026)
+
+- **3 yeni test dosyası, 43 test** — full pipeline integration coverage
+- **`test_pipeline_integration.spec.ts`** (11 test): Job Queue enqueue/dequeue/broadcast, FFmpeg concat/filter/reframe/SRT→ASS, Scene CRUD + reorder, pipeline error handling (retry/cancel)
+- **`test_api_lifecycle.spec.ts`** (21 test): Full job CRUD via API, Scene CRUD via REST, API security auth guards + validation, publish route pre-checks
+- **`test_frontend_rendering.spec.ts`** (11 test): SPA rendering, auth redirects, session management, job listing rendering, static asset serving, SPA catch-all
+- **`__fixtures__/input_exists.mp4`** — 1s test video oluşturuldu
+- **`__fixtures__/audio_exists.wav`** — 1s test audio oluşturuldu
+- **Test Sonuç**: **524 ✅ / 34 ⏸️ (558 total), 192sn**, 0 hata
+
 ## ✅ Paralel Workstream Faz A/C/G — Agent Katmanı + Altyapı (26 Haziran 2026)
 
 - **TypeScript**: `tsc --noEmit` → 0 hata ✅
@@ -108,26 +118,27 @@
 - **Test**: 7/7 passed (holdCredits, yetersiz bakiye, confirmHold)
 - **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` temiz, `vitest run` passed
 
-## 🔴 Aktif — Script Writer Full Workflow (24 Haziran 2026)
+## ✅ Script Writer Full Workflow (27 Haziran 2026)
 
-**Hedef:** `Script_writer_is_akisi.txt`'deki profesyonel kısa film üretim iş akışının tamamını implement etmek.
-6 paralel backend workstream (A-F), ardından frontend (G-I).
+`Script_writer_is_akisi.txt`'deki profesyonel kısa film üretim iş akışı tamamlandı.
 
-**Temel:** CrewAI 4-agent pipeline tamamlandı, üzerine katmanlar ekleniyor.
+**Temel:** CrewAI 4-agent pipeline + 6 workstream (A-F backend, G-I frontend)
 
 ### Workstream İlerleme
 
 | # | Workstream | Durum |
 |---|-----------|-------|
-| **A** | Writer Tier System (3 tier config + pipeline entegrasyon) | 🔄 Aktif |
-| **B** | Document Parser (PDF/Word → text) | ⏳ |
-| **C** | Art Style Presets (10+ preset: Nolan, Blade Runner...) | ⏳ |
-| **D** | Beatsheet Duration (scene süre tahmini) | ⏳ |
-| **E** | Env/Prop Library (environment + prop CRUD) | ⏳ |
-| **F** | Storyboard Service (RunPod FLUX → 2K image per scene) | ⏳ |
-| **G** | Frontend (tier selector, style cards, doc upload, storyboard grid) | ⏳ |
-| **H** | Timeline + Post-Prod (drag-reorder, transition, 4K upscale, alt scene) | ⏳ |
-| **I** | Export Pipeline (concat/zip, FilmFreeway metadata) | ⏳ |
+| **A** | Writer Tier System (3 tier config + pipeline entegrasyon) | ✅ |
+| **B** | Document Parser (PDF/Word → text) | ✅ |
+| **C** | Art Style Presets (10+ preset: Nolan, Blade Runner...) | ✅ |
+| **D** | Beatsheet Duration (scene süre tahmini) | ✅ |
+| **E** | Env/Prop Library (environment + prop CRUD) | ✅ |
+| **F** | Storyboard Service (RunPod FLUX → 2K image per scene) | ✅ |
+| **G** | Frontend (ScriptWriterPanel: tier selector, style cards, doc upload, storyboard grid) | ✅ |
+| **H** | Timeline + Post-Prod (drag-reorder, transition, 4K upscale, alt scene) | ✅ |
+| **I** | Export Pipeline (concat/zip, FilmFreeway metadata) | ✅ |
+| **J** | Analytics, Multi-Lang, Notification Center, Bugfix/Refactor | ✅ |
+| **K** | Test Altyapısı (AI guard, 3 pipeline integration test dosyası, 524 test) | ✅ |
 
 Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 
@@ -320,8 +331,8 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.3 (Root docker-compose + Altyapi Servisleri) |
-| Sürüm | 0.7.3-dev |
+| Faz | v7.4 (Script Writer Full Workflow tamamlandı, 524 test) |
+| Sürüm | 0.7.4-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 
@@ -422,8 +433,8 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - Content team agent: 5 (Director, Screenwriter, Producer, Marketing, Quality) — CrewAI-style custom
 - Frontend component: ~25+
 - Build: `tsc --noEmit` 0 hata, `vite build` ~1.2s
-- Test: **83 unit test** (modelRouter 27 + characterProfile 20 + characterPresets 24 + characterGeneration 12) + 23 integration + 18 prod readiness
-- Test dosyası: 24 adet (`.spec.ts`)
+- Test: **524 test** (39 test dosyası, 34 AI-guarded skip)
+- Test dosyası: 39 adet (`.spec.ts`)
 - Colab→Docker: 19 dosya güncellendi
 - Teknik borç: 7 orphan fixture silindi, silent-pass anti-pattern düzeltildi, OTLP telemetry'ye entegre
 - Docker iyileştirme: base→devel, 20 modele /preload, /content/→/workspace/, GH Actions workflow, shared/utils.py

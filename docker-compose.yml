@@ -1,0 +1,110 @@
+# ============================================================
+# AI Publisher - Altyapi Servisleri
+# Node.js backend host'ta calisir, bu servislere baglanir.
+#
+# Kullanim:
+#   docker compose up -d              # Tümünü baslat
+#   docker compose up -d neo4j redis  # Sadece belirli servisler
+#   docker compose down               # Tümünü durdur
+#   docker compose logs -f <svc>      # Log takibi
+# ============================================================
+
+services:
+  # ── PostgreSQL (Ana Veritabani) ───────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-pub-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ai_publisher
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MyF1n%40ns}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_publisher"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Redis (Pub/Sub + Cache + Mutex) ──────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ai-pub-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── Neo4j (Canon/Continuity Graph DB) ────────────────────
+  neo4j:
+    image: neo4j:5-community
+    container_name: ai-pub-neo4j
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    environment:
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/ai_publisher_2026}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_max__size: 1G
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-ai_publisher_2026}", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+  # ── RabbitMQ (Is Kuyrugu) ────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: ai-pub-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
+volumes:
+  postgres-data:
+  redis-data:
+  neo4j-data:
+  neo4j-logs:
+  rabbitmq-data:
+
+networks:
+  ai-pub-net:
+    driver: bridge

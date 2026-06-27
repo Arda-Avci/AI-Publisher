@@ -1,4 +1,6 @@
 import os
+import sys
+sys.setrecursionlimit(10000)
 import gc
 import torch
 import torch.nn.functional as F

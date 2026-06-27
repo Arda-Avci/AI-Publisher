@@ -25,41 +25,25 @@
 - [x] `zeroscope` Docker build ve push (26 Haz)
 - [x] `wav2lip` Docker build ve push (Hata giderildi, başarıyla derlendi) (26 Haz)
 
-## 🔴 Aktif — Script Writer Full Workflow (24 Haz 2026)
+## ✅ Script Writer Full Workflow Tamamlandı (27 Haz 2026)
 
 Kaynak: `Script_writer_is_akisi.txt`
 
-### Paralel Workstream'ler (A-F backend, birbirini bloklamaz)
+### Workstream A-F (Backend) + G-I (Frontend) + J (Feature) + K (Test)
 
-| # | Workstream | Dosyalar | Durum |
-|---|-----------|----------|-------|
-| A | Writer Tier System | `writerTiers.ts`, `writerCrew.ts` güncelle, `crewAI.ts` güncelle, `test_writerTiers.spec.ts` | ✅ |
-| B | Document Parser | `documentParser.ts`, `documentUpload.ts`, `test_documentParser.spec.ts` | ✅ |
-| C | Art Style Presets | `artStyle.ts`, `artStylePresets.ts`, `outlinerAgent.ts` güncelle, `test_artStylePresets.spec.ts` | ✅ |
-| D | Beatsheet Duration | `types/script.ts` güncelle, `sceneArchitectAgent.ts` güncelle | ✅ |
-| E | Env/Prop Library | `db.ts` güncelle, `envProp.ts`, `envPropService.ts`, `envProps.ts`, `test_envProp.spec.ts` | ✅ |
-| F | Storyboard Service | `storyboardGenerator.ts`, `storyboardRoutes.ts`, `b2.ts` güncelle, `test_storyboard.spec.ts` | ✅ |
-
-### 🔜 Frontend + Devam (A-F ✅, G ✅, H ✅, I ✅, J ✅)
-
-| # | Workstream | Bağımlılık | Durum |
-|---|-----------|-----------|-------|
-| G | **Frontend Dashboard** — multi-platform metadata UI, auto-download, video player, Save & Publish | A-F API | ⏳ **kısmi** |
-| G1 | Multi-platform metadata UI (TikTok/X/Meta field'ları + tab switcher) | — | ✅ |
-| G2 | Auto-download on SSE stageCompleted | — | ✅ |
-| G3 | Multi-platform Save & Publish (tüm platform alanlarını gönder) | — | ✅ |
-| G4 | AI metadata auto-populate (`GET /api/v1/jobs` + `GET /api/v1/jobs/:id` + SSE auto-select) | `jobs.ts`, `App.tsx` | ✅ |
-| G5 | Gallery inline video player | — | ✅ |
-| G6 | Dashboard ana sayfa (stats, recent videos, quick actions) | G1-5 | ✅ |
-| H | **Timeline + Post-Prod** (drag-reorder animation + keyboard shortcuts, 20 transition type, 4K Real-ESRGAN upscale, alt scene) | G | ✅ |
-| I | **Export Pipeline** (concat/zip, FilmFreeway metadata, GalleryPanel button) | H | ✅ |
-| J | **Analytics, Multi-Lang, Notification Center, Bugfix/Refactor** | I | ✅ |
-| J1 | Analytics & Stats Dashboard — view tracking, viral score history, trend engagement charts | — | ✅ |
-| J2 | Multi-Language Expansion — DE/FR/ES/AR locale support | — | ✅ |
-| J3 | Notification Center — in-app history, email, push | — | ✅ |
-| J4 | Bugfix & Refactor — lint fix, test cleanup, code quality pass | J1-3 | ✅ |
-| K | **Test Altyapısı** — AI guard standardizasyonu, Phase J test dosyaları | J | ✅ |
-| K1 | Test Altyapısı — `skipAITests` guard, 4 yeni test dosyası (notif/analytics/export/email), PG boolean fix | — | ✅ |
+| # | Workstream | Durum |
+|---|-----------|-------|
+| A | Writer Tier System — `writerTiers.ts`, `writerCrew.ts`, `test_writerTiers.spec.ts` | ✅ |
+| B | Document Parser — `documentParser.ts`, `documentUpload.ts`, `test_documentParser.spec.ts` | ✅ |
+| C | Art Style Presets — `artStyle.ts`, `artStylePresets.ts`, `test_artStylePresets.spec.ts` | ✅ |
+| D | Beatsheet Duration — `types/script.ts`, `sceneArchitectAgent.ts` | ✅ |
+| E | Env/Prop Library — `db.ts`, `envProp.ts`, `envPropService.ts`, `test_envProp.spec.ts` | ✅ |
+| F | Storyboard Service — `storyboardGenerator.ts`, `storyboardRoutes.ts`, `test_storyboard.spec.ts` | ✅ |
+| G | Frontend Dashboard — ScriptWriterPanel (tier/style/doc upload/storyboard grid) + Gallery + metadata UI | ✅ |
+| H | Timeline + Post-Prod — drag-reorder, transition, 4K upscale, alt scene | ✅ |
+| I | Export Pipeline — concat/zip, FilmFreeway metadata, GalleryPanel button | ✅ |
+| J | Analytics, Multi-Lang, Notification Center, Bugfix/Refactor | ✅ |
+| K | **Test Altyapısı** — AI guard standardizasyonu, 3 pipeline integration test dosyası (43 test), 11 frontend rendering test | ✅ |
 
 ## ✅ Tamamlanan Fazlar
 
@@ -111,25 +95,28 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [x] Dizi modu admin-only (`routes/jobs.ts`)
 - [x] Senaryo/prompt geliştirme kredi kesintisi (`creditService.ts` + `queue.ts`)
 
-### Test Suite Onarımları (26 Haz)
+### Test Suite Onarımları (26-27 Haz)
 - [x] Test suite hanging fix — `vitest.config.ts`'ye `SKIP_AI_TESTS=true`, AI guard standardizasyonu
 - [x] promptEnhancer.ts `maxDurationSec` bug fix — hardcoded 60 yerine `config?.maxDurationSec ?? 60`
 - [x] multiTurnEditor test fix — çift generateObject mock'u + videoService importOriginal partial mock
 - [x] getCreativeContext assertion fix — string return tipine uygun toContain
 - [x] timeStructureAgent mock fix — `structureMap` anahtarına uygun değer (`non-linear`)
-- [x] **481 test geçiyor, 34 skip, 150sn tam süre** (0 hata)
+- [x] **481 → 524 test geçiyor, 34 skip, 192sn tam süre** (0 hata)
 
-### Yeni Test Dosyaları
+### Yeni Test Dosyaları (K-Faz)
+- [x] `test_pipeline_integration.spec.ts` — 11 test: Job Queue + FFmpeg + Scene CRUD + error handling
+- [x] `test_api_lifecycle.spec.ts` — 21 test: Full job/scene CRUD via API + auth guards + publish pre-checks
+- [x] `test_frontend_rendering.spec.ts` — 11 test: SPA rendering + session management + auth redirects
 - [x] `test_promptEnhancer.spec.ts` — 10 test, Phase F pure functions
-- [x] `test_narrativeAgents.spec.ts` — 15 test, Phase B (canonAuditor/continuityManager/characterPsychologist) + Phase G (narrativeDeviceAgent/timeStructureAgent/transitionDesignerAgent)
-- [x] `test_competitive_features.spec.ts` — 13 → 29 test (brandGuide CRUD, memoryVault, multiTurnEditor, draftToHiFi FFmpeg, hdrPipeline)
+- [x] `test_narrativeAgents.spec.ts` — 15 test, Phase B + G
+- [x] `test_competitive_features.spec.ts` — 13 → 29 test
 
 ### Bekleyen (Açık İşler)
 - [x] `docker-compose.yml` (root) — PostgreSQL + Redis + Neo4j + RabbitMQ (26 Haz)
-- [x] Docker build: wan25, wav2lip
+- [ ] Docker build: sadtalker, svd, wan, wan25, wav2lip
 - [x] Faz H: Frontend — StoryboardPanel (tab), CameraControlPanel, App.tsx entegrasyon (26 Haz)
 - [x] Faz H: Timeline drag-reorder tum track + transition strip (26 Haz)
-- [ ] Faz K: Kapsamlı integration test full pipeline (3 test dosyası planlı)
+- [x] Faz K: Kapsamlı integration test full pipeline (3 test dosyası) — ✅ TAMAMLANDI
 
 ## ✅ Tamamlanan Major Fazlar
 
@@ -201,8 +188,11 @@ Kaynak: `Script_writer_is_akisi.txt`
 | test_ai_helper.spec.ts | 4 | ⏸️ (AI-guarded) |
 | test_prompt_services.spec.ts | 4 | ⏸️ (AI-guarded) |
 | test_clipper_v2.spec.ts | 8 | ⏸️ (AI-guarded) |
+| test_pipeline_integration.spec.ts | 11 | ✅ (yeni) |
+| test_api_lifecycle.spec.ts | 21 | ✅ (yeni) |
+| test_frontend_rendering.spec.ts | 11 | ✅ (yeni) |
 | _diğer 22 test dosyası_ | ~280 | ✅ |
-| **Toplam** | **481 ✅ / 34 ⏸️** (515 total) | |
+| **Toplam** | **524 ✅ / 34 ⏸️** (558 total) | |
 
 ---
 
