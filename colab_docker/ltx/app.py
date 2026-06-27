@@ -5,8 +5,10 @@ sys.setrecursionlimit(10000)
 # Force-initialize T5 lazy modules to prevent diffusers placeholder load errors
 import_error = None
 try:
-    import transformers
-    from transformers import T5Tokenizer, T5TokenizerFast, T5EncoderModel
+    # Bypass lazy loader by importing directly from the implementation modules
+    from transformers.models.t5.modeling_t5 import T5EncoderModel
+    from transformers.models.t5.tokenization_t5 import T5Tokenizer
+    from transformers.models.t5.tokenization_t5_fast import T5TokenizerFast
 except Exception as e:
     import traceback
     import_error = traceback.format_exc()
