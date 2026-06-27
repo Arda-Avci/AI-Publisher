@@ -36,6 +36,60 @@ if not hasattr(torch.compiler, "is_compiling"):
 if not hasattr(torch.compiler, "is_dynamo_compiling"):
     torch.compiler.is_dynamo_compiling = lambda: False
 
+# Workaround for torch.library.custom_op AttributeError in PyTorch < 2.4.0
+import torch.library
+def _patched_custom_op(name, fn=None, /, *, mutates_args=(), device_types=None, schema=None):
+    parts = name.split("::")
+    ns = parts[0]
+    op_name = parts[1] if len(parts) > 1 else parts[0]
+    class CustomOpCallable:
+        def __init__(self, impl_fn):
+            self.impl_fn = impl_fn
+        def __call__(self, *args, **kwargs):
+            return self.impl_fn(*args, **kwargs)
+        def register_fake(self, fake_fn):
+            return fake_fn
+        def register_autograd(self, backward_fn, *args, **kwargs):
+            return backward_fn
+    def decorator(real_fn):
+        if not hasattr(torch.ops, ns):
+            class DummyNamespace:
+                pass
+            setattr(torch.ops, ns, DummyNamespace())
+        op_callable = CustomOpCallable(real_fn)
+        setattr(getattr(torch.ops, ns), op_name, op_callable)
+        return op_callable
+    if fn is not None:
+        return decorator(fn)
+    return decorator
+
+if not hasattr(torch.library, "custom_op"):
+    torch.library.custom_op = _patched_custom_op
+
+_orig_register_fake = getattr(torch.library, "register_fake", None)
+def _patched_register_fake(name, fn=None):
+    if _orig_register_fake is not None:
+        try:
+            if fn is not None:
+                return _orig_register_fake(name, fn)
+            return _orig_register_fake(name)
+        except Exception:
+            pass
+    if fn is not None:
+        return fn
+    return lambda f: f
+torch.library.register_fake = _patched_register_fake
+
+_orig_register_autograd = getattr(torch.library, "register_autograd", None)
+def _patched_register_autograd(name, backward, /, *, setup_context=None):
+    if _orig_register_autograd is not None:
+        try:
+            return _orig_register_autograd(name, backward, setup_context=setup_context)
+        except Exception:
+            pass
+    return backward
+torch.library.register_autograd = _patched_register_autograd
+
 # Workaround for PyTorch < 2.3 where torch.uint16/32/64 do not exist
 if not hasattr(torch, "uint16"):
     torch.uint16 = torch.int16
