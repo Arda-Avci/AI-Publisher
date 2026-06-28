@@ -1,6 +1,6 @@
 FROM ai-publisher-base:latest
 
-# Trigger build for SDXL integration v3
+# Trigger build for SDXL integration v4
 # Install Stable Diffusion specific packages
 RUN /opt/conda/bin/pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
