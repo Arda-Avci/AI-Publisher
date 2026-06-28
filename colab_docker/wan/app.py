@@ -16,6 +16,8 @@ importlib.metadata.version = _patched_metadata_version
 import builtins
 import torch
 torch.__version__ = "2.4.0"
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
 import torch.nn as nn
 builtins.nn = nn
 builtins.torch = torch
