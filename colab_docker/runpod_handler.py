@@ -30,7 +30,7 @@ else:
 
     # Wait for local Flask app to be ready on port 5000
     ready = False
-    for i in range(90):
+    for i in range(300):
         try:
             r = requests.get("http://localhost:5000/health", timeout=1)
             if r.status_code == 200:
@@ -42,7 +42,7 @@ else:
         time.sleep(1)
 
     if not ready:
-        print("[WRAPPER] Flask app failed to start within 90 seconds. Exiting.")
+        print("[WRAPPER] Flask app failed to start within 300 seconds. Exiting.")
         sys.exit(1)
 
     def handler(job):
