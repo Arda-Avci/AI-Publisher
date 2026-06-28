@@ -192,6 +192,8 @@ jobs:
             dockerfile: geneface/Dockerfile
           - model: video-retalking
             dockerfile: video-retalking/Dockerfile
+          - model: stablediffusion
+            dockerfile: stablediffusion/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
