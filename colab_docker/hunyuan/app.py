@@ -56,6 +56,9 @@ if not hasattr(torch.library, "custom_op"):
 if not hasattr(torch.library, "register_fake"):
     torch.library.register_fake = lambda *args, **kwargs: None
 
+if not hasattr(torch.library, "register_autograd"):
+    torch.library.register_autograd = lambda *args, **kwargs: None
+
 if not hasattr(torch.library, "impl"):
     def dummy_impl(*args, **kwargs):
         def decorator(f):
