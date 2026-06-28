@@ -18,7 +18,27 @@ import torch
 torch.__version__ = "2.4.0"
 if not hasattr(torch, "get_default_device"):
     torch.get_default_device = lambda: torch.device("cpu")
+
+# Patch torch.nn.RMSNorm for PyTorch < 2.4.0
 import torch.nn as nn
+if not hasattr(nn, "RMSNorm"):
+    class RMSNorm(nn.Module):
+        def __init__(self, normalized_shape, eps=1e-8, elementwise_affine=True, device=None, dtype=None):
+            super().__init__()
+            self.eps = eps
+            if isinstance(normalized_shape, int):
+                dim = normalized_shape
+            else:
+                dim = normalized_shape[-1]
+            if elementwise_affine:
+                self.weight = nn.Parameter(torch.ones(dim, device=device, dtype=dtype))
+            else:
+                self.register_parameter('weight', None)
+        def forward(self, x):
+            variance = x.pow(2).mean(-1, keepdim=True)
+            return x * torch.rsqrt(variance + self.eps) * (self.weight if self.weight is not None else 1.0)
+    nn.RMSNorm = RMSNorm
+
 builtins.nn = nn
 builtins.torch = torch
 
