@@ -26,7 +26,8 @@ function isLegacyFormat(ciphertext: string): boolean {
 
 export function encryptUsername(text: string): string {
   if (!text) return text;
-  const iv = crypto.randomBytes(IV_LENGTH);
+  const hash = crypto.createHmac('sha256', getKey()).update(text).digest();
+  const iv = hash.subarray(0, IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
