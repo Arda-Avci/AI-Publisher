@@ -55,28 +55,23 @@ if not hasattr(torch, "uint64"):
 # Force patch torch.library for full compatibility
 import torch.library
 
-def dummy_custom_op(*args, **kwargs):
+def dummy_decorator_or_func(*args, **kwargs):
+    if len(args) >= 2 and callable(args[1]):
+        return args[1]
+    if "fn" in kwargs and callable(kwargs["fn"]):
+        return kwargs["fn"]
+    if len(args) >= 1 and callable(args[0]):
+        return args[0]
     def decorator(f):
         return f
     return decorator
-torch.library.custom_op = dummy_custom_op
 
-torch.library.register_fake = lambda *args, **kwargs: None
-torch.library.register_autograd = lambda *args, **kwargs: None
-
-def dummy_impl(*args, **kwargs):
-    def decorator(f):
-        return f
-    return decorator
-torch.library.impl = dummy_impl
-
-def dummy_impl_abstract(*args, **kwargs):
-    def decorator(f):
-        return f
-    return decorator
-torch.library.impl_abstract = dummy_impl_abstract
-
-torch.library.register_abstract_impl = lambda *args, **kwargs: None
+torch.library.custom_op = dummy_decorator_or_func
+torch.library.register_fake = dummy_decorator_or_func
+torch.library.register_autograd = dummy_decorator_or_func
+torch.library.impl = dummy_decorator_or_func
+torch.library.impl_abstract = dummy_decorator_or_func
+torch.library.register_abstract_impl = dummy_decorator_or_func
 
 # Patch torch.nn.RMSNorm for PyTorch < 2.4.0
 import torch.nn as nn
