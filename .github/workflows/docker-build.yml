@@ -133,6 +133,8 @@ jobs:
           - zeroscope
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Free disk space
         run: |
@@ -226,6 +228,8 @@ jobs:
             dockerfile: video-retalking/Dockerfile
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Free disk space
         run: |
