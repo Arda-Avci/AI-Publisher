@@ -8,7 +8,8 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     einops==0.7.0 \
     ftfy==6.2.0
 
-# Model weights downloaded at runtime from HuggingFace via app.py git clone
+# Clone VideoCrafter repo at build time for config files
+RUN git clone --depth 1 https://github.com/AILab-CVC/VideoCrafter.git /app/videocrafter
 
 COPY app.py /app/
 WORKDIR /app

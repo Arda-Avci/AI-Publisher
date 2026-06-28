@@ -1,7 +1,7 @@
 FROM ai-publisher-base:latest
 
 RUN /opt/conda/bin/pip install --no-cache-dir \
-    "diffusers>=0.35,<0.36" \
+    "diffusers>=0.30.0" \
     "transformers>=4.39.3" \
     "accelerate==0.30.0" \
     "einops" \

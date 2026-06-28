@@ -1,4 +1,4 @@
-﻿import os
+import os
 import gc
 import sys
 sys.setrecursionlimit(10000)
@@ -57,6 +57,76 @@ if not hasattr(torch.compiler, "is_compiling"):
     torch.compiler.is_compiling = lambda: False
 if not hasattr(torch.compiler, "is_dynamo_compiling"):
     torch.compiler.is_dynamo_compiling = lambda: False
+
+# Workaround for accelerate GradScaler import error in PyTorch < 2.4.0
+import torch.amp
+if not hasattr(torch.amp, "GradScaler"):
+    try:
+        from torch.cuda.amp import GradScaler
+        torch.amp.GradScaler = GradScaler
+    except ImportError:
+        pass
+
+if not hasattr(torch, "uint16"):
+    torch.uint16 = torch.int16
+if not hasattr(torch, "uint32"):
+    torch.uint32 = torch.int32
+if not hasattr(torch, "uint64"):
+    torch.uint64 = torch.int64
+
+# Force-initialize T5 lazy modules
+import_error = None
+try:
+    import types
+    import importlib
+    import transformers
+    import transformers.models.t5
+
+    def get_t5_submodule(name):
+        module_name = f"transformers.models.t5.{name}"
+        if hasattr(transformers.models.t5, "_get_module"):
+            try:
+                return transformers.models.t5._get_module(name)
+            except Exception:
+                pass
+        return importlib.import_module(module_name)
+
+    real_modeling_t5 = get_t5_submodule("modeling_t5")
+    real_tokenization_t5 = get_t5_submodule("tokenization_t5")
+
+    T5EncoderModel = getattr(real_modeling_t5, "T5EncoderModel")
+    T5Tokenizer = getattr(real_tokenization_t5, "T5Tokenizer")
+
+    from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+
+    class T5TokenizerFast(PreTrainedTokenizerFast):
+        vocab_files_names = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.json"}
+        model_input_names = ["input_ids", "attention_mask"]
+        slow_tokenizer_class = T5Tokenizer
+        def __init__(self, vocab_file=None, tokenizer_file=None, eos_token="</s>", unk_token="<unk>", pad_token="<pad>", extra_ids=100, additional_special_tokens=None, **kwargs):
+            if extra_ids > 0 and additional_special_tokens is None:
+                additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
+            super().__init__(vocab_file=vocab_file, tokenizer_file=tokenizer_file, eos_token=eos_token, unk_token=unk_token, pad_token=pad_token, additional_special_tokens=additional_special_tokens, **kwargs)
+
+    real_modeling_t5.T5EncoderModel = T5EncoderModel
+    real_tokenization_t5.T5Tokenizer = T5Tokenizer
+    real_tokenization_t5.T5TokenizerFast = T5TokenizerFast
+
+    sys.modules["transformers.models.t5.modeling_t5"] = real_modeling_t5
+    sys.modules["transformers.models.t5.tokenization_t5"] = real_tokenization_t5
+    mock_tok_fast = types.ModuleType("transformers.models.t5.tokenization_t5_fast")
+    mock_tok_fast.T5TokenizerFast = T5TokenizerFast
+    sys.modules["transformers.models.t5.tokenization_t5_fast"] = mock_tok_fast
+
+    transformers.T5EncoderModel = T5EncoderModel
+    transformers.T5Tokenizer = T5Tokenizer
+    transformers.T5TokenizerFast = T5TokenizerFast
+    transformers.models.t5.T5EncoderModel = T5EncoderModel
+    transformers.models.t5.T5Tokenizer = T5Tokenizer
+    transformers.models.t5.T5TokenizerFast = T5TokenizerFast
+except Exception as e:
+    import traceback
+    import_error = traceback.format_exc()
 
 import numpy as np
 from flask import Flask, request, jsonify

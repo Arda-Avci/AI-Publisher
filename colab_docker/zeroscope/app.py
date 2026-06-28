@@ -1,9 +1,65 @@
 ﻿import os
 import gc
+import sys
 import torch
 import numpy as np
 from flask import Flask, request, jsonify
 import subprocess
+
+# Monkey-patch for transformers v5+ compatibility
+import importlib.metadata
+_orig_metadata_version = importlib.metadata.version
+def _patched_metadata_version(distribution_name):
+    if distribution_name.lower() == "torch":
+        return "2.4.0"
+    return _orig_metadata_version(distribution_name)
+importlib.metadata.version = _patched_metadata_version
+
+import builtins
+torch.__version__ = "2.4.0"
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
+import torch.nn as nn
+if not hasattr(nn, "RMSNorm"):
+    class RMSNorm(nn.Module):
+        def __init__(self, normalized_shape, eps=1e-8, elementwise_affine=True, device=None, dtype=None):
+            super().__init__()
+            self.eps = eps
+            dim = normalized_shape if isinstance(normalized_shape, int) else normalized_shape[-1]
+            if elementwise_affine:
+                self.weight = nn.Parameter(torch.ones(dim, device=device, dtype=dtype))
+            else:
+                self.register_parameter('weight', None)
+        def forward(self, x):
+            variance = x.pow(2).mean(-1, keepdim=True)
+            return x * torch.rsqrt(variance + self.eps) * (self.weight if self.weight is not None else 1.0)
+    nn.RMSNorm = RMSNorm
+
+import torch.nn.functional as F
+_orig_sdpa = F.scaled_dot_product_attention
+def _patched_sdpa(*args, **kwargs):
+    if "enable_gqa" in kwargs:
+        del kwargs["enable_gqa"]
+    return _orig_sdpa(*args, **kwargs)
+F.scaled_dot_product_attention = _patched_sdpa
+
+builtins.nn = nn
+builtins.torch = torch
+
+import torch.compiler
+if not hasattr(torch.compiler, "is_compiling"):
+    torch.compiler.is_compiling = lambda: False
+if not hasattr(torch.compiler, "is_dynamo_compiling"):
+    torch.compiler.is_dynamo_compiling = lambda: False
+
+import torch.amp
+if not hasattr(torch.amp, "GradScaler"):
+    try:
+        from torch.cuda.amp import GradScaler
+        torch.amp.GradScaler = GradScaler
+    except ImportError:
+        pass
 
 app = Flask(__name__)
 

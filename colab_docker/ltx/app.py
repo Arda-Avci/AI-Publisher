@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 sys.setrecursionlimit(10000)
 
@@ -315,7 +315,7 @@ def frames_to_mp4(frames, path, fps=8):
         '-pix_fmt', 'rgb24',
         '-r', str(fps),
         '-i', '-',
-        '-c:v', 'libopenh264',
+        '-c:v', 'libx264',
         '-pix_fmt', 'yuv420p',
         '-b:v', '5M',
         '-movflags', '+faststart',

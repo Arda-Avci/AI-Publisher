@@ -1,4 +1,4 @@
-﻿# Trigger rebuild with wan25 and hunyuan added to CI matrix
+# Trigger rebuild with wan25 and hunyuan added to CI matrix
 import os
 import gc
 import sys
@@ -58,6 +58,15 @@ if not hasattr(torch.compiler, "is_compiling"):
     torch.compiler.is_compiling = lambda: False
 if not hasattr(torch.compiler, "is_dynamo_compiling"):
     torch.compiler.is_dynamo_compiling = lambda: False
+
+# Workaround for accelerate GradScaler import error in PyTorch < 2.4.0
+import torch.amp
+if not hasattr(torch.amp, "GradScaler"):
+    try:
+        from torch.cuda.amp import GradScaler
+        torch.amp.GradScaler = GradScaler
+    except ImportError:
+        pass
 
 import numpy as np
 from flask import Flask, request, jsonify
