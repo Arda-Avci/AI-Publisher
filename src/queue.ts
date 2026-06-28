@@ -2,6 +2,7 @@ import { getRabbitChannel, VIDEO_JOBS_QUEUE, registerReconnectCallback } from '.
 import { checkZenModelsHealth } from './lib/ai-provider.js';
 import { t, STAGE_KEYS } from './lib/server-i18n.js';
 import { RunPodClient } from './services/runpod.js';
+import { downloadFile } from './lib/download.js';
 import {
   extractReferenceFrame,
   runFFmpegWithFallback,
@@ -583,27 +584,6 @@ async function startProduction(job: VideoJob) {
         [job.user_id],
       );
       const applyLipsync = userSettings?.apply_lipsync === 1;
-
-      // Helper: download a file from URL to dest path
-      const dl = async (url: string, dest: string) => {
-        const res = await axios({ method: 'GET', url, responseType: 'stream', timeout: 120000 });
-        const w = fs.createWriteStream(dest);
-        res.data.pipe(w);
-        return new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            w.destroy();
-            reject(new Error('Download stream timeout'));
-          }, 120000);
-          w.on('finish', () => {
-            clearTimeout(timeout);
-            resolve(null);
-          });
-          w.on('error', (err) => {
-            clearTimeout(timeout);
-            reject(err);
-          });
-        });
-      };
 
       // 1C: SD/Flux cover image generation (pre-scene)
       if (job.sd_flux_enabled === 1) {
@@ -1253,7 +1233,7 @@ async function startProduction(job: VideoJob) {
           if (!(await fs.pathExists(tV))) {
             if (currentScene?.video_path) {
               Logger.info(`[PRODUCTION] Downloading video from B2: ${currentScene.video_path}`);
-              await dl(currentScene.video_path, tV);
+              await downloadFile(currentScene.video_path, tV);
             } else {
               throw new Error('Video path is missing after production completed.');
             }
@@ -1262,21 +1242,21 @@ async function startProduction(job: VideoJob) {
           if (!(await fs.pathExists(tS))) {
             if (currentScene?.audio_path) {
               Logger.info(`[PRODUCTION] Downloading speech from B2: ${currentScene.audio_path}`);
-              await dl(currentScene.audio_path, tS);
+              await downloadFile(currentScene.audio_path, tS);
             }
           }
 
           if (!(await fs.pathExists(tE))) {
             if (currentScene?.sfx_path) {
               Logger.info(`[PRODUCTION] Downloading SFX from B2: ${currentScene.sfx_path}`);
-              await dl(currentScene.sfx_path, tE);
+              await downloadFile(currentScene.sfx_path, tE);
             }
           }
 
           if (currentScene?.subtitle_path) {
             if (!(await fs.pathExists(tSRT))) {
               Logger.info(`[PRODUCTION] Downloading subtitle from B2: ${currentScene.subtitle_path}`);
-              await dl(currentScene.subtitle_path, tSRT);
+              await downloadFile(currentScene.subtitle_path, tSRT);
             }
             srtFile = tSRT;
           }

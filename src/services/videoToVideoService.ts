@@ -110,7 +110,7 @@ async function pollV2VJob(jobId: string, maxRetries = 120, delayMs = 5000): Prom
   const ENDPOINT = 'https://api.runpod.ai/v2/video-to-video/run';
   for (let i = 0; i < maxRetries; i++) {
     const status = await RunPodClient.getJobStatus(ENDPOINT, jobId);
-    if (status.status === 'COMPLETED') return status;
+    if (status.status === 'COMPLETED') return status as unknown as Record<string, unknown>;
     if (status.status === 'FAILED') throw new Error(`V2V job failed: ${JSON.stringify(status)}`);
     await new Promise(r => setTimeout(r, delayMs));
   }

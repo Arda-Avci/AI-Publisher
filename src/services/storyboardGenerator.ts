@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { RunPodClient } from './runpod.js';
 import { Logger } from '../lib/logger.js';
 import { uploadToB2 } from '../lib/b2.js';
 import { db } from '../db.js';
@@ -96,40 +97,27 @@ export async function generateStoryboardImage(
   }
 
   try {
-    const url = `https://api.runpod.ai/v1/${FLUX_ENDPOINT_ID}/runsync`;
-
-    const response = await axios.post(
-      url,
+    const result = await RunPodClient.runSync(
+      FLUX_ENDPOINT_ID,
       {
-        input: {
-          prompt: fullPrompt,
-          width,
-          height,
-          num_inference_steps: 30,
-          guidance_scale: 7.5,
-        },
+        prompt: fullPrompt,
+        width,
+        height,
+        num_inference_steps: 30,
+        guidance_scale: 7.5,
       },
-      {
-        headers: {
-          'Authorization': `Bearer ${RUNPOD_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 120000,
-      },
+      120000,
     );
 
-    const data = response.data;
-
-    if (data.status === 'error') {
-      throw new Error(data.error || 'RunPod FLUX hatasi');
+    if (result.status === 'FAILED') {
+      throw new Error(result.error || 'RunPod FLUX hatasi');
     }
 
     let imageBuffer: Buffer | null = null;
 
-    const output = data.output;
+    const output = result.output;
 
     if (typeof output === 'string') {
-      // Base64 string
       const base64Data = output.replace(/^data:image\/\w+;base64,/, '');
       imageBuffer = Buffer.from(base64Data, 'base64');
     } else if (Array.isArray(output) && output.length > 0) {

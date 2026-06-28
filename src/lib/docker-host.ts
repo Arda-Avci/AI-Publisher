@@ -38,7 +38,9 @@ export type DockerService =
   | 'video-retalking'
    | 'geneface'
    | 'mochi'
-   | 'realesrgan';
+   | 'videocrafter'
+   | 'realesrgan'
+   | 'browser-use';
 
 export interface ServiceInfo {
   port: number;
@@ -70,7 +72,9 @@ const SERVICE_REGISTRY: Record<DockerService, ServiceInfo> = {
   mochi:          { port: 5022, description: 'Video Generation (Mochi-1)',           healthUrl: '/health' },
   'pyramid-flow': { port: 5023, description: 'Video Generation (Pyramid-Flow)',    healthUrl: '/health' },
    geneface:       { port: 5021, description: '3D Talking Head (GeneFace++)',       healthUrl: '/health' },
-   realesrgan:     { port: 5024, description: '4K Upscale (Real-ESRGAN)',           healthUrl: '/health' },
+   videocrafter:   { port: 5024, description: 'Video Generation (VideoCrafter)',    healthUrl: '/health' },
+   realesrgan:     { port: 5025, description: '4K Upscale (Real-ESRGAN)',           healthUrl: '/health' },
+   'browser-use':  { port: 5026, description: 'Browser Automation (browser-use)',    healthUrl: '/health' },
 };
 
 export interface DockerHostState {

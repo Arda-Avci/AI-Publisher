@@ -155,22 +155,23 @@ export class BrowserUseService {
 
       try {
         const status = await RunPodClient.getJobStatus(endpointId, taskId);
-        const state = status?.status || status?.state;
+        const state = String(status?.status || (status as any)?.state || '');
+        const result = (status as any)?.result;
 
         Logger.info(`[BrowserUse] Poll task ${taskId}: state=${state}`);
 
         if (state === 'COMPLETED' || state === 'SUCCEEDED') {
           return {
             status: 'success',
-            output: status.output || status.result?.output || JSON.stringify(status.result || {}),
-            stepsUsed: status.result?.steps_used,
+            output: status.output || result?.output || JSON.stringify(result || {}),
+            stepsUsed: result?.steps_used,
           };
         }
 
         if (state === 'FAILED' || state === 'CANCELLED') {
           return {
             status: 'error',
-            error: status.error || status.result?.error || `Task ${state}`,
+            error: status.error || result?.error || `Task ${state}`,
           };
         }
       } catch (err: any) {
@@ -190,7 +191,7 @@ export class BrowserUseService {
     maxSteps: number,
     timeoutSecs: number,
   ): Promise<BrowserUseTaskResult> {
-    const port = process.env.RUNPOD_BROWSER_USE_PORT || '5017';
+    const port = process.env.RUNPOD_BROWSER_USE_PORT || '5026';
     const url = `http://localhost:${port}/browser-task`;
 
     try {
@@ -335,7 +336,7 @@ export class BrowserUseService {
    * Only works locally (no RunPod serverless support yet).
    */
   static async takeScreenshot(url: string, fullPage = false): Promise<{ base64?: string; error?: string }> {
-    const port = process.env.RUNPOD_BROWSER_USE_PORT || '5017';
+    const port = process.env.RUNPOD_BROWSER_USE_PORT || '5026';
     const localUrl = `http://localhost:${port}/browser-screenshot`;
 
     try {

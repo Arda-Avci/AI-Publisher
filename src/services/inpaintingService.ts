@@ -86,7 +86,7 @@ export async function inpaintImage(
 async function pollInpaintJob(jobId: string, maxRetries = 60, delayMs = 3000): Promise<Record<string, unknown>> {
   for (let i = 0; i < maxRetries; i++) {
     const status = await RunPodClient.getJobStatus(INPAINT_ENDPOINT, jobId);
-    if (status.status === 'COMPLETED') return status;
+    if (status.status === 'COMPLETED') return status as unknown as Record<string, unknown>;
     if (status.status === 'FAILED') throw new Error(`Inpainting job failed: ${JSON.stringify(status)}`);
     await sleep(delayMs);
   }

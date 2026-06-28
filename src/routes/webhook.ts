@@ -2,11 +2,26 @@ import { Application, Request, Response } from 'express';
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
 import { broadcast } from '../queue.js';
+import { extractUrls } from '../lib/webhook-utils.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const CALLBACK_TOKEN = process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026';
+const WEBHOOK_RETRY_COUNT = 5;
+const WEBHOOK_RETRY_DELAY_MS = 1000;
+
+async function findSceneWithRetry(runpodJobId: string): Promise<any> {
+  for (let attempt = 0; attempt < WEBHOOK_RETRY_COUNT; attempt++) {
+    const scene = await db.get('SELECT * FROM video_scenes WHERE runpod_job_id = ?', [runpodJobId]);
+    if (scene) return scene;
+    if (attempt < WEBHOOK_RETRY_COUNT - 1) {
+      Logger.info(`[Webhook] Scene not found for job ${runpodJobId}, retrying (${attempt + 1}/${WEBHOOK_RETRY_COUNT})...`);
+      await new Promise((r) => setTimeout(r, WEBHOOK_RETRY_DELAY_MS));
+    }
+  }
+  return null;
+}
 
 export function registerWebhookRoutes(app: Application): void {
   app.post('/api/webhook/runpod', async (req: Request, res: Response) => {
@@ -29,46 +44,20 @@ export function registerWebhookRoutes(app: Application): void {
     Logger.info(`[Webhook] Received RunPod webhook for job ${id}. Status: ${status}`);
 
     try {
-      // Find the associated video scene
-      const scene = await db.get('SELECT * FROM video_scenes WHERE runpod_job_id = ?', [id]);
+      const scene = await findSceneWithRetry(id);
 
       if (!scene) {
-        Logger.warn(`[Webhook] No video scene found for runpod_job_id: ${id}`);
-        // Return 200 to RunPod to acknowledge, but log it
-        res.json({ success: false, message: 'No matching scene found' });
+        Logger.warn(`[Webhook] No video scene found for runpod_job_id: ${id} after ${WEBHOOK_RETRY_COUNT} attempts`);
+        res.status(202).json({ success: false, message: 'No matching scene found after retries' });
         return;
       }
 
       if (status === 'COMPLETED' && output) {
-        let videoUrl =
-          output.video_url ||
-          (output.b2_urls && output.b2_urls['/content/current_scene.mp4']) ||
-          (output.b2_urls && output.b2_urls['/content/raw_video.mp4']) ||
-          '';
-
-        if (!videoUrl && output.images) {
-          for (const key of Object.keys(output.images)) {
-            const files = output.images[key];
-            if (Array.isArray(files) && files.length > 0) {
-              const file = files[0];
-              if (typeof file === 'string' && (file.endsWith('.mp4') || file.endsWith('.mkv') || file.endsWith('.avi') || file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))) {
-                videoUrl = file;
-                break;
-              }
-            }
-          }
-        }
-        const speechUrl =
-          output.speech_url ||
-          (output.b2_urls && output.b2_urls['/content/speech.wav']) ||
-          (output.b2_urls && output.b2_urls['/content/kokoro_speech.wav']) ||
-          '';
-        const sfxUrl = output.sfx_url || (output.b2_urls && output.b2_urls['/content/sfx.wav']) || '';
-        const subtitleUrl =
-          output.subtitle_url || (output.b2_urls && output.b2_urls['/content/subtitle.srt']) || '';
+        const { videoUrl, speechUrl, sfxUrl, subtitleUrl } = extractUrls(output);
 
         Logger.info(
-          `[Webhook] Scene ${scene.scene_number} of job ${scene.job_id} completed successfully.`
+          `[Webhook] Scene ${scene.scene_number} of job ${scene.job_id} completed. ` +
+          `video=${videoUrl.slice(0, 60)} speech=${speechUrl.slice(0, 60)}`
         );
 
         await db.run(
@@ -78,14 +67,12 @@ export function registerWebhookRoutes(app: Application): void {
           [videoUrl, speechUrl, sfxUrl, subtitleUrl, scene.id]
         );
 
-        // SSE broadcast
         broadcast(scene.job_id, {
           stageKey: 'stageSceneFinished',
           sceneNumber: scene.scene_number,
           message: `Sahne ${scene.scene_number} başarıyla tamamlandı.`,
         });
       } else {
-        // Status is FAILED or other error
         const errMsg = error || (output && output.message) || 'Unknown error';
         Logger.error(`[Webhook] RunPod job ${id} failed: ${errMsg}`);
 
@@ -105,3 +92,5 @@ export function registerWebhookRoutes(app: Application): void {
     }
   });
 }
+
+export { findSceneWithRetry, CALLBACK_TOKEN };
