@@ -101,11 +101,13 @@ class ContainerManager:
         "video-retalking": 5020,
         "geneface": 5021,
         "mochi": 5022,
-        "pyramid-flow": 5023
+        "pyramid-flow": 5023,
+        "videocrafter": 5024,
+        "realesrgan": 5025
     }
     
     # GPU-heavy containers: only one can run at a time (T4 VRAM limit)
-    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts", "lora-trainer", "sadtalker", "dynamicrafter", "video-retalking", "geneface", "mochi", "pyramid-flow"]
+    GPU_HEAVY = ["cogvideox", "xtts", "audioldm2", "wav2lip", "musetalk", "stablediffusion", "wan", "ltx", "hunyuan", "svd", "animatediff", "wan25", "f5tts", "lora-trainer", "sadtalker", "dynamicrafter", "video-retalking", "geneface", "mochi", "pyramid-flow", "videocrafter", "realesrgan"]
     
     # CPU-only containers: can run concurrently, no GPU reservation needed
     CPU_ONLY = ["whisper", "kokorotts", "zeroscope"]

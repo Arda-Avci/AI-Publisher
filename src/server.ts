@@ -81,6 +81,7 @@ import { crewRouter } from './routes/crewAI.js';
 import { documentRouter } from './routes/documentUpload.js';
 import { storyboardRouter } from './services/storyboardRoutes.js';
 import { envPropsRouter } from './routes/envProps.js';
+import dockerRouter from './routes/docker.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -238,6 +239,7 @@ app.use('/api/v1/crew', crewRouter);
 app.use('/api/v1', storyboardRouter);
 app.use('/api/v1', documentRouter);
 app.use('/api/v1', envPropsRouter);
+app.use('/api/v1/docker', dockerRouter);
 
 // CSRF token endpoint — React uygulaması session alıp token'ı kullanabilsin
 app.get('/api/v1/csrf', (req, res) => {

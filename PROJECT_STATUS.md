@@ -8,13 +8,14 @@
 - **Mixture of Experts Entegrasyonu (torch.library.custom_op AttributeError)**: `transformers` v5+ `moe.py` bileşeninde PyTorch >= 2.4.0 ile gelen `torch.library.custom_op` API'sinin kullanılması ve autograd/fake operasyon kayıtlarının yapılması esnasında oluşan çökmeler; `torch.library.custom_op` metodunun python düzeyinde geriye dönük uyumlu, dinamik decorator destekli simülasyonu yazılarak ve `register_fake`, `register_autograd` fonksiyonları hata korumalı (graceful fallback) hale getirilerek çözüldü.
 - **Nihai Başarılı Test Sonucu**: RunPod template'i en son yamalı imaj etiketi (`50ebc37ae773b179fa5763c2125709c2e661f185`) ile güncellenip worker'lar sıfırdan ayağa kaldırıldıktan sonra çalıştırılan `test_wan_serverless.js` doğrulaması, sıfır hata ile **COMPLETED** konumuna ulaştı ve `T5EncoderModel` sınıfının başarıyla çözümlendiğini (`imported_class: T5EncoderModel`) doğruladı. Canlı video üretim pipeline'ı önündeki tüm engeller kalktı.
 
-## ✅ Faz I - RunPod Serverless Test Script Kontrolü ve Endpoint Doğrulaması (27 Haz 2026)
-- **Test Scriptleri Doğrulaması**: `scripts/test_wan_serverless.js` ve `scripts/test-runpod-models.ts` dosyaları kontrol edildi. `.env` üzerindeki `RUNPOD_API_KEY` ve endpoint tanımlamalarını otomatik okuma mimarisi sorunsuz çalışıyor.
+## ✅ Faz I - RunPod Serverless Test Script Kontrolü ve Endpoint Doğrulaması (28 Haz 2026)
+- **Test Scriptleri Doğrulaması**: `scripts/test_wan_serverless.js`, `scripts/test_generate_video.js` ve `scripts/test-runpod-models.ts` dosyaları kontrol edildi ve test edildi. `.env` üzerindeki credentials yapılandırılması ve dinamik region çözümlemesiyle doğrulamalar tamamlandı.
 - **Canlı Test Sorun Giderme ve Çözümler**:
   - **Özyineleme (Recursion) Hatası Giderildi**: LTX-Video'nun `scaled_dot_product_attention` monkey-patch'inin Flask reimport/reload süreçlerinde üst üste bindirilmesi nedeniyle oluşan sonsuz özyineleme döngüsü (`RecursionError`), yamanın idempotent (`if not hasattr(F, "_is_patched")`) yapılması ile çözüldü.
   - **Eksik Bağımlılıklar (Dependency Fix) Giderildi**: LTX-Video tokenizer'ının HuggingFace weights okuması sırasında ihtiyaç duyduğu `tiktoken` ve `protobuf` paketlerinin base imajda eksik olması sebebiyle oluşan hatalar, `colab_docker/Dockerfile.base` dosyasına bu paketler eklenerek ve base imaj (`28282974034` nolu Actions run) sıfırdan derlenerek giderildi.
-  - **RunPod Worker Cache Bypass**: RunPod'un `:latest` etiketli imajları lokal önbellekten yüklemesini engellemek için şablon imajı doğrudan en son git commit SHA'sı (`ghcr.io/arda-avci/ltx:6b8788504a0e22d0ea0a4f45da1434bb328a8c72`) ile güncellendi ve worker'lar scale-down (0) -> scale-up (3) adımlarıyla sıfırlanarak tetiklendi.
-- **Durum**: Entegrasyon ve serverless video üretim hattı canlıda hata gidermeleriyle birlikte başarıyla test ediliyor.
+  - **Backblaze B2 S3 API İmza ve Bölge (Region) Hatası Giderildi**: B2 sunucusundan alınan `Malformed Access Key Id` hatası; hardcoded `us-west-004` bölgesinin kaldırılıp, `B2_ENDPOINT_URL`'den bölge kodunun dinamik parse edilmesi ile çözüldü.
+  - **S3 Uyumlu Uygulama Anahtarı Entegrasyonu**: B2'nin master anahtarlarının S3 API'sini desteklememesi sorunu, konsoldan yeni bir S3 uyumlu Custom Application Key oluşturulup `.env` üzerinde güncellenerek aşılmıştır.
+- **Durum**: Entegrasyon ve serverless video üretim hattı canlıda hem teşhis (`diagnose`) hem de gerçek video üretimi ve B2 yükleme aşamalarında %100 başarıyla doğrulanmıştır.
 
 ## ✅ Faz I - Base Imaj, Actions Workflow ve Çoklu Model Derleme Başarısı (26 Haz 2026)
 - **`Dockerfile.base`**: Modellerin ortak ihtiyaç duyduğu referans python paketleri (`diffusers`, `sentencepiece`, `einops`, `decord`, `open_clip_torch`, `av`) base imaja taşındı. Böylece her model derlemesinde bu kütüphanelerin tekrar indirilip kurulması engellenerek derleme süreleri kısaltıldı.
@@ -335,6 +336,16 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **Sıralı Derleme & Disk Temizleme:** ✅ Tamamlandı (build_all.sh betiğinde sora yerine svd modeli eklendi, her model drive'a yazıldıktan hemen sonra local registry reposunu silen rm -rf temizleme mantığı ve docker/podman system prune temizlikleri entegre edildi).
 
 
+## ✅ Faz L — RunPod API v2 + Webhook E2E + Model Registry (28 Haz 2026)
+
+- **RunPod API v2 tam geçiş**: `runpod.ts` — `runSync`, `streamLogs`, `healthCheck`, `listEndpoints`, `pollUntilComplete` eklendi. Tüm tipler (RunPodJobResponse, RunPodJobStatus, RunPodHealthResponse, RunPodEndpointInfo) strict TypeScript ile yazıldı.
+- **24-model endpoint registry**: `runpodEndpoints.ts` — Her model için env variable mapping, kategori (video/audio/face/image/lora/browser/upscale), default input schema, validation, `getEndpointForModel()` fallback.
+- **Webhook e2e test**: `test_webhook_e2e.spec.ts` — 5 test (auth rejection, missing id, COMPLETED update, FAILED handling). `webhook-utils.ts` ile çoklu B2/Flask/API output format parsing.
+- **Test scripts**: `scripts/test-all-models.ts` (kategori filtreli), `scripts/test-ports.ts` (5001-5026 Docker port health).
+- **V1→V2 migration**: storyboardGenerator.ts `runsync` artık `RunPodClient.runSync()` kullanıyor. browserUseService, inpaintingService, videoToVideoService type fix'leri.
+- **Küçük refactor**: `download.ts` — queue.ts içindeki inline download helper'ı modüler dosyaya taşındı. `docker-host.ts` — videocrafter, realesrgan, browser-use port eklendi.
+- **Test**: 539 ✅ / 34 ⏸️ (573 total), tsc 0 hata, commit `0f8c5d2`
+
 ## Genel Durum
 
 | Başlık | Detay |
@@ -342,7 +353,7 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.4 (Script Writer Full Workflow tamamlandı, 524 test) |
+| Faz | v7.4 (Faz L — RunPod v2 + Webhook E2E tamamlandı, 539 test) |
 | Sürüm | 0.7.4-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)

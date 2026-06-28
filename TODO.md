@@ -25,13 +25,15 @@
 - [x] `zeroscope` Docker build ve push (26 Haz)
 - [x] `wav2lip` Docker build ve push (Hata giderildi, başarıyla derlendi) (26 Haz)
 
-## ✅ RunPod Serverless Hata Giderimi ve Entegrasyonu (27 Haz 2026)
+## ✅ RunPod Serverless Hata Giderimi ve Entegrasyonu (28 Haz 2026)
 - [x] LTX/Wan model `diagnose` modundaki `UnboundLocalError` hatasının giderilmesi
 - [x] HuggingFace `transformers` v5+ sürümünün PyTorch >= 2.4.0 zorunluluğunu aşmak için sürüm taklit yaması
 - [x] `accelerate` paketinin `torch.amp.GradScaler` içe aktarım hatasının giderilmesi
 - [x] `transformers` v5+ model kayıt süreçlerindeki `torch.compiler.is_compiling` AttributeError hatasının giderilmesi
 - [x] Mixture of Experts (`moe.py`) içindeki `torch.library.custom_op` AttributeError hatasının giderilmesi ve register_fake/register_autograd uyumluluk yamasının yazılması
-- [x] RunPod worker'larının yeni yamalı imaj etiketleri ile cycle edilip `test_wan_serverless.js` ile %100 başarılı doğrulanması
+- [x] Backblaze B2 S3 API endpoint'inden bölge (region) kodunun dinamik parse edilmesi yamasının eklenmesi
+- [x] B2 Master Key sınırlamasını aşmak için S3 uyumlu Custom Application Key entegrasyonunun tamamlanması
+- [x] RunPod worker'larının yeni yamalı imaj etiketleri ile cycle edilip `test_generate_video.js` ile gerçek video sentezleme ve B2 yüklemesinin %100 başarılı doğrulanması
 
 ## ✅ Script Writer Full Workflow Tamamlandı (27 Haz 2026)
 
@@ -207,8 +209,8 @@ Kaynak: `Script_writer_is_akisi.txt`
 ## Bekleyen İşler
 
 ### ☁️ RunPod Altyapı + E2E Test
-- [ ] Port yönlendirme testi (5001-5012)
-- [ ] RunPod callback (webhook) POST → diske yazma doğrulama
+- [x] Port yönlendirme testi (5001-5012) — `scripts/test-ports.ts`
+- [x] RunPod callback (webhook) POST → diske yazma doğrulama — `src/test_webhook_e2e.spec.ts` (5 test)
 - [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
 - [x] RunPod serverless endpoint sorgusu (Hesapta aktif endpoint bulunmadığı doğrulandı, 404 durumu netleşti)
 - [x] RunPod üzerinde yeni serverless endpoint (`rojgtzuf3nztup`) oluşturulduktan sonra `test_wan_serverless.js` ile video üretim doğrulaması
@@ -216,7 +218,9 @@ Kaynak: `Script_writer_is_akisi.txt`
   - [x] LTX-Video tokenizer'ı için eksik `tiktoken` ve `protobuf` bağımlılıkları base imaja eklendi ve base imaj yeniden derlendi
   - [x] Hugging Face `transformers` lazy-loading Placeholder hatasını çözmek için T5 modülleri force-import edildi
   - [x] RunPod template'i en son commit hash etiketli imajla güncellenip worker'lar sıfırlanarak test edildi
-- [ ] `test-runpod-models.ts` ile diğer hazır şablon modellerin doğrulanması
+- [x] Tüm modeller için test script'i — `scripts/test-all-models.ts` (--all/--video/--audio/--face)
+- [x] RunPod API v2 tam geçiş — runsync, health, stream, pollUntilComplete, listEndpoints
+- [x] 24-model endpoint registry — `src/services/runpodEndpoints.ts`
 
 ### 💳 iyzico Ödeme — Canlı Test
 - [ ] Sandbox merchant panel → API key + abonelik plan kodları

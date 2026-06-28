@@ -1448,7 +1448,7 @@ function DockerStatusPanel() {
   useEffect(() => {
     fetchStatus();
 
-    const sseUrl = `/docker-status-stream`;
+    const sseUrl = `/api/v1/docker/stream`;
     let eventSource: EventSource | null = new EventSource(sseUrl, { withCredentials: true });
 
     eventSource.onmessage = (event) => {

@@ -612,6 +612,32 @@ services:
     networks:
       - ai-pub-net
 
+  # ── Real-ESRGAN (4K Upscale) ─────────────────────────────
+  realesrgan:
+    build: ./realesrgan
+    image: ai-publisher-realesrgan:latest
+    container_name: ai-pub-realesrgan
+    ports:
+      - "5025:5000"
+    volumes:
+      - ./shared:/app/shared
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ai-pub-net
+
   # ── Mochi-1 (GenFilm T2V) ────────────────────────────────
   mochi:
     build: ./mochi
