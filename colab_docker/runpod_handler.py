@@ -61,7 +61,7 @@ else:
                 os.environ["B2_BUCKET_NAME"] = b2_creds["bucket_name"]
         
         # Determine Flask endpoint path
-        endpoint_path = os.environ.get("RUNPOD_ENDPOINT_PATH", "/generate-media")
+        endpoint_path = os.environ.get("RUNPOD_ENDPOINT_PATH", "/generate")
         flask_port = os.environ.get("RUNPOD_FLASK_PORT", "5000")
 
         # If mode is passed or we need alternative routing
