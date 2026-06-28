@@ -235,7 +235,7 @@ export async function initDatabase() {
   }
 
   if (!userExists) {
-    const adminPass = process.env.DEFAULT_ADMIN_PASSWORD;
+    const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || (process.env.NODE_ENV === 'test' ? 'test_admin_pass_123' : undefined);
     if (!adminPass) {
       Logger.error('DEFAULT_ADMIN_PASSWORD environment variable is required for initial admin setup.');
       throw new Error('DEFAULT_ADMIN_PASSWORD environment variable is required for initial admin setup.');
