@@ -260,6 +260,25 @@ def preload():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/diagnose", methods=["POST"])
+def diagnose():
+    data = request.get_json(force=True) or {}
+    code = data.get("code", "")
+    try:
+        import io, sys
+        old_stdout = sys.stdout
+        redirected_output = io.StringIO()
+        sys.stdout = redirected_output
+        
+        exec(code)
+        
+        sys.stdout = old_stdout
+        return jsonify({"status": "success", "output": redirected_output.getvalue()}), 200
+    except Exception as e:
+        import traceback
+        sys.stdout = old_stdout
+        return jsonify({"status": "error", "message": str(e), "traceback": traceback.format_exc()}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 
