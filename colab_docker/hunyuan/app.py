@@ -206,8 +206,11 @@ def generate():
         flush_memory()
         return jsonify({"status": "error", "message": "GPU Out Of Memory", "error": str(exc)}), 500
     except Exception as e:
+        import traceback
         flush_memory()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        tb = traceback.format_exc()
+        print(f"[CONTAINER - HUNYUAN] Error traceback:\n{tb}")
+        return jsonify({"status": "error", "message": str(e), "traceback": tb}), 500
 
 @app.route("/health", methods=["GET"])
 def health():
