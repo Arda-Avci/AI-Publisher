@@ -57,7 +57,7 @@ subscriptionsRouter.post('/cancel', requireAuth, async (req: Request, res: Respo
           locale: 'tr',
           subscriptionReferenceCode: sub.iyzico_subscription_reference,
         },
-        async (err: any, result: any) => {
+        async (err: any, _result: any) => {
           if (err) {
             Logger.error('[SUBSCRIPTION] iyzico iptal hatasi:', err);
             res.status(500).json({ error: 'Abonelik iptal edilemedi.', details: err });

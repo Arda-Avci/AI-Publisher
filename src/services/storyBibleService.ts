@@ -421,7 +421,7 @@ export async function deletePlotPoint(id: number): Promise<void> {
  */
 export async function generateFromStoryBible(
   storyBibleId: number,
-  template: 'cinematic' | 'dynamic' | 'simple' | 'pixar',
+  _template: 'cinematic' | 'dynamic' | 'simple' | 'pixar',
   options?: {
     sceneCount?: number;
     includeCharacters?: boolean;
@@ -471,7 +471,7 @@ export async function generateFromStoryBible(
 
   // Build scene prompts from plot points
   const sceneCount = options?.sceneCount || 5;
-  const scenePrompts = plotPoints.slice(0, sceneCount).map((pp, idx) => {
+  const scenePrompts = plotPoints.slice(0, sceneCount).map((pp, _idx) => {
     const actLabel =
       pp.act === 'setup' ? 'Giriş' : pp.act === 'confrontation' ? 'Çatışma' : 'Çözüm';
     return `[${actLabel}] ${pp.title}: ${pp.description}`;

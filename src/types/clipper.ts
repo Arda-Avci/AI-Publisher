@@ -3,7 +3,6 @@
  * Smart Cropper and Subtitle Mixer type definitions
  */
 
-import type { FaceTrackResult } from '../services/faceTracker.js';
 
 // ── Smart Cropper Types ──────────────────────────────────────────────────────
 

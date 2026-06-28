@@ -25,14 +25,6 @@ export interface ColorGrade {
   };
 }
 
-interface ParsedColorCommand {
-  temperature?: 'warm' | 'cool';
-  mood?: 'cinematic' | 'neon' | 'vintage';
-  saturation?: 'doygun' | 'düşük' | 'normal';
-  contrast?: 'yüksek' | 'düşük' | 'normal';
-  primaryHue?: string; // "mor", "mavi", "yeşil", "kırmızı", "sarı", "turuncu"
-}
-
 // ── Preset Filtre Parametreleri ─────────────────────────────────────────────
 
 interface PresetFilterParams {
@@ -152,19 +144,6 @@ const PRESET_PARAMS: Record<string, PresetFilterParams> = {
 };
 
 // ── Doğal Dil Parse ──────────────────────────────────────────────────────────
-
-const HUE_MAP: Record<string, { r: number; g: number; b: number }> = {
-  purple: { r: 128, g: 0, b: 128 },
-  blue: { r: 0, g: 0, b: 255 },
-  green: { r: 0, g: 128, b: 0 },
-  red: { r: 255, g: 0, b: 0 },
-  yellow: { r: 255, g: 255, b: 0 },
-  orange: { r: 255, g: 165, b: 0 },
-  cyan: { r: 0, g: 255, b: 255 },
-  magenta: { r: 255, g: 0, b: 255 },
-  white: { r: 255, g: 255, b: 255 },
-  black: { r: 0, g: 0, b: 0 },
-};
 
 /**
  * Doğal dil renk komutlarını parse eder.

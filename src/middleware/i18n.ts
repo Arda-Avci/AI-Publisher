@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import fs from 'fs-extra';
 import path from 'path';
-import { db } from '../db.js';
+
 import { Logger } from '../lib/logger.js';
 
 // Extend Express Request interface to include lang and t

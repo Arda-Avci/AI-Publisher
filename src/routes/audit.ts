@@ -1,6 +1,5 @@
 import { Application, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { logAudit } from '../lib/audit.js';
 import { db } from '../db.js';
 
 export function registerAuditRoutes(app: Application): void {

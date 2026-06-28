@@ -9,7 +9,6 @@ import fs from 'fs-extra';
 import {
   applyColorGrade,
   parseColorCommand,
-  generateLUTFromCommand,
   colorBalance,
   ColorGrade,
 } from '../services/colorGrader.js';

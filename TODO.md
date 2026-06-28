@@ -228,6 +228,19 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [ ] Film/Series mode → AI'nın anlatı yapısına uygun prompt ürettiğini doğrula
 - [ ] Model-specific prompt'ların model_parameters_and_prompts.md şablonlarına uyduğunu kontrol et
 
+### 🔒 Code Audit — Kalan Yüksek Öncelikler
+- [x] `any` tip kullanımı yaygın — db.ts, queue.ts, middleware'lerdeki unused temizlendi
+- [x] CSRF token rotation — başarılı state-changing POST'tan sonra token yenileniyor
+- [x] `noUnusedLocals: true` + `noUnusedParameters: true` aktifleştirildi (60+ unused fix tamamlandı)
+
+### 🔒 Code Audit — Kalan Orta/Düşük Öncelikler
+- [x] Route modülerliği — server.ts'deki 60+ route yorum satırlarıyla gruplandırıldı
+- [x] pino-http type uyumsuzluğu — `@types/pino` kaldırıldı (pino 9.x kendi tiplerini içeriyor)
+- [x] Logger redact — `username` eklendi
+- [x] Cookie `secure` — `COOKIE_SECURE` env ile yapılandırılabilir
+- [x] Rate limit test bypass — `DISABLE_RATE_LIMIT` env ile devre dışı bırakılabilir
+- [x] `convertQuery()` refactor — basitleştirildi, `@deprecated` notu eklendi, yeni sorgular PostgreSQL native formatında yazılacak
+
 ---
 
 ## ✅ Tamamlanan Faz M (28 Haz 2026)

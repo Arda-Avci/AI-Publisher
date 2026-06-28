@@ -7,11 +7,13 @@ import { loadServerTranslations, t } from '../lib/server-i18n.js';
 import { registerRoute } from '../lib/routeAlias.js';
 import { requireAuth } from '../middleware/auth.js';
 
+const AUTH_DIR = path.join(process.cwd(), '.auth');
+
 export const AUTH_FILE_MAP = {
-  youtube: 'auth_youtube.json',
-  tiktok: 'auth_tiktok.json',
-  x: 'auth_x.json',
-  meta: 'auth_meta.json',
+  youtube: path.join(AUTH_DIR, 'auth_youtube.json'),
+  tiktok: path.join(AUTH_DIR, 'auth_tiktok.json'),
+  x: path.join(AUTH_DIR, 'auth_x.json'),
+  meta: path.join(AUTH_DIR, 'auth_meta.json'),
 } as const;
 
 const LOGIN_URLS = {

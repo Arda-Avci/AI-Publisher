@@ -6,7 +6,6 @@ import { validateSceneConsistency } from '../mllmValidator.js';
 import { Logger } from '../../lib/logger.js';
 import { storyboardVectorStore } from './vectorStore.js';
 import {
-  StoryboardFrame,
   StoryboardScript,
   StoryboardResult,
   StoryboardOptions,

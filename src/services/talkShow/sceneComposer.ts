@@ -2,7 +2,6 @@ import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { Logger } from '../../lib/logger.js';
-import type { Character } from '../../types/character.js';
 
 export type SceneType = 'opening' | 'talk' | 'reaction' | 'wide' | 'closing';
 
@@ -37,7 +36,6 @@ const AVATAR_Y_OFFSET = 80;
 const NAME_FONTSIZE = 36;
 const TEXT_FONTSIZE = 32;
 const TEXT_MAX_WIDTH = 1600;
-const CROSSFADE_DURATION = 0.3;
 const MUSIC_FADE_DURATION = 2;
 
 function resolveFontPath(): string {
@@ -134,7 +132,7 @@ function buildSceneFilter(
 async function runFFmpeg(args: string[], description: string): Promise<void> {
   return new Promise((resolve, reject) => {
     Logger.info(`[SceneComposer] ${description}: ffmpeg ${args.join(' ')}`);
-    const proc = execFile('ffmpeg', args, { timeout: 300000 }, (err, stdout, stderr) => {
+    const proc = execFile('ffmpeg', args, { timeout: 300000 }, (err, _stdout, _stderr) => {
       if (err) {
         Logger.error(`[SceneComposer] ${description} failed: ${err.message}`);
         reject(new Error(`${description} başarısız: ${err.message}`));
@@ -162,7 +160,6 @@ async function renderScene(
   const durationFrames = Math.round(scene.duration * fps);
 
   const inputs: string[] = [];
-  const inputFiles: string[] = [bgPath, scene.avatarPath];
 
   if (!fs.existsSync(bgPath)) {
     throw new Error(`Arkaplan dosyası bulunamadı: ${bgPath}`);
@@ -242,7 +239,6 @@ async function mixAudio(
 ): Promise<void> {
   const inputs = ['-i', videoPath];
   const filterParts: string[] = [];
-  const maps: string[] = [];
 
   let ttsAmixInputs = '';
   let audioInputIndex = 1;

@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import path from 'path';
 import fs from 'fs-extra';
 import { db } from '../db.js';
@@ -176,7 +176,6 @@ export function registerJobRoutes(app: Application): void {
     }
 
     const { id } = req.params;
-    const userId = req.session.userId;
     const { yt_title, yt_desc, yt_tags, tt_desc, tt_tags, x_desc, x_tags, meta_desc, meta_tags } =
       req.body;
 
@@ -825,7 +824,6 @@ export function registerJobRoutes(app: Application): void {
   // ── AI Viralite Skoru Analiz Rotası ──
   app.post('/api/v1/jobs/:jobId/viral-score', requireAuth, async (req, res) => {
     const jobId = parseInt(String(req.params.jobId), 10);
-    const userId = req.session.userId;
     try {
       const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
       if (!job) {

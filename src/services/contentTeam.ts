@@ -1,11 +1,10 @@
 import { z } from 'zod';
 import { generateObject } from 'ai';
-import { getAIModelChain, getObjectModelChain } from '../lib/ai-provider.js';
+import { getObjectModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 import { StudioSchema, MarketingSchema, generateMarketingCopy } from './aiService.js';
-import type { VideoJob } from '../types/job.js';
 
 // ── Agent Definitions (CrewAI-style) ──
 

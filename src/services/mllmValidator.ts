@@ -4,7 +4,6 @@ import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
 import { getVideoDuration } from './videoService.js';
-import path from 'path';
 import fs from 'fs-extra';
 
 export const ConsistencyReportSchema = z.object({
@@ -86,7 +85,7 @@ Kurallar:
 
 export async function validateFinalVideo(
   videoPath: string,
-  jobId: number,
+  _jobId: number,
   expectedScenes: number,
 ): Promise<{
   passed: boolean;

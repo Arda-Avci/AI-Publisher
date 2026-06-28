@@ -7,7 +7,6 @@ import {
   parseEditCommand,
   scoreScenes,
   applyEditOperations,
-  SceneScoreSchema,
 } from '../services/chatToEdit.js';
 import path from 'path';
 import fs from 'fs-extra';

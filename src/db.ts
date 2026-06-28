@@ -1,12 +1,11 @@
 import { Pool, PoolConfig } from 'pg';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
-import { encryptUsername } from './lib/crypto.js';
+import { encryptUsername, legacyEncryptUsername, isLegacyEncrypted, decryptUsername } from './lib/crypto.js';
 import { Logger } from './lib/logger.js';
 
 dotenv.config();
 
-// PostgreSQL Pool Config
 const poolConfig: PoolConfig = {
   connectionString:
     process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ai_publisher',
@@ -14,69 +13,40 @@ const poolConfig: PoolConfig = {
 
 const pool = new Pool(poolConfig);
 
+/**
+ * SQLite ? placeholder'larını PostgreSQL $1, $2... formatına dönüştürür.
+ * String içindeki ?'leri dokunmaz. Yeni sorgular PostgreSQL native formatında yazılmalı.
+ * @deprecated Yeni sorgularda $1, $2 formatı kullanın.
+ */
 function convertQuery(sql: string): string {
-  // SQLite datetime('now') -> PostgreSQL CURRENT_TIMESTAMP
-  const modifiedSql = sql.replace(/datetime\(\s*['"]now['"]\s*(?:,\s*['"]\w+['"]\s*)*\)/gi, 'CURRENT_TIMESTAMP');
+  const converted = sql.replace(
+    /datetime\(\s*['"]now['"]\s*(?:,\s*['"]\w+['"]\s*)*\)/gi,
+    'CURRENT_TIMESTAMP',
+  );
 
   let counter = 1;
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
+  let inSingle = false;
+  let inDouble = false;
   let inLineComment = false;
   let inBlockComment = false;
   let result = '';
 
-  for (let i = 0; i < modifiedSql.length; i++) {
-    const char = modifiedSql[i];
-    const nextChar = sql[i + 1] || '';
+  for (let i = 0; i < converted.length; i++) {
+    const c = converted[i]!;
+    const n = converted[i + 1] || '';
 
-    if (inLineComment) {
-      result += char;
-      if (char === '\n') inLineComment = false;
-      continue;
+    if (inLineComment) { result += c; if (c === '\n') inLineComment = false; continue; }
+    if (inBlockComment) { result += c; if (c === '*' && n === '/') { result += n; inBlockComment = false; i++; } continue; }
+
+    if (!inSingle && !inDouble) {
+      if (c === '-' && n === '-') { inLineComment = true; result += c + n; i++; continue; }
+      if (c === '/' && n === '*') { inBlockComment = true; result += c + n; i++; continue; }
     }
 
-    if (inBlockComment) {
-      result += char;
-      if (char === '*' && nextChar === '/') {
-        result += nextChar;
-        inBlockComment = false;
-        i++;
-      }
-      continue;
-    }
+    if (c === "'" && !inDouble) { inSingle = !inSingle; result += c; continue; }
+    if (c === '"' && !inSingle) { inDouble = !inDouble; result += c; continue; }
 
-    if (!inSingleQuote && !inDoubleQuote) {
-      if (char === '-' && nextChar === '-') {
-        inLineComment = true;
-        result += char + nextChar;
-        i++;
-        continue;
-      }
-      if (char === '/' && nextChar === '*') {
-        inBlockComment = true;
-        result += char + nextChar;
-        i++;
-        continue;
-      }
-    }
-
-    if (char === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
-      result += char;
-      continue;
-    }
-
-    if (char === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote;
-      result += char;
-      continue;
-    }
-
-    if (char === '?' && !inSingleQuote && !inDoubleQuote) {
-      result += `$${counter++}`;
-    } else {
-      result += char;
-    }
+    result += (c === '?' && !inSingle && !inDouble) ? `$${counter++}` : c;
   }
 
   return result;
@@ -88,12 +58,14 @@ function convertQuery(sql: string): string {
  */
 export const db = {
   pool: pool,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async get(sql: string, params: any[] = []): Promise<any> {
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
     const res = await activePool.query(convertQuery(sql), params);
     return res.rows[0];
   },
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async all(sql: string, params: any[] = []): Promise<any[]> {
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
     const res = await activePool.query(convertQuery(sql), params);
@@ -248,10 +220,26 @@ export async function initDatabase() {
 
   const defaultUsername = 'arda.avci@gmail.com';
   const encryptedUsername = encryptUsername(defaultUsername);
+  const legacyEncryptedUsername = legacyEncryptUsername(defaultUsername);
 
-  const userExists = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
+  let userExists = await db.get('SELECT * FROM users WHERE username = ? OR username = ?', [
+    encryptedUsername,
+    legacyEncryptedUsername,
+  ]);
+
+  if (userExists && isLegacyEncrypted(userExists.username)) {
+    const newEncrypted = encryptUsername(decryptUsername(userExists.username));
+    await db.run('UPDATE users SET username = ? WHERE id = ?', [newEncrypted, userExists.id]);
+    userExists.username = newEncrypted;
+    Logger.info('Legacy username encryption migrated to new format.');
+  }
+
   if (!userExists) {
-    const adminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin1234!!';
+    const adminPass = process.env.DEFAULT_ADMIN_PASSWORD;
+    if (!adminPass) {
+      Logger.error('DEFAULT_ADMIN_PASSWORD environment variable is required for initial admin setup.');
+      throw new Error('DEFAULT_ADMIN_PASSWORD environment variable is required for initial admin setup.');
+    }
     const hashedPassword = await bcrypt.hash(adminPass, 10);
     await db.run('INSERT INTO users (username, password, credits) VALUES (?, ?, 10000)', [
       encryptedUsername,
@@ -260,7 +248,7 @@ export async function initDatabase() {
     Logger.info('Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
   } else {
     await db.run('UPDATE users SET credits = 10000 WHERE username = ? AND credits < 10000', [
-      encryptedUsername,
+      userExists.username,
     ]);
     Logger.info('PostgreSQL Veritabanı hazır.');
   }

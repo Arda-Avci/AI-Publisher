@@ -166,7 +166,7 @@ export async function generateFullStoryboard(
   request: StoryboardRequest,
 ): Promise<StoryboardResult> {
   const { scriptId, userId, scenes, artStyle, resolution } = request;
-  const [resWidth, resHeight] = (resolution || '2048x2048').split('x').map(Number) as [number, number];
+  const [_resWidth, _resHeight] = (resolution || '2048x2048').split('x').map(Number) as [number, number];
 
   const images: StoryboardImageResult[] = [];
   let failedCount = 0;

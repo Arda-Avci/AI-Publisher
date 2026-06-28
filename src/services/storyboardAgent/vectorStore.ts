@@ -1,5 +1,4 @@
 import { VectorRecord } from './types.js';
-import { Logger } from '../../lib/logger.js';
 
 export class InMemoryVectorStore {
   private records: VectorRecord[] = [];

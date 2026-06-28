@@ -235,7 +235,6 @@ export async function insertBroll(
 
   // Build filtergraph for segment-wise assembly
   // Format: [0:v] [1:v] [0:v] [2:v] ... concat=n=2N:v=1:a=0
-  const filterParts: string[] = [];
   const inputArgs: string[] = ['-y', '-i', mainVideo];
 
   // Collect all video segments and B-Roll paths
@@ -298,7 +297,6 @@ export async function insertBroll(
     for (let i = 0; i < insertPoints.length; i++) {
       const insertAt = insertPoints[i];
       if (insertAt === undefined) continue;
-      const nextInsertAt = i < insertPoints.length - 1 ? insertPoints[i + 1] : totalDur;
 
       // Segment before B-Roll
       if (insertAt > currentTime) {

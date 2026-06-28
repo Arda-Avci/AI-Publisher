@@ -8,11 +8,10 @@ import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 import { sendClipToQueue, retryClipJob } from '../lib/clip-queue.js';
-import { viralAnalyzer, videoClipper, ClipSegment, ClipJob } from '../services/clipper/index.js';
+import { viralAnalyzer, videoClipper, ClipSegment } from '../services/clipper/index.js';
 import { smartCropper } from '../services/clipper/smartCropper.js';
 import { subtitleMixer } from '../services/clipper/subtitleMixer.js';
 import { autoProcessClip } from '../services/clipper/autoSubtitleBgm.js';
-import { generateText } from 'ai';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import {
   splitScreenVertical,
@@ -26,7 +25,6 @@ import {
   AnimationType,
   PipPosition,
 } from '../services/clipper/splitScreenService.js';
-import { broadcastProgress } from '../lib/redis.js';
 import Redis from 'ioredis';
 import path from 'path';
 import fs from 'fs-extra';

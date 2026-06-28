@@ -14,8 +14,12 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
   if (res.headersSent) {
     return;
   }
+  const isProduction = process.env.NODE_ENV === 'production';
   if (req.path.startsWith('/api/') || req.accepts(['json', 'html']) === 'json') {
-    res.status(500).json({ success: false, error: err?.message || 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      error: isProduction ? 'Internal server error' : (err?.message || 'Internal server error'),
+    });
   } else {
     res.status(500).send('Internal server error');
   }

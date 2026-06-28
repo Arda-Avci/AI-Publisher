@@ -9,7 +9,7 @@ import { ClipSegment, ClipperConfig } from './types.js';
 import { Logger } from '../../lib/logger.js';
 import { runInWorker } from '../videoService.js';
 import { v4 as uuidv4 } from 'uuid';
-import { faceTracker, FaceTrackerService } from '../faceTracker.js';
+import { faceTracker } from '../faceTracker.js';
 import type { FaceTrackResult } from '../faceTracker.js';
 
 // FFmpeg filter path helper — relative from CWD avoids Windows drive-letter colon
@@ -47,7 +47,7 @@ export class VideoClipper {
       trackCenter?: { x: number; y: number }; // Face/object center if tracking enabled
     } = {},
   ): Promise<string> {
-    const { aspectRatio = '9:16', faceTracking = true, trackCenter } = options;
+    const { aspectRatio = '9:16', faceTracking: _faceTracking = true, trackCenter } = options;
 
     Logger.info(
       `[VideoClipper] Cropping segment ${segment.id}: ${segment.startTime}s - ${segment.endTime}s`,
@@ -349,7 +349,7 @@ export class VideoClipper {
    */
   private buildMultiFaceCropFilter(
     faceX: number,
-    faceY: number,
+    _faceY: number,
     confidence: number,
     videoWidth: number,
     videoHeight: number,
@@ -395,7 +395,7 @@ export class VideoClipper {
    */
   private buildFaceCropFilter(
     faceX: number,
-    faceY: number,
+    _faceY: number,
     videoWidth: number,
     videoHeight: number,
     targetRatio: '9:16' | '16:9' | '1:1',

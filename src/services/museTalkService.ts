@@ -106,8 +106,6 @@ export async function generateComboLipSync(
   const outPath =
     outputVideo || path.join(process.cwd(), 'videolar', `combo_lipsync_${Date.now()}.mp4`);
 
-  const videoBuffer = await fs.readFile(vPath);
-  const audioBuffer = await fs.readFile(aPath);
 
   const formData = new FormData();
   formData.append('video_path', vPath);

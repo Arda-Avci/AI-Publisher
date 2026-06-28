@@ -197,10 +197,7 @@ function runFaceTrackerWorker(
  * Face Tracker Service
  */
 export class FaceTrackerService {
-  private sampleInterval: number;
-
-  constructor(sampleInterval: number = 0.5) {
-    this.sampleInterval = sampleInterval;
+  constructor(_sampleInterval: number = 0.5) {
   }
 
   /**

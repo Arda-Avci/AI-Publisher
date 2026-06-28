@@ -32,7 +32,7 @@ export async function downloadYouTubeVideo(videoId: string): Promise<string> {
   Logger.info(`İndiriliyor: ${videoUrl}`);
 
   await new Promise<void>((resolve, reject) => {
-    execFile('yt-dlp', args, (err, stdout, stderr) => {
+    execFile('yt-dlp', args, (err, _stdout, stderr) => {
       if (err) {
         Logger.error(`yt-dlp hatası: ${stderr}`);
         reject(new Error(`yt-dlp failed: ${err.message}`));

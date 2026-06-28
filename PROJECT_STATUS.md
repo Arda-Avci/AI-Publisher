@@ -1,5 +1,47 @@
 # AI_Publisher Proje Durumu
 
+## ✅ Code Audit Tamamlandı (28 Haz 2026)
+
+**Kapsam**: Güvenlik, kod kalitesi, performans ve sürdürülebilirlik denetimi. 25 bulgu tespit edildi, tamamı düzeltildi.
+
+### Düzeltilen Kritik Sorunlar (6/6)
+| # | Sorun | Çözüm | Dosya |
+|---|-------|-------|-------|
+| 1 | AES-256-CBC sabit IV | Rastgele IV + `iv:ciphertext` formatı + legacy geriye uyumluluk | `src/lib/crypto.ts` |
+| 2 | CSRF JSON body bypass | JSON/XHR muafiyeti kaldırıldı, tüm state-değişiklik istekleri doğrulanıyor | `src/middleware/csrf.ts` |
+| 3 | Hardcoded session secret | Fallback `crypto.randomBytes(32)` ile değiştirildi | `src/server.ts` |
+| 4 | Hardcoded admin şifresi | `DEFAULT_ADMIN_PASSWORD` env zorunlu kılındı | `src/db.ts` |
+| 5 | Multer boyut sınırı yok | `fileSize: 500MB`, `files: 5` limiti eklendi | `src/lib/upload.ts` |
+| 6 | FFmpeg komut enjeksiyonu | `exec()` → `execFile()`, input sanitizasyonu, whitelist | `src/ffmpeg-worker.ts` |
+
+### Düzeltilen Yüksek/Orta/Düşük Sorunlar (11/11 tamamlandı)
+| # | Sorun | Çözüm | Dosya |
+|---|-------|-------|-------|
+| 7 | Auth dosyaları proje kökünde | `.auth/` dizinine taşındı | `publisher.ts`, `publish.ts`, `authSetup.ts` |
+| 8 | Error handler hata detayı | Production'da hata mesajı gizlendi | `middleware/error.ts` |
+| 9 | Hardcoded User-Agent | `AI_USER_AGENT` env ile yapılandırılabilir | `lib/ai-provider.ts` |
+| 10 | Logger redact eksik | iyzico_token, brand_logo_base64, username eklendi | `lib/logger.ts` |
+| 11 | Redis mutex timeout | `DOCKER_MUTEX_TIMEOUT_MS` env ile yapılandırılabilir | `queue.ts` |
+| 12 | Hatalı nextChar referansı | `sql[i+1]` → `modifiedSql[i+1]` düzeltildi | `db.ts` |
+| 13 | tsconfig exclude | `__fixtures__` + `.d.ts` exclude edildi | `tsconfig.json` |
+| 14 | CSRF token rotation | Başarılı POST'tan sonra token yenileniyor | `middleware/csrf.ts` |
+| 15 | pino-http type uyumsuzluğu | `@types/pino` kaldırıldı (pino 9.x kendi tiplerini içeriyor) | `package.json` |
+| 16 | noUnusedLocals/Parameters | Aktifleştirildi, 196 hata 65+ dosyada düzeltildi | `tsconfig.json` + çoklu dosya |
+| 17 | convertQuery() parser | Basitleştirildi, `@deprecated` eklendi | `db.ts` |
+
+### Kalan Açık Sorunlar
+- Yok ✅ (25/25 sorun çözüldü)
+
+### Doğrulama
+- `tsc --noEmit` → 0 hata ✅
+- `eslint --quiet` → 0 hata ✅
+- Legacy username migration → otomatik dönüştürme ✅
+- `noUnusedLocals: true` + `noUnusedParameters: true` aktif ✅
+- CSRF token rotation aktif ✅
+- Route modülerliği gruplandırıldı ✅
+
+---
+
 ## ✅ Faz I - RunPod Serverless Hata Giderimi (27 Haz 2026)
 - **UnboundLocalError Düzeltmesi**: `colab_docker/wan/app.py` ve `colab_docker/ltx/app.py` dosyalarında `generate` fonksiyonu içinde `diagnose` blogunda local olarak yapılan `import os` ve `import sys` tanımlamalarının, genel fonksiyon kapsamında global `os` ve `sys` modüllerini gölgelemesi ve `UnboundLocalError` fırlatmasına neden olan hata giderildi. Local importlar kaldırılarak global düzeydeki importların kullanılması sağlandı.
 - **T5 Lazy-Module & Transformers v5+ Uyumluluğu**: HuggingFace `transformers` v5+ sürümünde PyTorch >= 2.4.0 zorunluluğunun PyTorch 2.2.1 yüklü base imajımızda `T5EncoderModel` sınıfını dummy `Placeholder` nesnesine çevirmesi sorunu, `importlib.metadata.version("torch")` ve `torch.__version__` değerlerinin `"2.4.0"` olarak taklit edilmesiyle (monkey-patch) çözüldü.
@@ -381,8 +423,8 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.4 (Faz L — RunPod v2 + Webhook E2E tamamlandı, 539 test) |
-| Sürüm | 0.7.4-dev |
+| Faz | v7.5 (Code Audit 25/25 sorun çözüldü) |
+| Sürüm | 0.7.5-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 

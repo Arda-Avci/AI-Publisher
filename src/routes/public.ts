@@ -3,7 +3,7 @@ import { db } from '../db.js';
 
 export const publicRouter = express.Router();
 
-publicRouter.get('/demo-videos', async (req, res) => {
+publicRouter.get('/demo-videos', async (_req, res) => {
   try {
     const jobs = await db.all(
       "SELECT * FROM video_jobs WHERE status = 'completed' AND final_filename LIKE 'demo_video_%' ORDER BY id ASC LIMIT 20",

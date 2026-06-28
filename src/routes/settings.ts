@@ -1,4 +1,4 @@
-import { Application, Request, Response } from 'express';
+import { Application } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';

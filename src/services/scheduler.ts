@@ -141,24 +141,6 @@ export class Scheduler {
   /**
    * Platform-specific publish implementations
    */
-  private async publishToYouTube(video: any): Promise<void> {
-    // Implementation would call publisher.ts functions
-    Logger.info(`Publishing video ${video.id} to YouTube`);
-    // await publishVideo('youtube', video, userId);
-  }
-
-  private async publishToTikTok(video: any): Promise<void> {
-    Logger.info(`Publishing video ${video.id} to TikTok`);
-  }
-
-  private async publishToX(video: any): Promise<void> {
-    Logger.info(`Publishing video ${video.id} to X`);
-  }
-
-  private async publishToMeta(video: any): Promise<void> {
-    Logger.info(`Publishing video ${video.id} to Meta`);
-  }
-
   /**
    * Reset daily counters (called at midnight)
    */

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PREMIUM_THEMES, PremiumTheme, generateThemesCss } from '../lib/themes.js';
+import { PREMIUM_THEMES, generateThemesCss } from '../lib/themes.js';
 import { db } from '../db.js';
 
 // Extend Express Request interface to include theme information

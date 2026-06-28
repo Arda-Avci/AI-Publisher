@@ -284,7 +284,7 @@ async function qualityInspectScene(
   sceneNumber: number,
   videoPrompt: string,
   speechText: string,
-  jobId: number,
+  _jobId: number,
 ): Promise<QualityReport> {
   const models = getAIModelChain();
 

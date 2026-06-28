@@ -32,7 +32,6 @@
 
 import axios from 'axios';
 import { Logger } from '../lib/logger.js';
-import { dockerHost } from '../lib/docker-host.js';
 import { RunPodClient } from './runpod.js';
 
 export interface BrowserUseTaskOptions {

@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+import { Application, Request, Response } from 'express';
 import path from 'path';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';

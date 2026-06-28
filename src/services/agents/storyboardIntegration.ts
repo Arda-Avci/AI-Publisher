@@ -1,4 +1,3 @@
-import { db } from '../../db.js';
 import { Logger } from '../../lib/logger.js';
 import { runStoryboardAgent } from '../storyboardAgent/storyboardAgent.js';
 import { injectCharacterReferences, CharacterRefResult } from './characterReferenceService.js';

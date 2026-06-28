@@ -2,7 +2,7 @@ import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { Logger } from '../lib/logger.js';
-import { broadcastProgress } from '../lib/redis.js';
+
 import WebSocket from 'ws';
 import axios from 'axios';
 

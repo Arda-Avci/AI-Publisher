@@ -154,14 +154,6 @@ export function buildDashboardHTML(params: DashboardParams): string {
           '</button>'
         : '';
 
-      var cancelBtn =
-        isProcessing || isPending || isProcessingPhase1 || isAwaitingApproval
-          ? '<button onclick="cancelJob(' +
-            job.id +
-            ')" class="delete-btn" style="background: hsla(0, 70%, 50%, 0.15); color: hsl(0, 70%, 60%); border-color: hsla(0, 70%, 50%, 0.4); margin-right: 5px;">✕ ' +
-            (t.cancel76 || 'İptal Et') +
-            '</button>'
-          : '';
 
       let targetPlatforms = [];
       try {

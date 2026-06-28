@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 // @ts-expect-error iyzipay has no type declarations
 import Iyzipay from 'iyzipay';
 import { db } from '../db.js';
-import { CreditService } from '../services/creditService.js';
 import { Logger } from '../lib/logger.js';
 import { requireAuth } from '../middleware/auth.js';
 

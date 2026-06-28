@@ -41,7 +41,7 @@ export interface TranscriptEditResult {
  * @returns Array of TimeRange objects to remove
  */
 export function parseTranscriptEdits(
-  transcript: string,
+  _transcript: string,
   deletions: number[],
   wordTimestamps: WhisperWord[],
 ): TimeRange[] {

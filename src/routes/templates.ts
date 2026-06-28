@@ -28,7 +28,7 @@ const ALL_TEMPLATES: readonly string[] = [
  * GET /api/v1/templates
  * Get all template previews
  */
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const previews = await getAllTemplatePreviews();
     res.json({ success: true, templates: previews });

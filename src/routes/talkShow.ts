@@ -7,10 +7,6 @@ import { orchestrateTalkShow } from '../services/talkShow/orchestrator.js';
 import { OrchestratorInput } from '../services/talkShow/types.js';
 import { Logger } from '../lib/logger.js';
 import { fetchWeeklyDiscussion, discussionToScenes } from '../services/talkShow/sportotoBridge.js';
-import type {
-  SportotoDiscussion,
-  DiscussionSource,
-} from '../services/talkShow/discussionSource.js';
 import { scriptEngine } from './scripts.js';
 import { orchestrateToVideo } from '../services/talkShow/orchestratorToVideo.js';
 import { produceTalkShowVideo } from '../services/talkShow/videoProducer.js';

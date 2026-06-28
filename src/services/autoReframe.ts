@@ -49,7 +49,7 @@ async function detectFacesInFrame(
   framePath: string,
   minConfidence = 0.5,
 ): Promise<Array<{ x: number; y: number; w: number; h: number }>> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const workerPath = path.join(__dirnameStr, '..', 'workers', 'face-track-worker.js');
     const hasWorker = fs.existsSync(workerPath);
 
@@ -107,34 +107,6 @@ async function detectFacesInFrame(
  * @param targetW   - Output width (1080)
  * @param targetH   - Output height (1920)
  */
-async function extractCenterCrop(
-  framePath: string,
-  outPath: string,
-  targetW: number,
-  targetH: number,
-): Promise<void> {
-  const { runFFmpegWithFallback } = await import('./videoService.js');
-
-  // Use ffmpeg crop to extract center 9:16 region
-  // Calculate crop based on source frame dimensions
-  const cmd: FFmpegCommand = {
-    cmd: 'ffmpeg',
-    args: [
-      '-y',
-      '-i',
-      framePath,
-      '-vf',
-      `crop=min(${targetW},iw):min(${targetH},ih):(iw-min(${targetW},iw))/2:(ih-min(${targetH},ih))/2`,
-      '-frames:v',
-      '1',
-      outPath,
-    ],
-    timeoutMs: 30000,
-  };
-
-  await runFFmpegWithFallback([cmd]);
-}
-
 /**
  * Converts a horizontal 16:9 video to vertical 9:16 using smart face/object tracking.
  *
@@ -189,8 +161,6 @@ export async function autoReframeHorizontalToVertical(
   const dimsParts = dims.trim().split('x').map(Number);
   const srcW = dimsParts[0] ?? 1920;
   const srcH = dimsParts[1] ?? 1080;
-  const srcAspect = srcW / srcH;
-
   // Source is 16:9 horizontal — crop region center
   let cropX = 0;
   let cropY = 0;
@@ -225,7 +195,6 @@ export async function autoReframeHorizontalToVertical(
 
         // Convert face center (normalized 0-1) to pixel coordinates
         const facePxX = faceCenterX * srcW;
-        const facePxY = faceCenterY * srcH;
 
         // Calculate crop window centered on face
         const cropAspect = targetW / targetH;

@@ -8,7 +8,6 @@
  */
 
 import { execFile } from 'child_process';
-import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
 import type { FFmpegCommand } from './videoService.js';
@@ -101,7 +100,7 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
         execFileDur(
           'ffprobe',
           ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', audioPath],
-          async (durErr: any, durStdout: string) => {
+          async (_durErr: any, durStdout: string) => {
             const duration = parseFloat(durStdout.trim()) || 10;
 
             // Extract timestamps and peak levels
@@ -134,7 +133,6 @@ export async function detectVocalEmphasis(audioPath: string): Promise<WordEmphas
 
             const avgLevel = levels.reduce((a, b) => a + b, 0) / levels.length;
             const maxLevel = Math.max(...levels);
-            const minLevel = Math.min(...levels);
 
             const highThreshold = avgLevel + (maxLevel - avgLevel) * 0.6;
             const medThreshold = avgLevel + (maxLevel - avgLevel) * 0.3;
@@ -253,7 +251,7 @@ export async function detectEmotionPeaks(audioPath: string): Promise<EmotionDete
         'null',
         '-',
       ],
-      (err: any, stdout: string, stderr: string) => {
+      (err: any, _stdout: string, stderr: string) => {
         if (err) {
           Logger.warn('[emotionCaptions] FFmpeg astats failed, using fallback detection', {
             error: err.message,
@@ -264,7 +262,7 @@ export async function detectEmotionPeaks(audioPath: string): Promise<EmotionDete
 
         // Parse peak levels from stderr (astats outputs there)
         const output = stderr;
-        const peakLevels: number[] = [];
+
         const timeRangeMatch = output.match(/time=(\d+):(\d+):(\d+\.\d+)/g);
 
         if (!timeRangeMatch) {
@@ -278,7 +276,7 @@ export async function detectEmotionPeaks(audioPath: string): Promise<EmotionDete
         execFile2(
           'ffprobe',
           ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', audioPath],
-          (durErr: any, durStdout: string) => {
+          (_durErr: any, durStdout: string) => {
             const duration = parseFloat(durStdout.trim()) || 0;
 
             // Parse timestamps and find high-energy moments
@@ -518,7 +516,7 @@ export async function applyEmotionCaptionStyle(
   videoPath: string,
   srtPath: string,
   outputPath: string,
-  primaryColor = '#FFFFFF',
+  _primaryColor = '#FFFFFF',
 ): Promise<void> {
   Logger.info('[emotionCaptions] Applying emotion captions', { videoPath, srtPath, outputPath });
 

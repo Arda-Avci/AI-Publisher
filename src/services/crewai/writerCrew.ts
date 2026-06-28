@@ -1,4 +1,4 @@
-import { Agent, Task, Crew, Process } from '@crewai-ts/core';
+import { Task, Crew, Process } from '@crewai-ts/core';
 import { createOutlinerAgent } from './outlinerAgent.js';
 import { createSceneArchitectAgent } from './sceneArchitectAgent.js';
 import { createScriptwriterAgent } from './scriptwriterAgent.js';

@@ -9,7 +9,7 @@ import {
 
 const jobStartTimes = new Map<number | string, number>();
 
-export function trackJobStart(jobId: number | string, attrs?: Record<string, string>) {
+export function trackJobStart(jobId: number | string, _attrs?: Record<string, string>) {
   jobStartTimes.set(jobId, Date.now());
   jobStarted();
 }

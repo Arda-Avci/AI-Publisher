@@ -126,7 +126,7 @@ export async function whisperWordTimings(
   audioPath: string,
   _transcript: string,
 ): Promise<WordTiming[]> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const dockerHost = process.env.DOCKER_HOST || 'http://localhost';
     const whisperUrl = `${dockerHost}:5006/recognize`;
 

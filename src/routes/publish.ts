@@ -6,16 +6,12 @@ import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
 import { sendToQueue } from '../lib/rabbitmq.js';
-import {
-  uploadToYouTube,
-  uploadToTikTok,
-  uploadToX,
-  uploadToMeta,
-  activePublishBrowsers,
-} from '../publisher.js';
+import { activePublishBrowsers } from '../publisher.js';
 import { broadcastProgress } from '../lib/redis.js';
 import { Logger } from '../lib/logger.js';
 import { registerRoute } from '../lib/routeAlias.js';
+
+const AUTH_DIR = path.join(process.cwd(), '.auth');
 
 /**
  * Publish route: POST /publish/:id/:platform.
@@ -35,10 +31,10 @@ const VALID_PLATFORMS = ['youtube', 'tiktok', 'x', 'meta'] as const;
 type Platform = (typeof VALID_PLATFORMS)[number];
 
 const AUTH_FILE_MAP: Record<Platform, string> = {
-  youtube: 'auth_youtube.json',
-  tiktok: 'auth_tiktok.json',
-  x: 'auth_x.json',
-  meta: 'auth_meta.json',
+  youtube: path.join(AUTH_DIR, 'auth_youtube.json'),
+  tiktok: path.join(AUTH_DIR, 'auth_tiktok.json'),
+  x: path.join(AUTH_DIR, 'auth_x.json'),
+  meta: path.join(AUTH_DIR, 'auth_meta.json'),
 };
 
 const STATUS_FIELD_MAP: Record<Platform, string> = {

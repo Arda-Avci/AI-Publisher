@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import { Application } from 'express';
 import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';

@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import path from 'path';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { generateTalkingHead, preloadModel } from '../services/museTalkService.js';

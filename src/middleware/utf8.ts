@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
  * Ensures all text/html responses include the charset for Turkish character support.
  * (Binary content types are set explicitly per route/handler and remain untouched.)
  */
-export function utf8Middleware(req: Request, res: Response, next: NextFunction): void {
+export function utf8Middleware(_req: Request, res: Response, next: NextFunction): void {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   next();
 }

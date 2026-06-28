@@ -39,7 +39,6 @@ scriptsRouter.get(
   requireAuth,
   mediumLimiter,
   async (req: Request, res: Response) => {
-    const userId = req.session.userId!;
     const { showId } = req.params;
 
     try {

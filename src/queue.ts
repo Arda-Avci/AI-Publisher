@@ -1,6 +1,6 @@
 import { getRabbitChannel, VIDEO_JOBS_QUEUE, registerReconnectCallback } from './lib/rabbitmq.js';
 import { checkZenModelsHealth } from './lib/ai-provider.js';
-import { t, STAGE_KEYS } from './lib/server-i18n.js';
+import { STAGE_KEYS } from './lib/server-i18n.js';
 import { RunPodClient } from './services/runpod.js';
 import { downloadFile } from './lib/download.js';
 import {
@@ -29,7 +29,7 @@ import { RedisMutex } from './lib/redis-mutex.js';
 import { runDifferentiationPipeline } from './lib/differentiate.js';
 import { Logger } from './lib/logger.js';
 
-const dockerMutex = new RedisMutex('docker_gpu_lock', 600000);
+const dockerMutex = new RedisMutex('docker_gpu_lock', Number(process.env.DOCKER_MUTEX_TIMEOUT_MS) || 600000);
 
 import { broadcastProgress } from './lib/redis.js';
 import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/viralHook.js';
@@ -570,7 +570,7 @@ async function startProduction(job: VideoJob) {
 
             const { trainLoRA } = await import('./services/loraService.js');
             const trainPromise = trainLoRA(job.id!, char.name, char.paths);
-            const pollPromise = pollLoraProgress(job.id!);
+            void pollLoraProgress(job.id!);
             const result = await trainPromise;
             if (result.success) {
               Logger.info(`[LoRA] Character "${char.name}" trained successfully`, { jobId: job.id, weightsPath: result.weightsPath });
@@ -724,7 +724,7 @@ async function startProduction(job: VideoJob) {
         }
 
         // Model-specific prompt formatting
-        const { buildModelPrompt, modelAcceptsPrompt } = await import('./services/modelPromptBuilder.js');
+        const { buildModelPrompt, modelAcceptsPrompt: _modelAcceptsPrompt } = await import('./services/modelPromptBuilder.js');
         const finalPrompt = buildModelPrompt({
           videoPrompt: scene.video_prompt || '',
           cameraMotion: scene.camera_motion,

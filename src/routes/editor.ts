@@ -1,11 +1,10 @@
-import express, { Application, Request, Response } from 'express';
+import { Application, Request, Response } from 'express';
 import path from 'path';
 import { dockerHost } from '../lib/docker-host.js';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
 import { Logger } from '../lib/logger.js';
-import { db } from '../db.js';
 
 export function registerEditorRoutes(app: Application): void {
   // ─── 1. Arka Planı Kaldır (Proxy to Docker) ──────────────────────────────────
@@ -275,7 +274,7 @@ export function registerEditorRoutes(app: Application): void {
 
   // 6. Gaze correction (göz teması düzeltme)
   app.post('/api/v1/editor/gaze-fix', mediumLimiter, requireAuth, async (req, res) => {
-    const { videoPath, smooth = true } = req.body;
+    const { videoPath } = req.body;
     if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });
     const { pathExists } = await import('fs-extra');
     if (!(await pathExists(videoPath)))
@@ -341,7 +340,7 @@ export function registerEditorRoutes(app: Application): void {
 
   // 9. Inpainting (nesne/maske silme)
   app.post('/api/v1/editor/inpaint-video', mediumLimiter, requireAuth, async (req, res) => {
-    const { videoPath, masks = [], strength = 0.8 } = req.body;
+    const { videoPath, masks = [] } = req.body;
     if (!videoPath) return res.status(400).json({ success: false, error: 'videoPath gerekli' });
     const { pathExists } = await import('fs-extra');
     if (!(await pathExists(videoPath)))

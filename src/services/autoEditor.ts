@@ -6,12 +6,9 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { runInWorker, WorkerResult } from './videoService.js';
 import { Logger } from '../lib/logger.js';
 
-const execFileAsync = promisify(execFile);
 
 // ── Tipler ──────────────────────────────────────────────────────────────────────
 
@@ -136,7 +133,7 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
 
   try {
     // Her 5 frame'de bir hash al — hız için örnekleme
-    const { stdout } = await runInWorker<WorkerResult>(
+    const { stdout: _stdout } = await runInWorker<WorkerResult>(
       'ffmpeg',
       [
         '-y',
@@ -171,7 +168,7 @@ export async function detectMotionLevels(videoPath: string): Promise<number[]> {
       const currPath = path.join(tempDir, currFile);
 
       // SAD (Sum of Absolute Differences) benzeri basit karşılaştırma
-      const { stdout: diffStdout } = await runInWorker<WorkerResult>(
+      const { stdout: _diffStdout } = await runInWorker<WorkerResult>(
         'ffmpeg',
         [
           '-y',
@@ -277,9 +274,9 @@ export async function autoCutVideo(videoPath: string, options: AutoCutOptions): 
     silenceThresholdDb = -40,
     minSilenceSec = 0.5,
     staticThreshold = 0.01,
-    minStaticSec = 1.0,
+    minStaticSec: _minStaticSec = 1.0,
     aggressive = false,
-    addDissolveMs = 200,
+    addDissolveMs: _addDissolveMs = 200,
   } = options;
 
   Logger.info(`autoCutVideo: input=${videoPath}, aggressive=${aggressive}`);

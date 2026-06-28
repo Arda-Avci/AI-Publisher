@@ -1,7 +1,6 @@
 import { Logger } from '../lib/logger.js';
 import { RunPodClient } from './runpod.js';
 import { uploadToB2 } from '../lib/b2.js';
-import { runFFmpegWithFallback } from './videoService.js';
 import { db } from '../db.js';
 import path from 'node:path';
 import fs from 'fs-extra';

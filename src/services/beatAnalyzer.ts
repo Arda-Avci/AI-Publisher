@@ -51,8 +51,6 @@ export async function detectBPM(audioPath: string): Promise<number> {
 
     // Use FFmpeg to analyze audio and get volume peaks
     // We use a simple approach: extract audio samples and analyze peak intervals
-    const tempAnalysisFile = `temp_bpm_${Date.now()}.txt`;
-
     // Generate a silent audio track with metronome-like beeps at different BPMs
     // For a more accurate BPM detection, we'll use the astats filter to get RMS levels
     // and detect peaks programmatically via a Python-free approach
@@ -210,7 +208,6 @@ export async function findBeatPeaks(audioPath: string, bpm: number): Promise<Bea
   const beats: BeatMarker[] = [];
 
   let beatNumber = 0;
-  const bar = 1;
 
   // Start from a small offset to avoid edge issues
   for (let timestamp = 0.0; timestamp < duration; timestamp += beatInterval) {

@@ -17,7 +17,7 @@ function handleSseConnection(
   req: Request,
   res: Response,
   jobId: number,
-  job: any,
+  _job: any,
 ): void {
   const channel = `job_progress:${jobId}`;
 

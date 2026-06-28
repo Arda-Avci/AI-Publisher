@@ -17,17 +17,13 @@
 
 import { db } from '../db.js';
 import { fetchYouTubeTranscript } from './transcript.js';
-import { downloadYouTubeVideo } from '../services/videoDownloader.js';
-import { extractReferenceFrame } from '../services/videoService.js';
-import path from 'path';
-import fs from 'fs';
+
 import { Logger } from './logger.js';
 import {
   cleanText,
   translateText,
   generateScenePrompts,
   isSupportedLang,
-  LANG_NAMES,
   type GeneratedScene,
   type SupportedLang,
   translateTitleAndDesc,
@@ -215,7 +211,7 @@ export async function createDifferentiationJob(
  *
  * Final state: status='awaiting_approval' on success, status='failed' on error.
  */
-export async function runPhase1Background(jobId: number, userId: number): Promise<void> {
+export async function runPhase1Background(jobId: number, _userId: number): Promise<void> {
   try {
     // Step 1: indicate transcript fetch starting
     await db.run(

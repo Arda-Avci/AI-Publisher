@@ -42,7 +42,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', async (_req, res) => {
   try {
     const results = await refreshTrends();
     res.json({ success: true, results });
@@ -51,7 +51,7 @@ router.post('/refresh', async (req, res) => {
   }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', async (_req, res) => {
   try {
     const summary = await getTrendSummary();
     res.json(summary);
@@ -72,7 +72,7 @@ router.get('/history', async (req, res) => {
   }
 });
 
-router.get('/config', async (req, res) => {
+router.get('/config', async (_req, res) => {
   try {
     const config = getSchedulerConfig();
     res.json(config);

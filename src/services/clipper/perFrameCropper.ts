@@ -10,7 +10,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { v4 as uuidv4 } from 'uuid';
 import { runInWorker, getVideoDuration } from '../videoService.js';
-import { faceTracker, chunkStableSegments } from '../faceTracker.js';
+import { faceTracker } from '../faceTracker.js';
 import type { CropFrame, FaceTrackResult } from '../faceTracker.js';
 import { Logger } from '../../lib/logger.js';
 import type { CropAspectRatio } from '../../types/clipper.js';
@@ -76,7 +76,7 @@ function interpolateFrames(
 function getKeyframeAtTime(
   frames: CropFrame[],
   time: number,
-  smoothingWindow: number,
+  _smoothingWindow: number,
 ): { cropX: number; cropY: number; cropW: number; cropH: number } | null {
   if (frames.length === 0) return null;
   if (frames.length === 1) {
@@ -119,35 +119,6 @@ function getKeyframeAtTime(
   const t = timeRange > 0 ? (time - left.timestamp) / timeRange : 0;
 
   return interpolateFrames(left, right, Math.max(0, Math.min(1, t)));
-}
-
-/**
- * Yüz konumlarını yumuşatır (moving average).
- */
-function smoothCropPositions(
-  frames: CropFrame[],
-  windowSize: number,
-): Array<{ timestamp: number; cropX: number; cropY: number }> {
-  if (frames.length <= 1 || windowSize <= 1) {
-    return frames.map((f) => ({ timestamp: f.timestamp, cropX: f.cropX, cropY: f.cropY }));
-  }
-
-  const result: Array<{ timestamp: number; cropX: number; cropY: number }> = [];
-  for (let i = 0; i < frames.length; i++) {
-    const currentFrame = frames[i];
-    if (!currentFrame) continue;
-    const start = Math.max(0, i - Math.floor(windowSize / 2));
-    const end = Math.min(frames.length, i + Math.ceil(windowSize / 2));
-    const slice = frames.slice(start, end);
-
-    result.push({
-      timestamp: currentFrame.timestamp,
-      cropX: Math.round(slice.reduce((s, f) => s + f.cropX, 0) / slice.length),
-      cropY: Math.round(slice.reduce((s, f) => s + f.cropY, 0) / slice.length),
-    });
-  }
-
-  return result;
 }
 
 // ── Video Processing ──────────────────────────────────────────────────────────

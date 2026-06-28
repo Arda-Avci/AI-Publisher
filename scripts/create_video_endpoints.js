@@ -12,7 +12,7 @@ if (!RUNPOD_API_KEY) {
   process.exit(1);
 }
 
-const COMMIT_SHA = require('child_process').execSync('git log -n 1 --pretty=format:"%H"').toString().trim();
+const COMMIT_SHA = require('child_process').execSync('git log -n 1 --pretty=format:"%H" -- colab_docker').toString().trim();
 const SHORT_SHA = COMMIT_SHA.substring(0, 7);
 const TIMESTAMP = Date.now();
 
@@ -31,7 +31,7 @@ const models = [
   },
   {
     name: 'HunyuanVideo_Serverless',
-    image: `ghcr.io/arda-avci/hunyuanvideo:${COMMIT_SHA}`,
+    image: `ghcr.io/arda-avci/hunyuan:${COMMIT_SHA}`,
     envVar: 'RUNPOD_HUNYUANVIDEO_ENDPOINT_ID',
     templateName: `HunyuanVideo_Template_${SHORT_SHA}_${TIMESTAMP}`
   }

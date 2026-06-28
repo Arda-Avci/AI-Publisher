@@ -1,6 +1,5 @@
 import { Logger } from '../lib/logger.js';
 import axios from 'axios';
-import path from 'path';
 import fs from 'fs-extra';
 import { dockerHost } from '../lib/docker-host.js';
 

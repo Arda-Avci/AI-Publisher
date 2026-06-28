@@ -30,7 +30,6 @@ export function injectCharacterReferences(
       const name = profile.name || 'unknown';
       const appearance = profile.appearance || {};
       const style = profile.style || {};
-      const measurements = profile.measurements || {};
 
       const appearanceParts: string[] = [];
       if (appearance.hair_color) appearanceParts.push(`${appearance.hair_color} hair`);

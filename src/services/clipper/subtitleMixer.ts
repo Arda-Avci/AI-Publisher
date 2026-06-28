@@ -17,7 +17,6 @@ import type {
   WhisperWord,
   SrtEntry,
   SubtitleStyleOptions,
-  AudioDuckingOptions,
   SubtitleMixerOptions,
   SubtitleMixerResult,
 } from '../../types/clipper.js';
@@ -38,17 +37,6 @@ function secondsToSrtTime(seconds: number): string {
 /**
  * Convert SRT timestamp to seconds
  */
-function srtTimeToSeconds(srtTime: string): number {
-  const parts = srtTime.split(':');
-  const h = parseInt(parts[0] || '0', 10);
-  const m = parseInt(parts[1] || '0', 10);
-  const secsStr = parts[2] || '0,0';
-  const secsParts = secsStr.split(',');
-  const s = parseInt(secsParts[0] || '0', 10);
-  const ms = parseInt(secsParts[1] || '0', 10);
-  return h * 3600 + m * 60 + s + ms / 1000;
-}
-
 // ── Subtitle embedding ───────────────────────────────────────────────────────
 
 /**
@@ -456,10 +444,8 @@ export async function generateSrtFromWhisper(
     } else {
       // Fallback: segment-level word-wrap
       const lines = wrapText(text, maxCharsPerLine);
-      const wordDuration = (seg.end - seg.start) / Math.max(lines.join(' ').split(/\s+/).length, 1);
 
       for (const line of lines) {
-        const wordsInLine = line.split(/\s+/).length;
         entries.push({
           index: index++,
           startTime: seg.start,

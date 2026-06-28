@@ -20,6 +20,7 @@ import rateLimit from 'express-rate-limit';
 process.env.TRUST_PROXY = process.env.TRUST_PROXY || '1';
 
 const isTest = process.env.NODE_ENV === 'test';
+const isRateLimitDisabled = process.env.DISABLE_RATE_LIMIT === 'true';
 
 /**
  * Heavy operations: job creation, differentiation start, differentiation
@@ -28,7 +29,7 @@ const isTest = process.env.NODE_ENV === 'test';
  */
 export const heavyLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: isTest ? 1000 : 5,
+  max: isTest || isRateLimitDisabled ? 1000 : 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -43,7 +44,7 @@ export const heavyLimiter = rateLimit({
  */
 export const mediumLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: isTest ? 1000 : 20,
+  max: isTest || isRateLimitDisabled ? 1000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -59,7 +60,7 @@ export const mediumLimiter = rateLimit({
  */
 export const sseLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: isTest ? 1000 : 10,
+  max: isTest || isRateLimitDisabled ? 1000 : 10,
   standardHeaders: false,
   legacyHeaders: false,
   message: {

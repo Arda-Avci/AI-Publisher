@@ -1,4 +1,4 @@
-import { Application, Request, Response } from 'express';
+import { Application } from 'express';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
@@ -6,7 +6,6 @@ import { logAudit } from '../lib/audit.js';
 import { sendToQueue, VIDEO_JOBS_QUEUE } from '../lib/rabbitmq.js';
 import {
   createDifferentiationJob,
-  runPhase1Background,
   differentiateVideoPhase2,
   isValidDurationMode,
   type SourceVideoMeta,

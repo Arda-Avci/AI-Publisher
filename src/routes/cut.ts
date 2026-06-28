@@ -4,10 +4,8 @@
  */
 
 import { Router } from 'express';
-import path from 'path';
 import {
   detectSilenceRanges,
-  findStaticRanges,
   autoCutVideo,
   TimeRange,
 } from '../services/autoEditor.js';

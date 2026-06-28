@@ -47,29 +47,6 @@ export function formatSRTTime(seconds: number): string {
 /**
  * Generate SRT file from clip segments
  */
-async function generateSRTFromSegments(
-  segments: ClipSegment[],
-  outputPath: string,
-): Promise<string> {
-  let srtContent = '';
-  segments.forEach((seg, i) => {
-    const startTime = formatSRTTime(seg.startTime);
-    const endTime = formatSRTTime(seg.endTime);
-    // Use highlights as subtitle text if available, otherwise use suggested caption
-    const text =
-      seg.highlights && seg.highlights.length > 0
-        ? seg.highlights.join(' ')
-        : seg.suggestedCaption || '';
-    srtContent += `${i + 1}\n${startTime} --> ${endTime}\n${text}\n\n`;
-  });
-
-  const srtPath = outputPath.replace(/\.\w+$/, '.srt');
-  await fs.ensureDir(path.dirname(srtPath));
-  await fs.writeFile(srtPath, srtContent, 'utf-8');
-  Logger.info(`[PostCropService] SRT generated: ${srtPath}`);
-  return srtPath;
-}
-
 /**
  * Generate simple SRT for a single clip segment
  */

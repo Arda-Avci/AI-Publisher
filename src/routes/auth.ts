@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { db } from '../db.js';
 import { authLimiter } from '../middleware/rate-limit.js';
 import { logAudit } from '../lib/audit.js';
-import { encryptUsername } from '../lib/crypto.js';
+import { encryptUsername, legacyEncryptUsername, isLegacyEncrypted, decryptUsername } from '../lib/crypto.js';
 import { registerRoute } from '../lib/routeAlias.js';
 
 /**
@@ -11,7 +11,7 @@ import { registerRoute } from '../lib/routeAlias.js';
  */
 export function registerAuthRoutes(app: Application): void {
   // Login Rotaları
-  app.get('/login', (req, res) => {
+  app.get('/login', (_req, res) => {
     // React SPA'ya yönlendir
     res.redirect('/');
   });
@@ -19,7 +19,18 @@ export function registerAuthRoutes(app: Application): void {
   registerRoute(app, 'post', '/login', authLimiter, async (req, res) => {
     const { username, password } = req.body;
     const encryptedUsername = encryptUsername(username);
-    const user = await db.get('SELECT * FROM users WHERE username = ?', [encryptedUsername]);
+    const legacyEncrypted = legacyEncryptUsername(username);
+    let user = await db.get('SELECT * FROM users WHERE username = ? OR username = ?', [
+      encryptedUsername,
+      legacyEncrypted,
+    ]);
+
+    if (user && isLegacyEncrypted(user.username)) {
+      const newEncrypted = encryptUsername(decryptUsername(user.username));
+      await db.run('UPDATE users SET username = ? WHERE id = ?', [newEncrypted, user.id]);
+      user.username = newEncrypted;
+    }
+
     if (user && (await bcrypt.compare(password, user.password))) {
       req.session.userId = user.id;
       if (user.preferred_language) req.session.lang = user.preferred_language;

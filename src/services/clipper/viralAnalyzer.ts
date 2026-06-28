@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ClipSegment, ViralAnalysisResult, TranscriptionResult } from './types.js';
 import { Logger } from '../../lib/logger.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
-import { generateObject, generateText } from 'ai';
+import { generateObject } from 'ai';
 import { getAIModelChain } from '../../lib/ai-provider.js';
 import { tokenTracker } from '../../lib/token-tracker.js';
 
@@ -22,8 +22,6 @@ const ViralAnalysisSchema = z.object({
   overallScore: z.number().min(0).max(100).describe('Genel viral skor ortalaması'),
   topReason: z.string().describe('En yüksek puanlı segmentin neden seçildiği'),
 });
-
-type ViralSegmentResult = z.infer<typeof ViralSegmentSchema>;
 
 // ── ViralAnalyzer v2 ──────────────────────────────────────────────────────────
 
@@ -89,7 +87,7 @@ export class ViralAnalyzer {
     transcription: TranscriptionResult,
     minDuration: number,
     maxDuration: number,
-    targetCount: number,
+    _targetCount: number,
     title: string,
   ): Promise<ClipSegment[]> {
     const eligibleSegments = transcription.segments

@@ -47,14 +47,6 @@ const AGENT_META: Record<AgentRole, { name: string; provider: string }> = {
   data_scout: { name: 'İstihbarat Subayı', provider: 'zen' },
 };
 
-function getAgentName(role: AgentRole, characters?: OrchestratorInput['characters']): string {
-  if (characters) {
-    const match = characters.find((c) => c.role === role);
-    if (match) return match.name;
-  }
-  return AGENT_META[role]?.name || role;
-}
-
 export interface OrchestratorDeps {
   fetchMatchFeed?: (m: MatchContext) => Promise<MatchFeed>;
   fetchWeather?: (venue: string) => Promise<WeatherSnapshot>;

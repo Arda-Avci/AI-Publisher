@@ -23,7 +23,20 @@ export const pinoLogger: ReturnType<typeof pino> = pino({
     err: pino.stdSerializers.err,
   },
   redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', 'apiKey', 'password', 'token'],
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'apiKey',
+      'password',
+      'token',
+      'username',
+      'iyzico_token',
+      'iyzico_subscription_reference',
+      'personal_voice_base64',
+      'personal_avatar_base64',
+      'sample_cover_base64',
+      'brand_logo_base64',
+    ],
     censor: '[REDACTED]',
   },
 });

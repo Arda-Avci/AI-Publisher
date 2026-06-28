@@ -1,5 +1,4 @@
-import { generateText, generateObject } from 'ai';
-import { disabledZenModels } from './ai-provider.js';
+
 import { Logger } from './logger.js';
 
 /**

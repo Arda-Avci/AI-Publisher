@@ -15,7 +15,6 @@ import {
   textToCharacterReference,
   photoToCharacterProfile,
   analysisToProfile,
-  buildCharacterReferenceText,
   buildAllCharacterReferences,
   type FullBodyGenerationOptions,
 } from '../services/characterGenerationService.js';

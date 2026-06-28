@@ -185,7 +185,7 @@ async function processBatchJob(
   jobId: string,
   files: string[],
   platform: string,
-  schedule?: string,
+  _schedule?: string,
 ): Promise<void> {
   const job = batchJobs.get(jobId);
   if (!job) return;

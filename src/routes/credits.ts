@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import { Application } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { CreditService } from '../services/creditService.js';
 import { Logger } from '../lib/logger.js';

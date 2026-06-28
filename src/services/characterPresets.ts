@@ -259,7 +259,6 @@ export const OUTFIT_PRESETS: OutfitPreset[] = [
 /** Yas + cinsiyete uygun outfit presets listele */
 export function getOutfitPresets(age: number, gender: Gender): OutfitPreset[] {
   const group = ageToGroup(age);
-  const isAdult = group === 'teen' || group === 'young-adult' || group === 'adult' || group === 'middle-aged' || group === 'senior';
   const ageBucket: 'child' | 'adult' = group === 'child' ? 'child' : 'adult';
   return OUTFIT_PRESETS.filter((p) => {
     const genderMatch = p.appliesTo === 'all' || p.appliesTo === gender;

@@ -102,6 +102,10 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   process.exit(1);
 }
 
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV !== 'test') {
+  Logger.warn('SESSION_SECRET is not set. Using random secret (sessions will not survive restart).');
+}
+
 // Global process-level hata yakalama
 // Yakalanmayan Promise rejection'ları sessizce Node.js'i crash edebilir
 process.on('unhandledRejection', (reason) => {
@@ -126,7 +130,7 @@ app.use(pinoHttp({ logger: pinoLogger }));
 app.use(utf8Middleware);
 
 // HTTP Security Headers (Clickjacking, MIME-Sniffing & CSP with Dynamic Nonce)
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   const nonce = crypto.randomBytes(16).toString('base64');
   res.locals.cspNonce = nonce;
 
@@ -154,13 +158,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'gizemli_bir_sir_123_development',
+    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 1 gün
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production',
       sameSite: 'lax',
     },
   }),
@@ -178,30 +182,40 @@ app.use('/exports', express.static(path.join(process.cwd(), 'exports')));
 const clientDist = path.join(process.cwd(), 'client', 'dist');
 app.use(express.static(clientDist));
 
-// Register all routes
+// ── Auth & Oturum ──────────────────────────────────────────────
 registerAuthRoutes(app);
-registerDashboardRoutes(app);
-registerJobRoutes(app);
-registerPublishRoutes(app);
 registerAuthSetupRoutes(app);
+
+// ── Ana Panel & Dashboard ──────────────────────────────────────
+registerDashboardRoutes(app);
 registerProgressRoutes(app);
 registerSettingsRoutes(app);
-registerOpportunityRoutes(app);
-registerDifferentiationRoutes(app);
-registerEditorRoutes(app);
 registerCreditRoutes(app);
 registerLocalesRoutes(app);
 registerAuditRoutes(app);
+
+// ── İş Kuyruğu & Üretim ───────────────────────────────────────
+registerJobRoutes(app);
+registerPublishRoutes(app);
+registerDifferentiationRoutes(app);
+registerOpportunityRoutes(app);
+
+// ── Düzenleme & Post-Prodüksiyon ───────────────────────────────
+registerEditorRoutes(app);
 registerChatToEditRoutes(app);
 registerViMaxRoutes(app);
 registerPipecatRoutes(app);
+
+// ── Webhook & Bildirim ────────────────────────────────────────
 registerWebhookRoutes(app);
 registerNotificationRoutes(app);
+
+// ── Dışa Aktarım & Abonelik ───────────────────────────────────
 registerExportRoutes(app);
 registerAnalyticsRoutes(app);
 registerSubscriptionRoutes(app);
 
-// API Rotaları
+// ── API Rotaları (Router-based) ───────────────────────────────
 app.use('/api/v1/broll', bRollRouter);
 app.use('/api/v1', nicheRouter);
 app.use('/api/v1', splitRouter);
@@ -260,7 +274,7 @@ app.use(errorHandler);
 
 // React SPA catch-all: API olmayan tüm GET isteklerinde React index.html serve et
 const reactIndex = path.join(clientDist, 'index.html');
-app.get(/^\/(?!api|login|logout)(.*)/, (req, res) => {
+app.get(/^\/(?!api|login|logout)(.*)/, (_req, res) => {
   res.sendFile(reactIndex, (err) => {
     if (err) res.status(404).send('Not found');
   });

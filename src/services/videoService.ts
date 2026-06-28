@@ -734,8 +734,8 @@ export async function convertSrtToKineticAss(
   secondaryColor = '#FFFFFF',
   fontName = 'Arial',
   animStyle: 'bounce' | 'pulse' | 'shake' | 'pop' | 'wave' = 'bounce',
-  videoWidth = 1920,
-  videoHeight = 1080,
+  _videoWidth = 1920,
+  _videoHeight = 1080,
 ): Promise<void> {
   const content = await fs.readFile(srtPath, 'utf-8');
   const blocks = content.split(/\r?\n\r?\n/);

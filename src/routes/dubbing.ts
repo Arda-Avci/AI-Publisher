@@ -101,10 +101,8 @@ router.post('/dub', async (req, res) => {
  * Note: This is a simplified implementation. For full job tracking,
  * a dubbing_jobs table should be created.
  */
-router.get('/status/:jobId', async (req, res) => {
+router.get('/status/:jobId', async (_req, res) => {
   try {
-    const { jobId } = req.params;
-
     // For now, we just check if the output file exists
     // A full implementation would use a dubbing_jobs table
     const videolarDir = path.join(process.cwd(), 'videolar');

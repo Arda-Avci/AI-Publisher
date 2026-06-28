@@ -51,7 +51,7 @@ router.post('/validate', mediumLimiter, requireAuth, async (req, res) => {
   }
 });
 
-router.get('/frames', mediumLimiter, requireAuth, async (req, res) => {
+router.get('/frames', mediumLimiter, requireAuth, async (_req, res) => {
   try {
     const { storyboardVectorStore } = await import('../services/storyboardAgent/vectorStore.js');
     res.json({ success: true, frameCount: storyboardVectorStore.size });

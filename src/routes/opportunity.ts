@@ -18,21 +18,6 @@ import { registerRoute } from '../lib/routeAlias.js';
 
 const SUPPORTED_LANGS_FOR_SEARCH = ['tr', 'en', 'de', 'fr', 'es'];
 
-// Public fallback instances. Public Invidious/Piped instances are unreliable
-// (frequently offline or rate-limited), so we try them in order and fall
-// through on any error. No API key is required for either service.
-const FALLBACK_INSTANCES: { type: 'invidious' | 'piped'; base: string }[] = [
-  // Invidious (try first)
-  { type: 'invidious', base: 'https://inv.nadeko.net' },
-  { type: 'invidious', base: 'https://invidious.privacyredirect.com' },
-  { type: 'invidious', base: 'https://invidious.fdn.fr' },
-  // Piped
-  { type: 'piped', base: 'https://pipedapi.adminforge.de' },
-  { type: 'piped', base: 'https://watchapi.whatever.social' },
-  { type: 'piped', base: 'https://api-piped.mha.fi' },
-  { type: 'piped', base: 'https://pipedapi.kavin.rocks' },
-];
-
 // Chunk helper: split an array into fixed-size groups.
 const chunk = <T>(arr: T[], n: number): T[][] => {
   const out: T[][] = [];

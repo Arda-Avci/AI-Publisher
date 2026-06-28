@@ -87,7 +87,7 @@ export async function queryMemories(query: MemoryQuery): Promise<CreativeMemory[
 
 export async function getCreativeContext(
   userId: number,
-  sessionId: string,
+  _sessionId: string,
 ): Promise<string> {
   if (!isNeo4jConnected()) return '';
 

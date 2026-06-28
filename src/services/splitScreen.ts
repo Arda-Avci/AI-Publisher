@@ -1,6 +1,5 @@
 import path from 'path';
-import fs from 'fs-extra';
-import { runFFmpegWithFallback, getVideoDuration } from './videoService.js';
+import { runFFmpegWithFallback  } from './videoService.js';
 import { Logger } from '../lib/logger.js';
 
 export type SplitLayout = '50/50' | '70/30' | '60/40' | '30/70' | '40/60';

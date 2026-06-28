@@ -14,17 +14,15 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { Worker } from 'worker_threads';
-import { runInWorker, runFFmpeg, getVideoDuration } from '../videoService.js';
+import { runFFmpeg, getVideoDuration } from '../videoService.js';
 import { Logger } from '../../lib/logger.js';
 import type {
-  TargetFocus,
   CropAspectRatio,
   FaceBox,
   CropRegion,
   SmartCropOptions,
   SmartCropResult,
 } from '../../types/clipper.js';
-import type { PerFrameCropResult } from './perFrameCropper.js';
 
 const __dirnameStr = __dirname;
 
@@ -48,13 +46,7 @@ function parseAspectRatio(ratio: CropAspectRatio | [number, number]): number {
 /**
  * Get output dimensions from aspect ratio and target height
  */
-function getOutputDimensions(
-  ratio: CropAspectRatio | [number, number],
-  targetHeight = 1920,
-): [number, number] {
-  const r = parseAspectRatio(ratio);
-  return [Math.round(targetHeight * r), targetHeight];
-}
+
 
 // ── Face detection via OpenCV Haar Cascade (worker thread) ───────────────────
 
@@ -155,18 +147,18 @@ finally:
 
   return new Promise((resolve) => {
     const { execFile } = require('child_process');
-    const child = execFile(
+    execFile(
       'python',
       ['-c', pythonScript, videoPath, String(timestamp)],
       { timeout: 15000 },
-      (error: any, stdout: string, stderr: string) => {
+      (error: any, _stdout: string, _stderr: string) => {
         if (error) {
           Logger.warn('[SmartCropper] Python face detection failed:', error.message);
           resolve([]);
           return;
         }
         try {
-          const parsed = JSON.parse(stdout.trim());
+          const parsed = JSON.parse(_stdout.trim());
           resolve(Array.isArray(parsed) ? parsed : []);
         } catch {
           resolve([]);
@@ -194,7 +186,7 @@ export function computeCropRegion(
   targetRatio: CropAspectRatio | [number, number],
   videoWidth: number,
   videoHeight: number,
-  paddingRatio = 0.3,
+  _paddingRatio = 0.3,
 ): CropRegion {
   const ratio = parseAspectRatio(targetRatio);
 
@@ -203,10 +195,6 @@ export function computeCropRegion(
   const fy = faceBox.y * videoHeight;
   const fw = faceBox.width * videoWidth;
   const fh = faceBox.height * videoHeight;
-
-  // Add padding around face
-  const padX = fw * paddingRatio;
-  const padY = fh * paddingRatio;
 
   // Face center in pixel coordinates
   const faceCenterX = fx + fw / 2;
@@ -346,7 +334,7 @@ export class SmartCropper {
       aspectRatio,
       outputWidth = 1080,
       outputHeight = 1920,
-      inputPath: videoPath = inputPath,
+      inputPath: _videoPath = inputPath,
       minFaceConfidence = 0.5,
       smoothingWindow = 5,
       facePadding = 0.3,

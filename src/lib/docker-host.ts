@@ -12,7 +12,7 @@
 
 import { EventEmitter } from 'events';
 import axios from 'axios';
-import { Logger } from './logger.js';
+
 
 export type DockerService =
   | 'cogvideox'
@@ -99,7 +99,6 @@ export interface DockerHostManager {
 
 class DockerHostImpl extends EventEmitter implements DockerHostManager {
   private services: Record<string, { healthy: boolean; lastCheck: string | null }> = {};
-  private healthTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     super();
@@ -109,7 +108,7 @@ class DockerHostImpl extends EventEmitter implements DockerHostManager {
     const envHost = process.env.DOCKER_HOST;
     if (envHost) {
       void this.checkAllServices();
-      this.healthTimer = setInterval(() => {
+      void setInterval(() => {
         void this.checkAllServices();
       }, 60_000);
     }

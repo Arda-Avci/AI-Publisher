@@ -7,6 +7,7 @@ videolar/*.wav
 videolar/*.srt
 videolar/*.txt
 uploads/
+.auth/
 auth*.json
 auth_*.json
 .env

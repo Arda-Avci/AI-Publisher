@@ -3,9 +3,7 @@
  * Vertical/horizontal split-screen, mascot overlay, and PIP video composition
  */
 
-import path from 'path';
-import fs from 'fs-extra';
-import { runFFmpeg, runFFmpegWithFallback, FFmpegCommand } from '../videoService.js';
+import { runFFmpeg, runFFmpegWithFallback } from '../videoService.js';
 import { Logger } from '../../lib/logger.js';
 
 /** Split screen layout options */
@@ -98,7 +96,7 @@ export async function splitScreenVertical(
   output: string,
   options: SplitScreenOptions = {},
 ): Promise<string> {
-  const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight } = options;
+  const { gapPx = 0, borderColor = 'black', outputWidth: _outputWidth, outputHeight } = options;
 
   Logger.info(`[SplitScreen] Creating vertical split: ${topVideo} | ${bottomVideo}`);
 
@@ -157,7 +155,7 @@ export async function splitScreenHorizontal(
   output: string,
   options: SplitScreenOptions = {},
 ): Promise<string> {
-  const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight } = options;
+  const { gapPx = 0, borderColor = 'black', outputWidth, outputHeight: _outputHeight } = options;
 
   Logger.info(`[SplitScreen] Creating horizontal split: ${leftVideo} | ${rightVideo}`);
 
@@ -332,7 +330,7 @@ export async function overlayMascot(
   Logger.info(`[SplitScreen] Overlaying mascot: ${mascotPngPath} on ${videoPath}`);
 
   // Get video dimensions for coordinate expressions
-  const { stdout: dims } = await runFFmpeg('ffprobe', [
+  const { stdout: _dims } = await runFFmpeg('ffprobe', [
     '-v',
     'error',
     '-select_streams',
@@ -343,9 +341,6 @@ export async function overlayMascot(
     'csv=s=x:p=0',
     videoPath,
   ]);
-  const dimsParts = dims.trim().split('x').map(Number);
-  const vW = dimsParts[0] ?? 1920;
-  const vH = dimsParts[1] ?? 1080;
 
   // Get mascot dimensions
   const { stdout: mascotDims } = await runFFmpeg('ffprobe', [
@@ -534,7 +529,7 @@ export async function pipOverlay(
   Logger.info(`[SplitScreen] Creating PIP overlay: ${pipVideo} at ${position}`);
 
   // Get main video dimensions
-  const { stdout: dims } = await runFFmpeg('ffprobe', [
+  const { stdout: dimsRaw } = await runFFmpeg('ffprobe', [
     '-v',
     'error',
     '-select_streams',
@@ -545,9 +540,9 @@ export async function pipOverlay(
     'csv=s=x:p=0',
     mainVideo,
   ]);
-  const dimsParts = dims.trim().split('x').map(Number);
-  const vW = dimsParts[0] ?? 1920;
-  const vH = dimsParts[1] ?? 1080;
+  const dimsParts = (dimsRaw ?? '').split(',');
+  const vW = parseInt(dimsParts[0] ?? '', 10) || 1920;
+  const vH = parseInt(dimsParts[1] ?? '', 10) || 1080;
 
   // PIP size: 25% of main video
   const pipW = Math.round(vW * 0.25);

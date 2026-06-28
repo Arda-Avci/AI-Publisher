@@ -1,6 +1,6 @@
 import { Application, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
+import { heavyLimiter } from '../middleware/rate-limit.js';
 import { pipecatBridge } from '../services/pipecatBridge.js';
 import { heygenService, tavusService } from '../services/avatarService.js';
 import { getAIModelChain } from '../lib/ai-provider.js';
@@ -14,7 +14,7 @@ export function registerPipecatRoutes(app: Application): void {
     '/api/v1/pipecat/start-server',
     heavyLimiter,
     requireAuth,
-    async (req: Request, res: Response) => {
+    async (_req: Request, res: Response) => {
       try {
         await pipecatBridge.start();
         res.json({ success: true, message: 'Pipecat server started' });
@@ -28,7 +28,7 @@ export function registerPipecatRoutes(app: Application): void {
     '/api/v1/pipecat/stop-server',
     heavyLimiter,
     requireAuth,
-    async (req: Request, res: Response) => {
+    async (_req: Request, res: Response) => {
       try {
         await pipecatBridge.stop();
         res.json({ success: true, message: 'Pipecat server stopped' });

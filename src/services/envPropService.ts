@@ -1,4 +1,4 @@
-import { Logger } from '../lib/logger.js';
+
 import { db } from '../db.js';
 import type { Environment, Prop, EnvCategory, PropCategory } from '../types/envProp.js';
 

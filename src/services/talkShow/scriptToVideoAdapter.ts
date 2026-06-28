@@ -1,7 +1,7 @@
 import { db } from '../../db.js';
 import { Logger } from '../../lib/logger.js';
 import type { Character } from '../../types/character.js';
-import type { ScriptWithSegments, ScriptSegment, SceneType } from '../../types/script.js';
+import type { ScriptWithSegments, ScriptSegment } from '../../types/script.js';
 import { checkQueue } from '../../queue.js';
 
 function buildVideoPrompt(segment: ScriptSegment, characters: Character[]): string {
@@ -24,7 +24,7 @@ function buildVideoPrompt(segment: ScriptSegment, characters: Character[]): stri
 }
 
 async function createVideoJob(
-  showId: number,
+  _showId: number,
   userId: number,
   script: ScriptWithSegments,
 ): Promise<number> {

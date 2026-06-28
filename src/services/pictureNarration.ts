@@ -86,7 +86,7 @@ export async function processNarration(
 ): Promise<NarrationResult> {
   Logger.info(`Processing narration for text (${text.length} chars)`);
 
-  const { generateImages = true, language = 'en' } = options;
+  const { generateImages = true, language: _language = 'en' } = options;
 
   const { paragraphs, chapters } = analyzeStructure(text);
   const blocks: NarrationBlock[] = [];

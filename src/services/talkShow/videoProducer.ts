@@ -27,7 +27,7 @@ const SPEAKER_COLORS: Record<string, string> = {
 export async function produceTalkShowVideo(
   discussion: SportotoDiscussion,
   outputPath: string,
-  options: { backgroundVideo?: string } = {},
+  _options: { backgroundVideo?: string } = {},
 ): Promise<string> {
   const workDir = path.join(
     process.cwd(),

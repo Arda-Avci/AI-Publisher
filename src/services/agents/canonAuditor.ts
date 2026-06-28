@@ -72,7 +72,7 @@ For each entity, identify:
 
 export async function validateScenes(
   sceneDescriptions: string[],
-  jobId: number,
+  _jobId: number,
 ): Promise<CanonValidation> {
   const issues: CanonIssue[] = [];
   let allEntities: ExtractedEntity[] = [];

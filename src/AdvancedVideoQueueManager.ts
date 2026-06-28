@@ -5,7 +5,7 @@ import axios from 'axios';
 import { getAIModelChain } from './lib/ai-provider.js';
 import { withFallbackAndRetry } from './lib/ai-utils.js';
 import { generateObject } from 'ai';
-import { transcribeVideoAudio } from './lib/audio-transcriber.js';
+
 import { z } from 'zod';
 import { Logger } from './lib/logger.js';
 import { dockerHost } from './lib/docker-host.js';
@@ -231,7 +231,7 @@ Output JSON format:
     const captionId = preferred.id;
 
     // 2. Download the caption track
-    const downloadRes = await axios.get(
+    await axios.get(
       `https://www.googleapis.com/youtube/v3/captions/${captionId}`,
       {
         params: {
@@ -277,7 +277,7 @@ Output JSON format:
         const ytdlp = exec(
           `npx yt-dlp -x --audio-format mp3 --audio-quality 0 -o "${tempAudioPath}" "${videoUrl}"`,
           { timeout: 120000 },
-          (err, stdout, stderr) => {
+          (err, _stdout, _stderr) => {
             if (err) {
               Logger.warn('yt-dlp failed, trying direct ffmpeg stream...');
               reject(err);

@@ -5,7 +5,6 @@
  * Otomatik yas + cinsiyet bazli default fiziksel olculer ve outfit preset'i atar.
  */
 
-import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 import {
   CharacterProfileSchema,

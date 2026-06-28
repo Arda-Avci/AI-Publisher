@@ -6,6 +6,12 @@ import { VideoJob } from './types/job.js';
 
 export const activePublishBrowsers = new Map<string, any>();
 
+const AUTH_DIR = path.join(process.cwd(), '.auth');
+
+function getAuthPath(platform: string): string {
+  return path.join(AUTH_DIR, `auth_${platform}.json`);
+}
+
 /**
  * Rastgele milisaniye aralığında gecikme sağlar.
  */
@@ -82,7 +88,7 @@ async function humanType(
 }
 
 export async function checkSession(platform: string): Promise<boolean> {
-  const authFile = `auth_${platform}.json`;
+  const authFile = getAuthPath(platform);
   return await fs.pathExists(authFile);
 }
 
@@ -98,7 +104,7 @@ export async function uploadToYouTube(
   } = {},
 ): Promise<boolean> {
   Logger.info(`[YouTube] Starting upload: ${videoPath}`);
-  const authFile = 'auth_youtube.json';
+  const authFile = getAuthPath('youtube');
   if (!(await fs.pathExists(authFile))) {
     Logger.error(`[YouTube] Auth file not found: ${authFile}`);
     return false;
@@ -399,7 +405,7 @@ export async function uploadToTikTok(
   jobId?: number,
 ): Promise<boolean> {
   Logger.info(`TikTok yükleme başlatılıyor: ${videoPath}`);
-  const authFile = 'auth_tiktok.json';
+  const authFile = getAuthPath('tiktok');
   if (!(await fs.pathExists(authFile))) {
     Logger.error(`TikTok yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
@@ -487,7 +493,7 @@ export async function uploadToX(
   jobId?: number,
 ): Promise<boolean> {
   Logger.info(`X (Twitter) yükleme başlatılıyor: ${videoPath}`);
-  const authFile = 'auth_x.json';
+  const authFile = getAuthPath('x');
   if (!(await fs.pathExists(authFile))) {
     Logger.error(`X yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;
@@ -541,7 +547,7 @@ export async function uploadToMeta(
   jobId?: number,
 ): Promise<boolean> {
   Logger.info(`Meta Reels (Facebook/Instagram Creator Studio) yükleme başlatılıyor: ${videoPath}`);
-  const authFile = 'auth_meta.json';
+  const authFile = getAuthPath('meta');
   if (!(await fs.pathExists(authFile))) {
     Logger.error(`Meta yetkilendirme dosyası bulunamadı: ${authFile}`);
     return false;

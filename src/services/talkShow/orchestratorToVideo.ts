@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { execFile } from 'child_process';
 import { Logger } from '../../lib/logger.js';
-import type { OrchestratorResult, AgentRole } from './types.js';
+import type { OrchestratorResult } from './types.js';
 
 const AGENT_COLORS: Record<string, string> = {
   meta_orchestrator: '#A78BFA',
@@ -12,17 +12,8 @@ const AGENT_COLORS: Record<string, string> = {
   data_scout: '#F59E0B',
 };
 
-const AGENT_VOICES: Record<string, string> = {
-  meta_orchestrator: 'tr-TR-AhmetNeural',
-  match_analyst: 'tr-TR-EmelNeural',
-  former_player: 'tr-TR-AhmetNeural',
-  bookmaker: 'tr-TR-EmelNeural',
-  data_scout: 'tr-TR-AhmetNeural',
-};
-
 const FONT_SIZE_NAME = 36;
 const FONT_SIZE_TEXT = 28;
-const TEXT_MAX_WIDTH = 1700;
 
 export interface OrchestratorVideoInput {
   result: OrchestratorResult;
@@ -90,8 +81,7 @@ async function renderAgentScene(
   const wrapped = wordWrap(content, 80);
   const escapedText = escapeDrawText(wrapped);
   const escapedSpeaker = escapeDrawText(speaker);
-  const totalFrames = Math.round(duration * fps);
-  const speakerY = h / 2 - 80;
+    const speakerY = h / 2 - 80;
   const textY = h / 2 + 10;
 
   const filterComplex = [
@@ -191,7 +181,7 @@ export async function orchestrateToVideo(
 
   if (input.backgroundMusicPath && fs.existsSync(input.backgroundMusicPath)) {
     const finalVideo = input.outputPath;
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, _reject) => {
       execFile(
         'ffmpeg',
         [

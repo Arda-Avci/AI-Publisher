@@ -8,7 +8,7 @@
 
 import axios from 'axios';
 import { MatchContext } from './types.js';
-import { MatchFeed, WeatherSnapshot, InjuryReport, OddsSnapshot } from './dataSources.js';
+import { MatchFeed } from './dataSources.js';
 
 const BASE_URL = 'https://v3.football.api-sports.io';
 const SUPER_LIG_ID = 203;
@@ -74,12 +74,6 @@ export async function fetchMatchFeed(match: MatchContext): Promise<MatchFeed> {
   const season = match.season || DEFAULT_SEASON;
   const fixture = await findFixture(match.homeTeam, match.awayTeam, season);
   if (!fixture) throw new Error(`Fixture not found for ${match.homeTeam} vs ${match.awayTeam}`);
-
-  const home = fixture.teams?.home?.name || match.homeTeam;
-  const away = fixture.teams?.away?.name || match.awayTeam;
-  const score = fixture.goals;
-  const homeGoals = score?.home ?? 0;
-  const awayGoals = score?.away ?? 0;
 
   // Head to head
   const h2hRes = await client

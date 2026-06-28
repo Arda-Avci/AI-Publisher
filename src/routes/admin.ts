@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAdmin } from '../middleware/adminAuth.js';
 import { Logger } from '../lib/logger.js';
-import { dockerHost } from '../lib/docker-host.js';
+
 import os from 'os';
 
 const router = Router();
@@ -79,7 +79,7 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', async (_req, res) => {
   try {
     const [totalUsers, totalJobs, activeJobs, totalVideos] = await Promise.all([
       db.get('SELECT COUNT(*) as count FROM users'),
@@ -106,7 +106,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-router.get('/system', async (req, res) => {
+router.get('/system', async (_req, res) => {
   try {
     const jobStats = await Promise.all([
       db.get("SELECT COUNT(*) as count FROM video_jobs WHERE status = 'processing'"),

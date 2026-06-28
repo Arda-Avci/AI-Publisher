@@ -7,7 +7,6 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { v4 as uuidv4 } from 'uuid';
 import { runInWorker, getVideoDuration } from '../videoService.js';
 import { embedSubtitles, mixBackgroundMusic, applyAudioDuck } from './subtitleMixer.js';
 import { generateSrtFromWhisper } from './subtitleMixer.js';
