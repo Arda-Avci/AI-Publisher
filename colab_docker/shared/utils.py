@@ -32,7 +32,7 @@ def upload_to_backblaze(local_path, key, bucket=None):
     if not client:
         print(f"[B2] Credentials missing, skipping {local_path}")
         return None
-    bucket_name = bucket or os.environ.get("B2_BUCKET_NAME", "ai-publisher-models")
+    bucket_name = bucket or os.environ.get("B2_BUCKET_NAME") or os.environ.get("B2_BUCKET", "ai-publisher-models")
     try:
         client.upload_file(local_path, bucket_name, key)
         endpoint = os.environ.get("B2_ENDPOINT_URL", "https://s3.us-west-004.backblazeb2.com")
@@ -55,7 +55,7 @@ def download_from_b2(b2_key, local_path, bucket=None):
     if not client:
         print(f"[B2] Credentials missing, skipping download {b2_key}")
         return False
-    bucket_name = bucket or os.environ.get("B2_BUCKET_NAME", "ai-publisher-models")
+    bucket_name = bucket or os.environ.get("B2_BUCKET_NAME") or os.environ.get("B2_BUCKET", "ai-publisher-models")
     try:
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         client.download_file(bucket_name, b2_key, local_path)

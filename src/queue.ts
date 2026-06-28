@@ -896,7 +896,7 @@ async function startProduction(job: VideoJob) {
           endpoint_url: process.env.B2_ENDPOINT_URL,
           key_id: process.env.B2_KEY_ID,
           application_key: process.env.B2_APPLICATION_KEY,
-          bucket_name: process.env.B2_BUCKET_NAME
+          bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET
         };
 
         const callbackUrl = process.env.PUBLIC_URL

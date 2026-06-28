@@ -250,8 +250,12 @@ async function coverSynthesis(state: GraphState): Promise<Partial<GraphState>> {
       try {
         const res = await RunPodClient.runJob(endpointId, {
           job_id: jobId, prompt, task: 'cover',
-          b2_credentials: { bucket: process.env.BUCKET_NAME, endpoint: process.env.BUCKET_ENDPOINT_URL,
-            accessKey: process.env.BUCKET_ACCESS_KEY_ID, secretKey: process.env.BUCKET_SECRET_ACCESS_KEY },
+          b2_credentials: {
+            endpoint_url: process.env.B2_ENDPOINT_URL,
+            key_id: process.env.B2_KEY_ID,
+            application_key: process.env.B2_APPLICATION_KEY,
+            bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET,
+          },
         }, process.env.WEBHOOK_URL ? `${process.env.WEBHOOK_URL}/api/webhook/runpod` : undefined);
         Logger.info('[Graph] Cover generation dispatched', { runpodId: res.id });
       } catch (err) {
@@ -314,8 +318,10 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
   const callbackUrl = process.env.WEBHOOK_URL ? `${process.env.WEBHOOK_URL}/api/webhook/runpod` : undefined;
   const mockColab = process.env.MOCK_COLAB === 'true';
   const b2Credentials = {
-    bucket: process.env.BUCKET_NAME, endpoint: process.env.BUCKET_ENDPOINT_URL,
-    accessKey: process.env.BUCKET_ACCESS_KEY_ID, secretKey: process.env.BUCKET_SECRET_ACCESS_KEY,
+    endpoint_url: process.env.B2_ENDPOINT_URL,
+    key_id: process.env.B2_KEY_ID,
+    application_key: process.env.B2_APPLICATION_KEY,
+    bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET,
   };
 
   let completed = state.completedScenes;
