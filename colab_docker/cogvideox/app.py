@@ -1,4 +1,4 @@
-import os
+﻿import os
 import gc
 import torch
 import numpy as np
@@ -85,8 +85,10 @@ def frames_to_mp4(frames, path, fps=8):
         frame_arr.append(f_np)
     frames_arr = np.stack(frame_arr)
     h, w = frames_arr.shape[1:3]
+    w = w + (w % 2)
+    h = h + (h % 2)
     cmd = [
-        'ffmpeg', '-y',
+        '/usr/bin/ffmpeg', '-y',
         '-f', 'rawvideo',
         '-vcodec', 'rawvideo',
         '-s', f'{w}x{h}',
@@ -113,6 +115,9 @@ def generate():
     output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
     num_frames = int(data.get("num_frames", 49))
     num_inference_steps = int(data.get("num_inference_steps", 30))
+
+    # Make sure output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     is_i2v = bool(image_path and os.path.exists(image_path))
     

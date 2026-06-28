@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 sys.setrecursionlimit(10000)
 
@@ -305,6 +305,8 @@ def frames_to_mp4(frames, path, fps=8):
         frame_arr.append(f_np)
     frames_arr = np.stack(frame_arr)
     h, w = frames_arr.shape[1:3]
+    w = w + (w % 2)
+    h = h + (h % 2)
     cmd = [
         'ffmpeg', '-y',
         '-f', 'rawvideo',

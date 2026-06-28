@@ -1,4 +1,4 @@
-import os, gc, torch, subprocess
+﻿import os, gc, torch, subprocess
 import numpy as np
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
@@ -48,8 +48,10 @@ def frames_to_mp4(frames, path, fps=8):
         frame_arr.append(f_np)
     frames_arr = np.stack(frame_arr)
     h, w = frames_arr.shape[1:3]
+    w = w + (w % 2)
+    h = h + (h % 2)
     cmd = [
-        'ffmpeg', '-y',
+        '/usr/bin/ffmpeg', '-y',
         '-f', 'rawvideo',
         '-vcodec', 'rawvideo',
         '-s', f'{w}x{h}',
@@ -90,6 +92,9 @@ def generate():
         return jsonify({"error": "image_path and prompt required"}), 400
     if not os.path.exists(image_path):
         return jsonify({"error": f"image not found: {image_path}"}), 404
+
+    # Make sure output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     try:
         pipe = get_pipeline()
