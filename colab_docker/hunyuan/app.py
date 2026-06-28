@@ -139,6 +139,9 @@ def generate():
     output_path = data.get("output_path", "/workspace/outputs/raw_video.mp4")
     
     try:
+        # Make sure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
         pipe = get_pipeline()
         
         with torch.inference_mode():

@@ -142,6 +142,9 @@ def generate():
     fps = int(data.get("fps", 16))
 
     try:
+        # Make sure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
         pipe = get_pipeline()
 
         from PIL import Image
