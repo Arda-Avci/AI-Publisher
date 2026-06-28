@@ -99,9 +99,37 @@ def get_pipeline():
     return pipe
 
 def frames_to_mp4(frames, path, fps=16):
-    uint8_frames = [(np.clip(np.array(f), 0.0, 1.0) * 255).astype(np.uint8) for f in frames]
-    from diffusers.utils import export_to_video
-    export_to_video(frames, path, fps=fps)
+    frame_arr = []
+    for f in frames:
+        f_np = np.array(f)
+        if f_np.dtype in [np.float16, np.float32, np.float64]:
+            if f_np.max() <= 1.0:
+                f_np = (np.clip(f_np, 0.0, 1.0) * 255).astype(np.uint8)
+            else:
+                f_np = f_np.astype(np.uint8)
+        elif f_np.dtype != np.uint8:
+            f_np = f_np.astype(np.uint8)
+        frame_arr.append(f_np)
+    frames_arr = np.stack(frame_arr)
+    h, w = frames_arr.shape[1:3]
+    import subprocess
+    cmd = [
+        'ffmpeg', '-y',
+        '-f', 'rawvideo',
+        '-vcodec', 'rawvideo',
+        '-s', f'{w}x{h}',
+        '-pix_fmt', 'rgb24',
+        '-r', str(fps),
+        '-i', '-',
+        '-c:v', 'libopenh264',
+        '-pix_fmt', 'yuv420p',
+        '-b:v', '5M',
+        '-movflags', '+faststart',
+        path
+    ]
+    proc = subprocess.run(cmd, input=frames_arr.tobytes(), capture_output=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f'FFmpeg encoding failed: {proc.stderr.decode(errors="replace")}')
 
 @app.route("/generate", methods=["POST"])
 def generate():

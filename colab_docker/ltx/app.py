@@ -306,17 +306,16 @@ def frames_to_mp4(frames, path, fps=8):
     frames_arr = np.stack(frame_arr)
     h, w = frames_arr.shape[1:3]
     cmd = [
-        '/usr/bin/ffmpeg', '-y',
+        'ffmpeg', '-y',
         '-f', 'rawvideo',
         '-vcodec', 'rawvideo',
         '-s', f'{w}x{h}',
         '-pix_fmt', 'rgb24',
         '-r', str(fps),
         '-i', '-',
-        '-c:v', 'libx264',
+        '-c:v', 'libopenh264',
         '-pix_fmt', 'yuv420p',
-        '-preset', 'medium',
-        '-crf', '18',
+        '-b:v', '5M',
         '-movflags', '+faststart',
         path
     ]
