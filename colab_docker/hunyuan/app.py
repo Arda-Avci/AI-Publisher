@@ -1,3 +1,4 @@
+# Trigger rebuild with wan25 and hunyuan added to CI matrix
 import os
 import gc
 import sys
