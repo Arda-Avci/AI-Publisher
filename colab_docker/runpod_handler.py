@@ -73,7 +73,7 @@ else:
 
         print(f"[WRAPPER] Forwarding request to local Flask:{flask_port}{endpoint_path}")
         try:
-            resp = requests.post(f"http://localhost:{flask_port}{endpoint_path}", json=job_input, timeout=600)
+            resp = requests.post(f"http://localhost:{flask_port}{endpoint_path}", json=job_input, timeout=1800)
             result = resp.json()
         except Exception as e:
             return {"status": "error", "message": f"Flask forward failed: {str(e)}"}
