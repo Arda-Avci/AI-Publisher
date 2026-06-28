@@ -39,6 +39,15 @@ if not hasattr(nn, "RMSNorm"):
             return x * torch.rsqrt(variance + self.eps) * (self.weight if self.weight is not None else 1.0)
     nn.RMSNorm = RMSNorm
 
+# Patch scaled_dot_product_attention to remove unsupported enable_gqa arg
+import torch.nn.functional as F
+_orig_sdpa = F.scaled_dot_product_attention
+def _patched_sdpa(*args, **kwargs):
+    if "enable_gqa" in kwargs:
+        del kwargs["enable_gqa"]
+    return _orig_sdpa(*args, **kwargs)
+F.scaled_dot_product_attention = _patched_sdpa
+
 builtins.nn = nn
 builtins.torch = torch
 
