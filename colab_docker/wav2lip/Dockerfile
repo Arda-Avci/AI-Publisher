@@ -1,7 +1,7 @@
 ﻿FROM ai-publisher-base:latest
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 # Clone Wav2Lip repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
 RUN curl -sL https://github.com/Rudrabha/Wav2Lip/archive/refs/heads/master.tar.gz -o /tmp/wav2lip.tar.gz && \
@@ -27,7 +27,7 @@ RUN sed -i "s/args = parser.parse_args()/if __name__ == '__main__':\n    args = 
 #     python -c "import os, shutil; from huggingface_hub import hf_hub_download; os.makedirs('/workspace/models/Wav2Lip/checkpoints', exist_ok=True); [shutil.copy(hf_hub_download(repo_id='Rudrabha/Wav2Lip', filename=f, cache_dir='/workspace/models/hf_cache'), f'/workspace/models/Wav2Lip/checkpoints/{f}') for f in ['wav2lip.pth', 'wav2lip_gan.pth', 'visual_quality_disc.pth']]"
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 COPY app.py /app/app.py
 WORKDIR /app

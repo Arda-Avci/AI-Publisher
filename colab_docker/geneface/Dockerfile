@@ -3,7 +3,7 @@
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel AS builder
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ffmpeg \
@@ -39,7 +39,7 @@ RUN /opt/conda/bin/pip install "git+https://github.com/facebookresearch/pytorch3
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ffmpeg \

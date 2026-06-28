@@ -1,7 +1,7 @@
 ﻿FROM ai-publisher-base:latest
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 RUN /opt/conda/bin/pip install --no-cache-dir \
     "f5-tts>=1.1.0" \

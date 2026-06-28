@@ -1,7 +1,7 @@
 ﻿FROM ai-publisher-base:latest
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 # Install LTX-Video specific dependencies
 RUN /opt/conda/bin/pip install --no-cache-dir \

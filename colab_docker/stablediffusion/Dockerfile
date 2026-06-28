@@ -1,7 +1,7 @@
 ﻿FROM ai-publisher-base:latest
 
 ARG HF_TOKEN
-ENV HF_TOKEN=\
+ENV HF_TOKEN=${HF_TOKEN}
 
 # Trigger build for SDXL integration v5
 # Install Stable Diffusion specific packages
