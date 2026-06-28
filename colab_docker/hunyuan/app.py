@@ -88,7 +88,8 @@ def get_pipeline():
         return current_pipe
         
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
-    print(f"[CONTAINER - HUNYUAN] Loading HunyuanVideo (VRAM: {vram_gb:.2f} GB)")
+    gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "unknown"
+    print(f"[CONTAINER - HUNYUAN] Loading HunyuanVideo (VRAM: {vram_gb:.2f} GB, GPU: {gpu_name})")
     
     from diffusers import HunyuanVideoPipeline
     pipe = HunyuanVideoPipeline.from_pretrained(
@@ -96,15 +97,25 @@ def get_pipeline():
         torch_dtype=torch.bfloat16
     )
 
-    if vram_gb <= 18.0:
-        print(f"[CONTAINER - HUNYUAN] 16GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload and VAE tiling.")
+    if vram_gb <= 16.0:
+        print(f"[CONTAINER - HUNYUAN] T4/16GB GPU detected. Enabling aggressive memory optimization.")
         pipe.enable_sequential_cpu_offload()
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
+        if hasattr(pipe, "enable_attention_slicing"):
+            pipe.enable_attention_slicing("max")
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+            pipe.vae.enable_slicing()
+    elif vram_gb <= 18.0:
+        print(f"[CONTAINER - HUNYUAN] 16-18GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload.")
+        pipe.enable_sequential_cpu_offload()
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
     else:
-        print(f"[CONTAINER - HUNYUAN] 24GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
+        print(f"[CONTAINER - HUNYUAN] 24GB+ GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
         pipe.enable_model_cpu_offload()
-        
-    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
-        pipe.vae.enable_tiling()
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
         
     current_pipe = pipe
     return pipe

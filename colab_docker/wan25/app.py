@@ -147,7 +147,8 @@ def get_pipeline():
         return current_pipe
 
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
-    print(f"[CONTAINER - WAN25] Loading Wan2.5 I2V (VRAM: {vram_gb:.2f} GB)")
+    gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "unknown"
+    print(f"[CONTAINER - WAN25] Loading Wan2.5 I2V (VRAM: {vram_gb:.2f} GB, GPU: {gpu_name})")
 
     from diffusers import WanPipeline
     pipe = WanPipeline.from_pretrained(
@@ -155,15 +156,25 @@ def get_pipeline():
         torch_dtype=torch.float16
     )
 
-    if vram_gb <= 18.0:
-        print(f"[CONTAINER - WAN25] 16GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload and VAE tiling.")
+    if vram_gb <= 16.0:
+        print(f"[CONTAINER - WAN25] T4/16GB GPU detected. Enabling aggressive memory optimization.")
         pipe.enable_sequential_cpu_offload()
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
+        if hasattr(pipe, "enable_attention_slicing"):
+            pipe.enable_attention_slicing("max")
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+            pipe.vae.enable_slicing()
+    elif vram_gb <= 18.0:
+        print(f"[CONTAINER - WAN25] 16-18GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload.")
+        pipe.enable_sequential_cpu_offload()
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
     else:
-        print(f"[CONTAINER - WAN25] 24GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
+        print(f"[CONTAINER - WAN25] 24GB+ GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
         pipe.enable_model_cpu_offload()
-        
-    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
-        pipe.vae.enable_tiling()
+        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
 
     current_pipe = pipe
     return pipe
@@ -243,7 +254,15 @@ def generate():
 
     except torch.cuda.OutOfMemoryError as exc:
         flush_memory()
-        return jsonify({"status": "error", "message": "GPU Out Of Memory", "error": str(exc)}), 500
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
+        gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "unknown"
+        error_msg = (
+            f"GPU Out Of Memory on {gpu_name} ({vram_gb:.1f}GB). "
+            f"Wan2.5 I2V 14B requires A100 40GB+ or A10 24GB+ with aggressive offloading. "
+            f"T4 16GB is insufficient for this model."
+        )
+        print(f"[CONTAINER - WAN25] {error_msg}")
+        return jsonify({"status": "error", "message": error_msg, "error": str(exc)}), 500
     except Exception as e:
         flush_memory()
         return jsonify({"status": "error", "message": str(e)}), 500
