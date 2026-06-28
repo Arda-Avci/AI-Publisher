@@ -130,9 +130,18 @@ export function validateCreateJob(body: any): { valid: boolean; errors: Validati
     }
   }
 
-  // production_template: optional, string, enum: cinematic, dynamic, simple
+  // production_template: optional, string, enum from templatePromptService
   if (body.production_template) {
-    const validTemplates = ['cinematic', 'dynamic', 'simple', 'pixar', 'animatediff', 'svd', 'wan25', 'cogvideox5b', 'cogvideox2b', 'wan2.2-comfyui'];
+    const validTemplates = [
+      'cinematic', 'noir', 'epic', 'atmospheric', 'dynamic',
+      'viral_tiktok', 'shorts_fast', 'reel_aesthetic', 'trending', 'challenge',
+      'asmr', 'unboxing', 'simple', 'tutorial', 'whiteboard',
+      'explainer', 'keynote', 'documentary', 'pixar', 'anime',
+      'retro_vhs', 'glitch_art', 'claymation', 'stop_motion', 'gaming_montage',
+      'fitness', 'cooking', 'travel_vlog', 'corporate', 'luxury',
+      'wedding', 'real_estate', 'sadtalker', 'dynamicrafter', 'zeroscope',
+      'geneface', 'pyramid-flow', 'video-retalking', 'mochi', 'veo31',
+    ];
     if (
       typeof body.production_template !== 'string' ||
       !validTemplates.includes(body.production_template)

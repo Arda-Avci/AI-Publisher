@@ -83,13 +83,33 @@ interface ProjectFormProps {
   onSetUseMuseTalk: (v: boolean) => void;
 }
 
-const MODELS = ['Publisher Cinematic V3', 'Anime Diffusion (Hızlı)', 'Zen-M3 Realism'];
+const MODEL_ENGINE_OPTIONS = [
+  { value: 'CogVideoX-5b', label: 'CogVideoX-5b (Varsayılan)', speed: '⭐⭐⭐' },
+  { value: 'Wan2.1', label: 'Wan 2.1 (Yüksek Kalite)', speed: '⭐⭐' },
+  { value: 'Wan2.5', label: 'Wan 2.5 (En Yeni)', speed: '⭐⭐' },
+  { value: 'HunyuanVideo', label: 'HunyuanVideo (Sinematik)', speed: '⭐⭐' },
+  { value: 'LTX-Video', label: 'LTX-Video (Hızlı)', speed: '⭐⭐⭐⭐⭐' },
+  { value: 'CogVideoX-2b', label: 'CogVideoX-2b (Hızlı)', speed: '⭐⭐⭐⭐' },
+  { value: 'AnimateDiff', label: 'AnimateDiff (Animasyon)', speed: '⭐⭐⭐' },
+  { value: 'SVD-XT', label: 'SVD-XT (Görselden Video)', speed: '⭐⭐' },
+  { value: 'ZeroScope', label: 'ZeroScope (Hızlı)', speed: '⭐⭐⭐' },
+  { value: 'Mochi-1', label: 'Mochi-1 (Yüksek Kalite)', speed: '⭐' },
+  { value: 'DynamiCrafter', label: 'DynamiCrafter (Görselden)', speed: '⭐⭐' },
+  { value: 'VideoCrafter', label: 'VideoCrafter', speed: '⭐⭐' },
+  { value: 'Veo-31', label: 'Veo 3.1 (Google Cloud)', speed: '⭐⭐' },
+  { value: '', label: 'Tema bazlı seç (otomatik)', speed: '---' },
+];
 const RATIOS = ['16:9', '9:16', '1:1'] as const;
 const TEMPLATES: Array<{ key: ProductionTemplate; model: string; speed: string }> = [
   { key: 'cinematic', model: 'HunyuanVideo', speed: '⭐⭐' },
   { key: 'dynamic', model: 'Wan 2.1', speed: '⭐⭐' },
   { key: 'simple', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
   { key: 'pixar', model: 'Wan 2.1', speed: '⭐⭐' },
+  { key: 'cogvideox5b', model: 'CogVideoX-5b', speed: '⭐⭐⭐' },
+  { key: 'cogvideox2b', model: 'CogVideoX-2b', speed: '⭐⭐⭐⭐' },
+  { key: 'wan25', model: 'Wan2.5', speed: '⭐⭐' },
+  { key: 'animatediff', model: 'AnimateDiff', speed: '⭐⭐⭐' },
+  { key: 'svd', model: 'SVD-XT', speed: '⭐⭐' },
   { key: 'sadtalker', model: 'SadTalker', speed: '⭐⭐⭐' },
   { key: 'dynamicrafter', model: 'DynamiCrafter', speed: '⭐⭐' },
   { key: 'zeroscope', model: 'Zeroscope', speed: '⭐⭐⭐' },
@@ -105,6 +125,12 @@ const MODEL_MAP: Record<string, { key: ProductionTemplate; model: string; speed:
   dynamic: { key: 'dynamic', model: 'Wan 2.1', speed: '⭐⭐' },
   simple: { key: 'simple', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
   pixar: { key: 'pixar', model: 'Wan 2.1', speed: '⭐⭐' },
+  cogvideox5b: { key: 'cogvideox5b', model: 'CogVideoX-5b', speed: '⭐⭐⭐' },
+  cogvideox2b: { key: 'cogvideox2b', model: 'CogVideoX-2b', speed: '⭐⭐⭐⭐' },
+  wan25: { key: 'wan25', model: 'Wan2.5', speed: '⭐⭐' },
+  animatediff: { key: 'animatediff', model: 'AnimateDiff', speed: '⭐⭐⭐' },
+  svd: { key: 'svd', model: 'SVD-XT', speed: '⭐⭐' },
+  videocrafter: { key: 'videocrafter', model: 'VideoCrafter', speed: '⭐⭐' },
   sadtalker: { key: 'sadtalker', model: 'SadTalker', speed: '⭐⭐⭐' },
   dynamicrafter: { key: 'dynamicrafter', model: 'DynamiCrafter', speed: '⭐⭐' },
   zeroscope: { key: 'zeroscope', model: 'Zeroscope', speed: '⭐⭐⭐' },
@@ -120,78 +146,19 @@ const ALL_MODELS = [
   { value: 'dynamic', label: 'Dinamik Sosyal Medya', model: 'Wan 2.1', speed: '⭐⭐' },
   { value: 'simple', label: 'Hızlı & Basit Render', model: 'LTX-Video', speed: '⭐⭐⭐⭐⭐' },
   { value: 'pixar', label: 'Pixar Animasyon', model: 'Wan 2.1', speed: '⭐⭐' },
-  {
-    value: 'cogvideox5b' as ProductionTemplate,
-    label: 'CogVideoX-5b (Varsayılan)',
-    model: 'CogVideoX-5b',
-    speed: '⭐⭐⭐',
-  },
-  {
-    value: 'cogvideox2b' as ProductionTemplate,
-    label: 'CogVideoX-2b (Hızlı)',
-    model: 'CogVideoX-2b',
-    speed: '⭐⭐⭐⭐',
-  },
-  {
-    value: 'cogvideox2b' as ProductionTemplate,
-    label: 'CogVideoX-2b (Hızlı)',
-    model: 'CogVideoX-2b',
-    speed: '⭐⭐⭐⭐',
-  },
-  {
-    value: 'cogvideox2b' as ProductionTemplate,
-    label: 'CogVideoX-2b (Hızlı)',
-    model: 'CogVideoX-2b',
-    speed: '⭐⭐⭐⭐',
-  },
-  {
-    value: 'dynamicrafter' as ProductionTemplate,
-    label: 'DynamiCrafter (Görselden Video)',
-    model: 'DynamiCrafter',
-    speed: '⭐⭐',
-  },
-  {
-    value: 'cogvideox2b' as ProductionTemplate,
-    label: 'CogVideoX-2b (Hızlı)',
-    model: 'CogVideoX-2b',
-    speed: '⭐⭐⭐⭐',
-  },
-  {
-    value: 'zeroscope' as ProductionTemplate,
-    label: 'Zeroscope (Hızlı Video)',
-    model: 'Zeroscope',
-    speed: '⭐⭐⭐',
-  },
-  {
-    value: 'pyramid-flow' as ProductionTemplate,
-    label: 'Pyramid-Flow (Kademeli Video)',
-    model: 'Pyramid-Flow',
-    speed: '⭐⭐',
-  },
-  {
-    value: 'video-retalking' as ProductionTemplate,
-    label: 'Video-ReTalking (Dudak Senk.)',
-    model: 'Video-ReTalking',
-    speed: '⭐⭐',
-  },
-  {
-    value: 'mochi' as ProductionTemplate,
-    label: 'Mochi-1 (Yüksek Kalite)',
-    model: 'Mochi-1',
-    speed: '?',
-  },
-  {
-    value: 'geneface' as ProductionTemplate,
-    label: 'GeneFace++ (3D Konuşan Kafa)',
-    model: 'GeneFace++',
-    speed: '⭐',
-  },
-  {
-    value: 'veo31' as ProductionTemplate,
-    label: 'Veo 3.1 (Google I2V)',
-    model: 'Veo-31',
-    speed: '⭐⭐',
-  },
+  { value: 'cogvideox5b', label: 'CogVideoX-5b (Varsayılan)', model: 'CogVideoX-5b', speed: '⭐⭐⭐' },
+  { value: 'cogvideox2b', label: 'CogVideoX-2b (Hızlı)', model: 'CogVideoX-2b', speed: '⭐⭐⭐⭐' },
+  { value: 'wan25', label: 'Wan2.5 (Yüksek Kalite Video)', model: 'Wan2.5', speed: '⭐⭐' },
+  { value: 'animatediff', label: 'AnimateDiff (Animasyon)', model: 'AnimateDiff', speed: '⭐⭐⭐' },
+  { value: 'svd', label: 'SVD-XT (Görselden Video)', model: 'SVD-XT', speed: '⭐⭐' },
+  { value: 'videocrafter', label: 'VideoCrafter', model: 'VideoCrafter', speed: '⭐⭐' },
+  { value: 'dynamicrafter', label: 'DynamiCrafter (Görselden Video)', model: 'DynamiCrafter', speed: '⭐⭐' },
+  { value: 'zeroscope', label: 'Zeroscope (Hızlı Video)', model: 'Zeroscope', speed: '⭐⭐⭐' },
+  { value: 'pyramid-flow', label: 'Pyramid-Flow (Kademeli Video)', model: 'Pyramid-Flow', speed: '⭐⭐' },
+  { value: 'mochi', label: 'Mochi-1 (Yüksek Kalite)', model: 'Mochi-1', speed: '⭐' },
+  { value: 'video-retalking', label: 'Video-ReTalking (Dudak Senk.)', model: 'Video-ReTalking', speed: '⭐⭐' },
+  { value: 'geneface', label: 'GeneFace++ (3D Konuşan Kafa)', model: 'GeneFace++', speed: '⭐' },
+  { value: 'veo31', label: 'Veo 3.1 (Google I2V)', model: 'Veo-31', speed: '⭐⭐' },
 ];
 
 function TemplateCard({
@@ -373,11 +340,11 @@ export function ProjectForm(props: ProjectFormProps) {
           flex: 1,
         }}
       >
-        {/* ---- Section 1: Model Motoru ---- */}
+        {/* ---- Section 1: Model Motoru (model_type override) ---- */}
         <div style={sectionStyle}>
           <div style={{ ...labelStyle, display: 'flex', justifyContent: 'space-between' }}>
             Model Motoru
-            <span style={{ color: 'var(--accent)' }}>PRO</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>opsiyonel</span>
           </div>
           <select
             value={props.selectedModel}
@@ -393,8 +360,10 @@ export function ProjectForm(props: ProjectFormProps) {
               paddingRight: '32px',
             }}
           >
-            {MODELS.map((m) => (
-              <option key={m}>{m}</option>
+            {MODEL_ENGINE_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label} — {m.speed}
+              </option>
             ))}
           </select>
         </div>

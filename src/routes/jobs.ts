@@ -60,6 +60,7 @@ export function registerJobRoutes(app: Application): void {
         production_mode,
         trend_enabled,
         trend_context,
+        model_type,
       } = req.body;
 
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -111,8 +112,8 @@ export function registerJobRoutes(app: Application): void {
 
         const insertResult: any = await db.run(
           `INSERT INTO video_jobs (
-        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context, character_profiles, production_mode
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        user_id, master_prompt, production_notes, character_features, material_path, target_platforms, playlist_id, has_shorts, has_subtitles, transcript_translated, differentiation_layout, differentiation_duration_mode, tts_provider, tts_voice, production_template, background_music_path, trend_enabled, trend_context, character_profiles, production_mode, model_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             userId,
             master_prompt,
@@ -134,6 +135,7 @@ export function registerJobRoutes(app: Application): void {
             trend_context || '',
             characterProfilesJson,
             finalProductionMode,
+            model_type || '',
           ],
         );
 

@@ -490,7 +490,7 @@ export function GalleryPanel({
                   }}
                 >
                   Sahneler: {job.completed_scenes} / {job.total_scenes} | Model:{' '}
-                  {job.model_type || 'CogVideo'}
+                  {job.model_type || 'CogVideoX-5b'}
                 </div>
                 <button
                   onClick={(e) => {

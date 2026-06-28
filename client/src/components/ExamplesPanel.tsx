@@ -251,7 +251,7 @@ export function ExamplesPanel({ language: _language, t }: ExamplesPanelProps) {
                     textTransform: 'uppercase',
                   }}
                 >
-                  {selectedVideo.model_type || 'CogVideo V3'}
+                  {selectedVideo.model_type || 'CogVideoX-5b'}
                 </span>
               </div>
 
@@ -489,7 +489,7 @@ export function ExamplesPanel({ language: _language, t }: ExamplesPanelProps) {
                   >
                     <span>Sahneler: {vid.total_scenes}</span>
                     <span style={{ color: 'var(--gold)', fontWeight: 600 }}>
-                      {vid.model_type || 'CogVideo V3'}
+                      {vid.model_type || 'CogVideoX-5b'}
                     </span>
                   </div>
                 </div>

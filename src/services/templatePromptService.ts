@@ -96,7 +96,7 @@ interface TemplateMeta {
   colorPalette: string[];
 }
 
-const TEMPLATE_DESCRIPTIONS: Record<ProductionTemplate, TemplateMeta> = {
+export const TEMPLATE_DESCRIPTIONS: Record<ProductionTemplate, TemplateMeta> = {
   cinematic: {
     title: 'Sinematik',
     description: 'Dramatik aydınlatma, derin gölgeler ve Hollywood tarzı görsel hikaye anlatımı.',

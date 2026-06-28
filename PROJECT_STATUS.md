@@ -220,6 +220,20 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **Deep Think fallback zinciri:** `getDeepThinkModel()` artık Minimax → Gemini Flash sıralı fallback kullanır. Gemini 2.5 Pro sadece `DEEP_THINK_PRO=true` env var ile aktifleşir (opt-in). Eskiden her deep think çağrısı Pro'ya giderdi → maliyet düştü.
 - **Tip güvenliği:** `tsc --noEmit` 0 hata, `eslint --quiet` temiz
 
+## ✅ Faz M — Model-Seçim UI/UX Hata Giderme (28 Haz 2026)
+
+- **3 farklı ProductionTemplate tipi senkronize edildi**: Frontend types.ts (14 değer), backend validation.ts (10 değer), backend templatePromptService (32 değer) — hepsi 40+ değerle uyumlu hale getirildi.
+- **Backend validation gevşetildi**: `validation.ts`'de validTemplates 10→40. `sadtalker`, `mochi`, `geneface`, `dynamicrafter`, `zeroscope`, `pyramid-flow`, `video-retalking`, `veo31` artık validation'dan geçiyor.
+- **Template endpoint'i tüm template'leri kabul ediyor**: Model-based template'ler (sadtalker, mochi vs.) için fallback preview döner, 400 hatası vermez.
+- **ProjectForm.tsx**:
+  - `cogvideox2b` 4 tekrarı temizlendi (dropdown'da aynı option 1 kere görünür)
+  - `wan25`, `animatediff`, `svd`, `videocrafter` template listesine eklendi
+  - MODEL_MAP güncellendi, tüm model→template eşlemesi tutarlı
+- **Galeri fallback düzeltildi**: GalleryPanel/Dashboard/ExamplesPanel `'CogVideo'` → `'CogVideoX-5b'`
+- **Frontend ProductionTemplate tipi güncellendi**: Backend'deki 32 style template + 12 model template kapsanır
+- **TypeScript**: Backend tsc 0 hata, frontend tsc 0 hata
+- **Test**: 4 yeni docker route testi eklendi
+
 ## 🧪 Faz 7C — Entegrasyon Testleri Tamamlandı (23 Haziran 2026)
 
 - **23 test, 8 suite:** Auth/Session (5), Queue Sıralama (1), API Routes (6), File Upload (1), SSE Broadcast (3), Trend Analysis (2), Database CRUD (3), External Service Health (2)
@@ -345,6 +359,20 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **V1→V2 migration**: storyboardGenerator.ts `runsync` artık `RunPodClient.runSync()` kullanıyor. browserUseService, inpaintingService, videoToVideoService type fix'leri.
 - **Küçük refactor**: `download.ts` — queue.ts içindeki inline download helper'ı modüler dosyaya taşındı. `docker-host.ts` — videocrafter, realesrgan, browser-use port eklendi.
 - **Test**: 539 ✅ / 34 ⏸️ (573 total), tsc 0 hata, commit `0f8c5d2`
+
+## ✅ Faz M — Model-Specific Prompt Formatting (28 Haz 2026)
+
+- **`src/services/modelPromptBuilder.ts`** — Yeni dosya. `buildModelPrompt()` her model tipi için `model_parameters_and_prompts.md`'deki optimize şablonu uygular (Wan/Hunyuan/CogVideoX/LTX/AnimateDiff/ZeroScope/DynamiCrafter/Mochi/Pyramid-Flow/VideoCrafter/SVD). `modelAcceptsPrompt()` SVD için prompt'u boş döndürür (image-only).
+- **`runpodEndpoints.ts`** — defaultInput parametreleri `model_parameters_and_prompts.md`'ye göre düzeltildi:
+  - `wan`: fps:8, `wan25`: fps:16, `ltx`: num_frames:65+fps:8
+  - `svd`: fps:7, `zeroscope`: 1024x576@8fps
+  - `animatediff`/`dynamicrafter`: fps:8, `hunyuan`: num_frames/width/height kaldırıldı
+  - `veo31` eklendi (cloud API, endpoint required değil)
+- **`queue.ts`** — modelType belirleme prompt inşası ÖNCESİNE taşındı. `buildModelPrompt()` kullanılıyor.
+- **`queue-graph.ts`** — Aynı prompt builder eklendi.
+- **Model Motoru dropdown canlandı**: Fake `MODELS` kaldırıldı, `MODEL_ENGINE_OPTIONS` ile 14 gerçek model key'i. PRO rozeti → "opsiyonel". `model_type` backend'e gönderilip DB'ye yazılıyor.
+- **TypeScript**: tsc --noEmit backend 0, frontend 0 hata.
+- **ESLint**: 0 hata.
 
 ## Genel Durum
 

@@ -677,18 +677,30 @@ async function startProduction(job: VideoJob) {
           completedScenes: scene.scene_number - 1,
         });
 
-        // Kamera hareketini prompta ekleyelim (VRAM harcamayan prompt engineering metodu)
-        let customPrompt = scene.video_prompt || '';
-        if (scene.camera_motion && scene.camera_motion !== 'none') {
-          const motionPrompts: Record<string, string> = {
-            zoom_in: ', camera zooming in slowly, cinematic zoom, forward motion',
-            zoom_out: ', camera zooming out slowly, cinematic zoom-out, pulling back',
-            pan_left: ', panning left slowly, camera moving left',
-            pan_right: ', panning right slowly, camera moving right',
-            breathing: ', subtle camera breathing motion, slow organic camera handheld movement',
-          };
-          const motionSuffix = motionPrompts[scene.camera_motion] || '';
-          customPrompt = customPrompt + motionSuffix;
+        // Model type determination
+        let modelType = 'CogVideoX-5b';
+        if (job.production_template === 'cinematic') {
+          modelType = 'HunyuanVideo';
+        } else if (job.production_template === 'dynamic' || job.production_template === 'pixar') {
+          modelType = 'Wan2.1';
+        } else if (job.production_template === 'simple') {
+          modelType = 'LTX-Video';
+        } else if (job.production_template === 'animatediff') {
+          modelType = 'AnimateDiff';
+        } else if (job.production_template === 'svd' || job.model_type === 'SVD-XT') {
+          modelType = 'SVD-XT';
+        } else if (job.production_template === 'cogvideox5b' || job.model_type === 'CogVideoX-5b') {
+          modelType = 'CogVideoX-5b';
+        } else if (job.production_template === 'cogvideox2b') {
+          modelType = 'CogVideoX-2b';
+        } else if (job.production_template === 'wan25') {
+          modelType = 'Wan2.5';
+        } else if (job.production_template === 'wan2.2-comfyui') {
+          modelType = 'Wan2.2-ComfyUI';
+        } else if (job.production_template === 'veo31') {
+          modelType = 'Veo-31';
+        } else if (job.model_type) {
+          modelType = job.model_type;
         }
 
         // Karakter profili (boy, kg, olculer) zenginlestirmesi
@@ -704,9 +716,15 @@ async function startProduction(job: VideoJob) {
             // Servir yuklenemezse orjinal feature kullan
           }
         }
-        const finalPrompt =
-          (finalCharacterFeatures ? `${finalCharacterFeatures}, ${customPrompt}` : customPrompt) ||
-          '';
+
+        // Model-specific prompt formatting
+        const { buildModelPrompt, modelAcceptsPrompt } = await import('./services/modelPromptBuilder.js');
+        const finalPrompt = buildModelPrompt({
+          videoPrompt: scene.video_prompt || '',
+          cameraMotion: scene.camera_motion,
+          characterFeatures: finalCharacterFeatures,
+          modelType,
+        });
         let referenceImageBase64 = '';
         let sendSourceVideoId = '';
 
@@ -783,31 +801,6 @@ async function startProduction(job: VideoJob) {
               Logger.warn(`[LoRA] No weights found for character "${scene.speaker}", proceeding without LoRA`, e);
             }
           }
-        }
-
-        let modelType = 'CogVideoX-5b';
-        if (job.production_template === 'cinematic') {
-          modelType = 'HunyuanVideo';
-        } else if (job.production_template === 'dynamic' || job.production_template === 'pixar') {
-          modelType = 'Wan2.1';
-        } else if (job.production_template === 'simple') {
-          modelType = 'LTX-Video';
-        } else if (job.production_template === 'animatediff') {
-          modelType = 'AnimateDiff';
-        } else if (job.production_template === 'svd' || job.model_type === 'SVD-XT') {
-          modelType = 'SVD-XT';
-        } else if (job.production_template === 'cogvideox5b' || job.model_type === 'CogVideoX-5b') {
-          modelType = 'CogVideoX-5b';
-        } else if (job.production_template === 'cogvideox2b') {
-          modelType = 'CogVideoX-2b';
-        } else if (job.production_template === 'wan25') {
-          modelType = 'Wan2.5';
-        } else if (job.production_template === 'wan2.2-comfyui') {
-          modelType = 'Wan2.2-ComfyUI';
-        } else if (job.production_template === 'veo31') {
-          modelType = 'Veo-31';
-        } else if (job.model_type) {
-          modelType = job.model_type;
         }
 
         // ── Karakter ve Ses Algılama ──

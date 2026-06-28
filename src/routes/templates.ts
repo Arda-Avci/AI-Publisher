@@ -9,13 +9,20 @@ import {
   getAllTemplatePreviews,
   enhancePromptForTemplate,
   ProductionTemplate,
+  TEMPLATE_NAMES,
+  TEMPLATE_DESCRIPTIONS,
 } from '../services/templatePromptService';
 import { Logger } from '../lib/logger.js';
 
 const router = Router();
 
-// Valid templates
-const VALID_TEMPLATES: ProductionTemplate[] = ['cinematic', 'dynamic', 'simple', 'pixar'];
+/** All valid template names (32 style + model templates) */
+const ALL_TEMPLATES: readonly string[] = [
+  ...TEMPLATE_NAMES,
+  'cogvideox5b', 'cogvideox2b', 'sadtalker', 'dynamicrafter',
+  'zeroscope', 'geneface', 'pyramid-flow', 'video-retalking',
+  'mochi', 'veo31', 'animatediff', 'svd', 'wan25', 'wan2.2-comfyui',
+];
 
 /**
  * GET /api/v1/templates
@@ -39,16 +46,32 @@ router.get('/:template/preview', async (req, res) => {
   try {
     const { template } = req.params;
 
-    if (!VALID_TEMPLATES.includes(template as ProductionTemplate)) {
+    if (!ALL_TEMPLATES.includes(template)) {
       return res.status(400).json({
         success: false,
-        error: `Invalid template. Must be one of: ${VALID_TEMPLATES.join(', ')}`,
+        error: `Invalid template. Must be one of: ${ALL_TEMPLATES.join(', ')}`,
       });
     }
 
     const niche = req.query.niche as string | undefined;
-    const preview = await generateTemplatePreview(template as ProductionTemplate, niche);
 
+    if (!TEMPLATE_DESCRIPTIONS[template as ProductionTemplate]) {
+      return res.json({
+        success: true,
+        preview: {
+          title: template,
+          description: `${template} modeli için doğrudan üretim.`,
+          samplePrompts: [],
+          recommendedScenes: 5,
+          strengths: ['Doğrudan model kullanımı'],
+          bestFor: ['Bu modele özel projeler'],
+          cameraStyles: [],
+          colorPalette: [],
+        },
+      });
+    }
+
+    const preview = await generateTemplatePreview(template as ProductionTemplate, niche);
     res.json({ success: true, preview });
   } catch (error) {
     Logger.error('Failed to get template preview', error);
@@ -69,11 +92,15 @@ router.post('/:template/enhance-prompt', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Prompt is required' });
     }
 
-    if (!VALID_TEMPLATES.includes(template as ProductionTemplate)) {
+    if (!ALL_TEMPLATES.includes(template)) {
       return res.status(400).json({
         success: false,
-        error: `Invalid template. Must be one of: ${VALID_TEMPLATES.join(', ')}`,
+        error: `Invalid template. Must be one of: ${ALL_TEMPLATES.join(', ')}`,
       });
+    }
+
+    if (!TEMPLATE_DESCRIPTIONS[template as ProductionTemplate]) {
+      return res.json({ success: true, enhanced: prompt });
     }
 
     const enhanced = await enhancePromptForTemplate(prompt, template as ProductionTemplate);

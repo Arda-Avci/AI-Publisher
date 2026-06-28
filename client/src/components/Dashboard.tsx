@@ -183,7 +183,7 @@ export function Dashboard({ jobs, userCredits, onSelectJob, onNewProject, onOpen
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>{job.total_scenes || 0} {t('sahne', 'scenes')}</span>
-                    <span>{job.model_type || 'CogVideo'}</span>
+                    <span>{job.model_type || 'CogVideoX-5b'}</span>
                   </div>
                 </div>
               </div>

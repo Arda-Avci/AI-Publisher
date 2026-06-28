@@ -121,9 +121,19 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [x] `test_narrativeAgents.spec.ts` — 15 test, Phase B + G
 - [x] `test_competitive_features.spec.ts` — 13 → 29 test
 
+## ✅ Faz M — Model-Specific Prompt Formatting (28 Haz 2026)
+- [x] `modelPromptBuilder.ts` — `buildModelPrompt()` her model için optimize prompt şablonu
+- [x] `runpodEndpoints.ts` — defaultInput düzeltmeleri (fps/num_frames/width/height)
+- [x] `veo31` cloud API registry'e eklendi
+- [x] `queue.ts` — modelType belirleme öne çekildi, modelPromptBuilder kullanılıyor
+- [x] `queue-graph.ts` — modelPromptBuilder entegre edildi
+- [x] Model Motoru dropdown canlandı: `MODEL_ENGINE_OPTIONS` (14 model), `model_type` backend'e gönderiliyor
+- [x] `App.tsx` + `routes/jobs.ts` — model_type form/DB akışı tamam
+- [x] tsc --noEmit 0 hata (backend + frontend)
+
 ### Bekleyen (Açık İşler)
 - [x] `docker-compose.yml` (root) — PostgreSQL + Redis + Neo4j + RabbitMQ (26 Haz)
-- [ ] Docker build: sadtalker, svd, wan, wan25, wav2lip
+- [x] Docker build: sadtalker, svd, wan, wan25, wav2lip (Hepsi 26-27 Haz'da derlendi)
 - [x] Faz H: Frontend — StoryboardPanel (tab), CameraControlPanel, App.tsx entegrasyon (26 Haz)
 - [x] Faz H: Timeline drag-reorder tum track + transition strip (26 Haz)
 - [x] Faz K: Kapsamlı integration test full pipeline (3 test dosyası) — ✅ TAMAMLANDI
@@ -206,31 +216,29 @@ Kaynak: `Script_writer_is_akisi.txt`
 
 ---
 
-## Bekleyen İşler
-
-### ☁️ RunPod Altyapı + E2E Test
-- [x] Port yönlendirme testi (5001-5012) — `scripts/test-ports.ts`
-- [x] RunPod callback (webhook) POST → diske yazma doğrulama — `src/test_webhook_e2e.spec.ts` (5 test)
-- [x] Wan 2.1/2.5 imajlarının Colab'de yeniden derlenip GHCR'a pushlanması
-- [x] RunPod serverless endpoint sorgusu (Hesapta aktif endpoint bulunmadığı doğrulandı, 404 durumu netleşti)
-- [x] RunPod üzerinde yeni serverless endpoint (`rojgtzuf3nztup`) oluşturulduktan sonra `test_wan_serverless.js` ile video üretim doğrulaması
-  - [x] LTX-Video `scaled_dot_product_attention` özyineleme (recursion) hatası giderildi (yamalar idempotent yapıldı)
-  - [x] LTX-Video tokenizer'ı için eksik `tiktoken` ve `protobuf` bağımlılıkları base imaja eklendi ve base imaj yeniden derlendi
-  - [x] Hugging Face `transformers` lazy-loading Placeholder hatasını çözmek için T5 modülleri force-import edildi
-  - [x] RunPod template'i en son commit hash etiketli imajla güncellenip worker'lar sıfırlanarak test edildi
-- [x] Tüm modeller için test script'i — `scripts/test-all-models.ts` (--all/--video/--audio/--face)
-- [x] RunPod API v2 tam geçiş — runsync, health, stream, pollUntilComplete, listEndpoints
-- [x] 24-model endpoint registry — `src/services/runpodEndpoints.ts`
+## 🔴 Aktif İşler
 
 ### 💳 iyzico Ödeme — Canlı Test
 - [ ] Sandbox merchant panel → API key + abonelik plan kodları
 - [ ] Sanal kartla manuel checkout/webhook testi
 - [x] Kredi blokajı (render başında bloke, bitince düş, iptalde refund)
 
-### 📦 GHCR → RunPod
-- [x] 7 model ContainerManager entegrasyonu + endpoint (SadTalker, DynamiCrafter, Zeroscope, Video-ReTalking, GeneFace++, Mochi-1, Pyramid-Flow)
+### 🎬 Prompt Generation Control
+- [ ] Short mode → prompt enhancer'ın doğru çalıştığından emin ol
+- [ ] Film/Series mode → AI'nın anlatı yapısına uygun prompt ürettiğini doğrula
+- [ ] Model-specific prompt'ların model_parameters_and_prompts.md şablonlarına uyduğunu kontrol et
 
 ---
+
+## ✅ Tamamlanan Faz M (28 Haz 2026)
+- [x] modelPromptBuilder.ts — `buildModelPrompt()` her model için optimize prompt şablonu
+- [x] runpodEndpoints.ts — defaultInput düzeltmeleri (fps/num_frames/width/height)
+- [x] veo31 cloud API registry'e eklendi
+- [x] queue.ts — modelType belirleme öne çekildi, modelPromptBuilder kullanılıyor
+- [x] queue-graph.ts — modelPromptBuilder entegre edildi
+- [x] Model Motoru dropdown canlandı: MODEL_ENGINE_OPTIONS (14 model), model_type backend'e gönderiliyor
+- [x] App.tsx + routes/jobs.ts — model_type form/DB akışı tamam
+- [x] tsc --noEmit 0 hata (backend + frontend)
 
 ## Notlar
 - Docker Hub kullanılmaz. Tüm imajlar → GHCR (`ghcr.io/Arda-Avci/`)

@@ -330,7 +330,13 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
     const audioPath = tempPath(jobId, `ts_${sceneNum}.wav`);
     const sfxPath = tempPath(jobId, `te_${sceneNum}.wav`);
     const srtPath = tempPath(jobId, `srt_${sceneNum}.srt`);
-    const finalPrompt = scene.video_prompt || job?.master_prompt || 'cinematic scene';
+    const { buildModelPrompt } = await import('./services/modelPromptBuilder.js');
+    const finalPrompt = buildModelPrompt({
+      videoPrompt: scene.video_prompt || job?.master_prompt || 'cinematic scene',
+      cameraMotion: scene.camera_motion,
+      characterFeatures: job?.character_features || '',
+      modelType,
+    });
 
     try {
       const endpointId = modelToEndpointId(modelType);

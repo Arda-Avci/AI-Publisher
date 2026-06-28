@@ -19,7 +19,7 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_ANIMATEDIFF_ENDPOINT_ID',
     category: 'video',
     description: 'AnimateDiff text-to-video animation',
-    defaultInput: { prompt: '', num_frames: 16, width: 512, height: 512 },
+    defaultInput: { prompt: '', num_frames: 16, width: 512, height: 512, fps: 8 },
   },
   'audioldm2': {
     modelName: 'AudioLDM2',
@@ -47,7 +47,7 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_DYNAMICRAFTER_ENDPOINT_ID',
     category: 'video',
     description: 'DynamiCrafter image-to-video',
-    defaultInput: { prompt: '', image_url: '', num_frames: 16 },
+    defaultInput: { prompt: '', image_url: '', num_frames: 16, fps: 8 },
   },
   'f5tts': {
     modelName: 'F5-TTS',
@@ -68,7 +68,7 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_HUNYUANVIDEO_ENDPOINT_ID',
     category: 'video',
     description: 'HunyuanVideo text-to-video',
-    defaultInput: { prompt: '', num_frames: 49, width: 848, height: 480 },
+    defaultInput: { prompt: '' },
   },
   'kokorotts': {
     modelName: 'Kokoro-TTS',
@@ -89,7 +89,7 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_LTX_ENDPOINT_ID',
     category: 'video',
     description: 'LTX-Video text-to-video generation',
-    defaultInput: { prompt: '', num_frames: 49, width: 768, height: 432 },
+    defaultInput: { prompt: '', num_frames: 65, width: 768, height: 432, fps: 8 },
   },
   'mochi': {
     modelName: 'Mochi-1',
@@ -131,7 +131,7 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_SVD_ENDPOINT_ID',
     category: 'video',
     description: 'Stable Video Diffusion XT image-to-video',
-    defaultInput: { image_url: '', num_frames: 25, fps: 6 },
+    defaultInput: { image_url: '', num_frames: 25, fps: 7 },
   },
   'video-retalking': {
     modelName: 'Video-ReTalking',
@@ -152,14 +152,14 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_WAN_ENDPOINT_ID',
     category: 'video',
     description: 'Wan2.1 text-to-video',
-    defaultInput: { prompt: '', num_frames: 81, width: 832, height: 480 },
+    defaultInput: { prompt: '', num_frames: 81, width: 832, height: 480, fps: 8 },
   },
   'wan25': {
     modelName: 'Wan2.5',
     envVar: 'RUNPOD_WAN25_ENDPOINT_ID',
     category: 'video',
     description: 'Wan2.5 text-to-video (improved)',
-    defaultInput: { prompt: '', num_frames: 81, width: 832, height: 480 },
+    defaultInput: { prompt: '', num_frames: 81, width: 832, height: 480, fps: 16 },
   },
   'wan22-comfyui': {
     modelName: 'Wan2.2-ComfyUI',
@@ -194,7 +194,14 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     envVar: 'RUNPOD_ZEROSCOPE_ENDPOINT_ID',
     category: 'video',
     description: 'ZeroScope text-to-video',
-    defaultInput: { prompt: '', num_frames: 24, width: 576, height: 320 },
+    defaultInput: { prompt: '', num_frames: 24, width: 1024, height: 576, fps: 8 },
+  },
+  'veo31': {
+    modelName: 'Veo-31',
+    envVar: 'RUNPOD_VEO31_ENDPOINT_ID',
+    category: 'video',
+    description: 'Google Veo 3.1 (cloud API, no RunPod endpoint)',
+    defaultInput: { prompt: '', aspect_ratio: '16:9' },
   },
   'browser-use': {
     modelName: 'Browser-Use',

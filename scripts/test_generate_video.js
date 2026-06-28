@@ -15,9 +15,9 @@ if (!RUNPOD_API_KEY || RUNPOD_API_KEY.includes('your_runpod_api_key_here')) {
 // Format for our custom Flask API (ghcr.io/arda-avci/ai-publisher-wan)
 const payload = {
   input: {
-    prompt: "A beautiful cinematic shot of a neon cyber city at night, rain reflections, high quality, 4k",
-    num_frames: 49,          // Fast test generation (around 6 seconds at 8fps)
-    num_inference_steps: 15, // Fast test generation
+    prompt: "Slow-motion close-up video of three heavy solid square ice cubes falling from the air and splashing one by one into a crystal glass. The crystal glass is filled with amber-brown liquor whiskey. As each ice cube plunges into the glass, the liquid whiskey displaces, creating a dynamic splash of brown droplets spraying upwards over the edges of the glass. The glass sits on a blue tablecloth. The background is a dimly lit, cozy warm rustic wooden living room. Highly detailed fluid physics, photorealistic, 4k",
+    num_frames: 81,          // 10 seconds of high-fidelity dynamic video
+    num_inference_steps: 50, // Optimal inference steps for LTX-Video to compute realistic physics and details
     b2_credentials: {
       endpoint_url: process.env.B2_ENDPOINT_URL,
       key_id: process.env.B2_KEY_ID,

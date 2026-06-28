@@ -150,7 +150,17 @@ export interface TrendSummary {
   topCategories: { category: string; count: number }[];
 }
 
-export type ProductionTemplate = 'cinematic' | 'dynamic' | 'simple' | 'pixar' | 'cogvideox5b' | 'cogvideox2b' | 'sadtalker' | 'dynamicrafter' | 'zeroscope' | 'geneface' | 'pyramid-flow' | 'video-retalking' | 'mochi' | 'veo31';
+export type ProductionTemplate =
+  | 'cinematic' | 'noir' | 'epic' | 'atmospheric' | 'dynamic'
+  | 'viral_tiktok' | 'shorts_fast' | 'reel_aesthetic' | 'trending' | 'challenge'
+  | 'asmr' | 'unboxing' | 'simple' | 'tutorial' | 'whiteboard'
+  | 'explainer' | 'keynote' | 'documentary' | 'pixar' | 'anime'
+  | 'retro_vhs' | 'glitch_art' | 'claymation' | 'stop_motion' | 'gaming_montage'
+  | 'fitness' | 'cooking' | 'travel_vlog' | 'corporate' | 'luxury'
+  | 'wedding' | 'real_estate'
+  | 'cogvideox5b' | 'cogvideox2b' | 'wan25' | 'animatediff' | 'svd' | 'videocrafter'
+  | 'sadtalker' | 'dynamicrafter' | 'zeroscope' | 'geneface' | 'pyramid-flow'
+  | 'video-retalking' | 'mochi' | 'veo31' | 'wan2.2-comfyui';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
 export type Language = 'tr' | 'en' | 'de' | 'fr' | 'es' | 'ar';

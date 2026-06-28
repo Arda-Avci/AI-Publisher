@@ -413,6 +413,7 @@ export default function App() {
       fd.append('tts_provider', ttsProvider);
       fd.append('tts_voice', ttsVoice);
       fd.append('production_template', productionTemplate);
+      fd.append('model_type', selectedModel);
       fd.append('has_shorts', hasShorts ? '1' : '0');
       fd.append('has_subtitles', hasSubtitles ? '1' : '0');
       fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0');
@@ -441,6 +442,7 @@ export default function App() {
     fd.append('tts_provider', ttsProvider);
     fd.append('tts_voice', ttsVoice);
     fd.append('production_template', productionTemplate);
+    fd.append('model_type', selectedModel);
     fd.append('has_shorts', hasShorts ? '1' : '0');
     fd.append('has_subtitles', hasSubtitles ? '1' : '0');
     fd.append('brand_kit_enabled', brandKitEnabled ? '1' : '0');
