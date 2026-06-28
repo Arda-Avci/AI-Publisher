@@ -157,10 +157,7 @@ export type ProductionTemplate =
   | 'explainer' | 'keynote' | 'documentary' | 'pixar' | 'anime'
   | 'retro_vhs' | 'glitch_art' | 'claymation' | 'stop_motion' | 'gaming_montage'
   | 'fitness' | 'cooking' | 'travel_vlog' | 'corporate' | 'luxury'
-  | 'wedding' | 'real_estate'
-  | 'cogvideox5b' | 'cogvideox2b' | 'wan25' | 'animatediff' | 'svd' | 'videocrafter'
-  | 'sadtalker' | 'dynamicrafter' | 'zeroscope' | 'geneface' | 'pyramid-flow'
-  | 'video-retalking' | 'mochi' | 'veo31' | 'wan2.2-comfyui';
+  | 'wedding' | 'real_estate';
 export type Platform = 'youtube' | 'tiktok' | 'x' | 'meta';
 export type TtsProvider = 'edge' | 'openai' | 'xtts';
 export type Language = 'tr' | 'en' | 'de' | 'fr' | 'es' | 'ar';

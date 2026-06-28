@@ -256,7 +256,7 @@ export function registerPublishRoutes(app: Application): void {
     }
 
     try {
-      const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
+      const job: any = await db.get('SELECT * FROM video_jobs WHERE id = ? AND user_id = ?', [jobId, req.session.userId]);
       if (!job) {
         return res.json({ success: false, error: 'Job bulunamadi.' });
       }

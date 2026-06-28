@@ -10,7 +10,10 @@ let _key: Buffer | null = null;
 
 function getKey(): Buffer {
   if (!_key) {
-    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'gizli_bir_sifreleme_anahtari_123';
+    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+    if (!ENCRYPTION_KEY) {
+      throw new Error('ENCRYPTION_KEY environment variable is required');
+    }
     _key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
   }
   return _key;

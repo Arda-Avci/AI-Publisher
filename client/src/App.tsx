@@ -95,7 +95,7 @@ export default function App() {
   const [progressPercent, setProgressPercent] = useState(0);
   const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const [selectedModel, setSelectedModel] = useState('Publisher Cinematic V3');
+  const [selectedModel, setSelectedModel] = useState('');
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [camIntensity, setCamIntensity] = useState(0.75);
   const [settingsOpen, setSettingsOpen] = useState(false);

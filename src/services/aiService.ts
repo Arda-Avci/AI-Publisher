@@ -298,40 +298,6 @@ export const PodcastScriptSchema = z.object({
   ),
 });
 
-export async function generatePodcastScript(
-  topic: string,
-  characters: string,
-): Promise<z.infer<typeof PodcastScriptSchema>> {
-  const models = getAIModelChain();
-
-  const prompt = `Sen profesyonel bir podcast ve talk-show yapımcısısın.
-Konu: ${topic}
-Katılımcı Personalar / Karakterler: ${characters}
-
-Görevlerin:
-1. Bu konu etrafında, personaların karakter özelliklerine ve ses tonlarına uygun olarak akıcı ve tartışmalı bir diyalog (script) oluştur.
-2. Diyalogları ardışık konuşma blokları halinde tasarla (her blok maksimum 6 saniye sürecek şekilde ayarlanmalı).
-3. Konuşmaların arasına ve arkasına uygun ses efektleri (sfxPrompt) yerleştir.
-4. Çıktıyı tamamen Türkçe olarak, Zod şemasına uygun biçimde üret.`;
-
-  const result = await withFallbackAndRetry(
-    (model) => {
-      return generateObject({
-        model,
-        schema: PodcastScriptSchema,
-        abortSignal: AbortSignal.timeout(60000),
-        prompt,
-      });
-    },
-    models,
-    2,
-    2000,
-    true,
-  );
-
-  return result.object;
-}
-
 export const TutorialSchema = z.object({
   tutorialTitle: z.string(),
   scenes: z.array(

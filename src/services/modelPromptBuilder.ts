@@ -1,3 +1,5 @@
+import { Logger } from '../lib/logger.js';
+
 const MOTION_MAP: Record<string, string> = {
   zoom_in: 'camera zooming in slowly, cinematic zoom, forward motion',
   zoom_out: 'camera zooming out slowly, cinematic zoom-out, pulling back',
@@ -101,6 +103,7 @@ export function buildModelPrompt(input: BuildPromptInput): string {
   }
 
   // Default fallback
+  Logger.debug(`[buildModelPrompt] Unknown modelType "${modelType}", using raw prompt`);
   const parts = [features, base, motion].filter(Boolean);
   return parts.join(', ') || '';
 }

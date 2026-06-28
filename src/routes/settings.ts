@@ -21,7 +21,7 @@ export function registerSettingsRoutes(app: Application): void {
     res.json({ success: true, user });
   });
 
-  app.post('/api/v1/set-language', (req, res) => {
+  app.post('/api/v1/set-language', requireAuth, (req, res) => {
     const { lang } = req.body;
     if (lang === 'tr' || lang === 'en' || lang === 'de' || lang === 'fr' || lang === 'es' || lang === 'ar') {
       req.session.lang = lang;
