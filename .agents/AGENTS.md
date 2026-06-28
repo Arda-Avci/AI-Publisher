@@ -44,3 +44,33 @@ Bu dosya, AI-Publisher projesinde karşılaşılan ve çözüme kavuşturulan ka
 
 ### 3. Asla Mock Kullanılmaması Kuralı
 - **Kural**: Projenin asıl kodlarında (`src/` klasörü altında) veya çalışma mantığında asla mock kullanılmamalıdır. Hatalar maskelenmemeli, doğrudan fırlatılarak hatanın kaynağı görünür kılınmalıdır. Sadece üçüncü parti kütüphanelerin sürüm uyumsuzluklarını aşmak için gerekli dinamik maymun yamaları (monkey-patching) yukarıda 1. maddede gösterildiği gibi izole biçimde uygulanmalıdır.
+
+### 4. Fonksiyonel Kapsamda Değişken Gölgeleme (Variable Shadowing) ve UnboundLocalError
+- **Sorun**: Bir python fonksiyonu (örn: `generate()`) içerisinde local düzeyde yapılan `import torch` veya `import importlib` gibi import tanımlamaları, Python yorumlayıcısı tarafından fonksiyonun tüm kapsamı (scope) boyunca yerel değişken olarak algılanır. Bu durum, diagnose dışındaki video üretim dalları çalıştığında `UnboundLocalError: local variable 'torch' referenced before assignment` hatasına sebep olur.
+- **Kural**: Global düzeyde import edilmiş modüller, fonksiyonlar içindeki alt bloklarda lokal olarak tekrar `import` edilmemelidir. Global nesne referansları doğrudan kullanılmalıdır.
+
+### 5. `torch.get_default_device` Eksikliği Giderimi
+- **Sorun**: PyTorch 2.2.1 ve eski özel imaj runtimelarında, `transformers` v5+ tarafından çağrılan `torch.get_default_device()` metodunun bulunmaması sebebiyle model yüklenirken `AttributeError` fırlatılır.
+- **Kural**: Model yüklenmeden önce `torch` modülüne bu metot dinamik olarak yamalanmalıdır:
+  ```python
+  if not hasattr(torch, "get_default_device"):
+      torch.get_default_device = lambda: torch.device("cpu")
+  ```
+
+### 6. Backblaze B2 S3 API Endpoint ve Bölge (Region) Eşleşmesi
+- **Sorun**: Boto3 (Python) veya AWS SDK (Node.js) ile Backblaze B2'ye dosya yüklerken, endpoint URL (örn: `https://s3.eu-central-003.backblazeb2.com`) ile istemciye parametre geçilen bölge (örn: `us-west-004`) uyuşmadığında, imza doğrulama adımı başarısız olur ve B2 API'si `Malformed Access Key Id` / `InvalidAccessKeyId` hatası döner.
+- **Kural**: B2 S3 istemcisi yapılandırılırken bölge adı (`region_name`), endpoint URL'den dinamik olarak parse edilmelidir:
+  * Python:
+    ```python
+    region = "us-west-004"
+    if "s3." in endpoint:
+        region = endpoint.split("s3.")[1].split(".")[0]
+    ```
+  * TypeScript:
+    ```typescript
+    let region = 'us-west-004';
+    if (endpoint.includes('s3.')) {
+      region = endpoint.split('s3.')[1]?.split('.')[0] || 'us-west-004';
+    }
+    ```
+
