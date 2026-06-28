@@ -44,6 +44,15 @@ torch.__version__ = "2.4.0"
 if not hasattr(torch, "get_default_device"):
     torch.get_default_device = lambda: torch.device("cpu")
 
+# Patch torch.library.custom_op for PyTorch < 2.4.0 (transformers v5 MoE compatibility)
+import torch.library
+if not hasattr(torch.library, "custom_op"):
+    def dummy_custom_op(*args, **kwargs):
+        def decorator(f):
+            return f
+        return decorator
+    torch.library.custom_op = dummy_custom_op
+
 # Patch torch.nn.RMSNorm for PyTorch < 2.4.0
 import torch.nn as nn
 if not hasattr(nn, "RMSNorm"):
