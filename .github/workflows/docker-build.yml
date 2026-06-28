@@ -114,6 +114,23 @@ jobs:
           - ltx
           - hunyuan
           - stablediffusion
+          - animatediff
+          - audioldm2
+          - cogvideox
+          - dynamicrafter
+          - f5tts
+          - kokorotts
+          - lora-trainer
+          - mochi
+          - musetalk
+          - pyramid-flow
+          - realesrgan
+          - sadtalker
+          - svd
+          - videocrafter
+          - whisper
+          - xtts
+          - zeroscope
     steps:
       - uses: actions/checkout@v4
 
