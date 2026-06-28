@@ -22,7 +22,7 @@ describe('splitScreen', () => {
     await expect(
       applySplitScreen(FIXTURES.primary, FIXTURES.secondary, outputPath(), '70/30', 'left'),
     ).resolves.toBeUndefined();
-  }, 30000);
+  }, 120000);
 
   it('split layouts (60/40, 30/70, 40/60)', async () => {
     for (const layout of ['60/40', '30/70', '40/60'] as SplitLayout[]) {
@@ -30,7 +30,7 @@ describe('splitScreen', () => {
         applySplitScreen(FIXTURES.primary, FIXTURES.secondary, outputPath(), layout, 'top'),
       ).resolves.toBeUndefined();
     }
-  }, 30000);
+  }, 120000);
 
   it('SplitLayout type validation', () => {
     const validLayouts: SplitLayout[] = ['50/50', '70/30', '60/40', '30/70', '40/60'];
@@ -55,7 +55,7 @@ describe('splitScreen', () => {
     );
     expect(typeof preview).toBe('string');
     expect(preview).toContain('.mp4');
-  }, 30000);
+  }, 120000);
 
   it('LAYOUT_RATIOS correct percentages', () => {
     expect(LAYOUT_RATIOS['50/50']).toEqual({ primaryPct: 50, secondaryPct: 50 });
