@@ -11,7 +11,7 @@ let _key: Buffer | null = null;
 
 function getKey(): Buffer {
   if (!_key) {
-    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || (process.env.NODE_ENV === 'test' ? 'test-key-for-unit-tests-only' : undefined);
     if (!ENCRYPTION_KEY) {
       throw new Error('ENCRYPTION_KEY environment variable is required');
     }
