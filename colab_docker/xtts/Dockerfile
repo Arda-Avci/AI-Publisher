@@ -15,9 +15,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     soundfile
 
 # Build-time weight download (TTS_MODEL = tts_models/multilingual/multi-dataset/xtts_v2)
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "coqui/XTTS-v2" "tts_models/multilingual/multi-dataset/xtts_v2"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "coqui/XTTS-v2" "tts_models/multilingual/multi-dataset/xtts_v2"
 
 COPY app.py /app/app.py
 WORKDIR /app

@@ -40,8 +40,8 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     "facexlib"
 
 # Build-time weight download (inline python script block to avoid standalone file dependency issues in Kaniko)
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
     mkdir -p /app/MuseTalk/models && \
     cd /app/MuseTalk && \
     HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \

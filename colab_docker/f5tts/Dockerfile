@@ -7,9 +7,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     librosa
 
 # Build-time weight download (F5-TTS: Vocos + inference checkpoints)
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "charactr/vocos-mel-24khz"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "charactr/vocos-mel-24khz"
 
 COPY app.py /app/app.py
 WORKDIR /app

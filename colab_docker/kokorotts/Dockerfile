@@ -6,9 +6,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     munch
 
 # Build-time weight download (kokoro implicit olarak hexgrad/Kokoro-82M indirir)
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "hexgrad/Kokoro-82M"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "hexgrad/Kokoro-82M"
 
 COPY app.py /app/app.py
 WORKDIR /app

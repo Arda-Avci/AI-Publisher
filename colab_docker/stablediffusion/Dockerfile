@@ -1,4 +1,4 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # Trigger build for SDXL integration v5
 # Install Stable Diffusion specific packages
@@ -10,10 +10,10 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     rembg
 
 # Build-time weight download
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "Lykon/dreamshaper-8" && \
-    /tmp/download_weights.sh "runwayml/stable-diffusion-inpainting"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "Lykon/dreamshaper-8" && \
+#     /tmp/download_weights.sh "runwayml/stable-diffusion-inpainting"
 
 COPY app.py /app/app.py
 WORKDIR /app
