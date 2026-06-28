@@ -76,9 +76,10 @@ def get_pipeline():
         torch_dtype=torch.float16
     )
 
-    if vram_gb >= 18.0:
+    if vram_gb >= 40.0:
         pipe.to("cuda")
     else:
+        print(f"[CONTAINER - WAN25] VRAM ({vram_gb:.2f} GB) is under 40GB, enabling model CPU offload")
         pipe.enable_model_cpu_offload()
         if vram_gb < 20.0:
             print("[CONTAINER - WAN25] VRAM < 20GB, enabling sequential CPU offload")

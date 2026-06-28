@@ -114,7 +114,7 @@ async function createEndpoint(model, templateId) {
     saveEndpoint(input: {
       name: "${model.name}",
       templateId: "${templateId}",
-      gpuIds: "ADA_24,ADA_48_PRO,AMPERE_80,ADA_80_PRO,ADA_32_PRO",
+      gpuIds: "AMPERE_16,AMPERE_24,ADA_24",
       workersMin: 0,
       workersMax: 2,
       idleTimeout: 5

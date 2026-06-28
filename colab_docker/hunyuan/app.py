@@ -77,10 +77,14 @@ def get_pipeline():
         torch_dtype=torch.bfloat16
     )
 
-    if vram_gb >= 18.0:
+    if vram_gb >= 40.0:
         pipe.to("cuda")
     else:
+        print(f"[CONTAINER - HUNYUAN] VRAM ({vram_gb:.2f} GB) is under 40GB, enabling model CPU offload")
         pipe.enable_model_cpu_offload()
+        if vram_gb < 20.0:
+            print("[CONTAINER - HUNYUAN] VRAM < 20GB, enabling sequential CPU offload")
+            pipe.enable_sequential_cpu_offload()
         
     if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
         pipe.vae.enable_tiling()
