@@ -52,37 +52,31 @@ if not hasattr(torch, "uint32"):
 if not hasattr(torch, "uint64"):
     torch.uint64 = torch.int64
 
-# Patch torch.library for PyTorch < 2.4.0 (transformers v5 MoE compatibility)
+# Force patch torch.library for full compatibility
 import torch.library
-if not hasattr(torch.library, "custom_op"):
-    def dummy_custom_op(*args, **kwargs):
-        def decorator(f):
-            return f
-        return decorator
-    torch.library.custom_op = dummy_custom_op
 
-if not hasattr(torch.library, "register_fake"):
-    torch.library.register_fake = lambda *args, **kwargs: None
+def dummy_custom_op(*args, **kwargs):
+    def decorator(f):
+        return f
+    return decorator
+torch.library.custom_op = dummy_custom_op
 
-if not hasattr(torch.library, "register_autograd"):
-    torch.library.register_autograd = lambda *args, **kwargs: None
+torch.library.register_fake = lambda *args, **kwargs: None
+torch.library.register_autograd = lambda *args, **kwargs: None
 
-if not hasattr(torch.library, "impl"):
-    def dummy_impl(*args, **kwargs):
-        def decorator(f):
-            return f
-        return decorator
-    torch.library.impl = dummy_impl
+def dummy_impl(*args, **kwargs):
+    def decorator(f):
+        return f
+    return decorator
+torch.library.impl = dummy_impl
 
-if not hasattr(torch.library, "impl_abstract"):
-    def dummy_impl_abstract(*args, **kwargs):
-        def decorator(f):
-            return f
-        return decorator
-    torch.library.impl_abstract = dummy_impl_abstract
+def dummy_impl_abstract(*args, **kwargs):
+    def decorator(f):
+        return f
+    return decorator
+torch.library.impl_abstract = dummy_impl_abstract
 
-if not hasattr(torch.library, "register_abstract_impl"):
-    torch.library.register_abstract_impl = lambda *args, **kwargs: None
+torch.library.register_abstract_impl = lambda *args, **kwargs: None
 
 # Patch torch.nn.RMSNorm for PyTorch < 2.4.0
 import torch.nn as nn
