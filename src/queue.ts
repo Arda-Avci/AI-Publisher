@@ -218,7 +218,13 @@ async function startProduction(job: VideoJob) {
         const isFilmOrSeries = prodMode === 'film' || prodMode === 'series';
 
         if (isFilmOrSeries) {
-          Logger.info('[PRODUCTION] Film/Series mode — mandatory storyboard pipeline...');
+          Logger.info('[PRODUCTION] Film/Series mode — applying cinematic enhancement...');
+          const { enhanceFilmPrompt } = await import('./services/promptEnhancer.js');
+          const filmEnhanced = enhanceFilmPrompt(job.master_prompt || '', job.production_notes || '');
+          job.master_prompt = filmEnhanced.masterPrompt;
+          job.production_notes = filmEnhanced.productionNotes;
+          Logger.info('[PRODUCTION] Film prompt enhanced:', { constraints: filmEnhanced.constraints.length });
+
           try {
             const { runFilmStoryboard } = await import('./services/agents/storyboardIntegration.js');
             const filmResult = await runFilmStoryboard(job, (stage, pct) => {
