@@ -375,9 +375,7 @@ def generate():
             t5_model_info["t5_missing_backends"] = getattr(transformers.models.t5, "_object_missing_backend", {})
             from transformers.utils import import_utils
             t5_model_info["is_torch_available"] = import_utils.is_torch_available()
-            import importlib.metadata
             t5_model_info["metadata_version"] = importlib.metadata.version("torch")
-            import torch
             t5_model_info["torch_version"] = torch.__version__
         except Exception as e:
             t5_model_info["t5_missing_backends_error"] = str(e)
