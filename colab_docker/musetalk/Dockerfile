@@ -1,4 +1,4 @@
-﻿FROM ai-publisher-base:latest
+FROM ai-publisher-base:latest
 
 ARG HF_TOKEN
 ENV HF_TOKEN=${HF_TOKEN}
@@ -42,16 +42,11 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     "face-alignment" \
     "facexlib"
 
-# Build-time weight download (inline python script block to avoid standalone file dependency issues in Kaniko)
-# COPY download_weights.sh /tmp/download_weights.sh
-# RUN chmod +x /tmp/download_weights.sh && \
-    mkdir -p /app/MuseTalk/models && \
-    cd /app/MuseTalk && \
-    HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \
-    python -c "from huggingface_hub import snapshot_download; import os; snapshot_download('TMElyralab/MuseTalk', local_dir='models', cache_dir=os.environ['HF_HOME'], ignore_patterns=['*.git*', 'docs/*'], token=os.environ.get('HF_TOKEN') or None)"
-
-ARG HF_TOKEN
-ENV HF_TOKEN=${HF_TOKEN}
+# Build-time weight download devre disi — runtime'da indirilecek
+# mkdir -p /app/MuseTalk/models && \
+# cd /app/MuseTalk && \
+# HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \
+# python -c "from huggingface_hub import snapshot_download; import os; snapshot_download('TMElyralab/MuseTalk', local_dir='models', cache_dir=os.environ['HF_HOME'], ignore_patterns=['*.git*', 'docs/*'], token=os.environ.get('HF_TOKEN') or None)"
 
 COPY app.py /app/app.py
 WORKDIR /app
