@@ -1,6 +1,9 @@
 ﻿# ⚠️ CUDA 11.8 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ffmpeg \
     cmake \

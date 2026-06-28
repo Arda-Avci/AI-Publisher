@@ -197,6 +197,7 @@ jobs:
             cp -rf ${{ env.CONTEXT }}/shared ${{ env.CONTEXT }}/${{ matrix.model }}/
             
             docker build -f ${{ env.CONTEXT }}/${{ matrix.model }}/Dockerfile \
+              --build-arg HF_TOKEN=${{ secrets.HF_TOKEN }} \
               -t "$MODEL_TAG" -t "$SHA_TAG" -t "$FOLDER_TAG" \
               ${{ env.CONTEXT }}/${{ matrix.model }}
             docker push "$MODEL_TAG"
@@ -288,6 +289,7 @@ jobs:
             cp -rf ${{ env.CONTEXT }}/shared "$DIR"/
             
             docker build -f ${{ env.CONTEXT }}/${{ matrix.dockerfile }} \
+              --build-arg HF_TOKEN=${{ secrets.HF_TOKEN }} \
               -t "$MODEL_TAG" -t "$SHA_TAG" -t "$FOLDER_TAG" \
               "$DIR"
             docker push "$MODEL_TAG"

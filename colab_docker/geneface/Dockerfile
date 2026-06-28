@@ -2,6 +2,9 @@
 # Stage 1: Derleme Aşaması (Build Stage)
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel AS builder
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ffmpeg \
     cmake \
@@ -34,6 +37,9 @@ RUN /opt/conda/bin/pip install "git+https://github.com/facebookresearch/pytorch3
 
 # Stage 2: Çalışma Aşaması (Runtime Stage)
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
+
+ARG HF_TOKEN
+ENV HF_TOKEN=\
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ffmpeg \

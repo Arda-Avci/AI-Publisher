@@ -1,5 +1,8 @@
 ﻿FROM ai-publisher-base:latest
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 # Clone MuseTalk repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
 # Once main/master branch farki olabiliyor -> once main dene, olmazsa master
 RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.gz -o /tmp/musetalk.tar.gz; \
@@ -46,6 +49,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     cd /app/MuseTalk && \
     HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \
     python -c "from huggingface_hub import snapshot_download; import os; snapshot_download('TMElyralab/MuseTalk', local_dir='models', cache_dir=os.environ['HF_HOME'], ignore_patterns=['*.git*', 'docs/*'], token=os.environ.get('HF_TOKEN') or None)"
+
+ARG HF_TOKEN
+ENV HF_TOKEN=\
 
 COPY app.py /app/app.py
 WORKDIR /app

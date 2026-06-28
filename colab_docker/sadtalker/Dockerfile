@@ -1,4 +1,7 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
+
+ARG HF_TOKEN
+ENV HF_TOKEN=\
 
 RUN /opt/conda/bin/pip install --no-cache-dir dlib-bin==19.24.1 && \
     /opt/conda/bin/pip install --no-cache-dir face-recognition-models Click Pillow && \

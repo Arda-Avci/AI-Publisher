@@ -1,5 +1,8 @@
 ﻿FROM ai-publisher-base:latest
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 # Install system dependencies for XTTS and rubberband
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     rubberband-cli \

@@ -1,5 +1,8 @@
 ﻿FROM ai-publisher-base:latest
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 # AudioLDM2 is mostly built on diffusers, which is already in base
 
 # Build-time weight download

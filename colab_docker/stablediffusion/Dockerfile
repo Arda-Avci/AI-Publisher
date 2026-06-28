@@ -1,5 +1,8 @@
 ﻿FROM ai-publisher-base:latest
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 # Trigger build for SDXL integration v5
 # Install Stable Diffusion specific packages
 RUN /opt/conda/bin/pip install --no-cache-dir \

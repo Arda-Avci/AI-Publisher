@@ -1,4 +1,7 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
+
+ARG HF_TOKEN
+ENV HF_TOKEN=\
 
 # Install video-specific packages
 RUN /opt/conda/bin/pip install --no-cache-dir \

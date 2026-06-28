@@ -1,5 +1,8 @@
 ﻿FROM ai-publisher-base:latest
 
+ARG HF_TOKEN
+ENV HF_TOKEN=\
+
 RUN /opt/conda/bin/pip install --no-cache-dir \
     kokoro \
     soundfile \
