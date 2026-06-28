@@ -126,6 +126,13 @@ const MODEL_REGISTRY: Record<string, ModelEndpoint> = {
     description: 'Stable Diffusion text-to-image',
     defaultInput: { prompt: '', width: 1024, height: 1024, num_inference_steps: 30 },
   },
+  'sdxl': {
+    modelName: 'SDXL',
+    envVar: 'RUNPOD_SDXL_ENDPOINT_ID',
+    category: 'image',
+    description: 'Stable Diffusion XL high-quality image generation',
+    defaultInput: { prompt: '', width: 1024, height: 1024, num_inference_steps: 25, guidance_scale: 7.5 },
+  },
   'svd': {
     modelName: 'SVD-XT',
     envVar: 'RUNPOD_SVD_ENDPOINT_ID',

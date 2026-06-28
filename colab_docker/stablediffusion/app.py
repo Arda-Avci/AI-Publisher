@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import base64
 from flask import Flask, request, jsonify, send_file
-from diffusers import DiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionPipeline
+from diffusers import DiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image
 from diffusers.utils import load_image
 
 app = Flask(__name__)
@@ -30,12 +30,27 @@ def get_pipeline(model_type):
         flush_memory()
 
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
-    print(f"[CONTAINER] Loading image model {model_type} (VRAM: {vram_gb:.2f} GB)")
+    gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "unknown"
+    print(f"[CONTAINER] Loading image model {model_type} (VRAM: {vram_gb:.2f} GB, GPU: {gpu_name})")
 
     if model_type == "flux":
         from diffusers import FluxPipeline
         pipe = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16)
         pipe.enable_model_cpu_offload()
+    elif model_type == "sdxl":
+        pipe = AutoPipelineForText2Image.from_pretrained(
+            "stabilityai/stable-diffusion-xl-base-1.0",
+            torch_dtype=torch.float16,
+            variant="fp16"
+        )
+        if vram_gb <= 16.0:
+            pipe.enable_sequential_cpu_offload()
+            if hasattr(pipe, "enable_attention_slicing"):
+                pipe.enable_attention_slicing("max")
+        elif vram_gb <= 18.0:
+            pipe.enable_model_cpu_offload()
+        else:
+            pipe.to("cuda")
     elif model_type == "inpaint":
         pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16)
         pipe.to("cuda")
@@ -91,22 +106,39 @@ def upscale_image_realesrgan(image_path, scale=2):
 def generate_image():
     data = request.get_json(force=True) or {}
     prompt = data.get("prompt", "")
-    model_type = data.get("model_type", "dreamshaper") # dreamshaper or flux
+    model_type = data.get("model_type", "dreamshaper")
     output_path = data.get("output_path", "/workspace/outputs/generated_anchor.png")
+    width = int(data.get("width", 1024 if model_type == "sdxl" else 512))
+    height = int(data.get("height", 1024 if model_type == "sdxl" else 512))
+    num_inference_steps = int(data.get("num_inference_steps", 25 if model_type == "sdxl" else 20))
+    guidance_scale = float(data.get("guidance_scale", 7.5 if model_type != "flux" else 0.0))
 
     if not prompt:
         return jsonify({"error": "prompt is required"}), 400
 
     try:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         pipe = get_pipeline(model_type)
         with torch.inference_mode():
             if model_type == "flux":
                 image = pipe(prompt=prompt, guidance_scale=0.0, num_inference_steps=4, max_sequence_length=256).images[0]
+            elif model_type == "sdxl":
+                image = pipe(
+                    prompt=prompt,
+                    width=width,
+                    height=height,
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale
+                ).images[0]
             else:
                 image = pipe(prompt=prompt, num_inference_steps=20).images[0]
 
         image.save(output_path)
         return jsonify({"status": "success", "output_path": output_path}), 200
+    except torch.cuda.OutOfMemoryError as exc:
+        flush_memory()
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9 if torch.cuda.is_available() else 0
+        return jsonify({"status": "error", "message": f"GPU OOM on {vram_gb:.1f}GB. Try lower resolution or different model.", "error": str(exc)}), 500
     except Exception as e:
         flush_memory()
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -116,15 +148,19 @@ def generate_covers():
     data = request.get_json(force=True) or {}
     cover_prompt = data.get("cover_prompt", "")
     output_paths = data.get("output_paths", ["/workspace/outputs/cover_0.jpg", "/workspace/outputs/cover_1.jpg", "/workspace/outputs/cover_2.jpg"])
+    model_type = data.get("model_type", "dreamshaper")
 
     if not cover_prompt:
         return jsonify({"error": "cover_prompt is required"}), 400
 
     try:
-        pipe = get_pipeline("dreamshaper")
+        pipe = get_pipeline(model_type)
         for i in range(min(3, len(output_paths))):
             with torch.inference_mode():
-                img = pipe(prompt=cover_prompt, num_inference_steps=20, height=512, width=512).images[0]
+                if model_type == "sdxl":
+                    img = pipe(prompt=cover_prompt, num_inference_steps=25, width=1024, height=1024).images[0]
+                else:
+                    img = pipe(prompt=cover_prompt, num_inference_steps=20, height=512, width=512).images[0]
             img.save(output_paths[i])
             enhance_face_gfpgan(output_paths[i])
             upscale_image_realesrgan(output_paths[i], scale=2)
@@ -223,9 +259,11 @@ def health():
 def preload():
     """Pre-load model into VRAM to avoid cold start latency."""
     try:
-        pipe = get_pipeline()
-        vram_cleanup()
-        return jsonify({"status": "ok", "model_loaded": pipe is not None})
+        data = request.get_json(force=True) or {}
+        model_type = data.get("model_type", "dreamshaper")
+        pipe = get_pipeline(model_type)
+        flush_memory()
+        return jsonify({"status": "ok", "model_loaded": pipe is not None, "model_type": model_type})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
