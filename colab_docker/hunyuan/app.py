@@ -44,6 +44,12 @@ torch.__version__ = "2.4.0"
 if not hasattr(torch, "get_default_device"):
     torch.get_default_device = lambda: torch.device("cpu")
 
+# Patch torch.is_autocast_enabled to support new signature with old PyTorch backend
+_orig_is_autocast_enabled = torch.is_autocast_enabled
+def patched_is_autocast_enabled(device_type=None):
+    return _orig_is_autocast_enabled()
+torch.is_autocast_enabled = patched_is_autocast_enabled
+
 # Patch missing unsigned integer dtypes in older PyTorch versions
 if not hasattr(torch, "uint16"):
     torch.uint16 = torch.int16
