@@ -308,7 +308,7 @@ def frames_to_mp4(frames, path, fps=8):
     w = w + (w % 2)
     h = h + (h % 2)
     cmd = [
-        'ffmpeg', '-y',
+        '/usr/bin/ffmpeg', '-y',
         '-f', 'rawvideo',
         '-vcodec', 'rawvideo',
         '-s', f'{w}x{h}',
