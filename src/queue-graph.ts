@@ -256,6 +256,7 @@ async function coverSynthesis(state: GraphState): Promise<Partial<GraphState>> {
             application_key: process.env.B2_APPLICATION_KEY,
             bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET,
           },
+          hf_token: process.env.HF_TOKEN || undefined,
         }, process.env.WEBHOOK_URL ? `${process.env.WEBHOOK_URL}/api/webhook/runpod` : undefined);
         Logger.info('[Graph] Cover generation dispatched', { runpodId: res.id });
       } catch (err) {
@@ -369,6 +370,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
           tts_voice: job?.tts_voice || 'Claribel Dervla',
           background_music: '', music_volume: 0.15,
           b2_credentials: b2Credentials,
+          hf_token: process.env.HF_TOKEN || undefined,
         };
         const runpodRes = await RunPodClient.runJob(endpointId, runpodInput, callbackUrl);
         await db.run('UPDATE video_scenes SET runpod_job_id = ? WHERE id = ?', [runpodRes.id, scene.id]);

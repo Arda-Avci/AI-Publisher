@@ -1130,7 +1130,8 @@ async function startProduction(job: VideoJob) {
               subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
               subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
               lora_weights_path: loraWeightsPath,
-              b2_credentials: b2Credentials
+              b2_credentials: b2Credentials,
+              hf_token: process.env.HF_TOKEN || undefined
             };
           }
 

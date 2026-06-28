@@ -60,6 +60,13 @@ else:
                 os.environ["B2_APPLICATION_KEY"] = b2_creds["application_key"]
             if "bucket_name" in b2_creds:
                 os.environ["B2_BUCKET_NAME"] = b2_creds["bucket_name"]
+
+        # HuggingFace token — RunPod endpoint env veya job input'dan
+        hf_token = job_input.get("hf_token") or os.environ.get("HF_TOKEN")
+        if hf_token:
+            os.environ["HF_TOKEN"] = hf_token
+            os.environ["HUGGING_FACE_HUB_TOKEN"] = hf_token
+            print(f"[WRAPPER] HF_TOKEN configured")
         
         # Determine Flask endpoint path
         endpoint_path = os.environ.get("RUNPOD_ENDPOINT_PATH", "/generate")
