@@ -110,7 +110,9 @@ jobs:
         model:
           - wav2lip
           - wan
+          - wan25
           - ltx
+          - hunyuan
     steps:
       - uses: actions/checkout@v4
 
