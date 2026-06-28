@@ -11,13 +11,19 @@ def b2_client():
     app_key = os.environ.get("B2_APPLICATION_KEY")
     if not key_id or not app_key:
         return None
+    region = "us-west-004"
+    if "s3." in endpoint:
+        try:
+            region = endpoint.split("s3.")[1].split(".")[0]
+        except Exception:
+            pass
     return boto3.client(
         "s3",
         endpoint_url=endpoint,
         aws_access_key_id=key_id,
         aws_secret_access_key=app_key,
         config=Config(signature_version="s3v4"),
-        region_name="us-west-004",
+        region_name=region,
     )
 
 

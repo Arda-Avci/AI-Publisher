@@ -14,13 +14,21 @@ let s3Client: S3Client | null = null;
 function getClient(): S3Client {
   if (!s3Client) {
     const endpoint = B2_ENDPOINT || 'https://s3.us-west-004.backblazeb2.com';
+    let region = 'us-west-004';
+    if (endpoint.includes('s3.')) {
+      try {
+        region = endpoint.split('s3.')[1]?.split('.')[0] || 'us-west-004';
+      } catch (err) {
+        // fallback
+      }
+    }
     s3Client = new S3Client({
       endpoint,
       credentials: {
         accessKeyId: B2_KEY_ID || 'dummy',
         secretAccessKey: B2_APPLICATION_KEY || 'dummy',
       },
-      region: 'us-west-004',
+      region,
       forcePathStyle: true,
     });
   }
