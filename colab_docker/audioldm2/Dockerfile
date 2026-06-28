@@ -1,4 +1,4 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # AudioLDM2 is mostly built on diffusers, which is already in base
 
@@ -13,5 +13,5 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
 

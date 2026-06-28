@@ -1,4 +1,4 @@
-# ⚠️ CUDA 11.8 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
+﻿# ⚠️ CUDA 11.8 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -13,7 +13,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     flask \
     requests \
     basicsr==1.4.2 \
@@ -38,4 +38,4 @@ WORKDIR /app
 EXPOSE 5000
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

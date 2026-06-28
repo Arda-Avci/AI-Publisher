@@ -1,9 +1,9 @@
 FROM ai-publisher-base:latest
 
-RUN pip install --no-cache-dir dlib-bin==19.24.1 && \
-    pip install --no-cache-dir face-recognition-models Click Pillow && \
-    pip install --no-cache-dir --no-deps face_recognition && \
-    pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir dlib-bin==19.24.1 && \
+    /opt/conda/bin/pip install --no-cache-dir face-recognition-models Click Pillow && \
+    /opt/conda/bin/pip install --no-cache-dir --no-deps face_recognition && \
+    /opt/conda/bin/pip install --no-cache-dir \
     scipy \
     opencv-python-headless \
     numba \
@@ -20,4 +20,4 @@ WORKDIR /app
 EXPOSE 5000
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

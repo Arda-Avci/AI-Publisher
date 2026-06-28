@@ -1,4 +1,4 @@
-# ⚠️ CUDA 11.8 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
+﻿# ⚠️ CUDA 11.8 GEREKTİRİR — Mevcut base (CUDA 12.x) ile uyumsuz
 # Stage 1: Derleme Aşaması (Build Stage)
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel AS builder
 
@@ -15,7 +15,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     flask \
     requests \
     decord \
@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir \
     ninja
 
 # PyTorch3D derlemesi (v0.7.6 sürümü PyTorch 2.1 ile uyumludur)
-RUN pip install "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.6"
+RUN /opt/conda/bin/pip install "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.6"
 
 # Stage 2: Çalışma Aşaması (Runtime Stage)
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
@@ -55,4 +55,4 @@ WORKDIR /app
 EXPOSE 5000
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

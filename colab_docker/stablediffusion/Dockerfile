@@ -1,7 +1,7 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # Install Stable Diffusion specific packages
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     "diffusers>=0.35,<0.36" \
     realesrgan \
     gfpgan \
@@ -20,5 +20,5 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
 

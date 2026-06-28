@@ -1,6 +1,6 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     kokoro \
     soundfile \
     munch
@@ -16,5 +16,5 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
 

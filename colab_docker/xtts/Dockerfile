@@ -1,4 +1,4 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # Install system dependencies for XTTS and rubberband
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -7,7 +7,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     && rm -rf /var/lib/apt/lists/*
 
 # Install XTTS, edge-tts, openai, pyrubberband, and soundfile
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     coqui-tts \
     edge-tts \
     openai \
@@ -25,5 +25,5 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
 

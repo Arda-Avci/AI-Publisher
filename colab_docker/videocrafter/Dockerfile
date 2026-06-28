@@ -1,7 +1,7 @@
 FROM ai-publisher-base:latest
 
 # VideoCrafter specific dependencies
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     pytorch-lightning==2.1.0 \
     xformers==0.0.24 \
     omegaconf==2.3.0 \
@@ -17,4 +17,4 @@ EXPOSE 5000
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
 
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

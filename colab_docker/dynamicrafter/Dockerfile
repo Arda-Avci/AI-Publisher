@@ -1,6 +1,6 @@
 FROM ai-publisher-base:latest
 
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     decord==0.6.0 \
     einops==0.3.0 \
     imageio==2.9.0 \
@@ -27,4 +27,4 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]

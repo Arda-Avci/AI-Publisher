@@ -9,9 +9,9 @@ RUN /opt/conda/bin/pip install --no-cache-dir \
     "open_clip_torch==2.23.0"
 
 # Build-time weight download
-COPY download_weights.sh /tmp/download_weights.sh
-RUN chmod +x /tmp/download_weights.sh && \
-    /tmp/download_weights.sh "cerspense/zeroscope_v2_576w"
+# COPY download_weights.sh /tmp/download_weights.sh
+# RUN chmod +x /tmp/download_weights.sh && \
+#     /tmp/download_weights.sh "cerspense/zeroscope_v2_576w"
 
 COPY app.py /app/app.py
 WORKDIR /app

@@ -1,4 +1,4 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base:latest
 
 # Clone Wav2Lip repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
 RUN curl -sL https://github.com/Rudrabha/Wav2Lip/archive/refs/heads/master.tar.gz -o /tmp/wav2lip.tar.gz && \
@@ -8,7 +8,7 @@ RUN curl -sL https://github.com/Rudrabha/Wav2Lip/archive/refs/heads/master.tar.g
     rm -rf /tmp/wav2lip.tar.gz /tmp/Wav2Lip-master
 
 # Install face_recognition and OpenCV dependencies
-RUN pip install --no-cache-dir \
+RUN /opt/conda/bin/pip install --no-cache-dir \
     face_recognition \
     face_recognition_models \
     opencv-python-headless \
@@ -29,4 +29,4 @@ EXPOSE 5000
 
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
