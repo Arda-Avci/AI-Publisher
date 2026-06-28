@@ -4,6 +4,7 @@ import sys
 import time
 import threading
 import requests
+from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "shared"))
 from utils import upload_to_backblaze
@@ -81,18 +82,21 @@ else:
         # Define file mapping for uploads
         job_id = job_input.get("job_id", "job")
         scene_num = job_input.get("scene_number", 1)
+        model_name = (job_input.get("video_model") or job_input.get("model_type") or "unknown").lower().replace(" ", "_").replace("-", "_")
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        prefix = f"{model_name}_{ts}"
         
         upload_map = {
-            f"{OUTPUT_BASE}/current_scene.mp4": f"outputs/{job_id}/scene_{scene_num}.mp4",
-            f"{OUTPUT_BASE}/raw_video.mp4": f"outputs/{job_id}/scene_{scene_num}_raw.mp4",
-            f"{OUTPUT_BASE}/speech.wav": f"outputs/{job_id}/scene_{scene_num}_speech.wav",
-            f"{OUTPUT_BASE}/kokoro_speech.wav": f"outputs/{job_id}/scene_{scene_num}_kokoro.wav",
-            f"{OUTPUT_BASE}/sfx.wav": f"outputs/{job_id}/scene_{scene_num}_sfx.wav",
-            f"{OUTPUT_BASE}/subtitle.srt": f"outputs/{job_id}/scene_{scene_num}.srt",
-            f"{OUTPUT_BASE}/generated_anchor.png": f"outputs/{job_id}/anchor_{scene_num}.png",
-            f"{OUTPUT_BASE}/cover_0.jpg": f"outputs/{job_id}/cover_0.jpg",
-            f"{OUTPUT_BASE}/cover_1.jpg": f"outputs/{job_id}/cover_1.jpg",
-            f"{OUTPUT_BASE}/cover_2.jpg": f"outputs/{job_id}/cover_2.jpg"
+            f"{OUTPUT_BASE}/current_scene.mp4": f"outputs/{job_id}/{prefix}_scene_{scene_num}.mp4",
+            f"{OUTPUT_BASE}/raw_video.mp4": f"outputs/{job_id}/{prefix}_scene_{scene_num}_raw.mp4",
+            f"{OUTPUT_BASE}/speech.wav": f"outputs/{job_id}/{prefix}_scene_{scene_num}_speech.wav",
+            f"{OUTPUT_BASE}/kokoro_speech.wav": f"outputs/{job_id}/{prefix}_scene_{scene_num}_kokoro.wav",
+            f"{OUTPUT_BASE}/sfx.wav": f"outputs/{job_id}/{prefix}_scene_{scene_num}_sfx.wav",
+            f"{OUTPUT_BASE}/subtitle.srt": f"outputs/{job_id}/{prefix}_scene_{scene_num}.srt",
+            f"{OUTPUT_BASE}/generated_anchor.png": f"outputs/{job_id}/{prefix}_anchor_{scene_num}.png",
+            f"{OUTPUT_BASE}/cover_0.jpg": f"outputs/{job_id}/{prefix}_cover_0.jpg",
+            f"{OUTPUT_BASE}/cover_1.jpg": f"outputs/{job_id}/{prefix}_cover_1.jpg",
+            f"{OUTPUT_BASE}/cover_2.jpg": f"outputs/{job_id}/{prefix}_cover_2.jpg"
         }
         
         # Check dynamic returned paths in the Flask JSON response
@@ -100,7 +104,7 @@ else:
             if field in result and isinstance(result[field], str) and os.path.exists(result[field]):
                 local_file = result[field]
                 ext = os.path.splitext(local_file)[1].lower()
-                b2_key = f"outputs/{job_id}/scene_{scene_num}_dyn{ext}"
+                b2_key = f"outputs/{job_id}/{prefix}_scene_{scene_num}_dyn{ext}"
                 if local_file not in upload_map:
                     upload_map[local_file] = b2_key
 
