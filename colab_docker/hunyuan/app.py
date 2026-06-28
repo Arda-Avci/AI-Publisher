@@ -44,6 +44,14 @@ torch.__version__ = "2.4.0"
 if not hasattr(torch, "get_default_device"):
     torch.get_default_device = lambda: torch.device("cpu")
 
+# Patch missing unsigned integer dtypes in older PyTorch versions
+if not hasattr(torch, "uint16"):
+    torch.uint16 = torch.int16
+if not hasattr(torch, "uint32"):
+    torch.uint32 = torch.int32
+if not hasattr(torch, "uint64"):
+    torch.uint64 = torch.int64
+
 # Patch torch.library for PyTorch < 2.4.0 (transformers v5 MoE compatibility)
 import torch.library
 if not hasattr(torch.library, "custom_op"):
