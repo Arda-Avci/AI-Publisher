@@ -79,6 +79,12 @@ else:
             endpoint_path = "/browser-task"
             flask_port = os.environ.get("RUNPOD_BROWSER_USE_PORT", "5017")
 
+        # Parametre eslestirme: Node.js video_prompt gonderir, Flask prompt bekler
+        if "video_prompt" in job_input and "prompt" not in job_input:
+            job_input["prompt"] = job_input["video_prompt"]
+        if "cover_prompt" not in job_input and "prompt" in job_input:
+            job_input["cover_prompt"] = job_input["prompt"]
+
         print(f"[WRAPPER] Forwarding request to local Flask:{flask_port}{endpoint_path}")
         try:
             resp = requests.post(f"http://localhost:{flask_port}{endpoint_path}", json=job_input, timeout=1800)
