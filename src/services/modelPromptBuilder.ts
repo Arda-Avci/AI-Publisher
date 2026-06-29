@@ -27,9 +27,16 @@ export function buildModelPrompt(input: BuildPromptInput): string {
   const features = characterFeatures || '';
   const lower = modelType.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  // Wan 2.1 / Wan 2.5
-  if (lower.includes('wan21') || lower === 'wan' || lower.includes('wan25')) {
+  // Wan 2.1
+  if (lower.includes('wan21') || lower === 'wan') {
     const parts = [features, `[Cinematic Shot] ${base}`, motion, 'photorealistic', '4k resolution', 'smooth motion']
+      .filter(Boolean);
+    return parts.join(', ');
+  }
+
+  // Wan 2.5
+  if (lower.includes('wan25')) {
+    const parts = [features, `[Detailed Scene Setup] ${base}`, `[Sequential Action] ${motion || 'dynamic motion'}`, 'high fidelity', 'masterpiece', '8k resolution']
       .filter(Boolean);
     return parts.join(', ');
   }

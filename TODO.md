@@ -235,9 +235,9 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [x] Kredi blokajı (render başında bloke, bitince düş, iptalde refund)
 
 ### 🎬 Prompt Generation Control
-- [ ] Short mode → prompt enhancer'ın doğru çalıştığından emin ol
-- [ ] Film/Series mode → AI'nın anlatı yapısına uygun prompt ürettiğini doğrula
-- [ ] Model-specific prompt'ların model_parameters_and_prompts.md şablonlarına uyduğunu kontrol et
+- [x] Short mode → `buildShortStructurePrompt()` ile dinamik süre/loop, edge case testleri eklendi (14 test)
+- [x] Film/Series mode → `narrativeDevice`, `timeStructure`, `transitionDesigner` pipeline'a entegre edildi
+- [x] Model-specific → Wan 2.1/2.5 ayrıldı, Mochi/PyramidFlow/VideoCrafter MD'ye eklendi, builder uyumlu
 
 ### ✅ Faz N — Kod Temizliği: Placeholder Fonksiyonlar + Testler + Tip Güvenliği (29 Haz 2026)
 - [x] `sceneChaining.ts` — `qualityScore` hardcoded → file-size heuristic

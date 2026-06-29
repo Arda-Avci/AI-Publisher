@@ -445,6 +445,16 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **Küçük refactor**: `download.ts` — queue.ts içindeki inline download helper'ı modüler dosyaya taşındı. `docker-host.ts` — videocrafter, realesrgan, browser-use port eklendi.
 - **Test**: 539 ✅ / 34 ⏸️ (573 total), tsc 0 hata, commit `0f8c5d2`
 
+## ✅ Faz N2 — Prompt Generation Control Doğrulama (29 Haz 2026)
+
+- **Short mode verification**: `enhanceShortFormPrompt()` içindeki `SHORT_STRUCTURE_PROMPT` hardcoded süreler (`max 60 seconds`) → `buildShortStructurePrompt(durationSeconds, loopRequired)` ile dinamik yapıldı. Artık config `maxDurationSec` değerine göre prompt oluşuyor, `loopRequired: false` ise LOOP bölümü tamamen çıkarılıyor.
+- **Film/Series narrative entegrasyonu**: `suggestNarrativeDevice()`, `suggestTimeStructure()`, `designTransitions()` artık `runFilmStoryboard()` pipeline'ında çağrılıyor. Her AI çağrısı kendi try/catch içinde, hata durumunda pipeline devam ediyor. `FilmStoryboardResult`'a `narrativeDevice`, `timeStructure`, `transitions` alanları eklendi.
+- **Model prompt şablon uyumlaştırması**: `buildModelPrompt()`'ta Wan 2.1 (`photorealistic, 4k, smooth motion`) ile Wan 2.5 (`high fidelity, masterpiece, 8k resolution`) ayrıldı. `model_parameters_and_prompts.md`'ye Mochi 1.2, Pyramid-Flow, VideoCrafter2 bölümleri eklendi.
+- **Edge case testleri**: 4 yeni test (empty masterPrompt, dynamic duration, loopRequired false, undefined productionNotes). Toplam 14 test.
+- **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` 0 hata, tüm testler geçiyor.
+
+---
+
 ## ✅ Faz M — Model-Specific Prompt Formatting (28 Haz 2026)
 
 - **`src/services/modelPromptBuilder.ts`** — Yeni dosya. `buildModelPrompt()` her model tipi için `model_parameters_and_prompts.md`'deki optimize şablonu uygular (Wan/Hunyuan/CogVideoX/LTX/AnimateDiff/ZeroScope/DynamiCrafter/Mochi/Pyramid-Flow/VideoCrafter/SVD). `modelAcceptsPrompt()` SVD için prompt'u boş döndürür (image-only).

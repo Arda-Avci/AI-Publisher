@@ -54,6 +54,30 @@ describe('promptEnhancer', () => {
       const result = enhanceShortFormPrompt('Alone', '');
       expect(result.productionNotes).toContain('Short-form constraints');
     });
+
+    it('uses dynamic duration in structure prompt', () => {
+      const result = enhanceShortFormPrompt('Test', '', { maxDurationSec: 30 });
+      expect(result.masterPrompt).toContain('max 30 seconds');
+      expect(result.masterPrompt).toContain('EXACTLY 20-30 seconds');
+      expect(result.masterPrompt).not.toContain('max 60 seconds');
+    });
+
+    it('omits loop section when loopRequired is false', () => {
+      const result = enhanceShortFormPrompt('Test', '', { loopRequired: false });
+      expect(result.masterPrompt).not.toContain('LOOP');
+      expect(result.masterPrompt).not.toContain('crossfade');
+    });
+
+    it('handles empty masterPrompt gracefully', () => {
+      const result = enhanceShortFormPrompt('', 'Notes');
+      expect(result.masterPrompt).toContain('SHORT FORM VIDEO STRUCTURE');
+      expect(result.productionNotes).toContain('Notes');
+    });
+
+    it('handles missing productionNotes (undefined)', () => {
+      const result = enhanceShortFormPrompt('Test', undefined as any);
+      expect(result.productionNotes).toContain('Short-form constraints');
+    });
   });
 
   describe('enhanceFilmPrompt', () => {
