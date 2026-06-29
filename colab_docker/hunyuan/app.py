@@ -163,13 +163,8 @@ def get_pipeline():
             pipe.enable_attention_slicing("max")
         if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
             pipe.vae.enable_slicing()
-    elif vram_gb <= 22.5:
-        print(f"[CONTAINER - HUNYUAN] 16-22.5GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload.")
-        pipe.enable_sequential_cpu_offload()
-        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
-            pipe.vae.enable_tiling()
     else:
-        print(f"[CONTAINER - HUNYUAN] 24GB+ GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
+        print(f"[CONTAINER - HUNYUAN] 16GB+ GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
         pipe.enable_model_cpu_offload()
         if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
             pipe.vae.enable_tiling()
