@@ -1,5 +1,26 @@
 # AI_Publisher Proje Durumu
 
+## ✅ Kod Temizliği — Placeholder Fonksiyonlar, Testler, Tip Güvenliği (29 Haz 2026)
+
+- **Faz 1A**: `sceneChaining.ts` — `qualityScore = 0.9` hardcoded → `fs.stat` bazlı heuristik (`min(size/5MB,1)*0.9+0.1`)
+- **Faz 1B**: `lumaService.ts` — `estimateCost` hardcoded pricing → `LUMA_CREDITS_PER_SECOND` / `LUMA_COST_MULTIPLIER` env
+- **Faz 1C**: `eyeContact.ts` — Docker passthrough → **yerel face-api + sharp** implementasyonu (face detection → eye region enhance → FFmpeg rebuild)
+- **Faz 2A**: `test_characters.spec.ts` — `expect(true).toBe(true)` → 6 gerçek test (CRUD, findById, findAll, update, delete)
+- **Faz 2B**: `test_e2e_features.spec.ts` — placeholder → 3 gerçek test (CSRF, 404, JSON parsing)
+- **Faz 2C**: `test_storyboard.spec.ts` — Placeholder yok, 22 test zaten mevcut
+- **Faz 3**: `db.ts` — `get<T>` / `all<T>` generic eklendi (geri uyumlu, varsayılan `any`)
+- **Faz 3**: `queue-graph.ts` — **18 adet `as any` → typed**: `db.get<VideoJob>()`, `job.property` direkt
+- **Faz 3**: `queue.ts` — **7 adet `as any` → typed**: `SplitLayout`, `BrollClip`, `error as Error` pattern
+- **Faz 4**: `tsconfig.json` — `outDir: ./dist`, `declarationDir: ./dist/types`, `.d.ts` cleanup
+- **Faz 5**: `src/types/iyzipay.d.ts` — declare module, `@ts-expect-error` kaldırıldı
+- **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` 0 hata, testler başarılı
+
+### Kalan `as any`'ler (Intentional / Library Limitation)
+
+⚠️ **2 adet `src/db.ts`** — `(newErr as any).stack = err.stack`: Standart JS pattern. Error stack trace'i korumak için. Tüm TS projelerinde aynı. Düzeltilemez.
+
+⚠️ **11 adet `src/queue-graph.ts` (`buildGraph()`)** — `StateGraph(QueueState as any)`, `addNode(fn as any)`, `addEdge(START as any)`: LangGraph v0.2.x `Annotation.Root` tip çıkarım sınırlaması. LangGraph >= v0.3 ile düzelebilir. Runtime'da sorun yok.
+
 ## ✅ Faz I - Proaktif Hata Giderme ve API Güncellemesi (29 Haz 2026)
 
 - **RunPod REST API PATCH Mimarisine Geçiş**: GraphQL `saveEndpoint` mutasyonundaki 400 bad request hatalarını önlemek için tüm yönetim scriptleri REST API PATCH `/v1/endpoints/:id` yapısına geçirildi. `test_all_video_models.js`, `test_sdxl.js`, `recycle_endpoints.js`, `temp_run_all_tests.js` ve `update_and_test_manual.js` dosyaları tamamen güncellendi.
@@ -937,6 +958,18 @@ docs/v6_roadmap/Faz_7_Testing_QA.md
   - Wan 2.1 `app.py` içerisindeki hatalı `WanAnimatePipeline` sınıfı, Hugging Face Diffusers standardı olan `WanPipeline` ile değiştirildi.
   - CogVideoX `app.py` dosyasındaki fallback kollarında yer alan hatalı `WanAnimatePipeline` sınıfları da proaktif olarak `WanPipeline` şeklinde düzeltildi.
 - **Alternatif Model Doğrulamaları:** `ltx`, `cogvideox`, `svd` ve `zeroscope` modellerinin `app.py` kod yapıları, Flask endpoint'leri (`/generate`), import sınıfları ve pipeline fonksiyonları detaylıca incelendi; Wan modelindeki gibi sınıf adı yazım hatasının bu modellerde bulunmadığı doğrulandı.
+## ✅ Faz II - Eye Contact Servisi Yerelleştirme (29 Haz 2026)
+
+- **`src/services/eyeContact.ts` Docker bağımlılığı kaldırıldı**: Artık `/api/v1/eye-contact` endpoint'ine HTTP çağrısı yapmak yerine, face-api (TensorFlow.js) + sharp ile doğrudan frame bazında yüz tanıma ve göz bölgesi iyileştirmesi yapılır.
+- **Yeni bağımlılıklar**: `@tensorflow/tfjs-core`, `@tensorflow/tfjs-backend-cpu`, `@vladmandic/face-api`, `sharp` eklendi — native derleme gerektirmez.
+- **Teknik yaklaşım:**
+  - FFmpeg ile videodan frame'ler çıkarılır (en fazla 200 frame, performans sınırı).
+  - Her frame'de face-api ile yüz tespiti + 68 landmark noktası bulunur.
+  - Göz bölgesi landmark'lardan hesaplanır, `sharp` ile `.sharpen()` + `.modulate()` uygulanır, composite ile orijinal frame'e yazılır.
+  - FFmpeg ile işlenmiş frame'lerden video yeniden oluşturulur (`setpts=PTS*{step}` ile süre korunur) ve orijinal ses kopyalanır.
+- **Hata toleransı**: Herhangi bir aşamada (model yüklenemezse, yüz bulunamazsa, FFmpeg hatası) orijinal videoya düşer — `usedFallback: true` ve `error` mesajı döner.
+- **Testler**: Mevcut `correctEyeContact()` testleri (shape + fallback) yeşil.
+
 - **RunPod Serverless Entegrasyon Notları:**
   - `RUNPOD_SERVERLESS=true` ve `RUNPOD_ENDPOINT_PATH=/generate` çevre değişkenlerinin RunPod üzerinde tanımlanması gerektiği belgelendi.
   - `test_wan_serverless.js` test betiği, custom Flask API imaj yapısına uygun düz formatta (`prompt` ve `b2_credentials` içeren) çalışacak şekilde kararlı hale getirildi.

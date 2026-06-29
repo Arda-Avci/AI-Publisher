@@ -14,7 +14,7 @@ import {
   convertSrtToKineticAss,
   applyColorGradeFilter,
 } from './services/videoService.js';
-import { applySplitScreen } from './services/splitScreen.js';
+import { applySplitScreen, type SplitLayout } from './services/splitScreen.js';
 import { generateTalkingHead } from './services/museTalkService.js';
 import { VideoJob } from './types/job.js';
 import { generateStudioScenes } from './services/aiService.js';
@@ -33,7 +33,7 @@ const dockerMutex = new RedisMutex('docker_gpu_lock', Number(process.env.DOCKER_
 
 import { broadcastProgress } from './lib/redis.js';
 import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/viralHook.js';
-import { insertBroll } from './services/aiBroll.js';
+import { insertBroll, type BrollClip } from './services/aiBroll.js';
 import { getSceneCharacterWeights, getTrainingProgress } from './services/loraService.js';
 import {
   detectEmotionPeaks,
@@ -1278,7 +1278,7 @@ async function startProduction(job: VideoJob) {
             : 'Arial';
           const validStyles = ['bounce', 'pulse', 'shake', 'pop', 'wave'] as const;
           const rawStyle = job.kinetic_subtitles_style || 'bounce';
-          const animStyle = validStyles.includes(rawStyle as any)
+          const animStyle = (validStyles as readonly string[]).includes(rawStyle)
             ? (rawStyle as (typeof validStyles)[number])
             : 'bounce';
           try {
@@ -1724,7 +1724,7 @@ async function startProduction(job: VideoJob) {
           fPath,
           secondaryVideo,
           splitOutputPath,
-          job.split_layout as any,
+          (job.split_layout as SplitLayout) || '50/50',
           'top',
         );
         await fs.move(splitOutputPath, fPath, { overwrite: true });
@@ -2233,23 +2233,24 @@ async function startProduction(job: VideoJob) {
             }
           }
 
-          const brollClips: Awaited<ReturnType<typeof generateBroll>>[] = [];
+          const brollClips: BrollClip[] = [];
           for (const moment of keywordMoments) {
             const brollPath = path.join(brollOutputDir, `broll_${brollClips.length}.mp4`);
             const genResult = await generateBroll(moment.keywords, moment.duration, brollPath);
             if (genResult.success) {
-              brollClips.push({
+              const clip: BrollClip = {
                 keywords: moment.keywords,
                 duration: moment.duration,
                 outputPath: brollPath,
                 insertAtSeconds: moment.insertAtSeconds,
-              } as any);
+              };
+              brollClips.push(clip);
             }
           }
 
           if (brollClips.length > 0) {
             const brollOutputPath = path.join(process.cwd(), 'videolar', `brolled_${fName}`);
-            await insertBroll(fPath, brollClips as any, brollOutputPath);
+            await insertBroll(fPath, brollClips, brollOutputPath);
             const originalPath = fPath;
             fPath = brollOutputPath;
             try {
@@ -2369,7 +2370,8 @@ async function startProduction(job: VideoJob) {
     }
   } catch (error) {
     // ── Cancel handling — refund, no retry ──
-    if (error && (error as any).message === 'JOB_CANCELLED') {
+    const cancelErr = error instanceof Error ? error : new Error(String(error));
+    if (cancelErr.message === 'JOB_CANCELLED') {
       if (requiredCredits > 0) {
         await CreditService.refundCredits(
           job.user_id,
@@ -2383,7 +2385,7 @@ async function startProduction(job: VideoJob) {
     }
 
     // --- Retry logic for transient Docker errors — KEEP credits held (no refund) ---
-    const errMsg = (error as any)?.message || '';
+    const errMsg = cancelErr.message;
     const transientPatterns = [
       'COLAB_NOT_READY',
       'COLAB_LIBRARIES_FAILED',
@@ -2421,7 +2423,7 @@ async function startProduction(job: VideoJob) {
       await CreditService.refundCredits(
         job.user_id,
         requiredCredits,
-        `Video Projesi #${job.id} iade - hata (${(error as any)?.message || 'bilinmeyen hata'})`,
+        `Video Projesi #${job.id} iade - hata (${cancelErr.message})`,
       );
     }
 

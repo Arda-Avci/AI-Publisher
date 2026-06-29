@@ -58,15 +58,13 @@ function convertQuery(sql: string): string {
  */
 export const db = {
   pool: pool,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async get(sql: string, params: any[] = []): Promise<any> {
+  async get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
     const res = await activePool.query(convertQuery(sql), params);
     return res.rows[0];
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async all(sql: string, params: any[] = []): Promise<any[]> {
+  async all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     const activePool = (this && 'pool' in this ? this.pool : pool) || pool;
     const res = await activePool.query(convertQuery(sql), params);
     return res.rows;

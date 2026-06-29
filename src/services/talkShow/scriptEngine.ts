@@ -406,9 +406,9 @@ ${characterName} olarak bu taslak metni kendi üslubunla zenginleştir.`,
 
     const script = await db.get('SELECT * FROM scripts WHERE id = ?', [scriptId]);
 
-    let character: Character | null = null;
+    let character: Character | null | undefined = null;
     if (segment.character_id) {
-      character = await db.get('SELECT * FROM characters WHERE id = ?', [segment.character_id]);
+      character = await db.get<Character>('SELECT * FROM characters WHERE id = ?', [segment.character_id]);
     }
 
     await db.exec('BEGIN');

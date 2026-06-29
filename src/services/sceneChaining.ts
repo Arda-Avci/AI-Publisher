@@ -101,9 +101,16 @@ export async function getSceneChainingFrame(
       { jobId, prevSceneNumber: currentScene - 1 },
     );
 
-    // Quality validation (optional, can be skipped for speed)
+    // Quality validation based on file size heuristic
     if (validateQuality) {
-      result.qualityScore = 0.9; // Placeholder - actual similarity check requires VLM
+      let videoSizeInBytes = 0;
+      try {
+        const stat = await fs.stat(prevVideoPath);
+        videoSizeInBytes = stat.size;
+      } catch {
+        videoSizeInBytes = 0;
+      }
+      result.qualityScore = Math.min(videoSizeInBytes / 5_000_000, 1.0) * 0.9 + 0.1;
       if (result.qualityScore < similarityThreshold) {
         Logger.warn(
           `[SceneChaining] Quality score ${result.qualityScore} below threshold ${similarityThreshold}`,

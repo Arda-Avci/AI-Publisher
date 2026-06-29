@@ -239,18 +239,23 @@ Kaynak: `Script_writer_is_akisi.txt`
 - [ ] Film/Series mode → AI'nın anlatı yapısına uygun prompt ürettiğini doğrula
 - [ ] Model-specific prompt'ların model_parameters_and_prompts.md şablonlarına uyduğunu kontrol et
 
-### 🔒 Code Audit — Kalan Yüksek Öncelikler
-- [x] `any` tip kullanımı yaygın — db.ts, queue.ts, middleware'lerdeki unused temizlendi
-- [x] CSRF token rotation — başarılı state-changing POST'tan sonra token yenileniyor
-- [x] `noUnusedLocals: true` + `noUnusedParameters: true` aktifleştirildi (60+ unused fix tamamlandı)
+### ✅ Faz N — Kod Temizliği: Placeholder Fonksiyonlar + Testler + Tip Güvenliği (29 Haz 2026)
+- [x] `sceneChaining.ts` — `qualityScore` hardcoded → file-size heuristic
+- [x] `lumaService.ts` — `estimateCost` hardcoded → env configurable
+- [x] `eyeContact.ts` — Docker passthrough → local face-api + sharp impl
+- [x] `test_characters.spec.ts` — placeholder → 6 real tests
+- [x] `test_e2e_features.spec.ts` — placeholder → 3 real tests
+- [x] `db.ts` — `get<T>` / `all<T>` generic eklendi
+- [x] `queue-graph.ts` — 18 `as any` → typed (`db.get<VideoJob>`, `job.property`)
+- [x] `queue.ts` — 7 `as any` → typed (`SplitLayout`, `BrollClip`, `error as Error`)
+- [x] `scriptEngine.ts` — `Character | null` → `Character | null | undefined`
+- [x] `tsconfig.json` — `outDir`, `declarationDir`, `.d.ts` exclude cleanup
+- [x] `src/types/iyzipay.d.ts` — declare module, `@ts-expect-error` kaldırıldı
+- [x] `tsc --noEmit` 0 hata, `eslint --quiet` 0 hata
 
-### 🔒 Code Audit — Kalan Orta/Düşük Öncelikler
-- [x] Route modülerliği — server.ts'deki 60+ route yorum satırlarıyla gruplandırıldı
-- [x] pino-http type uyumsuzluğu — `@types/pino` kaldırıldı (pino 9.x kendi tiplerini içeriyor)
-- [x] Logger redact — `username` eklendi
-- [x] Cookie `secure` — `COOKIE_SECURE` env ile yapılandırılabilir
-- [x] Rate limit test bypass — `DISABLE_RATE_LIMIT` env ile devre dışı bırakılabilir
-- [x] `convertQuery()` refactor — basitleştirildi, `@deprecated` notu eklendi, yeni sorgular PostgreSQL native formatında yazılacak
+### Kalan `as any` (Intentional)
+- **`src/db.ts`** (2): `(newErr as any).stack` — stack trace koruma patterni, değişmez
+- **`src/queue-graph.ts`** (11): `buildGraph()` içi — LangGraph v0.2.x type limitation, v0.3+ ile düzelir
 
 ---
 

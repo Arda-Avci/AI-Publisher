@@ -15,8 +15,9 @@ export class LumaService implements IVideoAPIService {
   isConfigured(): boolean { return !!API_KEY; }
 
   estimateCost(durationSec: number): number {
-    // TBD pricing — conservative estimate: 10 credits/sec × 1.5
-    return Math.ceil(durationSec * 10);
+    const creditsPerSecond = Number(process.env.LUMA_CREDITS_PER_SECOND) || 10;
+    const multiplier = Number(process.env.LUMA_COST_MULTIPLIER) || 1.5;
+    return Math.ceil(durationSec * creditsPerSecond * multiplier);
   }
 
   async generate(opts: VideoGenOptions): Promise<VideoResult> {

@@ -241,7 +241,7 @@ async function coverSynthesis(state: GraphState): Promise<Partial<GraphState>> {
   Logger.info('[Graph] Node: coverSynthesis', { jobId });
   await updateProgress(jobId, 'stageCoverSynthesis', 52);
 
-  const job = await db.get('SELECT cover_image_path, cover_images, sd_flux_enabled, sd_flux_prompt, master_prompt FROM video_jobs WHERE id = ?', [jobId]) as any;
+  const job = await db.get<VideoJob>('SELECT cover_image_path, cover_images, sd_flux_enabled, sd_flux_prompt, master_prompt FROM video_jobs WHERE id = ?', [jobId]);
   if (job && job.sd_flux_enabled === 1 && !job.cover_image_path && !job.cover_images) {
     Logger.info('[Graph] SD/Flux cover generation enabled, generating cover...');
     const prompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
@@ -314,7 +314,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
     return { currentStage: 'sceneRender', progressPercent: 80, completedScenes: state.totalScenes };
   }
 
-  const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]) as any;
+  const job = await db.get<VideoJob>('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
   const modelType = state.modelType || job?.model_type || 'CogVideoX-5b';
   const callbackUrl = process.env.WEBHOOK_URL ? `${process.env.WEBHOOK_URL}/api/webhook/runpod` : undefined;
   const mockColab = process.env.MOCK_COLAB === 'true';
@@ -575,10 +575,10 @@ async function publishSocial(state: GraphState): Promise<Partial<GraphState>> {
   const jobId = state.jobId;
   Logger.info('[Graph] Node: publishSocial', { jobId });
 
-  const job = await db.get(
+  const job = await db.get<VideoJob>(
     'SELECT target_platforms, yt_title, yt_desc, yt_tags, tt_desc, tt_tags, x_desc, x_tags, meta_desc, meta_tags, final_filename FROM video_jobs WHERE id = ?',
     [jobId],
-  ) as any;
+  );
 
   if (!job?.target_platforms) {
     Logger.info('[Graph] No target platforms, marking completed');
@@ -646,6 +646,7 @@ async function publishSocial(state: GraphState): Promise<Partial<GraphState>> {
 // ── Graph Builder ──
 
 function buildGraph() {
+  // LangGraph type inference limitation with Annotation.Root
   const graph = new StateGraph(QueueState as any) as any;
 
   graph.addNode('directorPlanning', directorPlanning as any);
@@ -667,7 +668,7 @@ function buildGraph() {
   graph.addEdge('concatFinal', 'publishSocial');
   graph.addEdge('publishSocial', END as any);
 
-  return graph as any;
+  return graph;
 }
 
 // ── Public API ──
@@ -679,20 +680,20 @@ export async function runJobGraph(jobId: number): Promise<void> {
   }
 
   // ── Load job for credit check ──
-  const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
+  const job = await db.get<VideoJob>('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
   if (!job) {
     Logger.error(`[Graph] Job #${jobId} not found in DB`);
     throw new Error(`Job #${jobId} not found`);
   }
 
   let requiredCredits = 0;
-  const modelType = (job as any).model_type || 'CogVideoX-5b';
+  const modelType = job.model_type || 'CogVideoX-5b';
   const modelCost = getModelCost(modelType);
 
   try {
     // Estimate scene count: use scenes JSON if available, else default 8
     let totalScenes = 8;
-    const scenesRaw = (job as any).scene_prompts || (job as any).scenes;
+    const scenesRaw = job.scene_prompts;
     if (scenesRaw) {
       try {
         const parsed = typeof scenesRaw === 'string' ? JSON.parse(scenesRaw) : scenesRaw;
@@ -700,22 +701,22 @@ export async function runJobGraph(jobId: number): Promise<void> {
       } catch { /* ignore */ }
     }
     requiredCredits = totalScenes * modelCost.sceneCost + modelCost.coverCost;
-    if ((job as any).differentiation_layout === 1) {
+    if (job.differentiation_layout === 1) {
       requiredCredits += 15;
     }
 
     // Check + hold (skip on retry)
     const balanceCheck = await CreditService.checkSufficientCredits(
-      (job as any).user_id, requiredCredits,
+      job.user_id, requiredCredits,
     );
     if (!balanceCheck.ok) {
       throw new Error('INSUFFICIENT_CREDITS');
     }
 
-    const isRetry = ((job as any).retry_count || 0) > 0;
+    const isRetry = (job.retry_count || 0) > 0;
     if (!isRetry) {
       const holdOk = await CreditService.holdCredits(
-        (job as any).user_id,
+        job.user_id,
         requiredCredits,
         `Video Projesi #${jobId} blokaji (Sahneler: ${totalScenes}, Model: ${modelType})`,
       );
@@ -731,27 +732,33 @@ export async function runJobGraph(jobId: number): Promise<void> {
       await checkpointer.setup();
     }
 
-    const app = graph.compile({ checkpointer } as any);
+    // LangGraph compile returns complex generic — use intermediate type
+    const app: any = graph.compile({ checkpointer });
     const threadId = `job_${jobId}`;
     const config = { configurable: { thread_id: threadId } };
 
     Logger.info(`[Graph] Starting job #${jobId} via LangGraph StateGraph`, { threadId, requiredCredits });
 
-    await (app as any).invoke(
+    await app.invoke(
       {
         jobId,
-        userId: (job as any).user_id || 0,
-        currentStage: 'starting',
+        userId: job.user_id || 0,
+        currentStage: 'directorPlanning',
         progressPercent: 0,
         totalScenes,
         completedScenes: 0,
         status: 'processing',
         errors: [],
         sceneResults: [],
-        marketing: { ytTitle: '', ytDesc: '', ytTags: '', ttDesc: '', ttTags: '', xDesc: '', xTags: '', metaDesc: '', metaTags: '' },
+        marketing: {
+          ytTitle: '', ytDesc: '', ytTags: '',
+          ttDesc: '', ttTags: '',
+          xDesc: '', xTags: '',
+          metaDesc: '', metaTags: '',
+        },
         finalFilename: '',
         finalVideoPath: '',
-        modelType,
+        modelType: modelType,
         retryCount: 0,
       },
       config,
@@ -760,7 +767,7 @@ export async function runJobGraph(jobId: number): Promise<void> {
     // ── Success — confirm hold ──
     if (requiredCredits > 0) {
       await CreditService.confirmHold(
-        (job as any).user_id,
+        job!.user_id,
         requiredCredits,
         `Video Projesi #${jobId} uretimi basarili (Sahneler: ${totalScenes}, Model: ${modelType})`,
       );
@@ -773,7 +780,7 @@ export async function runJobGraph(jobId: number): Promise<void> {
     const errMsg = err instanceof Error ? err.message : String(err);
     if (errMsg !== 'JOB_CANCELLED' && requiredCredits > 0) {
       await CreditService.refundCredits(
-        (job as any).user_id,
+        job!.user_id,
         requiredCredits,
         `Video Projesi #${jobId} iade - graph hatasi (${errMsg})`,
       );
@@ -802,12 +809,12 @@ export async function resumeJobGraph(jobId: number): Promise<void> {
   await checkpointer.setup();
 
   const graph = buildGraph();
-  const app = graph.compile({ checkpointer } as any);
+  const app: any = graph.compile({ checkpointer });
 
   const threadId = `job_${jobId}`;
   const config = { configurable: { thread_id: threadId } };
 
-  const state = await (app as any).getState(config);
+  const state = await app.getState(config);
   if (!state) {
     Logger.warn(`[Graph] No saved state for job #${jobId}, starting fresh`);
     await runJobGraph(jobId);
@@ -815,5 +822,5 @@ export async function resumeJobGraph(jobId: number): Promise<void> {
   }
 
   Logger.info(`[Graph] Resuming job #${jobId} from stage: ${state.values.currentStage}`);
-  await (app as any).invoke(null, config);
+  await app.invoke(null, config);
 }
