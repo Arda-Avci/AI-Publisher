@@ -36,6 +36,7 @@ import { EnvPropManager } from './components/EnvPropManager.js';
 import { ExamplesPanel } from './components/ExamplesPanel.js';
 import { StudioToolsPanel } from './components/StudioToolsPanel.js';
 import { TrendPanel } from './components/TrendPanel.js';
+import { PodcastPanel } from './components/PodcastPanel.js';
 import { StoryboardPanel } from './components/StoryboardPanel.js';
 import AdminLayout from './components/admin/AdminLayout.js';
 import AdminDashboard from './components/admin/AdminDashboard.js';
@@ -154,6 +155,7 @@ export default function App() {
     'Yayın Planla',
     'Trendler',
     'AI Stüdyo',
+    'Podcast',
   ] as const;
   const [mainTab, setMainTab] = useState<(typeof mainTabs)[number]>('Dashboard');
 
@@ -1008,6 +1010,9 @@ export default function App() {
                       onSetInpaintEnabled={setInpaintEnabled}
                       t={t}
                     />
+                  )}
+                  {mainTab === 'Podcast' && (
+                    <PodcastPanel language={language} />
                   )}
 
                   <HelpVideoPanel

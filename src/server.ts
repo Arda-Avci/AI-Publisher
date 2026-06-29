@@ -40,6 +40,7 @@ import adminRouter from './routes/admin.js';
 import { registerChatToEditRoutes } from './routes/chatToEdit.js';
 import { registerViMaxRoutes } from './routes/viMax.js';
 import { registerPipecatRoutes } from './routes/pipecat.js';
+import { registerPodcastRoutes } from './routes/podcast.js';
 import { bRollRouter } from './routes/bRoll.js';
 import { nicheRouter } from './routes/niche.js';
 import { splitRouter } from './routes/splitScreen.js';
@@ -205,6 +206,7 @@ registerEditorRoutes(app);
 registerChatToEditRoutes(app);
 registerViMaxRoutes(app);
 registerPipecatRoutes(app);
+registerPodcastRoutes(app);
 
 // ── Webhook & Bildirim ────────────────────────────────────────
 registerWebhookRoutes(app);

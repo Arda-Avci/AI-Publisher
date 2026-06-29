@@ -38,6 +38,11 @@ transformers.T5TokenizerFast = T5TokenizerFast
 transformers.models.t5.T5TokenizerFast = T5TokenizerFast
 
 # Workaround for HuggingFace transformers accelerate integration NameError
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+import gc
+import sys
 import builtins
 import torch
 torch.__version__ = "2.4.0"
@@ -83,20 +88,13 @@ torch.library.register_abstract_impl = dummy_decorator_or_func
 import torch.nn as nn
 if not hasattr(nn, "RMSNorm"):
     class RMSNorm(nn.Module):
-        def __init__(self, normalized_shape, eps=1e-8, elementwise_affine=True, device=None, dtype=None):
+        def __init__(self, dim: int, eps: float = 1e-6, device=None, dtype=None):
             super().__init__()
             self.eps = eps
-            if isinstance(normalized_shape, int):
-                dim = normalized_shape
-            else:
-                dim = normalized_shape[-1]
-            if elementwise_affine:
-                self.weight = nn.Parameter(torch.ones(dim, device=device, dtype=dtype))
-            else:
-                self.register_parameter('weight', None)
+            self.weight = nn.Parameter(torch.ones(dim, device=device, dtype=dtype))
         def forward(self, x):
             variance = x.pow(2).mean(-1, keepdim=True)
-            return x * torch.rsqrt(variance + self.eps) * (self.weight if self.weight is not None else 1.0)
+            return x * torch.rsqrt(variance + self.eps) * self.weight
     nn.RMSNorm = RMSNorm
 
 # Patch scaled_dot_product_attention to remove unsupported enable_gqa arg
@@ -165,8 +163,8 @@ def get_pipeline():
             pipe.enable_attention_slicing("max")
         if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
             pipe.vae.enable_slicing()
-    elif vram_gb <= 18.0:
-        print(f"[CONTAINER - HUNYUAN] 16-18GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload.")
+    elif vram_gb <= 22.5:
+        print(f"[CONTAINER - HUNYUAN] 16-22.5GB GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling sequential CPU offload.")
         pipe.enable_sequential_cpu_offload()
         if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
             pipe.vae.enable_tiling()
