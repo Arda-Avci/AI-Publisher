@@ -35,12 +35,14 @@ export function extractUrls(output: any): {
 
   if (!videoUrl && output.b2_urls) {
     const b2Paths = [
-      '/content/current_scene.mp4',
-      '/content/raw_video.mp4',
-      '/content/final_scene.mp4',
+      '/workspace/outputs/current_scene.mp4',
+      '/workspace/outputs/raw_video.mp4',
+      '/workspace/outputs/final_scene.mp4',
       '/workspace/current_scene.mp4',
       '/workspace/raw_video.mp4',
       '/workspace/final_scene.mp4',
+      '/content/current_scene.mp4',
+      '/content/raw_video.mp4',
     ];
     for (const p of b2Paths) {
       if (output.b2_urls[p]) {
@@ -82,11 +84,13 @@ export function extractUrls(output: any): {
 
   if (!speechUrl && output.b2_urls) {
     const audioPaths = [
-      '/content/speech.wav',
-      '/content/kokoro_speech.wav',
-      '/content/audio.wav',
+      '/workspace/outputs/speech.wav',
+      '/workspace/outputs/kokoro_speech.wav',
+      '/workspace/outputs/audio.wav',
       '/workspace/speech.wav',
       '/workspace/audio.wav',
+      '/content/speech.wav',
+      '/content/kokoro_speech.wav',
     ];
     for (const p of audioPaths) {
       if (output.b2_urls[p]) {
@@ -96,12 +100,13 @@ export function extractUrls(output: any): {
     }
   }
 
-  let sfxUrl = output.sfx_url || (output.b2_urls?.['/content/sfx.wav']) || (output.b2_urls?.['/workspace/sfx.wav']) || '';
+  let sfxUrl = output.sfx_url || (output.b2_urls?.['/workspace/outputs/sfx.wav']) || (output.b2_urls?.['/workspace/sfx.wav']) || (output.b2_urls?.['/content/sfx.wav']) || '';
 
   let subtitleUrl = output.subtitle_url ||
     output.subtitleUrl ||
-    (output.b2_urls?.['/content/subtitle.srt']) ||
+    (output.b2_urls?.['/workspace/outputs/subtitle.srt']) ||
     (output.b2_urls?.['/workspace/subtitle.srt']) ||
+    (output.b2_urls?.['/content/subtitle.srt']) ||
     output.subtitles ||
     '';
 
