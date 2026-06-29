@@ -4,6 +4,9 @@ import torch
 import tempfile
 from flask import Flask, request, send_file
 
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 app = Flask(__name__)
 
 model = None

@@ -4,7 +4,7 @@ Sen kıdemli bir Full-Stack ve Yapay Zeka Entegrasyon Mühendisisin. Hedefin; bu
 Senden, aşağıda mimarisi ve tüm detayları belirtilen "Otonom Çoklu Sosyal Medya Destekli AI Video Üretim ve Pazarlama Platformu" (SaaS) projesini uçtan uca, temiz, tür güvenli (type-safe) ve üretime hazır şekilde kodlamanı istiyorum. 
 
 Sistem iki ana katmandan oluşacaktır:
-1. Google Colab: Docker imajı build etmek ve GHCR'a push etmek için kullanılır. GPU gerektirmez (CPU runtime yeterli), Kaniko ile build alınır.
+1. GitHub Actions & GHCR: Docker imajlarını derlemek ve GitHub Container Registry (GHCR) üzerine push etmek için kullanılır.
 2. Node.js (TypeScript / Express Sunucusu): Kullanıcı panelini sunan, iş kuyruğunu (Job Queue) yöneten, SSE ile canlı ilerleme durumunu tarayıcıya basan ve Playwright ile çoklu sosyal medya yüklemelerini yöneten komut merkezi katmanı.
 
 Her zaman şu önceliklere odaklan:
@@ -178,10 +178,9 @@ Sistemin tüm katmanlarını aşağıdaki spesifikasyonlara göre baştan aşağ
 
 ---
 
-### BÖLÜM 1: GOOGLE COLAB KATMANI (Docker Image Build)
-Google Colab, yalnızca Docker imajlarını build etmek ve GHCR'a push etmek için kullanılır. GPU runtime gerekmez — CPU runtime yeterlidir. Kaniko ile build alınır ve imajlar `ghcr.io/anomalyco/` altına push edilir.
-- Build script: `colab_docker/build_all_v2.sh` (23 model)
-- Build notları: `colab_docker_build.ipynb`
+### BÖLÜM 1: GITHUB ACTIONS VE GHCR KATMANI (Docker Image Build)
+Docker imajları doğrudan GitHub Container Registry (GHCR) üzerinde GitHub Actions CI/CD hatları ile derlenir ve `ghcr.io/anomalyco/` altına push edilir.
+- Build tanımları: `.github/workflows/docker-build.yml`
 - Çalışan modeller RunPod serverless endpoint'ler olarak deploy edilir, Node.js katmanı RunPod API üzerinden çağrı yapar.
 
 ---

@@ -6,6 +6,37 @@ from flask import Flask, request, jsonify
 from diffusers import AudioLDM2Pipeline
 import scipy.io.wavfile as wavfile
 
+# transformers v5+ monkey patch
+try:
+    import transformers
+    from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+    from transformers.models.t5.tokenization_t5 import T5Tokenizer
+
+    class T5TokenizerFast(PreTrainedTokenizerFast):
+        vocab_files_names = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.json"}
+        model_input_names = ["input_ids", "attention_mask"]
+        slow_tokenizer_class = T5Tokenizer
+        
+        def __init__(self, vocab_file=None, tokenizer_file=None, eos_token="</s>", unk_token="<unk>", pad_token="<pad>", extra_ids=100, additional_special_tokens=None, **kwargs):
+            if extra_ids > 0 and additional_special_tokens is None:
+                additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
+            elif extra_ids > 0 and additional_special_tokens is not None:
+                for i in range(extra_ids):
+                    token = f"<extra_id_{i}>"
+                    if token not in additional_special_tokens:
+                        additional_special_tokens.append(token)
+            super().__init__(vocab_file=vocab_file, tokenizer_file=tokenizer_file, eos_token=eos_token, unk_token=unk_token, pad_token=pad_token, additional_special_tokens=additional_special_tokens, **kwargs)
+
+    transformers.T5TokenizerFast = T5TokenizerFast
+    if hasattr(transformers, "models") and hasattr(transformers.models, "t5"):
+        transformers.models.t5.T5TokenizerFast = T5TokenizerFast
+    print("[PATCH] T5TokenizerFast monkey-patch applied successfully in audioldm2.")
+except Exception as e:
+    print(f"[PATCH] T5TokenizerFast patch failed in audioldm2: {e}")
+
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 app = Flask(__name__)
 
 # Lazy loaded pipeline
@@ -75,7 +106,7 @@ def preload():
     """Pre-load model into VRAM to avoid cold start latency."""
     try:
         pipe = get_sfx_pipe()
-        vram_cleanup()
+        flush_memory()
         return jsonify({"status": "ok", "model_loaded": pipe is not None})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

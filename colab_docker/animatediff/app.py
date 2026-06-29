@@ -2,6 +2,38 @@ import os
 import gc
 import torch
 import numpy as np
+
+# torch & GradScaler monkey-patches
+import sys
+import importlib.metadata
+_orig_metadata_version = importlib.metadata.version
+def _patched_metadata_version(distribution_name):
+    if distribution_name.lower() == "torch":
+        return "2.4.0"
+    return _orig_metadata_version(distribution_name)
+importlib.metadata.version = _patched_metadata_version
+
+import builtins
+torch.__version__ = "2.4.0"
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
+import torch.compiler
+if not hasattr(torch.compiler, "is_compiling"):
+    torch.compiler.is_compiling = lambda: False
+if not hasattr(torch.compiler, "is_dynamo_compiling"):
+    torch.compiler.is_dynamo_compiling = lambda: False
+
+import torch.amp
+if not hasattr(torch.amp, "GradScaler"):
+    try:
+        from torch.cuda.amp import GradScaler
+        torch.amp.GradScaler = GradScaler
+    except ImportError:
+        pass
+
+builtins.torch = torch
+
 from flask import Flask, request, jsonify
 from PIL import Image
 
@@ -113,7 +145,7 @@ def preload():
     """Pre-load model into VRAM to avoid cold start latency."""
     try:
         pipe = get_pipeline()
-        vram_cleanup()
+        flush_memory()
         return jsonify({"status": "ok", "model_loaded": pipe is not None})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

@@ -1,10 +1,10 @@
-﻿FROM ai-publisher-base:latest
+FROM ai-publisher-base:latest
 
 ARG HF_TOKEN
 ENV HF_TOKEN=${HF_TOKEN}
 
 RUN /opt/conda/bin/pip install --no-cache-dir \
-    "diffusers>=0.30.0" \
+    "diffusers>=0.32.0" \
     "transformers>=4.39.3" \
     "accelerate==0.30.0" \
     "einops" \

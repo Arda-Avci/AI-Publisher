@@ -55,25 +55,21 @@ async function updateTemplate() {
 }
 
 async function cycleWorkers(maxWorkers) {
-  const workersMutation = `
-  mutation {
-    saveEndpoint(input: {
-      id: "${ENDPOINT_ID}",
-      name: "diplomatic_cyan_sawfish",
-      workersMax: ${maxWorkers}
-    }) {
-      id
-      workersMax
-    }
+  try {
+    const res = await axios.patch(
+      `https://rest.runpod.io/v1/endpoints/${ENDPOINT_ID}`,
+      { workersMax: maxWorkers },
+      {
+        headers: {
+          Authorization: `Bearer ${RUNPOD_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log(`Set workersMax to ${maxWorkers} via REST API.`);
+  } catch (e) {
+    console.error(`❌ workersMax güncelleme başarısız:`, e.response ? e.response.data : e.message);
   }
-  `;
-  const url = 'https://api.runpod.io/graphql?api_key=' + RUNPOD_API_KEY;
-  const response = await axios.post(
-    url,
-    { query: workersMutation },
-    { headers: { 'Content-Type': 'application/json' } }
-  );
-  console.log(`Set workersMax to ${maxWorkers}:`, JSON.stringify(response.data, null, 2));
 }
 
 async function runTestScript() {

@@ -1,5 +1,37 @@
-﻿import os, gc, torch, subprocess
+import os, gc, torch, subprocess
 import numpy as np
+
+# torch & GradScaler monkey-patches
+import sys
+import importlib.metadata
+_orig_metadata_version = importlib.metadata.version
+def _patched_metadata_version(distribution_name):
+    if distribution_name.lower() == "torch":
+        return "2.4.0"
+    return _orig_metadata_version(distribution_name)
+importlib.metadata.version = _patched_metadata_version
+
+import builtins
+torch.__version__ = "2.4.0"
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
+import torch.compiler
+if not hasattr(torch.compiler, "is_compiling"):
+    torch.compiler.is_compiling = lambda: False
+if not hasattr(torch.compiler, "is_dynamo_compiling"):
+    torch.compiler.is_dynamo_compiling = lambda: False
+
+import torch.amp
+if not hasattr(torch.amp, "GradScaler"):
+    try:
+        from torch.cuda.amp import GradScaler
+        torch.amp.GradScaler = GradScaler
+    except ImportError:
+        pass
+
+builtins.torch = torch
+
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
 

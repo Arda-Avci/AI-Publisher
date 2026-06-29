@@ -12,15 +12,15 @@ RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries && \
     echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries && \
     echo 'Acquire::https::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
 
-# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
     libsndfile1 \
     espeak-ng \
     espeak \
     git \
     wget \
     curl \
+    xz-utils \
+    tar \
     cmake \
     libgl1-mesa-glx \
     libglib2.0-0 \
@@ -30,6 +30,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu \
     fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
+
+# Install static FFmpeg build to prevent libopenh264 dynamic library version mismatch errors
+RUN wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+    tar -xf ffmpeg-release-amd64-static.tar.xz && \
+    mv ffmpeg-*-amd64-static/ffmpeg /usr/bin/ffmpeg && \
+    mv ffmpeg-*-amd64-static/ffprobe /usr/bin/ffprobe && \
+    rm -rf ffmpeg-release-amd64-static.tar.xz ffmpeg-*-amd64-static
 
 # HuggingFace/Torch cache → Network Volume
 ENV HF_HOME="/workspace/hf_cache"

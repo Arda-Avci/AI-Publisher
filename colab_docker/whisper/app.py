@@ -2,6 +2,10 @@ import os
 import gc
 import uuid
 import torch
+
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)

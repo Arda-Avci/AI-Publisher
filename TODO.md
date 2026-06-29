@@ -34,6 +34,17 @@
 - [x] Backblaze B2 S3 API endpoint'inden bölge (region) kodunun dinamik parse edilmesi yamasının eklenmesi
 - [x] B2 Master Key sınırlamasını aşmak için S3 uyumlu Custom Application Key entegrasyonunun tamamlanması
 - [x] RunPod worker'larının yeni yamalı imaj etiketleri ile cycle edilip `test_generate_video.js` ile gerçek video sentezleme ve B2 yüklemesinin %100 başarılı doğrulanması
+- [x] **HunyuanVideo & Diğer Tüm Modeller `GradScaler` ve `T5TokenizerFast` Yamaları**: PyTorch 2.2.1 altındaki `GradScaler` ve transformers v5+ altındaki `T5TokenizerFast` / `get_default_device` monkey-patch yamaları tüm `app.py` dosyalarında (`hunyuan`, `mochi`, `pyramid-flow`, `animatediff`, `dynamicrafter`, `audioldm2`, `stablediffusion`, `cogvideox`, `wan`, `ltx`, `zeroscope`) proaktif olarak tamamlandı.
+- [x] **RunPod REST API PATCH Mimarisine Geçiş**: GraphQL `saveEndpoint` mutasyonundaki 400 bad request hatalarını önlemek için tüm yönetim scriptleri REST API PATCH `/v1/endpoints/:id` yapısına geçirildi.
+- [x] **FFmpeg openh264 Versiyon Uyuşmazlığı Düzeltmesi**: `libopenh264` dynamic library mismatches / encoding failed hatalarını tamamen ortadan kaldırmak için, `Dockerfile.base` imajına statik derlenmiş (statically compiled) FFmpeg binary'si indirilip kuruldu.
+- [x] **Wan 2.5 `libtorchaudio` ABI / C++ Symbol Uyuşmazlığı**: PyTorch 2.5.1 ve torchaudio dynamic linker ABI sembol uyuşmazlığı hatasını gidermek için `wan25/Dockerfile`'a `torchaudio==2.5.1+cu121` sürümü eklenerek uyumluluk sağlandı.
+- [x] **VideoCrafter2 Config Dizin Yolu Düzeltmesi**: `/app/videocrafter/configs/inference.yaml` bulunamadı başlatma hatası, pretrained yüklemesinde kullanılmayan bu gereksiz dosya check adımı `videocrafter/app.py` dosyasından kaldırılarak çözüldü.
+- [x] **PyramidFlow Pipeline İçe Aktarma Düzeltmesi**: `cannot import name 'PyramidFlowPipeline' from 'diffusers'` hatası, `pyramid-flow/Dockerfile`'daki diffusers minimum sürüm gereksinimi `>=0.32.0` yapılarak giderildi.
+- [x] **Preload NameError (vram_cleanup / flush_memory) Hataları**: Zeroscope, CogVideoX, AudioLDM2, AnimateDiff, Kokoro, F5-TTS, XTTS ve GeneFace modellerinin `app.py` preload rotalarındaki eksik/hatalı `vram_cleanup` veya `flush_memory` tanımlamaları tamamen giderildi.
+
+## 🔴 Aktif — RunPod Serverless Çoklu Model Hata Giderimleri (28 Haz 2026)
+- [ ] **Mochi-1 GPU VRAM Kotası Yükseltimi**: Mochi-1 serverless endpoint konfigürasyonunu T4 (16GB) yerine minimum 24GB (A10G/ADA_24) VRAM destekleyen GPU grupları ile güncellemek.
+- [ ] **AnimateDiff & DynamiCrafter Quota Limiti**: RunPod ile görüşülerek ya da pasif/az kullanılan endpoint'ler kapatılarak serverless worker quota limitini 10'dan yukarı çıkartıp bu iki modeli de aktif etmek.
 
 ## ✅ Script Writer Full Workflow Tamamlandı (27 Haz 2026)
 

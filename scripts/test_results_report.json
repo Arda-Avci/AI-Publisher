@@ -1,0 +1,118 @@
+[
+  {
+    "key": "wan",
+    "name": "Wan 2.1 T2V",
+    "endpoint": "mey8jdqjmajszx",
+    "status": "SUCCESS",
+    "durationSec": 726,
+    "output": {
+      "b2_urls": {
+        "/workspace/outputs/raw_video.mp4": "https://s3.eu-central-003.backblazeb2.com/ai-publisher-media/outputs/test_seq_wan_1782670927254/unknown_20260628_183359_scene_1_raw.mp4"
+      },
+      "output_path": "/workspace/outputs/raw_video.mp4",
+      "status": "success",
+      "video_url": "https://s3.eu-central-003.backblazeb2.com/ai-publisher-media/outputs/test_seq_wan_1782670927254/unknown_20260628_183359_scene_1_raw.mp4"
+    },
+    "error": null
+  },
+  {
+    "key": "wan25",
+    "name": "Wan 2.5 I2V",
+    "endpoint": "gitw8ok1ugw5xr",
+    "status": "TIMEOUT",
+    "durationSec": 1813,
+    "output": null,
+    "error": "Job did not finish within 20 minutes limit."
+  },
+  {
+    "key": "hunyuan",
+    "name": "HunyuanVideo",
+    "endpoint": "mxkayqhw4geo56",
+    "status": "SUCCESS",
+    "durationSec": 31,
+    "output": {
+      "message": "Failed to import diffusers.pipelines.hunyuan_video.pipeline_hunyuan_video because of the following error (look up to see its traceback):\nCould not import module 'CLIPTextModel'. Are this object's requirements defined correctly?",
+      "status": "error"
+    },
+    "error": null
+  },
+  {
+    "key": "ltx",
+    "name": "LTX-Video",
+    "endpoint": "rojgtzuf3nztup",
+    "status": "SUCCESS",
+    "durationSec": 106,
+    "output": {
+      "b2_urls": {
+        "/workspace/outputs/raw_video.mp4": "https://s3.eu-central-003.backblazeb2.com/ai-publisher-media/outputs/test_seq_ltx_1782673496408/unknown_20260628_190633_scene_1_raw.mp4"
+      },
+      "output_path": "/workspace/outputs/raw_video.mp4",
+      "status": "success",
+      "video_url": "https://s3.eu-central-003.backblazeb2.com/ai-publisher-media/outputs/test_seq_ltx_1782673496408/unknown_20260628_190633_scene_1_raw.mp4"
+    },
+    "error": null
+  },
+  {
+    "key": "mochi",
+    "name": "Mochi-1",
+    "endpoint": "1d1o2z4hqup1kd",
+    "status": "TIMEOUT",
+    "durationSec": 1816,
+    "output": null,
+    "error": "Job did not finish within 20 minutes limit."
+  },
+  {
+    "key": "cogvideox",
+    "name": "CogVideoX",
+    "endpoint": "bntqgrsmz4jojy",
+    "status": "SUCCESS",
+    "durationSec": 15,
+    "output": {
+      "message": "Failed to import diffusers.pipelines.cogvideo.pipeline_cogvideox because of the following error (look up to see its traceback):\nCould not import module 'T5EncoderModel'. Are this object's requirements defined correctly?",
+      "status": "error"
+    },
+    "error": null
+  },
+  {
+    "key": "svd",
+    "name": "Stable Video Diffusion",
+    "endpoint": "y6lancu65n7w6p",
+    "status": "SUCCESS",
+    "durationSec": 15,
+    "output": {
+      "message": "Failed to import diffusers.pipelines.stable_video_diffusion.pipeline_stable_video_diffusion because of the following error (look up to see its traceback):\nCould not import module 'CLIPImageProcessor'. Are this object's requirements defined correctly?",
+      "status": "error"
+    },
+    "error": null
+  },
+  {
+    "key": "zeroscope",
+    "name": "Zeroscope",
+    "endpoint": "7tnfihn0gjst27",
+    "status": "TIMEOUT",
+    "durationSec": 1813,
+    "output": null,
+    "error": "Job did not finish within 20 minutes limit."
+  },
+  {
+    "key": "videocrafter",
+    "name": "VideoCrafter2",
+    "endpoint": "fx21kse80al35d",
+    "status": "FAILED",
+    "durationSec": 31,
+    "output": null,
+    "error": "Config not found: /app/videocrafter/configs/inference.yaml"
+  },
+  {
+    "key": "pyramidflow",
+    "name": "PyramidFlow",
+    "endpoint": "aatp5pymi3mj53",
+    "status": "SUCCESS",
+    "durationSec": 31,
+    "output": {
+      "message": "cannot import name 'PyramidFlowPipeline' from 'diffusers' (/opt/conda/lib/python3.10/site-packages/diffusers/__init__.py)",
+      "status": "error"
+    },
+    "error": null
+  }
+]

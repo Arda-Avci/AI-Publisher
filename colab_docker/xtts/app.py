@@ -8,6 +8,15 @@ from flask import Flask, request, jsonify
 import scipy.io.wavfile as wavfile
 import soundfile as sf
 
+def flush_memory():
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 # Monkey patch transformers for coqui-tts compatibility
 try:
     import transformers

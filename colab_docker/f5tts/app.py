@@ -4,6 +4,10 @@ import base64
 import torch
 import numpy as np
 import soundfile as sf
+
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 import librosa
 from flask import Flask, request, jsonify
 
@@ -108,7 +112,7 @@ def preload():
     """Pre-load model into VRAM to avoid cold start latency."""
     try:
         pipe = get_pipeline()
-        vram_cleanup()
+        flush_memory()
         return jsonify({"status": "ok", "model_loaded": pipe is not None})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

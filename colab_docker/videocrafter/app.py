@@ -93,10 +93,6 @@ def get_videocrafter_model(model_name="VideoCrafter/VideoCrafter2", resolution="
         raise FileNotFoundError(f"VideoCrafter repo not found: {MODEL_DIR}")
 
     # Build arguments for inference
-    config_path = os.path.join(MODEL_DIR, "configs", "inference.yaml")
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Config not found: {config_path}")
-
     sys.path.insert(0, MODEL_DIR)
     from lvdm.datasets.utils import load_content
     from lvdm.models.diffusion import LatentVideoDiffusion

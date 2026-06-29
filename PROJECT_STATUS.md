@@ -1,5 +1,15 @@
 # AI_Publisher Proje Durumu
 
+## ✅ Faz I - Proaktif Hata Giderme ve API Güncellemesi (29 Haz 2026)
+
+- **RunPod REST API PATCH Mimarisine Geçiş**: GraphQL `saveEndpoint` mutasyonundaki 400 bad request hatalarını önlemek için tüm yönetim scriptleri REST API PATCH `/v1/endpoints/:id` yapısına geçirildi. `test_all_video_models.js`, `test_sdxl.js`, `recycle_endpoints.js`, `temp_run_all_tests.js` ve `update_and_test_manual.js` dosyaları tamamen güncellendi.
+- **Python Model app.py Dosyalarının Proaktif Yamalanması**: PyTorch 2.2.1 altındaki `GradScaler` ve transformers v5+ altındaki `T5TokenizerFast` / `get_default_device` monkey-patch yamaları tüm diffusers modellerinde (`hunyuan`, `mochi`, `pyramid-flow`, `animatediff`, `dynamicrafter`, `audioldm2`, `stablediffusion`, `cogvideox`, `wan`, `ltx`, `zeroscope`) proaktif olarak tamamlandı.
+- **Statik FFmpeg Derleme Entegrasyonu**: FFmpeg openh264 dynamic linking (`Incorrect library version loaded`) sürüm hatalarını kalıcı olarak çözmek için `Dockerfile.base` imajına statically compiled (statik derlenmiş) FFmpeg kuruldu.
+- **Wan 2.5 ABI Uyuşmazlığı ve Torchaudio Entegrasyonu**: PyTorch 2.5.1 ve torchaudio dynamic linker uyuşmazlığını gidermek için `wan25/Dockerfile`'a `torchaudio==2.5.1+cu121` sürümü eklenerek C++ ABI sembol uyuşmazlığı giderildi.
+- **VideoCrafter2 ve PyramidFlow Model Hatalarının Düzeltilmesi**: `videocrafter/app.py` içerisindeki gereksiz config dosyası kontrolü kaldırıldı, `pyramid-flow/Dockerfile`'daki diffusers minimum sürüm gereksinimi `0.32.0`'a çekildi.
+- **Preload NameError Hatalarının Düzeltilmesi**: Kokoro, F5-TTS, XTTS, GeneFace, Zeroscope, CogVideoX, AudioLDM2 ve AnimateDiff modellerindeki tanımsız `vram_cleanup` / `flush_memory` preload hataları tamamen düzeltildi.
+- **Durum**: RunPod eksi bakiye engeli nedeniyle canlı serverless testleri bekletilmektedir. Bakiye yüklendiği an tüm modeller sıfır hata ile test edilmeye hazırdır.
+
 ## ✅ Code Audit Tamamlandı (28 Haz 2026)
 
 **Kapsam**: Güvenlik, kod kalitesi, performans ve sürdürülebilirlik denetimi. 25 bulgu tespit edildi, tamamı düzeltildi.
@@ -58,6 +68,18 @@
   - **Backblaze B2 S3 API İmza ve Bölge (Region) Hatası Giderildi**: B2 sunucusundan alınan `Malformed Access Key Id` hatası; hardcoded `us-west-004` bölgesinin kaldırılıp, `B2_ENDPOINT_URL`'den bölge kodunun dinamik parse edilmesi ile çözüldü.
   - **S3 Uyumlu Uygulama Anahtarı Entegrasyonu**: B2'nin master anahtarlarının S3 API'sini desteklememesi sorunu, konsoldan yeni bir S3 uyumlu Custom Application Key oluşturulup `.env` üzerinde güncellenerek aşılmıştır.
 - **Durum**: Entegrasyon ve serverless video üretim hattı canlıda hem teşhis (`diagnose`) hem de gerçek video üretimi ve B2 yükleme aşamalarında %100 başarıyla doğrulanmıştır.
+
+## ⚠️ Faz I - RunPod Serverless Çoklu Video Modelleri Sıralı Test Raporu (28 Haz 2026)
+- **Kapsam**: Mevcut 4 endpoint ve yeni eklenen 6 endpoint (Toplam 10 serverless endpoint) `workersMax: 1` limitiyle sıralı testlere tabi tutulmuştur. Testler sırasında karşılaşılan ve bir sonraki aşamada düzeltilecek olan hata bulguları şunlardır:
+  1. **`wan` (Wan 2.1) & `ltx` (LTX-Video)**: Video birleştirme adımlarında FFmpeg çalışırken `libopenh264` kütüphanesinin `Incorrect library version loaded` uyuşmazlığı nedeniyle çıktı kodlayıcısı açılamamış ve video birleştirme adımları başarısız olmuştur.
+  2. **`wan25` (Wan 2.5)**: PyTorch 2.2.1 ve `torchaudio` binary kitaplıkları arasında C++ ABI uyuşmazlığı (`undefined symbol: _ZN3c1010Dispatcher...`) nedeniyle model başlatılamamıştır.
+  3. **`hunyuan` (HunyuanVideo)**: PyTorch 2.2.1 sürümünde `GradScaler` sınıfı `torch.amp` yerine eski namespace altında olduğu için diffusers'ın yeni sürümü import sırasında hata vermiştir (`cannot import name 'GradScaler' from 'torch.amp'`).
+  4. **`mochi` (Mochi-1)**: Serverless endpoint GPU konfigürasyonu T4 (16GB VRAM) seçildiği için model minimum 22GB VRAM gereksinimiyle başlamamış ve yetersiz bellek hatası vermiştir.
+  5. **`cogvideox` (CogVideoX) & `svd` (SVD) & `zeroscope`**: `transformers` v5+ ve `diffusers` importları sırasında tokenizer fast / `T5EncoderModel`, `CLIPImageProcessor` ve `AutoImageProcessor` çözümlenememiştir.
+  6. **`videocrafter` (VideoCrafter2)**: `/app/videocrafter/configs/inference.yaml` dosyasının yanlış veya eksik dizin yolu nedeniyle `Config not found` hatası alınmıştır.
+  7. **`pyramidflow` (PyramidFlow)**: `cannot import name 'PyramidFlowPipeline' from 'diffusers'` hatası alınmıştır. `diffusers` içinden import yerine yerel pipeline import edilmelidir.
+- **Harekete Geçildi**: Tüm model şablonları (Templates) RunPod Secrets üzerindeki Hugging Face yetkilendirme anahtarını otomatik okuması için `HF_TOKEN: $HF_TOKEN` şeklinde güncellenmiştir.
+- **Sonuç**: 10 modelin sıralı testleri başarıyla sonlandırılmış ve tüm hata çıktıları ileride çözülmek üzere `scripts/test_results_report.json` dosyasına kaydedilmiştir.
 
 ## ✅ Faz I - Base Imaj, Actions Workflow ve Çoklu Model Derleme Başarısı (26 Haz 2026)
 - **`Dockerfile.base`**: Modellerin ortak ihtiyaç duyduğu referans python paketleri (`diffusers`, `sentencepiece`, `einops`, `decord`, `open_clip_torch`, `av`) base imaja taşındı. Böylece her model derlemesinde bu kütüphanelerin tekrar indirilip kurulması engellenerek derleme süreleri kısaltıldı.

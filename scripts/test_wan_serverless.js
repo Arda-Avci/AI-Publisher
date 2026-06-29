@@ -17,10 +17,15 @@ if (!ENDPOINT_ID || ENDPOINT_ID.includes('endpoint_id')) {
   process.exit(1);
 }
 
-// Format for our custom Flask API (ghcr.io/arda-avci/ai-publisher-wan)
+const fs = require('fs');
+const path = require('path');
+
+// Format for actual video generation
 const payload = {
   input: {
-    prompt: "diagnose",
+    prompt: "Slow-motion close-up video of three heavy solid square ice cubes falling from the air and splashing one by one into a crystal glass. The crystal glass is filled with amber-brown liquor whiskey. As each ice cube plunges into the glass, the liquid whiskey displaces, creating a dynamic splash of brown droplets spraying upwards over the edges of the glass. The glass sits on a blue tablecloth. The background is a dimly lit, cozy warm rustic wooden living room. Highly detailed fluid physics, photorealistic, 4k",
+    num_frames: 81,
+    num_inference_steps: 50,
     b2_credentials: {
       endpoint_url: process.env.B2_ENDPOINT_URL,
       key_id: process.env.B2_KEY_ID,
@@ -33,8 +38,8 @@ const payload = {
 };
 
 async function testServerless() {
-  console.log(`🚀 [RunPod] Custom Flask API Endpoint tetikleniyor: ${ENDPOINT_ID}`);
-  console.log(`📂 Gönderilen Düz Payload:`, JSON.stringify(payload, null, 2));
+  console.log(`🚀 [RunPod] Wan Serverless Endpoint tetikleniyor: ${ENDPOINT_ID}`);
+  console.log(`📂 Gönderilen Payload:`, JSON.stringify(payload, null, 2));
 
   try {
     const runRes = await axios.post(
@@ -56,7 +61,6 @@ async function testServerless() {
     let attempts = 0;
     const maxAttempts = 180; // 15 dakika max
 
-
     while (!completed && attempts < maxAttempts) {
       attempts++;
       const statusRes = await axios.get(
@@ -72,20 +76,65 @@ async function testServerless() {
       console.log(`[Deneme ${attempts}] Durum: ${status}`);
 
       if (status === 'COMPLETED') {
-        console.log('🎉 [BAŞARILI] İş tamamlandı!');
+        console.log('🎉 [BAŞARILI] Video üretimi tamamlandı!');
         console.log('📦 Çıktı Verileri:', JSON.stringify(statusRes.data.output, null, 2));
+
+        // Otomatik Video İndirme (Auto-download video)
+        try {
+          const outputData = statusRes.data.output;
+          let downloadUrl = null;
+          if (outputData) {
+            if (outputData.video_url) {
+              downloadUrl = outputData.video_url;
+            } else if (outputData.b2_urls) {
+              const firstKey = Object.keys(outputData.b2_urls)[0];
+              if (firstKey) {
+                downloadUrl = outputData.b2_urls[firstKey];
+              }
+            } else if (typeof outputData === 'string' && outputData.startsWith('http')) {
+              downloadUrl = outputData;
+            }
+          }
+
+          if (downloadUrl) {
+            const destDir = path.join(process.cwd(), 'outputs', 'test_outputs');
+            if (!fs.existsSync(destDir)) {
+              fs.mkdirSync(destDir, { recursive: true });
+            }
+            const destPath = path.join(destDir, `test_video_wan_serverless_${Date.now()}.mp4`);
+            console.log(`   📥 Video otomatik indiriliyor: ${downloadUrl}`);
+            
+            const downloadRes = await axios({
+              method: 'get',
+              url: downloadUrl,
+              responseType: 'stream'
+            });
+            
+            const writer = fs.createWriteStream(destPath);
+            downloadRes.data.pipe(writer);
+            
+            await new Promise((resolve, reject) => {
+              writer.on('finish', resolve);
+              writer.on('error', reject);
+            });
+            console.log(`   💾 Video kaydedildi! Konum: ${destPath}`);
+          }
+        } catch (dlErr) {
+          console.error(`   ⚠️ Video indirme başarısız:`, dlErr.message);
+        }
+
         completed = true;
       } else if (status === 'FAILED') {
         console.error('❌ [HATA] İş başarısız oldu!');
         console.error('Error Details:', statusRes.data.error);
         completed = true;
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await new Promise((resolve) => setTimeout(resolve, 10000));
       }
     }
 
     if (!completed) {
-      console.log('⏰ Zaman aşımı: İş 5 dakika içinde tamamlanamadı.');
+      console.log('⏰ Zaman aşımı: İş 15 dakika içinde tamamlanamadı.');
     }
 
   } catch (error) {

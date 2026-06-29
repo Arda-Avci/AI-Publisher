@@ -2,6 +2,9 @@ import os, gc, torch, subprocess, sys
 import numpy as np
 from flask import Flask, request, jsonify, send_file
 
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 app = Flask(__name__)
 MODEL = None
 MODEL_DIR = "/app/geneface"

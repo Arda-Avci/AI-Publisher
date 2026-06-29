@@ -11,6 +11,7 @@
  *   RUNPOD_API_KEY
  */
 
+require('dotenv').config();
 const https = require('https');
 
 const API_KEY = process.env.RUNPOD_API_KEY;

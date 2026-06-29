@@ -6,6 +6,10 @@ import numpy as np
 import base64
 import face_recognition
 import torch
+
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 from flask import Flask, request, jsonify
 
 # Add Wav2Lip to sys.path

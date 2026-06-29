@@ -1,10 +1,3 @@
-"""
-MuseTalk Gerçek Entegrasyon - Flask API
-=======================================
-Gerçek MuseTalk inference pipeline'ını kullanır.
-Model yüklenemezse 503 döner, mock kullanılmaz.
-"""
-
 import os
 import gc
 import sys
@@ -12,6 +5,9 @@ import subprocess
 import traceback
 
 import torch
+if not hasattr(torch, "get_default_device"):
+    torch.get_default_device = lambda: torch.device("cpu")
+
 from flask import Flask, request, jsonify, send_file
 
 app = Flask(__name__)
