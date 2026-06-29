@@ -1,4 +1,4 @@
-FROM ai-publisher-base:latest
+﻿FROM ai-publisher-base-cuda124:latest
 
 ARG HF_TOKEN
 ENV HF_TOKEN=${HF_TOKEN}

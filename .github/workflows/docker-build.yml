@@ -27,30 +27,35 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       base_tag: ${{ steps.check_base.outputs.base_tag }}
+      base_cuda124_tag: ${{ steps.check_base.outputs.base_cuda124_tag }}
+      base_cuda126_tag: ${{ steps.check_base.outputs.base_cuda126_tag }}
       build_needed: ${{ steps.check_base.outputs.build_needed }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check if Dockerfile.base changed
+      - name: Check if any base Dockerfile changed
         id: check_base
         run: |
           BASE_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:latest"
+          BASE_CUDA124_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base-cuda124:latest"
+          BASE_CUDA126_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base-cuda126:latest"
           echo "base_tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
-          
-          # Git diff ile colab_docker/Dockerfile.base degisti mi kontrol et
+          echo "base_cuda124_tag=$BASE_CUDA124_TAG" >> "$GITHUB_OUTPUT"
+          echo "base_cuda126_tag=$BASE_CUDA126_TAG" >> "$GITHUB_OUTPUT"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "build_needed=true" >> "$GITHUB_OUTPUT"
             echo "Manual dispatch triggered. Base image build is required."
           else
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
-            if echo "$CHANGED_FILES" | grep -q "^colab_docker/Dockerfile.base$"; then
+            if echo "$CHANGED_FILES" | grep -qE "^colab_docker/Dockerfile\.base(-cuda124|-cuda126)?$"; then
               echo "build_needed=true" >> "$GITHUB_OUTPUT"
-              echo "Dockerfile.base changed. Base image build is required."
+              echo "One or more base Dockerfiles changed. Base image build is required."
             else
               echo "build_needed=false" >> "$GITHUB_OUTPUT"
-              echo "Dockerfile.base did not change. Skipping base image build."
+              echo "No base Dockerfiles changed. Skipping base image build."
             fi
           fi
 
@@ -88,16 +93,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push base image
+      - name: Set HF_TOKEN
         if: steps.check_base.outputs.build_needed == 'true'
-        id: build_base
+        run: echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Build & push base image (PyTorch 2.2.1)
+        if: steps.check_base.outputs.build_needed == 'true'
         run: |
-          BASE_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:latest"
+          BASE_TAG="${{ steps.check_base.outputs.base_tag }}"
           SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base:${{ github.sha }}"
           docker build -f ${{ env.CONTEXT }}/Dockerfile.base \
+            --build-arg HF_TOKEN=${{ secrets.HF_TOKEN }} \
             -t "$BASE_TAG" -t "$SHA_TAG" \
             ${{ env.CONTEXT }}
           docker push "$BASE_TAG"
+          docker push "$SHA_TAG"
+
+      - name: Build & push base image (CUDA 12.4, PyTorch 2.6.0)
+        if: steps.check_base.outputs.build_needed == 'true'
+        run: |
+          BASE_CUDA124_TAG="${{ steps.check_base.outputs.base_cuda124_tag }}"
+          SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base-cuda124:${{ github.sha }}"
+          docker build -f ${{ env.CONTEXT }}/Dockerfile.base-cuda124 \
+            --build-arg HF_TOKEN=${{ secrets.HF_TOKEN }} \
+            -t "$BASE_CUDA124_TAG" -t "$SHA_TAG" \
+            ${{ env.CONTEXT }}
+          docker push "$BASE_CUDA124_TAG"
+          docker push "$SHA_TAG"
+
+      - name: Build & push base image (CUDA 12.6, PyTorch 2.8.0)
+        if: steps.check_base.outputs.build_needed == 'true'
+        run: |
+          BASE_CUDA126_TAG="${{ steps.check_base.outputs.base_cuda126_tag }}"
+          SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/ai-publisher-base-cuda126:${{ github.sha }}"
+          docker build -f ${{ env.CONTEXT }}/Dockerfile.base-cuda126 \
+            --build-arg HF_TOKEN=${{ secrets.HF_TOKEN }} \
+            -t "$BASE_CUDA126_TAG" -t "$SHA_TAG" \
+            ${{ env.CONTEXT }}
+          docker push "$BASE_CUDA126_TAG"
           docker push "$SHA_TAG"
 
   models:
@@ -168,10 +201,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull base image
+      - name: Set HF_TOKEN
+        run: echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Pull all base images
         run: |
-          docker pull ${{ needs.base.outputs.base_tag }}
+          docker pull ${{ needs.base.outputs.base_tag }} && \
           docker tag ${{ needs.base.outputs.base_tag }} ai-publisher-base:latest
+          docker pull ${{ needs.base.outputs.base_cuda124_tag }} && \
+          docker tag ${{ needs.base.outputs.base_cuda124_tag }} ai-publisher-base-cuda124:latest
+          docker pull ${{ needs.base.outputs.base_cuda126_tag }} && \
+          docker tag ${{ needs.base.outputs.base_cuda126_tag }} ai-publisher-base-cuda126:latest
 
       - name: Build & push ${{ matrix.model }}
         if: ${{ !inputs.model || inputs.model == matrix.model }}
@@ -216,6 +256,7 @@ jobs:
 
   special:
     name: Build ${{ matrix.model }}
+    needs: base
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -263,6 +304,18 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set HF_TOKEN
+        run: echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Pull all base images
+        run: |
+          docker pull ${{ needs.base.outputs.base_tag }} && \
+          docker tag ${{ needs.base.outputs.base_tag }} ai-publisher-base:latest
+          docker pull ${{ needs.base.outputs.base_cuda124_tag }} && \
+          docker tag ${{ needs.base.outputs.base_cuda124_tag }} ai-publisher-base-cuda124:latest
+          docker pull ${{ needs.base.outputs.base_cuda126_tag }} && \
+          docker tag ${{ needs.base.outputs.base_cuda126_tag }} ai-publisher-base-cuda126:latest
 
       - name: Build & push ${{ matrix.model }}
         if: ${{ !inputs.model || inputs.model == matrix.model }}
