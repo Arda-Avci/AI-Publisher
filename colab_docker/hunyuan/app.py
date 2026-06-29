@@ -151,23 +151,12 @@ def get_pipeline():
     from diffusers import HunyuanVideoPipeline
     pipe = HunyuanVideoPipeline.from_pretrained(
         "hunyuanvideo-community/HunyuanVideo", 
-        torch_dtype=torch.bfloat16
+        torch_dtype=torch.bfloat16,
+        device_map="balanced"
     )
 
-    if vram_gb <= 16.0:
-        print(f"[CONTAINER - HUNYUAN] T4/16GB GPU detected. Enabling aggressive memory optimization.")
-        pipe.enable_sequential_cpu_offload()
-        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
-            pipe.vae.enable_tiling()
-        if hasattr(pipe, "enable_attention_slicing"):
-            pipe.enable_attention_slicing("max")
-        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
-            pipe.vae.enable_slicing()
-    else:
-        print(f"[CONTAINER - HUNYUAN] 16GB+ GPU class detected (VRAM: {vram_gb:.2f} GB). Enabling model CPU offload.")
-        pipe.enable_model_cpu_offload()
-        if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
-            pipe.vae.enable_tiling()
+    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+        pipe.vae.enable_tiling()
         
     current_pipe = pipe
     return pipe
