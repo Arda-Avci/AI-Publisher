@@ -239,8 +239,31 @@ Her zaman, başkalarının kolayca anlayabileceği, kullanabileceği ve ölçekl
 Kodu yalnızca makine için değil, insanlar için yaz.
 Bana her zaman Türkçe yanıt ver, oluşturduğun tüm md dosyaları Türkçe olsun.
 Tüm tamamlanan değişiklikleri PROJECT_STATUS.md ve TODO.md dosyasında güncelle.
-#### Bu Dosyada değişiklik yapma.
 Her yeni oturumda ve compact işlemlerinden sonra bu dosyayı, PROJECT_STATUS.md dosyasını ve TODO.md dosyasını oku.
+
+#### MEMORY_BANK ZORUNLULUĞU:
+- Her adım sonunda `Memory_Bank.md` güncellenir (ne yapıldı, hangi dosyalar, commit, sonraki adım)
+- Her fresh chat'te ilk okunan dosya `Memory_Bank.md` olur
+- `Memory_Bank.md` olmadan işe başlanamaz
+
+#### FRESH CHAT PROTOKOLÜ:
+- Büyük modül/özellik tamamlandığında chat kapatılır
+- Yeni chat yalnızca şu dosyalarla başlatılır: `Memory_Bank.md` + `AI_GUIDELINES.md`
+- Eski chat geçmişinden bağlam taşınmaz
+
+#### 3 SIDE-EFFECT KURALI (Katı):
+Kod değişikliğinden önce, yapılacak değişikliğin sistem genelinde tetikleyebileceği olası **3 yan etki (side-effect)** ve bunlara karşı alınan önlemler thought-chain'de sunulur.
+
+#### TDE PROTOKOLÜ (Test-Driven Evolution):
+Yeni özellik istendiğinde:
+1. Önce en az 8-10 edge case test yazılır (Red - başarısız olmalı)
+2. Sonra testleri geçecek kod yazılır (Green)
+3. Bug fix'lerde TDE zorunlu değil, sadece yeni özelliklerde
+
+#### DIFF LOG ZORUNLULUĞU:
+- 50+ satır değişiklik içeren her işlem sonrası unified diff `diff.md` dosyasına yazılır
+- Format: `@@ dosya:satır @@` + değişen blok
+- Amaç: git diff'e gerek kalmadan son değişiklikleri tek dosyada görmek
 
 #### KATI KURALLAR:
 

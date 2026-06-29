@@ -445,6 +445,17 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **Küçük refactor**: `download.ts` — queue.ts içindeki inline download helper'ı modüler dosyaya taşındı. `docker-host.ts` — videocrafter, realesrgan, browser-use port eklendi.
 - **Test**: 539 ✅ / 34 ⏸️ (573 total), tsc 0 hata, commit `0f8c5d2`
 
+## ✅ Faz O — Guideline Entegrasyonu (29 Haz 2026)
+
+- **AGENTS.md** — 4 yeni katı kural eklendi: 3 Side-Effect, TDE (Test-Driven Evolution), Fresh Chat + Memory_Bank, diff.md Log
+- **Memory_Bank.md** — Yeni handoff dosyası oluşturuldu. Her fresh chat'te ilk okunan dosya. Son oturum, mevcut durum, bilinen sorunlar, sonraki adım içerir.
+- **AI_GUIDELINES.md** — Diff format kuralı güncellendi. `diff.md` loglama zorunluluğu eklendi.
+- **diff.md** — Unified diff log dosyası oluşturuldu. 50+ satır değişiklik sonrası AI buraya yazar.
+- **.gitignore** — `Memory_Bank.md`, `diff.md`, `AI_GUIDELINES.md` tracked'e alındı.
+- **Doğrulama**: tsc 0 hata, eslint 0 hata (benim değişikliklerimle ilgili 0)
+
+---
+
 ## ✅ Faz N2 — Prompt Generation Control Doğrulama (29 Haz 2026)
 
 - **Short mode verification**: `enhanceShortFormPrompt()` içindeki `SHORT_STRUCTURE_PROMPT` hardcoded süreler (`max 60 seconds`) → `buildShortStructurePrompt(durationSeconds, loopRequired)` ile dinamik yapıldı. Artık config `maxDurationSec` değerine göre prompt oluşuyor, `loopRequired: false` ise LOOP bölümü tamamen çıkarılıyor.

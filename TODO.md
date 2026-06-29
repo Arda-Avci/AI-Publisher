@@ -227,6 +227,16 @@ Kaynak: `Script_writer_is_akisi.txt`
 
 ---
 
+## 🔴 Aktif — Guideline Entegrasyonu — Devam Eden Faz (29 Haz 2026)
+- [x] AGENTS.md — 3 side-effect, TDE, Fresh Chat, Memory_Bank, diff.md kuralları eklendi
+- [x] Memory_Bank.md — oluşturuldu
+- [x] AI_GUIDELINES.md — diff format güncellendi
+- [x] diff.md — oluşturuldu
+- [x] .gitignore — yeni .md dosyaları tracked
+- [ ] Barrel exports — Python script ile `src/services/index.ts` + import refactor
+- [ ] Internal constants — magic number/timeout/API URL'leri tek dosyada
+- [ ] Config consolidation — .env mantıksal gruplama
+
 ## 🔴 Aktif İşler
 
 ### 💳 iyzico Ödeme — Canlı Test

@@ -40,6 +40,9 @@ scratch/
 !KURULUM_VE_GEREKSINIMLER.md
 !KNOWN_ISSUES.md
 !last.md
+!Memory_Bank.md
+!diff.md
+!AI_GUIDELINES.md
 *.txt
 !requirements.txt
 *.log
