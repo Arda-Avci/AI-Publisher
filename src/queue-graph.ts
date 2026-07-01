@@ -228,7 +228,7 @@ async function coverSynthesis(state: GraphState): Promise<Partial<GraphState>> {
   if (job && job.sd_flux_enabled === 1 && !job.cover_image_path && !job.cover_images) {
     Logger.info('[Graph] SD/Flux cover generation enabled, generating cover...');
     const prompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
-    if (process.env.MOCK_COLAB !== 'true') {
+    if (true) {
       try {
         const result = await ModalClient.pollUntilComplete('Stable Diffusion', {
           prompt, job_id: jobId, task: 'cover',
@@ -289,7 +289,6 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
 
   const job = await db.get<VideoJob>('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
   const modelType = state.modelType || job?.model_type || 'CogVideoX-5b';
-  const mockColab = process.env.MOCK_COLAB === 'true';
 
   let completed = state.completedScenes;
   const sceneResults: SceneResult[] = [...(state.sceneResults || [])];
@@ -321,7 +320,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
         if (cloudResult.videoUrl) {
           await downloadFromUrl(cloudResult.videoUrl, videoPath);
         }
-      } else if (!mockColab) {
+      } else if (!false) {
         Logger.info(`[Graph] Scene ${sceneNum}: dispatching to Modal (${modelType})`);
         const scenePayload: Record<string, any> = {
           job_id: jobId, scene_number: sceneNum, video_prompt: finalPrompt,
@@ -338,7 +337,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
           throw new Error(`Scene ${sceneNum}: Modal job failed: ${modalResult.error || 'Unknown error'}`);
         }
         Logger.info(`[Graph] Scene ${sceneNum}: Modal completed`);
-      } else if (mockColab) {
+      } else if (false) {
         Logger.info(`[Graph] Scene ${sceneNum}: mock mode`);
         const { exec } = require('child_process');
         const escText = (finalPrompt || '').replace(/'/g, "'\\''").slice(0, 50);
@@ -349,7 +348,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
         await new Promise<void>(r => exec(`ffmpeg -y -f lavfi -i "anullsrc=r=16000:cl=mono" -t 6 "${sfxPath}"`, () => r()));
       }
 
-      if (!mockColab && !isCloudModel) {
+      if (!false && !isCloudModel) {
         if (scene.speech_text) {
           const srtContent = `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`;
           await fs.writeFile(srtPath, srtContent);

@@ -1,4 +1,4 @@
-﻿# Self-contained Dockerfile for realesrgan
+# Self-contained Dockerfile for realesrgan
 # Generated: no base image dependency
 
 FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
@@ -10,11 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx libglib2.0-0 build-essential libass-dev \
     gobject-introspection fonts-dejavu fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
-RUN wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
-    tar -xf ffmpeg-release-amd64-static.tar.xz && \
-    mv ffmpeg-*-amd64-static/ffmpeg /usr/bin/ffmpeg && \
-    mv ffmpeg-*-amd64-static/ffprobe /usr/bin/ffprobe && \
-    rm -rf ffmpeg-release-amd64-static.tar.xz ffmpeg-*-amd64-static
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \

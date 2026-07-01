@@ -1,5 +1,6 @@
-﻿# Self-contained Dockerfile for stablediffusion
+# Self-contained Dockerfile for stablediffusion
 # Generated: no base image dependency
+# Rebuild: 2026-06-30 monkey-patch fix
 
 FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC

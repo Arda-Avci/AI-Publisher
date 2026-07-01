@@ -476,7 +476,7 @@ async function startProduction(job: VideoJob) {
 
         const coverPaths: string[] = [];
 
-        if (process.env.MOCK_COLAB === 'true') {
+        if (false) {
           Logger.info('[MOCK] Generating mock cover images via FFmpeg...');
           const colors = ['0x08111F', '0x1A2E40', '0x00F2FE'];
           const { exec } = require('child_process');
@@ -597,7 +597,7 @@ async function startProduction(job: VideoJob) {
         Logger.info('[SD/FLUX] Generating cover image via Docker...');
         const sdPrompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
         let generatedPath = '';
-        if (process.env.MOCK_COLAB === 'true') {
+        if (false) {
           const mockImg = path.join(process.cwd(), DIRECTORIES.UPLOADS, `sd_flux_${job.id}.png`);
           const { exec } = require('child_process');
           await new Promise<void>((r) =>
@@ -956,7 +956,7 @@ async function startProduction(job: VideoJob) {
           };
           Logger.info(`[Veo31] Scene ${scene.scene_number} generated`, { videoUrl: veoResult.videoUrl });
         } else {
-          if (process.env.MOCK_COLAB === 'true') {
+          if (false) {
             Logger.info(`[MOCK] Mocking media generation for Scene ${scene.scene_number}...`);
             taskStatus = 'success';
             taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
@@ -1046,7 +1046,7 @@ async function startProduction(job: VideoJob) {
         Logger.info('[PRODUCTION] Scene completed, downloading files', { hasSubtitle });
 
         let srtFile = '';
-        if (process.env.MOCK_COLAB === 'true') {
+        if (false) {
           Logger.info('[MOCK] Generating mock scene files via FFmpeg...');
           const { exec } = require('child_process');
 
@@ -1140,7 +1140,7 @@ async function startProduction(job: VideoJob) {
 
         let tempLogoFile = '';
         try {
-          if (process.env.MOCK_COLAB === 'false') {
+          if (true) {
             Logger.info('[PRODUCTION] Skipping local FFmpeg mix, using pre-mixed Docker video.', {
               mS,
             });
@@ -1156,7 +1156,7 @@ async function startProduction(job: VideoJob) {
             let musicIndex = -1;
             if (job.background_music_path) {
               const musicAbsPath = path.resolve(
-                path.join(process.cwd(), job.background_music_path),
+                path.join(process.cwd(), job.background_music_path!),
               );
               if (await fs.pathExists(musicAbsPath)) {
                 inputArgs.push('-i', musicAbsPath);
@@ -1326,7 +1326,7 @@ async function startProduction(job: VideoJob) {
               });
               const gradedPath = mS.replace('.mp4', '_graded.mp4');
               try {
-                await applyColorGradeFilter(mS, gradedPath, job.color_grade_preset);
+                await applyColorGradeFilter(mS, gradedPath, job.color_grade_preset!);
                 await fs.move(gradedPath, mS, { overwrite: true });
                 Logger.info('[COLOR GRADE] Applied successfully');
               } catch (gradeErr) {
@@ -1458,7 +1458,7 @@ async function startProduction(job: VideoJob) {
     const fName = `film_${job.id}_${Date.now()}.mp4`;
     let fPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, fName);
 
-    if (process.env.MOCK_COLAB === 'false') {
+    if (true) {
       Logger.info('Sahneler demuxer concat (-c copy) ile birleştiriliyor...', { finalScenes });
       const txt = path.join(path.dirname(fPath), `temp_concat_${Date.now()}.txt`);
       await fs.writeFile(
