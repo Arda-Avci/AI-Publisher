@@ -1135,23 +1135,41 @@ export default function App() {
 
                   <HelpVideoPanel
                     feature={
-                      mainTab === 'Stüdyo' ? 'studio'
+                      mainTab === 'Dashboard' ? 'dashboard'
+                        : mainTab === 'Stüdyo' ? 'studio'
+                        : mainTab === 'Senaryo' ? 'script'
+                        : mainTab === 'Karakterler' ? 'characters'
+                        : mainTab === 'Ortam/Nesne' ? 'envprop'
+                        : mainTab === 'AI Asistan' ? 'ai_assistant'
+                        : mainTab === 'Örnekler' ? 'examples'
+                        : mainTab === 'Video Düzenleme' ? 'edit'
+                        : mainTab === 'Beat Sync' ? 'beatsync'
+                        : mainTab === 'B-Roll' ? 'broll'
+                        : mainTab === 'Video Kırpma' ? 'cut'
+                        : mainTab === 'Transkript' ? 'transcript'
                         : mainTab === 'Galeri' ? 'gallery'
                         : mainTab === 'Canvas' ? 'canvas'
+                        : mainTab === 'Talk-Show' ? 'talkshow'
+                        : mainTab === 'Podcast' ? 'podcast'
+                        : mainTab === 'Trendler' ? 'trends'
+                        : mainTab === 'Yayın Planla' ? 'schedule'
                         : mainTab === 'Batch' ? 'batch'
-                        : mainTab === 'Karakterler' ? 'characters'
-                        : mainTab === 'Senaryo' ? 'studio'
-                        : mainTab === 'Ortam/Nesne' ? 'studio'
-                        : mainTab === 'API Keys' ? 'api_keys'
-                        : mainTab === 'Hikaye Tahtası' ? 'studio'
-                        : mainTab === 'Trendler' ? 'studio'
-                        : mainTab === 'Video Düzenleme' ? 'gallery'
-                        : mainTab === 'AI Araçları' ? 'studio'
-                        : mainTab === 'Hesap' ? 'studio'
-                        : mainTab === 'Admin' ? 'studio'
+                        : mainTab === 'Clipper' ? 'clipper'
+                        : mainTab === 'AI Stüdyo' ? 'aistudio'
+                        : mainTab === 'Voice Pipeline' ? 'pipecat'
+                        : mainTab === 'LoRA' ? 'lora'
+                        : mainTab === 'Doküman Yükleme' ? 'document'
+                        : mainTab === 'Niche' ? 'niche'
+                        : mainTab === 'Hikaye Tahtası' ? 'storyboard'
+                        : mainTab === 'Krediler' ? 'credits'
+                        : mainTab === 'Ödemeler' ? 'payments'
+                        : mainTab === 'Abonelikler' ? 'subscriptions'
+                        : mainTab === 'Denetim Kayıtları' ? 'audit'
+                        : mainTab === 'Docker Durumu' ? 'docker'
                         : 'studio'
                     }
-                    }
+                    language={language}
+                  />
                     language={language}
                   />
                 </main>
