@@ -22,36 +22,99 @@ env:
   CONTEXT: colab_docker
 
 jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      models-changed: ${{ steps.set-matrix.outputs.models-changed }}
+      models: ${{ steps.set-matrix.outputs.models }}
+      special-changed: ${{ steps.set-matrix.outputs.special-changed }}
+      special: ${{ steps.set-matrix.outputs.special }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed models
+        id: set-matrix
+        run: |
+          ALL='["wav2lip","wan","wan25","ltx","hunyuan","stablediffusion","animatediff","audioldm2","cogvideox","dynamicrafter","f5tts","kokorotts","lora-trainer","mochi","musetalk","pyramid-flow","realesrgan","sadtalker","svd","videocrafter","whisper","xtts","zeroscope"]'
+          ALL_SPECIAL='[{"model":"browser-use","dockerfile":"browser-use/Dockerfile"},{"model":"geneface","dockerfile":"geneface/Dockerfile"},{"model":"video-retalking","dockerfile":"video-retalking/Dockerfile"}]'
+
+          # workflow_dispatch with specific model
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.model }}" ]; then
+            M="${{ inputs.model }}"
+            if echo "$ALL" | jq -e --arg m "$M" 'index($m)' > /dev/null 2>&1; then
+              echo "models=[\"$M\"]" >> $GITHUB_OUTPUT
+              echo "models-changed=true" >> $GITHUB_OUTPUT
+              echo "special=[]" >> $GITHUB_OUTPUT
+              echo "special-changed=false" >> $GITHUB_OUTPUT
+            elif echo "$ALL_SPECIAL" | jq -e --arg m "$M" '.[] | select(.model == $m)' > /dev/null 2>&1; then
+              echo "models=[]" >> $GITHUB_OUTPUT
+              echo "models-changed=false" >> $GITHUB_OUTPUT
+              echo "special=[{\"model\":\"$M\",\"dockerfile\":\"$M/Dockerfile\"}]" >> $GITHUB_OUTPUT
+              echo "special-changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "models=[]" >> $GITHUB_OUTPUT
+              echo "models-changed=false" >> $GITHUB_OUTPUT
+              echo "special=[]" >> $GITHUB_OUTPUT
+              echo "special-changed=false" >> $GITHUB_OUTPUT
+            fi
+            exit 0
+          fi
+
+          # workflow_dispatch without model → build all
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "models=$ALL" >> $GITHUB_OUTPUT
+            echo "models-changed=true" >> $GITHUB_OUTPUT
+            echo "special=$ALL_SPECIAL" >> $GITHUB_OUTPUT
+            echo "special-changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Push event: detect changed models
+          BEFORE="${{ github.event.before }}"
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "models=$ALL" >> $GITHUB_OUTPUT
+            echo "models-changed=true" >> $GITHUB_OUTPUT
+            echo "special=$ALL_SPECIAL" >> $GITHUB_OUTPUT
+            echo "special-changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- colab_docker/ 2>/dev/null || true)
+
+          # Shared file changes → build all
+          if echo "$CHANGED" | grep -qE '^colab_docker/(runpod_handler|shared/|download_weights)'; then
+            echo "models=$ALL" >> $GITHUB_OUTPUT
+            echo "models-changed=true" >> $GITHUB_OUTPUT
+            echo "special=$ALL_SPECIAL" >> $GITHUB_OUTPUT
+            echo "special-changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract unique model dirs from changed files → JSON array
+          CHANGED_DIRS=$(echo "$CHANGED" | grep -oP '^colab_docker/\K[^/]+' | sort -u | jq -R -s -c 'split("\n") | map(select(. != ""))')
+
+          # Find changed main models (exact match via index)
+          MODELS_RESULT=$(echo "$ALL" | jq -c --argjson dirs "$CHANGED_DIRS" '[.[] | select(. as $m | $dirs | index($m))]')
+
+          # Find changed special models (exact match via index)
+          SPECIAL_RESULT=$(echo "$ALL_SPECIAL" | jq -c --argjson dirs "$CHANGED_DIRS" '[.[] | select(.model as $m | $dirs | index($m))]')
+
+          echo "models=$MODELS_RESULT" >> $GITHUB_OUTPUT
+          [ "$MODELS_RESULT" = "[]" ] && echo "models-changed=false" >> $GITHUB_OUTPUT || echo "models-changed=true" >> $GITHUB_OUTPUT
+          echo "special=$SPECIAL_RESULT" >> $GITHUB_OUTPUT
+          [ "$SPECIAL_RESULT" = "[]" ] && echo "special-changed=false" >> $GITHUB_OUTPUT || echo "special-changed=true" >> $GITHUB_OUTPUT
+
   models:
     name: Build ${{ matrix.model }}
+    needs: [filter]
+    if: needs.filter.outputs.models-changed == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        model:
-          - wav2lip
-          - wan
-          - wan25
-          - ltx
-          - hunyuan
-          - stablediffusion
-          - animatediff
-          - audioldm2
-          - cogvideox
-          - dynamicrafter
-          - f5tts
-          - kokorotts
-          - lora-trainer
-          - mochi
-          - musetalk
-          - pyramid-flow
-          - realesrgan
-          - sadtalker
-          - svd
-          - videocrafter
-          - whisper
-          - xtts
-          - zeroscope
+        model: ${{ fromJson(needs.filter.outputs.models) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,7 +156,6 @@ jobs:
         run: echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> $GITHUB_ENV
 
       - name: Build & push ${{ matrix.model }}
-        if: ${{ !inputs.model || inputs.model == matrix.model }}
         run: |
           FOLDER_SHA=$(git log -1 --format="%H" -- "${{ env.CONTEXT }}/${{ matrix.model }}")
           SHA_TAG="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.model }}:${{ github.sha }}"
@@ -102,14 +164,14 @@ jobs:
 
           echo "Checking if image exists for folder SHA $FOLDER_SHA ($FOLDER_TAG)..."
           if docker manifest inspect "$FOLDER_TAG" > /dev/null 2>&1; then
-            echo "✅ Image already exists. Skipping build, updating tags..."
+            echo "Image already exists. Skipping build, updating tags..."
             docker pull "$FOLDER_TAG"
             docker tag "$FOLDER_TAG" "$MODEL_TAG"
             docker tag "$FOLDER_TAG" "$SHA_TAG"
             docker push "$MODEL_TAG"
             docker push "$SHA_TAG"
           else
-            echo "🚀 Image not found. Starting build..."
+            echo "Image not found. Starting build..."
             cp -f ${{ env.CONTEXT }}/runpod_handler.py ${{ env.CONTEXT }}/${{ matrix.model }}/
             cp -f ${{ env.CONTEXT }}/download_weights.sh ${{ env.CONTEXT }}/${{ matrix.model }}/
             cp -rf ${{ env.CONTEXT }}/shared ${{ env.CONTEXT }}/${{ matrix.model }}/
@@ -133,17 +195,13 @@ jobs:
 
   special:
     name: Build ${{ matrix.model }}
+    needs: [filter]
+    if: needs.filter.outputs.special-changed == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - model: browser-use
-            dockerfile: browser-use/Dockerfile
-          - model: geneface
-            dockerfile: geneface/Dockerfile
-          - model: video-retalking
-            dockerfile: video-retalking/Dockerfile
+        include: ${{ fromJson(needs.filter.outputs.special) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -185,7 +243,6 @@ jobs:
         run: echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> $GITHUB_ENV
 
       - name: Build & push ${{ matrix.model }}
-        if: ${{ !inputs.model || inputs.model == matrix.model }}
         run: |
           DIR=$(dirname "${{ env.CONTEXT }}/${{ matrix.dockerfile }}")
           FOLDER_SHA=$(git log -1 --format="%H" -- "$DIR")
@@ -195,14 +252,14 @@ jobs:
 
           echo "Checking if image exists for folder SHA $FOLDER_SHA ($FOLDER_TAG)..."
           if docker manifest inspect "$FOLDER_TAG" > /dev/null 2>&1; then
-            echo "✅ Image already exists. Skipping build, updating tags..."
+            echo "Image already exists. Skipping build, updating tags..."
             docker pull "$FOLDER_TAG"
             docker tag "$FOLDER_TAG" "$MODEL_TAG"
             docker tag "$FOLDER_TAG" "$SHA_TAG"
             docker push "$MODEL_TAG"
             docker push "$SHA_TAG"
           else
-            echo "🚀 Image not found. Starting build..."
+            echo "Image not found. Starting build..."
             cp -f ${{ env.CONTEXT }}/runpod_handler.py "$DIR"/
             cp -f ${{ env.CONTEXT }}/download_weights.sh "$DIR"/
             cp -rf ${{ env.CONTEXT }}/shared "$DIR"/
