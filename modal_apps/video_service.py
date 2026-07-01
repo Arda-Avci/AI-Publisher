@@ -116,8 +116,9 @@ def _run_generate(model_name: str, prompt: str, b2_key_id: str, b2_key: str, **k
     sys.path.insert(0, "/app")
     try:
         import app as flask_mod
-    except ImportError:
-        return {"status": "error", "error": "app.py not found in image", "model": model_name}
+    except ImportError as e:
+        import traceback
+        return {"status": "error", "error": f"app.py import failed: {e}", "traceback": traceback.format_exc(), "model": model_name}
 
     if not hasattr(flask_mod, "app"):
         return {"status": "error", "error": "app.py has no Flask app", "model": model_name}
