@@ -10,7 +10,6 @@ import os
 import sys
 import json
 from pathlib import Path
-from fastapi import Request, HTTPException
 
 from . import check_auth
 
@@ -212,7 +211,8 @@ def generate_zeroscope(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> di
 
 
 @modal.fastapi_endpoint(method="POST")
-def api_generate(request: Request):
+def api_generate(request):
+    from fastapi import Request, HTTPException
     auth_err = check_auth(request.headers.get("Authorization", ""))
     if auth_err:
         raise HTTPException(status_code=401, detail=auth_err)

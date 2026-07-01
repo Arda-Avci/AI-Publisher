@@ -13,7 +13,9 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction) 
   if (
     process.env.NODE_ENV === 'test' ||
     req.path === '/api/v1/video/callback' ||
-    req.path === '/api/webhook/runpod'
+    req.path === '/api/webhook/runpod' ||
+    req.path === '/login' ||
+    req.path === '/logout'
   ) {
     return next();
   }

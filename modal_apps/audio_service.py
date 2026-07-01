@@ -3,12 +3,12 @@ Modal App: Audio & Face Processing (GPU + CPU)
 GPU models: Wav2Lip, SadTalker, MuseTalk, GeneFace, Video-Retalking, AudioLDM2, Browser-Use
 CPU models: Kokoro TTS, F5-TTS, XTTS, Whisper
 Volume: ai-publisher-weights at /vol/weights
+Deploy marker: 2026-07-01-001
 """
 import modal
 import os
 import sys
 from pathlib import Path
-from fastapi import Request, HTTPException
 
 from . import check_auth
 
@@ -191,7 +191,8 @@ FN_MAP = {
 
 
 @modal.fastapi_endpoint(method="POST")
-def api_generate(request: Request):
+def api_generate(request):
+    from fastapi import Request, HTTPException
     auth_err = check_auth(request.headers.get("Authorization", ""))
     if auth_err:
         raise HTTPException(status_code=401, detail=auth_err)
