@@ -196,9 +196,7 @@ export default function App() {
   }, [selectedJob]);
   useEffect(() => {
     const r = document.documentElement;
-    r.className = `theme-${theme}`;
-    if (isDark) r.classList.add('dark');
-    else r.classList.remove('dark');
+    r.className = isDark ? `dark theme-${theme}` : `theme-${theme}`;
   }, [theme, isDark]);
 
   const fetchSession = async () => {
