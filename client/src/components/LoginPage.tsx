@@ -23,7 +23,6 @@ export function LoginPage({
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const isTR = language === 'tr';
   const t = (key: string) => {
     const dict: Record<string, Record<string, string>> = {
       tr: {
@@ -32,7 +31,6 @@ export function LoginPage({
         passwordLabel: 'Şifre',
         loginPlaceholderUsername: 'e-posta@adresiniz.com',
         signInButton: 'Giriş Yap',
-        languageToggleEN: 'Switch to English',
       },
       en: {
         loginSubtitle: 'Autonomous Video Production & Marketing Station',
@@ -40,10 +38,37 @@ export function LoginPage({
         passwordLabel: 'Password',
         loginPlaceholderUsername: 'you@example.com',
         signInButton: 'Sign In',
-        languageToggleEN: "Türkçe'ye Geç",
       },
+      de: {
+        loginSubtitle: 'KI-Videoproduktion für soziale Medien',
+        usernameLabel: 'Benutzername',
+        passwordLabel: 'Passwort',
+        loginPlaceholderUsername: 'Ihre E-Mail-Adresse',
+        signInButton: 'Anmelden',
+      },
+      fr: {
+        loginSubtitle: 'Production vidéo IA pour les médias sociaux',
+        usernameLabel: "Nom d'utilisateur",
+        passwordLabel: 'Mot de passe',
+        loginPlaceholderUsername: 'Votre adresse e-mail',
+        signInButton: 'Connexion',
+      },
+      es: {
+        loginSubtitle: 'Producción de video con IA para redes sociales',
+        usernameLabel: 'Nombre de usuario',
+        passwordLabel: 'Contraseña',
+        loginPlaceholderUsername: 'Su dirección de correo electrónico',
+        signInButton: 'Iniciar sesión',
+      },
+      ar: {
+        loginSubtitle: 'إنتاج فيديو بالذكاء الاصطناعي لوسائل التواصل',
+        usernameLabel: 'اسم المستخدم',
+        passwordLabel: 'كلمة المرور',
+        loginPlaceholderUsername: 'عنوان بريدك الإلكتروني',
+        signInButton: 'تسجيل الدخول',
+      }
     };
-    return dict[language]?.[key] || key;
+    return dict[language]?.[key] || dict['en']?.[key] || key;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,19 +232,28 @@ export function LoginPage({
             {t('signInButton')}
           </button>
         </form>
-        <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <button
-            onClick={() => setLanguage(isTR ? 'en' : 'tr')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: 12,
-            }}
-          >
-            {t('languageToggleEN')}
-          </button>
+        <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center' }}>
+          {(['tr', 'en', 'de', 'fr', 'es', 'ar'] as Language[]).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLanguage(lang)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: language === lang ? 'var(--accent)' : 'var(--text-muted)',
+                fontWeight: language === lang ? 600 : 400,
+                cursor: 'pointer',
+                fontSize: 11,
+                fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase',
+                padding: '2px 6px',
+                borderRadius: 4,
+                backgroundColor: language === lang ? 'rgba(0, 242, 254, 0.08)' : 'transparent',
+              }}
+            >
+              {lang}
+            </button>
+          ))}
         </div>
       </div>
     </div>

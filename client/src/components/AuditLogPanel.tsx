@@ -43,7 +43,7 @@ export function AuditLogPanel({ csrfToken }: Props) {
 
   useEffect(() => { fetchLogs(); }, [page, filter]);
 
-  const s: Record<string, React.CSSProperties> = {
+  const s: Record<string, any> = {
     root: { display: 'flex', flexDirection: 'column', gap: 12, height: '100%' },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
     search: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--foreground)', fontSize: 12, flex: 1 },

@@ -22,6 +22,7 @@ import {
   initScrollAnimations,
   initNumberAnimations,
 } from './LandingPageAnimations.js';
+import type { Language } from '../types.js';
 
 interface Scene {
   id: number;
@@ -53,8 +54,8 @@ interface LandingPageProps {
   onLogin: (username: string, password: string) => Promise<void>;
   authError: string;
   setAuthError: (err: string) => void;
-  language: 'tr' | 'en';
-  setLanguage: (lang: 'tr' | 'en') => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
   t: (key: string, params?: Record<string, any>) => string;
 }
 
@@ -69,6 +70,7 @@ export function LandingPage({
   const [demoVideos, setDemoVideos] = useState<DemoVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<DemoVideo | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -274,20 +276,86 @@ export function LandingPage({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-            className="btn btn-secondary"
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              borderRadius: '8px',
-            }}
-          >
-            <Globe size={14} style={{ marginRight: '4px' }} />
-            {language.toUpperCase()}
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+              className="btn btn-secondary"
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Globe size={14} />
+              {language.toUpperCase()}
+            </button>
+            {isLangDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '8px',
+                  background: 'rgba(9,9,11,0.95)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  padding: '6px',
+                  zIndex: 100,
+                  minWidth: '120px',
+                }}
+              >
+                {([
+                  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+                  { code: 'en', label: 'English', flag: '🇬🇧' },
+                  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+                  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+                  { code: 'es', label: 'Español', flag: '🇪🇸' },
+                  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+                ] as const).map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => {
+                      setLanguage(lang.code);
+                      setIsLangDropdownOpen(false);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: language === lang.code ? 'var(--accent)' : 'var(--text-primary)',
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: language === lang.code ? 600 : 400,
+                      width: '100%',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <span>{lang.flag}</span>
+                    <span>{lang.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => {
               setAuthError('');
@@ -319,13 +387,26 @@ export function LandingPage({
 
           {/* Title (Zarif Cormorant Garamond Tipografisi) */}
           <h1 className="premium-landing-hero-title">
-            {t('landingTitle') ? (
-              <>
-                AI-Publisher ile <span>Otonom</span><br />
-                Pazarlama ve <span>Video</span> Çağı
-              </>
-            ) : (
-              t('landingTitle')
+            {language === 'tr' && (
+              <>AI-Publisher ile <span>Otonom</span><br />Pazarlama ve <span>Video</span> Çağı</>
+            )}
+            {language === 'en' && (
+              <>Autonomous <span>Marketing</span><br />and <span>Video</span> Era with AI-Publisher</>
+            )}
+            {language === 'de' && (
+              <>Autonome <span>Marketing</span>-<br />und <span>Video</span>-Ära mit AI-Publisher</>
+            )}
+            {language === 'fr' && (
+              <>L'ère du <span>marketing</span> autonome<br />et de la <span>vidéo</span> avec AI-Publisher</>
+            )}
+            {language === 'es' && (
+              <>La era del <span>marketing</span> autónomo<br />y del <span>video</span> con AI-Publisher</>
+            )}
+            {language === 'ar' && (
+              <>عصر <span>التسويق</span> الذاتي<br />و<span>الفيديو</span> مع AI-Publisher</>
+            )}
+            {!['tr', 'en', 'de', 'fr', 'es', 'ar'].includes(language) && (
+              <>{t('landingTitle')}</>
             )}
           </h1>
 
@@ -346,7 +427,7 @@ export function LandingPage({
               onClick={scrollToGallery}
               className="btn btn-secondary premium-landing-btn-secondary"
             >
-              <Play size={16} /> Örnekleri İzle
+              <Play size={16} /> {t('watchExamples') || 'Örnekleri İzle'}
             </button>
           </div>
         </div>

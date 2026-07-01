@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mic, Download, Loader, FileAudio, Play, Check } from 'lucide-react';
+import { Mic, Download, Loader, FileAudio, Check } from 'lucide-react';
 
 interface EpisodeDisplay {
   speaker: string;
@@ -9,7 +9,7 @@ interface EpisodeDisplay {
 }
 
 export function PodcastPanel({
-  language,
+  language: _language,
 }: {
   language: string;
 }) {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Video, Film, CheckCircle, Clock, AlertCircle, Plus, Play, BarChart3, TrendingUp, Sparkles, Zap } from 'lucide-react';
+import { Video, Film, CheckCircle, Clock, Plus, Play, BarChart3, TrendingUp, Sparkles, Zap } from 'lucide-react';
 import type { Job, UserCredits } from '../types.js';
 
 interface DashboardProps {
@@ -8,11 +8,11 @@ interface DashboardProps {
   onSelectJob: (job: Job) => void;
   onNewProject: () => void;
   onOpenGallery: () => void;
-  t: (key: string, params?: Record<string, any>) => string;
+  t: (key: string, params?: any) => string;
 }
 
 export function Dashboard({ jobs, userCredits, onSelectJob, onNewProject, onOpenGallery, t }: DashboardProps) {
-  const [autoPlay, setAutoPlay] = useState(false);
+  const [, setAutoPlay] = useState(false);
 
   const stats = useMemo(() => {
     const completed = jobs.filter(j => j.status === 'completed');

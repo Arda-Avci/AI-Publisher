@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Subscription, Loader, XCircle, Calendar, CreditCard } from 'lucide-react';
+import { Sparkles, Loader, XCircle, Calendar, CreditCard } from 'lucide-react';
 
 interface SubscriptionData {
   id: number;
@@ -85,7 +85,7 @@ export function SubscriptionsPanel({ csrfToken: _csrfToken }: SubscriptionsPanel
   return (
     <div>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Subscription size={16} style={{ color: '#D4AF37' }} />
+        <Sparkles size={16} style={{ color: '#D4AF37' }} />
         Abonelik Yönetimi
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
@@ -227,7 +227,7 @@ export function SubscriptionsPanel({ csrfToken: _csrfToken }: SubscriptionsPanel
               margin: '0 auto 16px',
             }}
           >
-            <Subscription size={24} style={{ color: '#D4AF37', opacity: 0.5 }} />
+            <Sparkles size={24} style={{ color: '#D4AF37', opacity: 0.5 }} />
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
             Aktif abonelik bulunmuyor

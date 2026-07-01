@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Upload, FileText, X, Loader, AlertCircle, Download, CheckCircle, Copy, Check } from 'lucide-react';
+import { Upload, FileText, X, AlertCircle, CheckCircle, Copy, Check } from 'lucide-react';
 
 interface UploadedDocument {
   id: string;

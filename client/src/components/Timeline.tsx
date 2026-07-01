@@ -289,6 +289,8 @@ export const Timeline: React.FC<TimelineProps> = ({
   const audioInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const selectedScene = scenes.find((s) => s.id === selectedSceneId);
+
   useEffect(() => {
     fetch('/api/v1/characters')
       .then((res) => res.json())
@@ -396,7 +398,6 @@ export const Timeline: React.FC<TimelineProps> = ({
     if (e.target) e.target.value = '';
   }, []);
 
-  const selectedScene = scenes.find((s) => s.id === selectedSceneId);
 
   const renderWaveform = (height: number) => {
     const bars = 40;

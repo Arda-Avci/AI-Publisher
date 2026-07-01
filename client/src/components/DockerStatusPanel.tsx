@@ -18,7 +18,7 @@ interface Props {
 export function DockerStatusPanel({ csrfToken }: Props) {
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<any | null>(null);
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -41,7 +41,7 @@ export function DockerStatusPanel({ csrfToken }: Props) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
-  const s: Record<string, React.CSSProperties> = {
+  const s: Record<string, any> = {
     root: { display: 'flex', flexDirection: 'column', gap: 12, height: '100%' },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 },

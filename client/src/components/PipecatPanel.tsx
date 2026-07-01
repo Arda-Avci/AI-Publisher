@@ -151,7 +151,7 @@ export function PipecatPanel({ language }: { language: 'tr' | 'en' }) {
     }
   };
 
-  const s: Record<string, React.CSSProperties> = {
+  const s: Record<string, any> = {
     panel: {
       flex: 1,
       padding: '24px',
@@ -246,7 +246,7 @@ export function PipecatPanel({ language }: { language: 'tr' | 'en' }) {
       fontSize: 13,
       color: 'var(--text-primary)',
       lineHeight: 1.5,
-    }),
+    } as React.CSSProperties),
     chip: {
       display: 'inline-flex',
       alignItems: 'center',
@@ -321,10 +321,10 @@ export function PipecatPanel({ language }: { language: 'tr' | 'en' }) {
             <button
               style={{ ...s.btn, ...s.btnPrimary }}
               onClick={connect}
-              disabled={status === 'connecting'}
+              disabled={(status as any) === 'connecting'}
               aria-label={t('Bağlan', 'Connect')}
             >
-              {status === 'connecting' ? (
+              {(status as any) === 'connecting' ? (
                 <><Loader size={14} className="spin" /> {t('Bağlanıyor...', 'Connecting...')}</>
               ) : (
                 <><Phone size={14} /> {t('Bağlan', 'Connect')}</>

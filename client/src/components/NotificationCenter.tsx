@@ -733,13 +733,13 @@ function NotificationHistoryModal({
   );
 }
 
-export function NotificationCenter({ t }: { t: (key: string, params?: Record<string, any>) => string }) {
+export function NotificationCenter({ t }: { t: (key: string, params?: any) => string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval>>();
+  const pollRef = useRef<any>(null);
 
   const fetchNotifications = useCallback(async () => {
     const data = await apiFetch<{ success: boolean; notifications: Notification[]; unreadCount: number }>(

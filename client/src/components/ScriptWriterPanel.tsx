@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Sparkles, Clock, Copy, Check, ChevronDown, ChevronUp, Loader, BookOpen, User, RefreshCw, FileText, Upload, Palette, Image } from 'lucide-react';
+import { Send, Sparkles, Clock, Copy, Check, ChevronDown, ChevronUp, Loader, BookOpen, User, RefreshCw, FileText, Upload, Palette } from 'lucide-react';
 import { StoryboardGrid } from './StoryboardGrid.js';
 
 type Quality = 'low' | 'medium' | 'high';

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Camera, X, Maximize2, Minimize2, MoveLeft, MoveRight, Eye } from 'lucide-react';
+import { Camera, X, Maximize2 } from 'lucide-react';
 import type { Scene } from './Timeline.js';
 
 interface CameraControlPanelProps {
@@ -238,30 +238,30 @@ export function CameraControlPanel({
       </div>
 
       <div style={s.sceneList}>
-        {sortedScenes.map(s => (
+        {sortedScenes.map(sceneItem => (
           <div
-            key={s.id}
+            key={sceneItem.id}
             style={{
               ...s.sceneRow,
-              background: s.id === scene.id ? 'rgba(99,102,241,0.06)' : 'transparent',
+              background: sceneItem.id === scene.id ? 'rgba(99,102,241,0.06)' : 'transparent',
             }}
             onClick={() => {
-              onUpdateSceneField(scene.id, 'camera_motion', s.camera_motion || 'none');
-              onUpdateSceneField(scene.id, 'transition_type', s.transition_type || 'fade');
+              onUpdateSceneField(scene.id, 'camera_motion', sceneItem.camera_motion || 'none');
+              onUpdateSceneField(scene.id, 'transition_type', sceneItem.transition_type || 'fade');
             }}
           >
             <span style={{ fontWeight: 700, color: 'var(--text-muted)', minWidth: 28 }}>
-              #{s.scene_number}
+              #{sceneItem.scene_number}
             </span>
             <span
               style={{
                 ...s.camIndicator,
-                background: (s.camera_motion && s.camera_motion !== 'none')
+                background: (sceneItem.camera_motion && sceneItem.camera_motion !== 'none')
                   ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.04)',
-                color: getCamColor(s.camera_motion),
+                color: getCamColor(sceneItem.camera_motion),
               }}
             >
-              {s.camera_motion || 'static'}
+              {sceneItem.camera_motion || 'static'}
             </span>
             <span
               style={{
@@ -270,10 +270,10 @@ export function CameraControlPanel({
                 color: 'var(--text-muted)',
               }}
             >
-              {s.transition_type || 'fade'}
+              {sceneItem.transition_type || 'fade'}
             </span>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: 10 }}>
-              {(s.video_prompt || '').slice(0, 50)}
+              {(sceneItem.video_prompt || '').slice(0, 50)}
             </span>
           </div>
         ))}

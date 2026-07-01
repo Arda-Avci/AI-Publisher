@@ -321,7 +321,7 @@ export function StoryboardPanel({ language }: { language: 'tr' | 'en' }) {
     } catch {}
   };
 
-  const selectedJob = jobs.find(j => j.id === selectedJobId);
+  const _selectedJob = jobs.find(j => j.id === selectedJobId);
   const imageMap = new Map<number, StoryboardImage>();
   images.forEach(img => imageMap.set(img.scene_number, img));
 

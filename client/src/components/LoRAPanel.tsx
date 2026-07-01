@@ -38,7 +38,7 @@ export function LoRAPanel({ language }: { language: 'tr' | 'en' }) {
     resolution: 1024,
   });
   const [dragOver, setDragOver] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [, setUploading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -117,7 +117,7 @@ export function LoRAPanel({ language }: { language: 'tr' | 'en' }) {
     try {
       const formData = new FormData();
       formData.append('config', JSON.stringify(config));
-      uploadedImages.forEach((img, i) => {
+      uploadedImages.forEach((_img, _i) => {
         formData.append(`images`, img, img.name);
       });
 

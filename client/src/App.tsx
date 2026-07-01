@@ -171,12 +171,28 @@ export default function App() {
     'Hesap',
     'Admin',
   ] as const;
-  const [mainTab, setMainTab] = useState<(typeof mainTabs)[number]>('Dashboard');
+  const [mainTab, setMainTab] = useState<
+    | (typeof mainTabs)[number]
+    | 'Beat Sync'
+    | 'B-Roll'
+    | 'Video Kırpma'
+    | 'Transkript'
+    | 'AI Stüdyo'
+    | 'Voice Pipeline'
+    | 'LoRA'
+    | 'Doküman Yükleme'
+    | 'Niche'
+    | 'Krediler'
+    | 'Ödemeler'
+    | 'Abonelikler'
+    | 'Denetim Kayıtları'
+    | 'Docker Durumu'
+  >('Dashboard');
 
   const t = useCallback(
-    (key: string, params?: Record<string, any>) => {
+    (key: string, params?: Record<string, any> | string) => {
       let text = translations[key] || key;
-      if (params)
+      if (params && typeof params === 'object')
         Object.entries(params).forEach(
           ([k, v]) => (text = text.replace(new RegExp(`{{${k}}}`, 'g'), String(v))),
         );
@@ -325,8 +341,8 @@ export default function App() {
           });
           setTimeout(() => triggerAutoDownload(), 1000);
         }
-      } catch (e) {
-        console.error('[SSE] parse error', e, e.data);
+      } catch (e: any) {
+        console.error('[SSE] parse error', e, e?.data);
       }
     };
     es.onerror = (evt) => {
@@ -499,7 +515,7 @@ export default function App() {
     }
   };
 
-  const handleApplyTrend = (trend: any, enhancedPrompt: string, tc: string) => {
+  const handleApplyTrend = (_trend: any, enhancedPrompt: string, tc: string) => {
     setTrendContext(tc);
     setTrendEnabled(true);
     if (enhancedPrompt) setMasterPrompt(enhancedPrompt);
@@ -956,31 +972,31 @@ export default function App() {
                       t={t}
                     />
                   )}
-                  {mainTab === 'Örnekler' && <ExamplesPanel language={language} t={t} />}
+                  {mainTab === 'Örnekler' && <ExamplesPanel language={language as any} t={t} />}
                   {mainTab === 'AI Asistan' && (
                     <AIStoryAssistant
-                      language={language}
+                      language={language as any}
                       onApplyPrompts={(prompts) => {
                         setMasterPrompt(prompts.masterPrompt);
                       }}
                     />
                   )}
                   {mainTab === 'Senaryo' && (
-                    <ScriptWriterPanel language={language} />
+                    <ScriptWriterPanel language={language as any} />
                   )}
                   {mainTab === 'Ortam/Nesne' && (
-                    <EnvPropManager language={language} />
+                    <EnvPropManager language={language as any} />
                   )}
                   {mainTab === 'Canvas' && (
                     <CanvasPanel
-                      language={language}
+                      language={language as any}
                       t={t}
                       onShowToast={(msg, type) => window.showToast?.(type as any, 'Canvas', msg)}
                     />
                   )}
                   {mainTab === 'Batch' && (
                     <BatchUpload
-                      language={language}
+                      language={language as any}
                       t={t}
                       onShowToast={(msg, type) => window.showToast?.(type as any, 'Toplu İşlemler', msg)}
                     />
@@ -994,14 +1010,14 @@ export default function App() {
                   )}
                   {mainTab === 'Yayın Planla' && (
                     <SchedulePublishPanel
-                      language={language}
+                      language={language as any}
                       t={t}
                       onShowToast={(msg, type) => window.showToast?.(type as any, 'Yayın Planlama', msg)}
                     />
                   )}
                   {mainTab === 'Trendler' && <TrendPanel onApplyTrend={handleApplyTrend} masterPrompt={masterPrompt} />}
                   {mainTab === 'Hikaye Tahtası' && (
-                    <StoryboardPanel language={language} />
+                    <StoryboardPanel language={language as any} />
                   )}
                   {mainTab === 'AI Stüdyo' && (
                     <StudioToolsPanel
@@ -1042,9 +1058,9 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  {mainTab === 'Beat Sync' && <BeatSyncPanel csrfToken={csrfToken} jobId={selectedJob?.id} />}
-                  {mainTab === 'B-Roll' && <BRollPanel csrfToken={csrfToken} jobId={selectedJob?.id} />}
-                  {mainTab === 'Video Kırpma' && <CutPanel csrfToken={csrfToken} jobId={selectedJob?.id} />}
+                  {mainTab === 'Beat Sync' && <BeatSyncPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} onClose={() => setMainTab('Video Düzenleme')} />}
+                  {mainTab === 'B-Roll' && <BRollPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} scenes={scenes} onClose={() => setMainTab('Video Düzenleme')} />}
+                  {mainTab === 'Video Kırpma' && <CutPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} scenes={scenes} onClose={() => setMainTab('Video Düzenleme')} />}
                   {mainTab === 'Transkript' && <TranscriptEditorPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} onClose={() => setMainTab('Video Düzenleme')} />}
 
                   {mainTab === 'AI Araçları' && (
@@ -1087,10 +1103,10 @@ export default function App() {
                       t={t}
                     />
                   )}
-                  {mainTab === 'Voice Pipeline' && <PipecatPanel csrfToken={csrfToken} />}
-                  {mainTab === 'LoRA' && <LoRAPanel csrfToken={csrfToken} />}
-                  {mainTab === 'Doküman Yükleme' && <DocumentUploadPanel csrfToken={csrfToken} />}
-                  {mainTab === 'Niche' && <NichePanel csrfToken={csrfToken} />}
+                   {mainTab === 'Voice Pipeline' && <PipecatPanel language={language as any} />}
+                   {mainTab === 'LoRA' && <LoRAPanel language={language as any} />}
+                   {mainTab === 'Doküman Yükleme' && <DocumentUploadPanel language={language as any} />}
+                   {mainTab === 'Niche' && <NichePanel language={language as any} />}
 
                   {mainTab === 'Hesap' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: 'auto' }}>
@@ -1168,9 +1184,7 @@ export default function App() {
                         : mainTab === 'Docker Durumu' ? 'docker'
                         : 'studio'
                     }
-                    language={language}
-                  />
-                    language={language}
+                    language={language as any}
                   />
                 </main>
 

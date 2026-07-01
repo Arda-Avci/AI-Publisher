@@ -74,7 +74,7 @@ const defaultPropForm: PropFormData = {
   name: '', category: 'furniture', description: '', environment_id: null, interaction_notes: '',
 };
 
-const m: Record<string, React.CSSProperties> = {
+const m: Record<string, any> = {
   overlay: {
     position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)',
@@ -95,17 +95,17 @@ const m: Record<string, React.CSSProperties> = {
     padding: '14px 20px', borderTop: '1px solid var(--border)',
     display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0,
   },
-  categoryBadge: (cat: string): React.CSSProperties => ({
+  categoryBadge: (cat: string) => ({
     display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 4,
-    fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+    fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const,
     background: `${CATEGORY_COLORS[cat] || CATEGORY_COLORS.custom}20`,
     color: CATEGORY_COLORS[cat] || CATEGORY_COLORS.custom,
     border: `1px solid ${CATEGORY_COLORS[cat] || CATEGORY_COLORS.custom}40`,
-  }),
-  colorCircle: (hex: string): React.CSSProperties => ({
+  } as React.CSSProperties),
+  colorCircle: (hex: string) => ({
     width: 16, height: 16, borderRadius: '50%', background: hex,
     border: '1px solid var(--border)', flexShrink: 0,
-  }),
+  } as React.CSSProperties),
 };
 
 export function EnvPropManager({ language }: { language: 'tr' | 'en' }) {
@@ -127,7 +127,7 @@ export function EnvPropManager({ language }: { language: 'tr' | 'en' }) {
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; type: 'env' | 'prop' } | null>(null);
 
-  const styles: Record<string, React.CSSProperties> = {
+  const styles: Record<string, any> = {
     panel: {
       flex: 1, padding: '24px', overflowY: 'auto', position: 'relative', zIndex: 1, maxWidth: 960, margin: '0 auto',
     },
@@ -135,13 +135,13 @@ export function EnvPropManager({ language }: { language: 'tr' | 'en' }) {
       display: 'flex', gap: 4, marginBottom: 20, background: 'var(--bg-primary)',
       borderRadius: 10, padding: 4, border: '1px solid var(--border)',
     },
-    tab: (active: boolean): React.CSSProperties => ({
-      flex: 1, padding: '8px 16px', borderRadius: 8, border: 'none',
-      fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    tab: (active: boolean) => ({
+      flex: 1, padding: '8px 16px', borderRadius: 8, border: 'none' as const,
+      fontSize: 13, fontWeight: 600, cursor: 'pointer' as const,
       background: active ? 'var(--bg-surface)' : 'transparent',
       color: active ? 'var(--text-primary)' : 'var(--text-muted)',
       transition: 'all 0.2s',
-    }),
+    } as React.CSSProperties),
     headerRow: {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16,
     },

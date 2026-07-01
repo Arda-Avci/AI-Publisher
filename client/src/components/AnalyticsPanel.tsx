@@ -157,7 +157,7 @@ function BarChart({
   const plotW = chartWidth - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
 
-  const { maxTotal, yLabels, xLabels, bars } = useMemo(() => {
+  const { maxTotal, yLabels, xLabels, bars, barW, gap } = useMemo(() => {
     if (!data.length) return { maxTotal: 0, yLabels: [], xLabels: [], bars: [] };
 
     const maxVal = Math.max(...data.map((d) => d.completed + d.processing + d.failed), 1);
@@ -195,7 +195,7 @@ function BarChart({
       };
     });
 
-    return { maxTotal: maxT, yLabels: yLbls, xLabels: xLbls, bars: barElements };
+    return { maxTotal: maxT, yLabels: yLbls, xLabels: xLbls, bars: barElements, barW, gap };
   }, [data, plotW, plotH, pad]);
 
   if (!data.length) {
@@ -248,11 +248,13 @@ function BarChart({
 
       {xLabels.map((label) => {
         const idx = data.findIndex((d) => d.date === label);
+        const currentGap = gap || 0;
+        const currentBarW = barW || 0;
         const x =
           pad.left +
-          gap +
-          idx * (barW + gap) +
-          barW / 2;
+          currentGap +
+          idx * (currentBarW + currentGap) +
+          currentBarW / 2;
         return (
           <text
             key={label}
@@ -314,7 +316,7 @@ function BarChart({
   );
 }
 
-export function AnalyticsPanel({ t }: AnalyticsPanelProps) {
+export function AnalyticsPanel({ t: _t }: AnalyticsPanelProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
