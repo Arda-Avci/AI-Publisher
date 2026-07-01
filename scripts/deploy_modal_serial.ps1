@@ -68,12 +68,16 @@ foreach ($svc in $Targets) {
         continue
     }
 
+    $modulePath = "modal_apps.$($svc.Name)_service"
+
     if (-not $DryRun) {
         Write-Host "  [DEPLOY] Starting..." -ForegroundColor Green
-        $output = & modal deploy $filePath 2>&1
+        Push-Location $ProjectRoot
+        $output = & modal deploy -m $modulePath 2>&1
         $exitCode = $LASTEXITCODE
+        Pop-Location
     } else {
-        Write-Host "  [DRY-RUN] Would run: modal deploy $filePath" -ForegroundColor Yellow
+        Write-Host "  [DRY-RUN] Would run: modal deploy -m $modulePath" -ForegroundColor Yellow
         $Results += [PSCustomObject]@{ Service=$svc.Name; Status="DRY-RUN"; Time="0s"; Error=$null }
         continue
     }
