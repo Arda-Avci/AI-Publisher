@@ -8,6 +8,19 @@ import { GalleryPanel } from './components/GalleryPanel.js';
 import { PhotoEditor } from './components/PhotoEditor.js';
 import { LandingPage } from './components/LandingPage.js';
 import { LoginPage } from './components/LoginPage.js';
+import { CreditsPanel } from './components/CreditsPanel.js';
+import { PaymentsPanel } from './components/PaymentsPanel.js';
+import { SubscriptionsPanel } from './components/SubscriptionsPanel.js';
+import { AuditLogPanel } from './components/AuditLogPanel.js';
+import { DockerStatusPanel } from './components/DockerStatusPanel.js';
+import { BeatSyncPanel } from './components/BeatSyncPanel.js';
+import { BRollPanel } from './components/BRollPanel.js';
+import { CutPanel } from './components/CutPanel.js';
+import { TranscriptEditorPanel } from './components/TranscriptEditorPanel.js';
+import { PipecatPanel } from './components/PipecatPanel.js';
+import { LoRAPanel } from './components/LoRAPanel.js';
+import { DocumentUploadPanel } from './components/DocumentUploadPanel.js';
+import { NichePanel } from './components/NichePanel.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import {
   CharacterSelectorModal,
@@ -1011,6 +1024,45 @@ export default function App() {
                   )}
                   {mainTab === 'Podcast' && (
                     <PodcastPanel language={language} />
+                  )}
+                  {mainTab === 'Krediler' && (
+                    <CreditsPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Ödemeler' && (
+                    <PaymentsPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Abonelikler' && (
+                    <SubscriptionsPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Denetim Kayıtları' && (
+                    <AuditLogPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Docker Durumu' && (
+                    <DockerStatusPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Beat Sync' && (
+                    <BeatSyncPanel csrfToken={csrfToken} jobId={selectedJob?.id} />
+                  )}
+                  {mainTab === 'B-Roll' && (
+                    <BRollPanel csrfToken={csrfToken} jobId={selectedJob?.id} />
+                  )}
+                  {mainTab === 'Video Kırpma' && (
+                    <CutPanel csrfToken={csrfToken} jobId={selectedJob?.id} />
+                  )}
+                  {mainTab === 'Transkript' && (
+                    <TranscriptEditorPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} onClose={() => setMainTab('Stüdyo')} />
+                  )}
+                  {mainTab === 'Voice Pipeline' && (
+                    <PipecatPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'LoRA' && (
+                    <LoRAPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Doküman Yükleme' && (
+                    <DocumentUploadPanel csrfToken={csrfToken} />
+                  )}
+                  {mainTab === 'Niche' && (
+                    <NichePanel csrfToken={csrfToken} />
                   )}
 
                   <HelpVideoPanel
