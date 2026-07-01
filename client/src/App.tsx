@@ -151,22 +151,25 @@ export default function App() {
 
   const mainTabs = [
     'Dashboard',
-    'Örnekler',
     'Stüdyo',
-    'Galeri',
-    'Talk-Show',
-    'Hikaye Tahtası',
-    'AI Asistan',
-    'Karakterler',
     'Senaryo',
+    'Karakterler',
     'Ortam/Nesne',
+    'AI Asistan',
+    'Örnekler',
+    'Video Düzenleme',
+    'Galeri',
     'Canvas',
+    'Talk-Show',
+    'Podcast',
+    'Trendler',
+    'Yayın Planla',
     'Batch',
     'Clipper',
-    'Yayın Planla',
-    'Trendler',
-    'AI Stüdyo',
-    'Podcast',
+    'AI Araçları',
+    'Hikaye Tahtası',
+    'Hesap',
+    'Admin',
   ] as const;
   const [mainTab, setMainTab] = useState<(typeof mainTabs)[number]>('Dashboard');
 
@@ -1016,69 +1019,138 @@ export default function App() {
                   {mainTab === 'Podcast' && (
                     <PodcastPanel language={language} />
                   )}
-                  {mainTab === 'Krediler' && (
-                    <CreditsPanel csrfToken={csrfToken} />
+                  {mainTab === 'Video Düzenleme' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: 'auto' }}>
+                      <h3 style={{ margin: 0, fontSize: 16 }}>Video Düzenleme Araçları</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                        <div onClick={() => setMainTab('Beat Sync')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🎵 Beat Sync</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>BPM algılama ve beat senkronizasyonu</p>
+                        </div>
+                        <div onClick={() => setMainTab('B-Roll')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🎬 B-Roll</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>B-Roll arama ve ekleme</p>
+                        </div>
+                        <div onClick={() => setMainTab('Video Kırpma')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>✂️ Video Kırpma</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Timeline kırpma kontrolleri</p>
+                        </div>
+                        <div onClick={() => setMainTab('Transkript')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>📝 Transkript</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Sahne bazlı konuşma metni düzenleme</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  {mainTab === 'Ödemeler' && (
-                    <PaymentsPanel csrfToken={csrfToken} />
+                  {mainTab === 'Beat Sync' && <BeatSyncPanel csrfToken={csrfToken} jobId={selectedJob?.id} />}
+                  {mainTab === 'B-Roll' && <BRollPanel csrfToken={csrfToken} jobId={selectedJob?.id} />}
+                  {mainTab === 'Video Kırpma' && <CutPanel csrfToken={csrfToken} jobId={selectedJob?.id} />}
+                  {mainTab === 'Transkript' && <TranscriptEditorPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} onClose={() => setMainTab('Video Düzenleme')} />}
+
+                  {mainTab === 'AI Araçları' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: 'auto' }}>
+                      <h3 style={{ margin: 0, fontSize: 16 }}>Yapay Zeka Araçları</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                        <div onClick={() => setMainTab('AI Stüdyo')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🎨 AI Stüdyo</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Ses, göz teması, akıllı reframing, inpainting</p>
+                        </div>
+                        <div onClick={() => setMainTab('Voice Pipeline')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🎙️ Voice Pipeline</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Gerçek zamanlı ses/video pipeline</p>
+                        </div>
+                        <div onClick={() => setMainTab('LoRA')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🧠 LoRA</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Özel model eğitimi ve yönetimi</p>
+                        </div>
+                        <div onClick={() => setMainTab('Doküman Yükleme')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>📄 Doküman</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>PDF/DOCX/TXT senaryo yükleme</p>
+                        </div>
+                        <div onClick={() => setMainTab('Niche')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🎯 Niche</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Sektörel içerik profilleri</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  {mainTab === 'Abonelikler' && (
-                    <SubscriptionsPanel csrfToken={csrfToken} />
+                  {mainTab === 'AI Stüdyo' && (
+                    <StudioToolsPanel
+                      studioSoundEnabled={studioSoundEnabled}
+                      eyeContactEnabled={eyeContactEnabled}
+                      smartReframeEnabled={smartReframeEnabled}
+                      inpaintEnabled={inpaintEnabled}
+                      onSetStudioSoundEnabled={setStudioSoundEnabled}
+                      onSetEyeContactEnabled={setEyeContactEnabled}
+                      onSetSmartReframeEnabled={setSmartReframeEnabled}
+                      onSetInpaintEnabled={setInpaintEnabled}
+                      t={t}
+                    />
                   )}
-                  {mainTab === 'Denetim Kayıtları' && (
-                    <AuditLogPanel csrfToken={csrfToken} />
+                  {mainTab === 'Voice Pipeline' && <PipecatPanel csrfToken={csrfToken} />}
+                  {mainTab === 'LoRA' && <LoRAPanel csrfToken={csrfToken} />}
+                  {mainTab === 'Doküman Yükleme' && <DocumentUploadPanel csrfToken={csrfToken} />}
+                  {mainTab === 'Niche' && <NichePanel csrfToken={csrfToken} />}
+
+                  {mainTab === 'Hesap' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: 'auto' }}>
+                      <h3 style={{ margin: 0, fontSize: 16 }}>Hesap Yönetimi</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                        <div onClick={() => setMainTab('Krediler')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>💰 Krediler</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Kredi bakiyesi, limit, işlem geçmişi</p>
+                        </div>
+                        <div onClick={() => setMainTab('Ödemeler')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>💳 Ödemeler</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>iyzico ödeme planları ve checkout</p>
+                        </div>
+                        <div onClick={() => setMainTab('Abonelikler')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>📋 Abonelikler</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Abonelik yönetimi ve yükseltme</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  {mainTab === 'Docker Durumu' && (
-                    <DockerStatusPanel csrfToken={csrfToken} />
+                  {mainTab === 'Krediler' && <CreditsPanel csrfToken={csrfToken} />}
+                  {mainTab === 'Ödemeler' && <PaymentsPanel csrfToken={csrfToken} />}
+                  {mainTab === 'Abonelikler' && <SubscriptionsPanel csrfToken={csrfToken} />}
+
+                  {mainTab === 'Admin' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: 'auto' }}>
+                      <h3 style={{ margin: 0, fontSize: 16 }}>Yönetim Paneli</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                        <div onClick={() => setMainTab('Denetim Kayıtları')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>📋 Denetim Kayıtları</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Audit log görüntüleme</p>
+                        </div>
+                        <div onClick={() => setMainTab('Docker Durumu')} style={{ padding: 16, borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 13 }}>🐳 Docker Durumu</h4>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Container durumları ve GPU kullanımı</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  {mainTab === 'Beat Sync' && (
-                    <BeatSyncPanel csrfToken={csrfToken} jobId={selectedJob?.id} />
-                  )}
-                  {mainTab === 'B-Roll' && (
-                    <BRollPanel csrfToken={csrfToken} jobId={selectedJob?.id} />
-                  )}
-                  {mainTab === 'Video Kırpma' && (
-                    <CutPanel csrfToken={csrfToken} jobId={selectedJob?.id} />
-                  )}
-                  {mainTab === 'Transkript' && (
-                    <TranscriptEditorPanel csrfToken={csrfToken} jobId={selectedJob?.id || 0} onClose={() => setMainTab('Stüdyo')} />
-                  )}
-                  {mainTab === 'Voice Pipeline' && (
-                    <PipecatPanel csrfToken={csrfToken} />
-                  )}
-                  {mainTab === 'LoRA' && (
-                    <LoRAPanel csrfToken={csrfToken} />
-                  )}
-                  {mainTab === 'Doküman Yükleme' && (
-                    <DocumentUploadPanel csrfToken={csrfToken} />
-                  )}
-                  {mainTab === 'Niche' && (
-                    <NichePanel csrfToken={csrfToken} />
-                  )}
+                  {mainTab === 'Denetim Kayıtları' && <AuditLogPanel csrfToken={csrfToken} />}
+                  {mainTab === 'Docker Durumu' && <DockerStatusPanel csrfToken={csrfToken} />}
 
                   <HelpVideoPanel
                     feature={
-                      mainTab === 'Stüdyo'
-                        ? 'studio'
-                        : mainTab === 'Galeri'
-                          ? 'gallery'
-                          : mainTab === 'Canvas'
-                            ? 'canvas'
-                            : mainTab === 'Batch'
-                              ? 'batch'
-                  : mainTab === 'Karakterler'
-                    ? 'characters'
-                    : mainTab === 'Senaryo'
-                      ? 'studio'
-                      : mainTab === 'Ortam/Nesne'
-                        ? 'studio'
-                  : mainTab === 'API Keys'
-                    ? 'api_keys'
-                    : mainTab === 'Hikaye Tahtası'
-                    ? 'studio'
-                    : mainTab === 'Trendler'
-                          ? 'studio'
-                          : 'studio'
+                      mainTab === 'Stüdyo' ? 'studio'
+                        : mainTab === 'Galeri' ? 'gallery'
+                        : mainTab === 'Canvas' ? 'canvas'
+                        : mainTab === 'Batch' ? 'batch'
+                        : mainTab === 'Karakterler' ? 'characters'
+                        : mainTab === 'Senaryo' ? 'studio'
+                        : mainTab === 'Ortam/Nesne' ? 'studio'
+                        : mainTab === 'API Keys' ? 'api_keys'
+                        : mainTab === 'Hikaye Tahtası' ? 'studio'
+                        : mainTab === 'Trendler' ? 'studio'
+                        : mainTab === 'Video Düzenleme' ? 'gallery'
+                        : mainTab === 'AI Araçları' ? 'studio'
+                        : mainTab === 'Hesap' ? 'studio'
+                        : mainTab === 'Admin' ? 'studio'
+                        : 'studio'
+                    }
                     }
                     language={language}
                   />
