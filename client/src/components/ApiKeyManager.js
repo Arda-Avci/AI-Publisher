@@ -53,9 +53,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
             return;
         setIsSubmitting(true);
         try {
-            const url = editingKey
-                ? `/api/v1/api-keys/${editingKey.id}`
-                : '/api/v1/api-keys';
+            const url = editingKey ? `/api/v1/api-keys/${editingKey.id}` : '/api/v1/api-keys';
             const method = editingKey ? 'PUT' : 'POST';
             const r = await fetch(url, {
                 method,
@@ -142,29 +140,24 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
-            padding: '20px',
-            background: 'rgba(10, 10, 20, 0.6)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-            minHeight: '400px',
+            gap: '16px',
         }, children: [_jsxs("div", { style: {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: '20px',
-                    paddingBottom: '16px',
+                    marginBottom: '14px',
+                    paddingBottom: '12px',
                     borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                 }, children: [_jsxs("div", { children: [_jsx("h2", { style: {
                                     margin: 0,
-                                    fontSize: '18px',
+                                    fontSize: '14px',
                                     fontWeight: 700,
                                     background: 'linear-gradient(135deg, #E5E7EB, #A78BFA)',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
                                 }, children: t('api_keys') }), _jsx("p", { style: {
-                                    margin: '4px 0 0 0',
-                                    fontSize: '12px',
+                                    margin: '2px 0 0 0',
+                                    fontSize: '11px',
                                     color: '#6B7280',
                                 }, children: t('api_keys_description') })] }), _jsxs("button", { onClick: () => setShowAddModal(true), style: {
                             padding: '10px 18px',
@@ -179,7 +172,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                             alignItems: 'center',
                             gap: '8px',
                             transition: 'all 0.2s ease',
-                        }, onMouseEnter: e => e.currentTarget.style.transform = 'translateY(-2px)', onMouseLeave: e => e.currentTarget.style.transform = 'translateY(0)', children: [_jsx("span", { style: { fontSize: '16px' }, children: "+" }), t('add_api_key')] })] }), isLoading ? (_jsxs("div", { style: { textAlign: 'center', padding: '40px', color: '#6B7280' }, children: [t('loading'), "..."] })) : apiKeys.length === 0 ? (_jsxs("div", { style: {
+                        }, onMouseEnter: (e) => (e.currentTarget.style.transform = 'translateY(-2px)'), onMouseLeave: (e) => (e.currentTarget.style.transform = 'translateY(0)'), children: [_jsx("span", { style: { fontSize: '16px' }, children: "+" }), t('add_api_key')] })] }), isLoading ? (_jsxs("div", { style: { textAlign: 'center', padding: '40px', color: '#6B7280' }, children: [t('loading'), "..."] })) : apiKeys.length === 0 ? (_jsxs("div", { style: {
                     textAlign: 'center',
                     padding: '60px 20px',
                     background: 'rgba(0, 0, 0, 0.2)',
@@ -196,7 +189,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                             justifyContent: 'center',
                             fontSize: '24px',
                             opacity: 0.5,
-                        }, children: "\uD83D\uDD11" }), _jsx("div", { style: { fontSize: '14px', color: '#9CA3AF', marginBottom: '8px' }, children: t('no_api_keys') }), _jsx("div", { style: { fontSize: '12px', color: '#6B7280' }, children: t('add_first_key') })] })) : (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '10px' }, children: apiKeys.map(apiKey => {
+                        }, children: "\uD83D\uDD11" }), _jsx("div", { style: { fontSize: '14px', color: '#9CA3AF', marginBottom: '8px' }, children: t('no_api_keys') }), _jsx("div", { style: { fontSize: '12px', color: '#6B7280' }, children: t('add_first_key') })] })) : (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '10px' }, children: apiKeys.map((apiKey) => {
                     const colors = PROVIDER_COLORS[apiKey.provider] || PROVIDER_COLORS.custom;
                     const logo = PROVIDER_LOGOS[apiKey.provider] || PROVIDER_LOGOS.custom;
                     return (_jsxs("div", { style: {
@@ -208,7 +201,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                             alignItems: 'center',
                             gap: '14px',
                             transition: 'all 0.2s ease',
-                        }, onMouseEnter: e => e.currentTarget.style.borderColor = `${colors.accent}60`, onMouseLeave: e => e.currentTarget.style.borderColor = `${colors.accent}30`, children: [_jsx("div", { style: {
+                        }, onMouseEnter: (e) => (e.currentTarget.style.borderColor = `${colors.accent}60`), onMouseLeave: (e) => (e.currentTarget.style.borderColor = `${colors.accent}30`), children: [_jsx("div", { style: {
                                     width: '44px',
                                     height: '44px',
                                     background: colors.bg,
@@ -220,7 +213,12 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                     color: colors.accent,
                                     border: `1px solid ${colors.accent}40`,
                                     boxShadow: `0 0 15px ${colors.accent}20`,
-                                }, children: logo }), _jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }, children: [_jsx("span", { style: { fontSize: '14px', fontWeight: 600, color: '#E5E7EB' }, children: apiKey.name }), _jsx("span", { style: {
+                                }, children: logo }), _jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            marginBottom: '4px',
+                                        }, children: [_jsx("span", { style: { fontSize: '14px', fontWeight: 600, color: '#E5E7EB' }, children: apiKey.name }), _jsx("span", { style: {
                                                     padding: '2px 8px',
                                                     background: colors.bg,
                                                     borderRadius: '4px',
@@ -228,7 +226,17 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                     color: colors.accent,
                                                     fontFamily: 'var(--font-mono)',
                                                     textTransform: 'uppercase',
-                                                }, children: apiKey.provider })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#6B7280' }, children: [_jsx("span", { style: { fontFamily: 'var(--font-mono)' }, children: apiKey.keyHash }), apiKey.baseUrl && (_jsxs(_Fragment, { children: [_jsx("span", { children: "\u2022" }), _jsx("span", { style: { maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }, children: apiKey.baseUrl })] }))] })] }), _jsxs("div", { style: {
+                                                }, children: apiKey.provider })] }), _jsxs("div", { style: {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            fontSize: '11px',
+                                            color: '#6B7280',
+                                        }, children: [_jsx("span", { style: { fontFamily: 'var(--font-mono)' }, children: apiKey.keyHash }), apiKey.baseUrl && (_jsxs(_Fragment, { children: [_jsx("span", { children: "\u2022" }), _jsx("span", { style: {
+                                                            maxWidth: '200px',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                        }, children: apiKey.baseUrl })] }))] })] }), _jsxs("div", { style: {
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'flex-end',
@@ -246,7 +254,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             transition: 'all 0.2s ease',
-                                        }, onMouseEnter: e => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'), onMouseLeave: e => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'), children: "\u2713" }), _jsx("button", { onClick: () => openEditModal(apiKey), title: t('edit_key'), style: {
+                                        }, onMouseEnter: (e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'), onMouseLeave: (e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'), children: "\u2713" }), _jsx("button", { onClick: () => openEditModal(apiKey), title: t('edit_key'), style: {
                                             width: '32px',
                                             height: '32px',
                                             background: 'rgba(139, 92, 246, 0.15)',
@@ -259,7 +267,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             transition: 'all 0.2s ease',
-                                        }, onMouseEnter: e => (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)'), onMouseLeave: e => (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'), children: "\u270E" }), _jsx("button", { onClick: () => handleDelete(apiKey.id), title: t('delete_key'), style: {
+                                        }, onMouseEnter: (e) => (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)'), onMouseLeave: (e) => (e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'), children: "\u270E" }), _jsx("button", { onClick: () => handleDelete(apiKey.id), title: t('delete_key'), style: {
                                             width: '32px',
                                             height: '32px',
                                             background: 'rgba(239, 68, 68, 0.15)',
@@ -272,7 +280,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             transition: 'all 0.2s ease',
-                                        }, onMouseEnter: e => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'), onMouseLeave: e => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'), children: "\u00D7" })] })] }, apiKey.id));
+                                        }, onMouseEnter: (e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'), onMouseLeave: (e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'), children: "\u00D7" })] })] }, apiKey.id));
                 }) })), showAddModal && (_jsx("div", { style: {
                     position: 'fixed',
                     inset: 0,
@@ -280,7 +288,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 1000,
+                    zIndex: 1100,
                     backdropFilter: 'blur(6px)',
                 }, onClick: () => resetForm(), children: _jsxs("div", { style: {
                         background: 'linear-gradient(135deg, rgba(25, 25, 50, 0.98), rgba(15, 15, 35, 0.99))',
@@ -290,7 +298,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                         width: '420px',
                         maxWidth: '90vw',
                         boxShadow: '0 0 60px rgba(139, 92, 246, 0.3)',
-                    }, onClick: e => e.stopPropagation(), children: [_jsx("h3", { style: {
+                    }, onClick: (e) => e.stopPropagation(), children: [_jsx("h3", { style: {
                                 margin: '0 0 20px 0',
                                 fontSize: '16px',
                                 fontWeight: 700,
@@ -302,7 +310,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                 marginBottom: '6px',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
-                                            }, children: t('key_name') }), _jsx("input", { type: "text", value: formName, onChange: e => setFormName(e.target.value), placeholder: "My OpenAI Key", required: true, style: {
+                                            }, children: t('key_name') }), _jsx("input", { type: "text", value: formName, onChange: (e) => setFormName(e.target.value), placeholder: "My OpenAI Key", required: true, style: {
                                                 width: '100%',
                                                 padding: '12px 14px',
                                                 background: 'rgba(0, 0, 0, 0.5)',
@@ -312,14 +320,14 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                 fontSize: '14px',
                                                 outline: 'none',
                                                 boxSizing: 'border-box',
-                                            }, onFocus: e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)', onBlur: e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)' })] }), _jsxs("div", { style: { marginBottom: '16px' }, children: [_jsx("label", { style: {
+                                            }, onFocus: (e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)'), onBlur: (e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)') })] }), _jsxs("div", { style: { marginBottom: '16px' }, children: [_jsx("label", { style: {
                                                 display: 'block',
                                                 fontSize: '11px',
                                                 color: '#9CA3AF',
                                                 marginBottom: '6px',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
-                                            }, children: t('provider') }), _jsxs("select", { value: formProvider, onChange: e => setFormProvider(e.target.value), style: {
+                                            }, children: t('provider') }), _jsxs("select", { value: formProvider, onChange: (e) => setFormProvider(e.target.value), style: {
                                                 width: '100%',
                                                 padding: '12px 14px',
                                                 background: 'rgba(0, 0, 0, 0.5)',
@@ -337,7 +345,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                 marginBottom: '6px',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
-                                            }, children: "Base URL" }), _jsx("input", { type: "url", value: formBaseUrl, onChange: e => setFormBaseUrl(e.target.value), placeholder: "https://api.example.com/v1", style: {
+                                            }, children: "Base URL" }), _jsx("input", { type: "url", value: formBaseUrl, onChange: (e) => setFormBaseUrl(e.target.value), placeholder: "https://api.example.com/v1", style: {
                                                 width: '100%',
                                                 padding: '12px 14px',
                                                 background: 'rgba(0, 0, 0, 0.5)',
@@ -347,14 +355,14 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                 fontSize: '14px',
                                                 outline: 'none',
                                                 boxSizing: 'border-box',
-                                            }, onFocus: e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)', onBlur: e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)' })] })), _jsxs("div", { style: { marginBottom: '24px' }, children: [_jsxs("label", { style: {
+                                            }, onFocus: (e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)'), onBlur: (e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)') })] })), _jsxs("div", { style: { marginBottom: '24px' }, children: [_jsxs("label", { style: {
                                                 display: 'block',
                                                 fontSize: '11px',
                                                 color: '#9CA3AF',
                                                 marginBottom: '6px',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
-                                            }, children: [t('api_key'), editingKey && _jsxs("span", { style: { fontWeight: 400, marginLeft: '8px' }, children: ["(", t('leave_empty_keep'), ")"] })] }), _jsx("input", { type: "password", value: formKey, onChange: e => setFormKey(e.target.value), placeholder: editingKey ? '••••••••••••••••' : 'sk-...', required: !editingKey, style: {
+                                            }, children: [t('api_key'), editingKey && (_jsxs("span", { style: { fontWeight: 400, marginLeft: '8px' }, children: ["(", t('leave_empty_keep'), ")"] }))] }), _jsx("input", { type: "password", value: formKey, onChange: (e) => setFormKey(e.target.value), placeholder: editingKey ? '••••••••••••••••' : 'sk-...', required: !editingKey, style: {
                                                 width: '100%',
                                                 padding: '12px 14px',
                                                 background: 'rgba(0, 0, 0, 0.5)',
@@ -365,7 +373,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                 outline: 'none',
                                                 boxSizing: 'border-box',
                                                 fontFamily: editingKey ? 'var(--font-mono)' : 'inherit',
-                                            }, onFocus: e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)', onBlur: e => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)' })] }), _jsxs("div", { style: { display: 'flex', gap: '10px', justifyContent: 'flex-end' }, children: [_jsx("button", { type: "button", onClick: resetForm, style: {
+                                            }, onFocus: (e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.6)'), onBlur: (e) => (e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)') })] }), _jsxs("div", { style: { display: 'flex', gap: '10px', justifyContent: 'flex-end' }, children: [_jsx("button", { type: "button", onClick: resetForm, style: {
                                                 padding: '10px 20px',
                                                 background: 'rgba(255, 255, 255, 0.05)',
                                                 border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -381,7 +389,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }) {
                                                 color: 'white',
                                                 fontSize: '13px',
                                                 fontWeight: 600,
-                                                cursor: (isSubmitting || (!editingKey && !formKey.trim())) ? 'not-allowed' : 'pointer',
-                                                opacity: (isSubmitting || (!editingKey && !formKey.trim())) ? 0.5 : 1,
-                                            }, children: isSubmitting ? t('saving') : (editingKey ? t('update') : t('save')) })] })] })] }) }))] }));
+                                                cursor: isSubmitting || (!editingKey && !formKey.trim()) ? 'not-allowed' : 'pointer',
+                                                opacity: isSubmitting || (!editingKey && !formKey.trim()) ? 0.5 : 1,
+                                            }, children: isSubmitting ? t('saving') : editingKey ? t('update') : t('save') })] })] })] }) }))] }));
 }

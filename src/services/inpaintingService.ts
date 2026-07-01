@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
-import { RunPodClient } from './runpod.js';
+import { ModalClient } from './modalClient.js';
 import { db } from '../db.js';
 import { uploadToB2 } from '../lib/b2.js';
 import { RETRY } from '../constants.js';
@@ -62,7 +62,7 @@ export async function inpaintImage(
 
   try {
     Logger.info('[Inpainting] Starting FLUX inpainting job');
-    const job = await RunPodClient.runJob(INPAINT_ENDPOINT, payload);
+    const job = await ModalClient.runJob(INPAINT_ENDPOINT, payload);
 
     const result = await pollInpaintJob(job.id);
     const seed = options.seed ?? (result.seed as number ?? Math.floor(Math.random() * 999999));
@@ -86,7 +86,7 @@ export async function inpaintImage(
 
 async function pollInpaintJob(jobId: string, maxRetries = RETRY.INPAINT_POLL, delayMs = 3000): Promise<Record<string, unknown>> {
   for (let i = 0; i < maxRetries; i++) {
-    const status = await RunPodClient.getJobStatus(INPAINT_ENDPOINT, jobId);
+    const status = await ModalClient.getJobStatus(INPAINT_ENDPOINT, jobId);
     if (status.status === 'COMPLETED') return status as unknown as Record<string, unknown>;
     if (status.status === 'FAILED') throw new Error(`Inpainting job failed: ${JSON.stringify(status)}`);
     await sleep(delayMs);

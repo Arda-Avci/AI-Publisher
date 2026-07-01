@@ -23,7 +23,7 @@ interface SyncOption {
 
 const SYNC_OPTIONS: SyncOption[] = [
   { id: 'cut_on_beat', label: 'Kesim Noktaları', description: 'Sahne geçişlerini beat noktalarına hizala', color: '#00F2FE' },
-  { id: 'fade_to_beat', label: 'Fade Hizalama', description: 'Sahne geçişlerini beat'e göre yumuşak geçişlerle ayarla', color: '#9B51E0' },
+  { id: 'fade_to_beat', label: 'Fade Hizalama', description: "Sahne geçişlerini beat'e göre yumuşak geçişlerle ayarla", color: '#9B51E0' },
   { id: 'speed_ramp', label: 'Hız Rampası', description: 'Beat noktalarında hız değişimi efekti uygula', color: '#F59E0B' },
   { id: 'zoom_pulse', label: 'Zoom Pulse', description: 'Beat noktalarında ritmik zum efekti', color: '#EF4444' },
 ];

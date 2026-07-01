@@ -61,43 +61,16 @@ export function LoginPage({
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg-primary)',
-        backgroundImage: 'radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          width: 600,
-          height: 600,
-          background: 'radial-gradient(circle, rgba(200,26,86,0.08) 0%, transparent 70%)',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          width: 380,
-          padding: 40,
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 16,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-        }}
-      >
+    <div className="premium-loginpage-grid-container">
+      <div className="premium-loginpage-editorial-visual">
+        <div className="premium-loginpage-editorial-logo">
+          AI <span>Publisher</span>
+        </div>
+        <p className="premium-loginpage-editorial-desc">
+          {t('loginSubtitle')}
+        </p>
+      </div>
+      <div className="premium-loginpage-grid-card">
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div
             style={{

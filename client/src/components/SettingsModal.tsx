@@ -12,11 +12,19 @@ import {
   Sparkles,
   Trash2,
   Wand2,
+  Coins,
+  CreditCard,
+  RefreshCw,
+  Key,
 } from 'lucide-react';
 import type { Language } from '../types.js';
 import { PhotoEditor } from './PhotoEditor.js';
+import { CreditsPanel } from './CreditsPanel.js';
+import { PaymentsPanel } from './PaymentsPanel.js';
+import { SubscriptionsPanel } from './SubscriptionsPanel.js';
+import { ApiKeyManager } from './ApiKeyManager.js';
 
-type SettingsTab = 'appearance' | 'language' | 'account' | 'production' | 'characters';
+type SettingsTab = 'appearance' | 'language' | 'account' | 'production' | 'characters' | 'apikeys' | 'credits' | 'payments' | 'subscriptions';
 
 interface Character {
   id: number;
@@ -233,6 +241,7 @@ interface SettingsModalProps {
   onSetTheme: (t: string) => void;
   onToggleDark: () => void;
   onToggleLanguage: () => void;
+  onLogout: () => void;
   t: (key: string, params?: Record<string, any>) => string;
 }
 
@@ -246,6 +255,7 @@ export function SettingsModal({
   onSetTheme,
   onToggleDark,
   onToggleLanguage,
+  onLogout,
   t,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
@@ -417,6 +427,10 @@ export function SettingsModal({
     { id: 'account', label: t('settingsAccountTab') || 'Hesap', icon: <User size={16} /> },
     { id: 'production', label: t('production108') || 'Üretim', icon: <Monitor size={16} /> },
     { id: 'characters', label: 'Karakterler', icon: <Mic size={16} /> },
+    { id: 'apikeys', label: t('api_keys') || 'API Anahtarları', icon: <Key size={16} /> },
+    { id: 'credits', label: 'Krediler', icon: <Coins size={16} /> },
+    { id: 'payments', label: 'Ödemeler', icon: <CreditCard size={16} /> },
+    { id: 'subscriptions', label: 'Abonelikler', icon: <RefreshCw size={16} /> },
   ];
 
   return (
@@ -780,6 +794,29 @@ export function SettingsModal({
                     <Upload size={14} /> {t('upload') || 'Yükle'}
                   </button>
                 </div>
+
+                {/* Çıkış Yap (Logout) Alanı */}
+                <div style={{ ...s.section, marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+                  <div style={s.sectionTitle}>{t('logout') || 'Güvenli Çıkış'}</div>
+                  <div style={{ ...s.sectionDesc, marginBottom: 16 }}>
+                    {t('logout_description') || 'Mevcut oturumunuzu güvenli bir şekilde sonlandırın.'}
+                  </div>
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      onClose();
+                    }}
+                    style={{
+                      ...s.btnStatic,
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: 'rgb(239, 68, 68)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      padding: '8px 16px',
+                    }}
+                  >
+                    {t('logout') || 'Güvenli Çıkış'}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -998,6 +1035,30 @@ export function SettingsModal({
                   {t('saveSettings') || 'Kaydet'}
                 </button>
               </div>
+            )}
+
+            {/* API Keys Tab */}
+            {activeTab === 'apikeys' && (
+              <ApiKeyManager
+                language={language}
+                t={t}
+                onShowToast={(msg, type) => window.showToast?.(type as any, 'API Anahtarları', msg)}
+              />
+            )}
+
+            {/* Credits Tab */}
+            {activeTab === 'credits' && (
+              <CreditsPanel csrfToken={csrfToken} />
+            )}
+
+            {/* Payments Tab */}
+            {activeTab === 'payments' && (
+              <PaymentsPanel csrfToken={csrfToken} />
+            )}
+
+            {/* Subscriptions Tab */}
+            {activeTab === 'subscriptions' && (
+              <SubscriptionsPanel csrfToken={csrfToken} />
             )}
 
             {/* Characters Tab */}

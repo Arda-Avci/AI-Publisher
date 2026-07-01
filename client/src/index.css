@@ -202,3 +202,349 @@
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.2s ease-out; }
+
+
+
+
+
+/* PREMIUM DESIGN FOR LOGINPAGE */
+.premium-loginpage-grid-container {
+  background-color: hsl(var(--background)) !important;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  font-family: 'Manrope', sans-serif;
+  color: hsl(var(--foreground)) !important;
+}
+
+@media (max-width: 768px) {
+  .premium-loginpage-grid-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.premium-loginpage-grid-card {
+  background: rgba(8, 17, 31, 0.7) !important;
+  backdrop-filter: blur(16px) !important;
+  border-left: 1px solid hsl(var(--border)) !important;
+  padding: 4rem !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5) !important;
+  position: relative;
+  overflow: hidden;
+  animation: premiumSlideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Kart içindeki tüm elementleri z-index ile öne çıkarma */
+.premium-loginpage-grid-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Kullanıcının değiştiremeyeceği altın çizgi */
+.premium-loginpage-grid-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent, #D4AF37, transparent); /* Sabit Altın Tonu */
+  z-index: 3;
+}
+
+/* C'den entegre edilen döner altın glow efekti */
+.premium-loginpage-grid-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(212, 175, 55, 0.12), transparent 35%);
+  animation: premiumGlowRotate 12s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes premiumGlowRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+@keyframes premiumSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.premium-loginpage-editorial-visual {
+  background: linear-gradient(135deg, #08111F 0%, #05070B 100%) !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .premium-loginpage-editorial-visual {
+    display: none !important;
+  }
+}
+
+.premium-loginpage-editorial-logo {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-size: 3.5rem;
+  font-weight: 300;
+  color: #F2EBDD;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.05em;
+}
+
+.premium-loginpage-editorial-logo span {
+  color: #D4AF37; /* Sabit Altın Detay */
+}
+
+.premium-loginpage-editorial-desc {
+  font-family: 'Manrope', sans-serif;
+  color: #9AA3AF;
+  font-size: 1rem;
+  max-width: 380px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+/* ==========================================================================
+   PREMIUM EDITORIAL LANDING PAGE HERO STYLES
+   ========================================================================== */
+.premium-landing-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 100px 40px;
+  min-height: 80vh;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 968px) {
+  .premium-landing-hero {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    padding: 60px 20px;
+    text-align: center;
+  }
+}
+
+.premium-landing-hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.8rem;
+  text-align: left;
+  position: relative;
+  padding-left: 2rem;
+  animation: premiumFadeInUp 0.8s ease both;
+}
+
+/* Kullanıcının değiştiremeyeceği asimetrik altın sınır çizgisi */
+.premium-landing-hero-left::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 2px;
+  height: 90%;
+  background: linear-gradient(180deg, #D4AF37, transparent); /* Sabit Altın Çizgi */
+}
+
+@media (max-width: 968px) {
+  .premium-landing-hero-left {
+    align-items: center;
+    text-align: center;
+    padding-left: 0;
+  }
+  .premium-landing-hero-left::before {
+    display: none;
+  }
+}
+
+.premium-landing-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.2) !important;
+  padding: 6px 18px;
+  border-radius: 30px;
+  font-size: 12px;
+  color: #D4AF37 !important; /* Sabit Altın Detay */
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.premium-landing-hero-title {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-size: 3.8rem !important;
+  font-weight: 300 !important;
+  line-height: 1.1 !important;
+  color: hsl(var(--foreground)) !important;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.premium-landing-hero-title span {
+  font-style: italic;
+  color: #D4AF37 !important; /* Sabit Altın Detay */
+}
+
+@media (max-width: 968px) {
+  .premium-landing-hero-title {
+    font-size: 2.8rem !important;
+  }
+}
+
+.premium-landing-hero-subtitle {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.1rem;
+  color: #9AA3AF;
+  line-height: 1.6;
+  max-width: 550px;
+  margin: 0;
+  font-weight: 300;
+}
+
+.premium-landing-hero-ctas {
+  display: flex;
+  gap: 16px;
+  margin-top: 1rem;
+}
+
+@media (max-width: 480px) {
+  .premium-landing-hero-ctas {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+.premium-landing-btn {
+  background: #D4AF37 !important;
+  color: #05070B !important;
+  border: none !important;
+  font-weight: 800 !important;
+  padding: 14px 28px !important;
+  border-radius: 4px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.premium-landing-btn:hover {
+  background: #c5a880 !important;
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35) !important;
+  transform: translateY(-2px);
+}
+
+.premium-landing-btn-secondary {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: hsl(var(--foreground)) !important;
+  font-weight: 600 !important;
+  padding: 14px 28px !important;
+  border-radius: 4px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.3s ease !important;
+}
+
+.premium-landing-btn-secondary:hover {
+  border-color: #D4AF37 !important;
+  color: #D4AF37 !important;
+  transform: translateY(-2px);
+}
+
+.premium-landing-hero-right {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: premiumSlideInRight 0.8s ease both;
+}
+
+.premium-landing-hero-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 6px !important;
+  overflow: hidden;
+  background: rgba(8, 17, 31, 0.7) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(212, 175, 55, 0.18) !important; /* İnce Altın Kenarlık */
+  box-shadow: 0 0 40px rgba(212, 175, 55, 0.03), 0 30px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Kullanıcının değiştiremeyeceği döner altın glow efekti */
+.premium-landing-hero-video::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(212, 175, 55, 0.1), transparent 30%);
+  animation: premiumGlowRotate 12s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.premium-landing-video-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(9, 9, 11, 0.4) 0%, transparent 40%, transparent 60%, rgba(9, 9, 11, 0.4) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.premium-landing-play-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.premium-landing-play-btn {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #D4AF37, #C5A880) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.premium-landing-play-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 45px rgba(212, 175, 55, 0.45) !important;
+}
+
+

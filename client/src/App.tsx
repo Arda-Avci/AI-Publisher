@@ -38,7 +38,6 @@ import type {
   Platform,
 } from './types.js';
 import { CanvasPanel } from './components/CanvasPanel.js';
-import { ApiKeyManager } from './components/ApiKeyManager.js';
 import { BatchUpload } from './components/BatchUpload.js';
 import { ClipperPanel } from './components/ClipperPanel.js';
 import { SchedulePublishPanel } from './components/SchedulePublishPanel.js';
@@ -162,7 +161,6 @@ export default function App() {
     'Senaryo',
     'Ortam/Nesne',
     'Canvas',
-    'API Keys',
     'Batch',
     'Clipper',
     'Yayın Planla',
@@ -977,13 +975,6 @@ export default function App() {
                       onShowToast={(msg, type) => window.showToast?.(type as any, 'Canvas', msg)}
                     />
                   )}
-                  {mainTab === 'API Keys' && (
-                    <ApiKeyManager
-                      language={language}
-                      t={t}
-                      onShowToast={(msg, type) => window.showToast?.(type as any, 'API Anahtarları', msg)}
-                    />
-                  )}
                   {mainTab === 'Batch' && (
                     <BatchUpload
                       language={language}
@@ -1187,6 +1178,7 @@ export default function App() {
                   const idx = langs.indexOf(language);
                   setLanguage(langs[(idx + 1) % langs.length]);
                 }}
+                onLogout={handleLogout}
                 t={t}
               />
               <NotificationToast />

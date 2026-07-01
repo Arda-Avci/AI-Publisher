@@ -306,196 +306,71 @@ export function LandingPage({
         </div>
       </header>
 
-      {/* ========== HERO SECTION ========== */}
-      <section
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          padding: '80px 40px 60px',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '28px',
-        }}
-      >
-        {/* Badge */}
-        <div
-          className="hero-badge"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'var(--accent-light)',
-            border: '1px solid rgba(99,102,241,0.2)',
-            padding: '6px 18px',
-            borderRadius: '30px',
-            fontSize: '12px',
-            color: 'var(--accent)',
-            fontWeight: 'bold',
-          }}
-        >
-          <Sparkles size={12} />
-          <span>{t('heroBadge') || 'Otonom Video Üretiminin Geleceği'}</span>
-        </div>
+      {/* ========== HERO SECTION (PREMIUM EDITORIAL GRID) ========== */}
+      <section className="premium-landing-hero">
+        
+        {/* Sol Sütun - Tipografi & CTA */}
+        <div className="premium-landing-hero-left">
+          {/* Badge */}
+          <div className="premium-landing-hero-badge">
+            <Sparkles size={12} />
+            <span>{t('heroBadge') || 'Otonom Video Üretiminin Geleceği'}</span>
+          </div>
 
-        {/* Title */}
-        <h1
-          className="hero-title"
-          style={{
-            fontSize: '56px',
-            fontWeight: 800,
-            lineHeight: '1.1',
-            letterSpacing: '-2px',
-            textAlign: 'center',
-            margin: 0,
-            maxWidth: '850px',
-          }}
-        >
-          <span className="gradient-text">{t('landingTitle')}</span>
-        </h1>
+          {/* Title (Zarif Cormorant Garamond Tipografisi) */}
+          <h1 className="premium-landing-hero-title">
+            {t('landingTitle') ? (
+              <>
+                AI-Publisher ile <span>Otonom</span><br />
+                Pazarlama ve <span>Video</span> Çağı
+              </>
+            ) : (
+              t('landingTitle')
+            )}
+          </h1>
 
-        {/* Subtitle */}
-        <p
-          className="hero-subtitle"
-          style={{
-            fontSize: '17px',
-            color: 'var(--text-muted)',
-            lineHeight: '1.6',
-            textAlign: 'center',
-            maxWidth: '600px',
-            margin: 0,
-          }}
-        >
-          {t('landingSubtitle')}
-        </p>
+          {/* Subtitle */}
+          <p className="premium-landing-hero-subtitle">
+            {t('landingSubtitle')}
+          </p>
 
-        {/* CTA Buttons */}
-        <div className="hero-ctas" style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-          <button
-            onClick={() => setIsLoginOpen(true)}
-            className="btn btn-primary"
-            style={{
-              padding: '16px 32px',
-              fontSize: '15px',
-              fontWeight: 'bold',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            {t('heroCTA') || 'Hemen Başla'} <ArrowRight size={18} />
-          </button>
-          <button
-            onClick={scrollToGallery}
-            className="btn btn-secondary"
-            style={{
-              padding: '16px 32px',
-              fontSize: '15px',
-              fontWeight: 'bold',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            <Play size={16} /> Örnekleri İzle
-          </button>
-        </div>
-
-        {/* Video Player Area */}
-        <div
-          className="hero-video hero-float"
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '960px',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            marginTop: '20px',
-            aspectRatio: '16/9',
-            background: 'linear-gradient(220deg, #1e1b4b 0%, #09090b 100%)',
-            border: '1px solid var(--border)',
-            boxShadow: '0 0 80px rgba(99,102,241,0.1), 0 20px 60px rgba(0,0,0,0.5)',
-          }}
-        >
-          {/* Gradient overlay top/bottom */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'linear-gradient(180deg, rgba(9,9,11,0.4) 0%, transparent 40%, transparent 60%, rgba(9,9,11,0.4) 100%)',
-              zIndex: 1,
-              pointerEvents: 'none',
-            }}
-          />
-          {/* Grid pattern */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              opacity: 0.08,
-              backgroundImage: [
-                'linear-gradient(rgba(99,102,241,0.3) 1px, transparent 1px)',
-                'linear-gradient(90deg, rgba(99,102,241,0.3) 1px, transparent 1px)',
-              ].join(', '),
-              backgroundSize: '60px 60px',
-              zIndex: 0,
-            }}
-          />
-          {/* Center play button */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2,
-            }}
-          >
-            <div
-              className="hero-play-btn"
-              style={{
-                width: '72px',
-                height: '72px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 0 40px var(--accent-glow)',
-                transition: 'var(--transition)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.08)';
-                e.currentTarget.style.boxShadow = '0 0 60px var(--accent-glow)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 0 40px var(--accent-glow)';
-              }}
+          {/* CTA Buttons */}
+          <div className="premium-landing-hero-ctas">
+            <button
+              onClick={() => setIsLoginOpen(true)}
+              className="btn btn-primary premium-landing-btn"
             >
-              <Play size={28} fill="white" style={{ marginLeft: '3px' }} />
+              {t('heroCTA') || 'Hemen Başla'} <ArrowRight size={18} />
+            </button>
+            <button
+              onClick={scrollToGallery}
+              className="btn btn-secondary premium-landing-btn-secondary"
+            >
+              <Play size={16} /> Örnekleri İzle
+            </button>
+          </div>
+        </div>
+
+        {/* Sağ Sütun - Sinematik Video Player */}
+        <div className="premium-landing-hero-right">
+          <div className="premium-landing-hero-video hero-float">
+            {/* Gradient overlay top/bottom */}
+            <div className="premium-landing-video-overlay" />
+            
+            {/* Center play button */}
+            <div className="premium-landing-play-container">
+              <div
+                className="hero-play-btn premium-landing-play-btn"
+                onClick={scrollToGallery}
+              >
+                <Play size={28} fill="white" style={{ marginLeft: '3px' }} />
+              </div>
             </div>
           </div>
-          {/* Bottom gradient */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '80px',
-              background: 'linear-gradient(transparent, rgba(9,9,11,0.8))',
-              zIndex: 1,
-            }}
-          />
         </div>
+
+      </section>
+
 
         {/* Stat Badges */}
         <div
@@ -536,7 +411,6 @@ export function LandingPage({
             </div>
           ))}
         </div>
-      </section>
 
       {/* ========== DEMO VIDEO GALLERY ========== */}
       <section

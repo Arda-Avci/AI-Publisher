@@ -1,8 +1,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState, useEffect, useCallback } from 'react';
-import { UserPlus, User, Edit3, Trash2, Image as ImageIcon, Loader, Wand2, Sparkles } from 'lucide-react';
+import { UserPlus, User, Edit3, Trash2, Image as ImageIcon, Loader, Wand2, Sparkles, } from 'lucide-react';
 import { PhotoEditor } from './PhotoEditor.js';
-const ARCHETYPES = ['protagonist', 'mentor', 'comic_relief', 'antagonist', 'supporting', 'narrator'];
+const ARCHETYPES = [
+    'protagonist',
+    'mentor',
+    'comic_relief',
+    'antagonist',
+    'supporting',
+    'narrator',
+];
 const VOICE_PROVIDERS = ['edge', 'openai', 'xtts'];
 const VOICE_DEFAULTS = {
     edge: 'tr-TR-AhmetNeural',
@@ -203,7 +210,7 @@ const s = {
         objectFit: 'cover',
     },
 };
-export function CharacterCreationPanel({ csrfToken, onCharactersChange }) {
+export function CharacterCreationPanel({ csrfToken, onCharactersChange, }) {
     const [characters, setCharacters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -294,7 +301,9 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }) {
                 setAvatarSource('ai');
             }
         }
-        catch { /* ignore */ }
+        catch {
+            /* ignore */
+        }
         finally {
             setGeneratingAvatar(false);
         }
@@ -360,17 +369,37 @@ export function CharacterCreationPanel({ csrfToken, onCharactersChange }) {
         }
     };
     return (_jsxs("div", { style: s.panel, children: [_jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, children: [_jsxs("div", { style: s.sectionTitle, children: [_jsx(User, { size: 14 }), "KARAKTERLER"] }), !showForm && (_jsx("button", { onClick: () => setShowForm(true), style: s.iconBtn, title: "Yeni Karakter", children: _jsx(UserPlus, { size: 16, style: { color: 'var(--primary)' } }) }))] }), showForm && (_jsxs("form", { onSubmit: handleSubmit, style: s.form, children: [_jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Karakter Ad\u0131 *" }), _jsx("input", { type: "text", value: name, onChange: (e) => setName(e.target.value), placeholder: "\u00D6rn: Miki Fare", required: true, style: s.input })] }), _jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Fiziksel / Ki\u015Fisel Tasvir" }), _jsx("textarea", { value: description, onChange: (e) => setDescription(e.target.value), placeholder: "small brown mouse with big ears, blue overalls", style: s.textarea })] }), _jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Rol / Arketip" }), _jsx("select", { value: roleArchetype, onChange: (e) => setRoleArchetype(e.target.value), style: s.select, children: ARCHETYPES.map((a) => (_jsx("option", { value: a, children: a.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }, a))) })] }), _jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Ses Sa\u011Flay\u0131c\u0131" }), _jsx("select", { value: voiceProvider, onChange: (e) => handleProviderChange(e.target.value), style: s.select, children: VOICE_PROVIDERS.map((vp) => (_jsx("option", { value: vp, children: vp === 'edge' ? 'Edge Speech' : vp === 'openai' ? 'OpenAI TTS' : 'XTTS' }, vp))) })] }), _jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Ses ID" }), _jsx("input", { type: "text", value: voiceId, onChange: (e) => setVoiceId(e.target.value), placeholder: VOICE_DEFAULTS[voiceProvider] || 'Ses ID girin...', style: s.input })] }), _jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Avatar Stili" }), _jsxs("div", { style: { display: 'flex', gap: '8px' }, children: [_jsx("button", { type: "button", onClick: () => setAvatarStyle('realistic'), style: {
-                                            flex: 1, padding: '6px 8px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                                            flex: 1,
+                                            padding: '6px 8px',
+                                            fontSize: '11px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
                                             background: avatarStyle === 'realistic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                                             color: avatarStyle === 'realistic' ? '#0b0f19' : 'var(--text-muted)',
                                         }, children: "Ger\u00E7ek\u00E7i" }), _jsx("button", { type: "button", onClick: () => setAvatarStyle('animatic'), style: {
-                                            flex: 1, padding: '6px 8px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                                            flex: 1,
+                                            padding: '6px 8px',
+                                            fontSize: '11px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
                                             background: avatarStyle === 'animatic' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                                             color: avatarStyle === 'animatic' ? '#0b0f19' : 'var(--text-muted)',
                                         }, children: "Animatik" })] })] }), _jsxs("div", { style: s.field, children: [_jsx("label", { style: s.label, children: "Referans G\u00F6rseli" }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '6px' }, children: [_jsxs("div", { style: s.fileRow, children: [_jsxs("label", { style: s.fileBtn, children: [_jsx("input", { type: "file", accept: "image/*", onChange: handleImageUpload, style: { display: 'none' } }), _jsxs("span", { style: { display: 'flex', alignItems: 'center', gap: '6px' }, children: [_jsx(ImageIcon, { size: 12 }), referenceImage ? 'Değiştir' : 'Yükle'] })] }), _jsxs("button", { type: "button", onClick: handleGenerateAvatar, disabled: generatingAvatar || !description.trim(), style: {
-                                                    ...s.fileBtn, borderStyle: 'solid',
+                                                    ...s.fileBtn,
+                                                    borderStyle: 'solid',
                                                     opacity: generatingAvatar || !description.trim() ? 0.5 : 1,
-                                                }, children: [generatingAvatar ? (_jsx(Loader, { size: 12, className: "pulse" })) : (_jsx(Sparkles, { size: 12 })), "AI \u00DCret"] }), referenceImage && (_jsxs("button", { type: "button", onClick: () => setEditingAvatarUrl(referenceImage), style: { ...s.fileBtn, borderStyle: 'solid' }, children: [_jsx(Wand2, { size: 12 }), " D\u00FCzenle"] }))] }), referenceImage && (_jsxs("span", { style: { fontSize: '10px', color: avatarSource === 'ai' ? 'var(--primary)' : 'var(--success)' }, children: ["Kaynak: ", avatarSource === 'ai' ? 'AI Üretimi' : 'Yükleme'] }))] })] }), referenceImage && (_jsx("div", { style: { width: 80, height: 80, borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }, children: _jsx("img", { src: referenceImage, alt: "preview", style: { width: '100%', height: '100%', objectFit: 'cover' } }) })), _jsxs("div", { style: s.formActions, children: [_jsxs("button", { type: "submit", disabled: saving || !name.trim(), style: {
+                                                }, children: [generatingAvatar ? (_jsx(Loader, { size: 12, className: "pulse" })) : (_jsx(Sparkles, { size: 12 })), "AI \u00DCret"] }), referenceImage && (_jsxs("button", { type: "button", onClick: () => setEditingAvatarUrl(referenceImage), style: { ...s.fileBtn, borderStyle: 'solid' }, children: [_jsx(Wand2, { size: 12 }), " D\u00FCzenle"] }))] }), referenceImage && (_jsxs("span", { style: {
+                                            fontSize: '10px',
+                                            color: avatarSource === 'ai' ? 'var(--primary)' : 'var(--success)',
+                                        }, children: ["Kaynak: ", avatarSource === 'ai' ? 'AI Üretimi' : 'Yükleme'] }))] })] }), referenceImage && (_jsx("div", { style: {
+                            width: 80,
+                            height: 80,
+                            borderRadius: '6px',
+                            overflow: 'hidden',
+                            border: '1px solid var(--border)',
+                        }, children: _jsx("img", { src: referenceImage, alt: "preview", style: { width: '100%', height: '100%', objectFit: 'cover' } }) })), _jsxs("div", { style: s.formActions, children: [_jsxs("button", { type: "submit", disabled: saving || !name.trim(), style: {
                                     ...s.btnPrimary,
                                     opacity: saving || !name.trim() ? 0.5 : 1,
                                 }, children: [saving ? _jsx(Loader, { size: 12, className: "pulse" }) : null, editingId ? 'Güncelle' : 'Oluştur'] }), _jsx("button", { type: "button", onClick: resetForm, style: s.btnCancel, children: "\u0130ptal" })] })] })), loading ? (_jsxs("div", { style: s.empty, children: [_jsx(Loader, { size: 14, className: "pulse", style: { marginRight: 6 } }), "Y\u00FCkleniyor..."] })) : characters.length === 0 ? (_jsx("div", { style: s.empty, children: "Hen\u00FCz karakter eklenmemi\u015F. \"Yeni Karakter\" butonuna t\u0131klayarak ba\u015Flay\u0131n." })) : (_jsx("div", { style: s.list, children: characters.map((char) => (_jsxs("div", { style: s.card, children: [_jsx("div", { style: s.thread, children: char.reference_image ? (_jsx("img", { src: char.reference_image, alt: char.name, style: s.thumb })) : (_jsx(User, { size: 18, style: { color: 'var(--text-muted)', opacity: 0.4 } })) }), _jsxs("div", { style: s.cardBody, children: [_jsx("div", { style: s.cardName, children: char.name }), _jsx("div", { style: s.cardDesc, children: char.description }), _jsxs("div", { style: s.cardMeta, children: [_jsx("span", { children: char.role_archetype.replace(/_/g, ' ') }), _jsxs("span", { children: [char.voice_provider, " / ", char.voice_id] })] })] }), _jsxs("div", { style: s.cardActions, children: [_jsx("button", { onClick: () => handleEdit(char), style: { ...s.iconBtn, color: 'var(--primary)' }, title: "D\u00FCzenle", children: _jsx(Edit3, { size: 14 }) }), _jsx("button", { onClick: () => handleDelete(char.id), style: { ...s.iconBtn, color: 'rgba(239, 68, 68, 0.7)' }, title: "Sil", children: _jsx(Trash2, { size: 14 }) })] })] }, char.id))) })), editingAvatarUrl && (_jsx(PhotoEditor, { imageUrl: editingAvatarUrl, onSave: handleAvatarSave, onClose: () => setEditingAvatarUrl(null) }))] }));

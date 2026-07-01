@@ -32,7 +32,7 @@
 
 import axios from 'axios';
 import { Logger } from '../lib/logger.js';
-import { RunPodClient } from './runpod.js';
+import { ModalClient } from './modalClient.js';
 import { PORTS } from '../constants.js';
 
 export interface BrowserUseTaskOptions {
@@ -127,7 +127,7 @@ export class BrowserUseService {
     };
 
     try {
-      const runpodRes = await RunPodClient.runJob(endpointId, runpodInput, this.getCallbackUrl());
+      const runpodRes = await ModalClient.runJob(endpointId, runpodInput);
       Logger.info('[BrowserUse] RunPod task started', { taskId: runpodRes.id, status: runpodRes.status });
 
       // Poll for completion
@@ -154,7 +154,7 @@ export class BrowserUseService {
       await new Promise((r) => setTimeout(r, pollInterval));
 
       try {
-        const status = await RunPodClient.getJobStatus(endpointId, taskId);
+        const status = await ModalClient.getJobStatus(endpointId, taskId);
         const state = String(status?.status || (status as any)?.state || '');
         const result = (status as any)?.result;
 
@@ -163,7 +163,7 @@ export class BrowserUseService {
         if (state === 'COMPLETED' || state === 'SUCCEEDED') {
           return {
             status: 'success',
-            output: status.output || result?.output || JSON.stringify(result || {}),
+            output: status.result || result?.output || JSON.stringify(result || {}),
             stepsUsed: result?.steps_used,
           };
         }

@@ -9,7 +9,11 @@ const NODE_COLORS = {
     image: { bg: 'rgba(245, 158, 11, 0.15)', border: '#F59E0B', glow: 'rgba(245, 158, 11, 0.4)' },
     video: { bg: 'rgba(239, 68, 68, 0.15)', border: '#EF4444', glow: 'rgba(239, 68, 68, 0.4)' },
     character: { bg: 'rgba(139, 92, 246, 0.15)', border: '#8B5CF6', glow: 'rgba(139, 92, 246, 0.4)' },
-    storyboard: { bg: 'rgba(59, 130, 246, 0.15)', border: '#3B82F6', glow: 'rgba(59, 130, 246, 0.4)' },
+    storyboard: {
+        bg: 'rgba(59, 130, 246, 0.15)',
+        border: '#3B82F6',
+        glow: 'rgba(59, 130, 246, 0.4)',
+    },
     keyframe: { bg: 'rgba(236, 72, 153, 0.15)', border: '#EC4899', glow: 'rgba(236, 72, 153, 0.4)' },
 };
 const STATUS_BADGES = {
@@ -26,7 +30,12 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
     const [newCanvasName, setNewCanvasName] = useState('');
     const [showNewCanvasModal, setShowNewCanvasModal] = useState(false);
     const [selectedNode, setSelectedNode] = useState(null);
-    const [taskQueueStatus, setTaskQueueStatus] = useState({ pending: 0, running: 0, completed: 0, failed: 0 });
+    const [taskQueueStatus, setTaskQueueStatus] = useState({
+        pending: 0,
+        running: 0,
+        completed: 0,
+        failed: 0,
+    });
     const [_draggedNode, setDraggedNode] = useState(null);
     const fetchCanvases = useCallback(async () => {
         try {
@@ -84,7 +93,7 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
             });
             const d = await r.json();
             if (d.canvas) {
-                setCanvases(prev => [...prev, d.canvas]);
+                setCanvases((prev) => [...prev, d.canvas]);
                 setSelectedCanvas(d.canvas);
                 setShowNewCanvasModal(false);
                 setNewCanvasName('');
@@ -109,10 +118,12 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
             });
             const d = await r.json();
             if (d.node) {
-                setSelectedCanvas(prev => prev ? {
-                    ...prev,
-                    nodes: [...prev.nodes, d.node],
-                } : null);
+                setSelectedCanvas((prev) => prev
+                    ? {
+                        ...prev,
+                        nodes: [...prev.nodes, d.node],
+                    }
+                    : null);
             }
         }
         catch (err) {
@@ -127,11 +138,13 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                 method: 'DELETE',
             });
             if (r.ok) {
-                setSelectedCanvas(prev => prev ? {
-                    ...prev,
-                    nodes: prev.nodes.filter(n => n.id !== nodeId),
-                    connections: prev.connections.filter(c => c.fromNodeId !== nodeId && c.toNodeId !== nodeId),
-                } : null);
+                setSelectedCanvas((prev) => prev
+                    ? {
+                        ...prev,
+                        nodes: prev.nodes.filter((n) => n.id !== nodeId),
+                        connections: prev.connections.filter((c) => c.fromNodeId !== nodeId && c.toNodeId !== nodeId),
+                    }
+                    : null);
                 setSelectedNode(null);
                 onShowToast?.(t('node_deleted'), 'success');
             }
@@ -149,8 +162,8 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tasks: selectedCanvas.nodes
-                        .filter(n => n.status === 'draft')
-                        .map(n => ({ type: 'generate', nodeId: n.id })),
+                        .filter((n) => n.status === 'draft')
+                        .map((n) => ({ type: 'generate', nodeId: n.id })),
                 }),
             });
             const d = await r.json();
@@ -205,13 +218,13 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                     gap: '6px',
                                     justifyContent: 'center',
                                     transition: 'all 0.2s ease',
-                                }, onMouseEnter: e => e.currentTarget.style.transform = 'translateY(-1px)', onMouseLeave: e => e.currentTarget.style.transform = 'translateY(0)', children: [_jsx("span", { style: { fontSize: '14px' }, children: "+" }), " ", t('new_canvas')] })] }), _jsxs("div", { style: {
+                                }, onMouseEnter: (e) => (e.currentTarget.style.transform = 'translateY(-1px)'), onMouseLeave: (e) => (e.currentTarget.style.transform = 'translateY(0)'), children: [_jsx("span", { style: { fontSize: '14px' }, children: "+" }), " ", t('new_canvas')] })] }), _jsxs("div", { style: {
                             flex: 1,
                             overflowY: 'auto',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '4px',
-                        }, children: [canvases.map(canvas => (_jsxs("button", { onClick: () => setSelectedCanvas(canvas), style: {
+                        }, children: [canvases.map((canvas) => (_jsxs("button", { onClick: () => setSelectedCanvas(canvas), style: {
                                     padding: '10px 12px',
                                     background: selectedCanvas?.id === canvas.id
                                         ? 'rgba(139, 92, 246, 0.25)'
@@ -246,12 +259,17 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                     { label: t('running'), value: taskQueueStatus.running, color: '#60A5FA' },
                                     { label: t('completed'), value: taskQueueStatus.completed, color: '#34D399' },
                                     { label: t('failed'), value: taskQueueStatus.failed, color: '#F87171' },
-                                ].map(stat => (_jsxs("div", { style: {
+                                ].map((stat) => (_jsxs("div", { style: {
                                         padding: '6px 8px',
                                         background: 'rgba(0, 0, 0, 0.3)',
                                         borderRadius: '4px',
                                         textAlign: 'center',
-                                    }, children: [_jsx("div", { style: { fontSize: '16px', fontWeight: 700, color: stat.color, fontFamily: 'var(--font-mono)' }, children: stat.value }), _jsx("div", { style: { fontSize: '9px', color: '#6B7280', textTransform: 'uppercase' }, children: stat.label })] }, stat.label))) })] }))] }), _jsx("div", { style: {
+                                    }, children: [_jsx("div", { style: {
+                                                fontSize: '16px',
+                                                fontWeight: 700,
+                                                color: stat.color,
+                                                fontFamily: 'var(--font-mono)',
+                                            }, children: stat.value }), _jsx("div", { style: { fontSize: '9px', color: '#6B7280', textTransform: 'uppercase' }, children: stat.label })] }, stat.label))) })] }))] }), _jsx("div", { style: {
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
@@ -273,7 +291,7 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                                 borderRadius: '4px',
                                                 color: '#A78BFA',
                                                 fontFamily: 'var(--font-mono)',
-                                            }, children: [selectedCanvas.nodes.length, " ", t('nodes')] })] }), _jsx("div", { style: { display: 'flex', gap: '6px' }, children: ['text', 'image', 'video', 'character', 'storyboard', 'keyframe'].map(type => (_jsxs("button", { onClick: () => addNode(type), style: {
+                                            }, children: [selectedCanvas.nodes.length, " ", t('nodes')] })] }), _jsx("div", { style: { display: 'flex', gap: '6px' }, children: ['text', 'image', 'video', 'character', 'storyboard', 'keyframe'].map((type) => (_jsxs("button", { onClick: () => addNode(type), style: {
                                             padding: '6px 10px',
                                             background: NODE_COLORS[type].bg,
                                             border: `1px solid ${NODE_COLORS[type].border}`,
@@ -283,7 +301,7 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                             fontWeight: 500,
                                             cursor: 'pointer',
                                             transition: 'all 0.2s ease',
-                                        }, onMouseEnter: e => e.currentTarget.style.boxShadow = `0 0 12px ${NODE_COLORS[type].glow}`, onMouseLeave: e => e.currentTarget.style.boxShadow = 'none', children: ["+ ", type] }, type))) }), _jsxs("button", { onClick: startGeneration, disabled: !selectedCanvas.nodes.some(n => n.status === 'draft'), style: {
+                                        }, onMouseEnter: (e) => (e.currentTarget.style.boxShadow = `0 0 12px ${NODE_COLORS[type].glow}`), onMouseLeave: (e) => (e.currentTarget.style.boxShadow = 'none'), children: ["+ ", type] }, type))) }), _jsxs("button", { onClick: startGeneration, disabled: !selectedCanvas.nodes.some((n) => n.status === 'draft'), style: {
                                         padding: '8px 16px',
                                         background: 'linear-gradient(135deg, #10B981, #059669)',
                                         border: 'none',
@@ -291,8 +309,10 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                         color: 'white',
                                         fontSize: '12px',
                                         fontWeight: 600,
-                                        cursor: selectedCanvas.nodes.some(n => n.status === 'draft') ? 'pointer' : 'not-allowed',
-                                        opacity: selectedCanvas.nodes.some(n => n.status === 'draft') ? 1 : 0.5,
+                                        cursor: selectedCanvas.nodes.some((n) => n.status === 'draft')
+                                            ? 'pointer'
+                                            : 'not-allowed',
+                                        opacity: selectedCanvas.nodes.some((n) => n.status === 'draft') ? 1 : 0.5,
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '6px',
@@ -314,7 +334,7 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                 `,
                                         backgroundSize: '40px 40px',
                                         opacity: 0.3,
-                                    } }), selectedCanvas.nodes.map(node => {
+                                    } }), selectedCanvas.nodes.map((node) => {
                                     const colors = NODE_COLORS[node.type];
                                     const statusBadge = STATUS_BADGES[node.status];
                                     const isSelected = selectedNode?.id === node.id;
@@ -358,7 +378,9 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
                                                     lineHeight: 1.4,
-                                                }, children: node.data?.prompt ? String(node.data.prompt).substring(0, 50) + '...' : `${node.type} node` }), node.dependencies.length > 0 && (_jsxs("div", { style: {
+                                                }, children: node.data?.prompt
+                                                    ? String(node.data.prompt).substring(0, 50) + '...'
+                                                    : `${node.type} node` }), node.dependencies.length > 0 && (_jsxs("div", { style: {
                                                     position: 'absolute',
                                                     bottom: '-8px',
                                                     left: '50%',
@@ -368,7 +390,10 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                                     borderRadius: '3px',
                                                     fontSize: '8px',
                                                     color: '#60A5FA',
-                                                }, children: [node.dependencies.length, " deps"] })), isSelected && (_jsx("button", { onClick: (e) => { e.stopPropagation(); deleteNode(node.id); }, style: {
+                                                }, children: [node.dependencies.length, " deps"] })), isSelected && (_jsx("button", { onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    deleteNode(node.id);
+                                                }, style: {
                                                     position: 'absolute',
                                                     top: '-8px',
                                                     right: '-8px',
@@ -390,9 +415,9 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                                     background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
                                                     animation: 'shimmer 1.5s infinite',
                                                 } }))] }, node.id));
-                                }), _jsx("svg", { style: { position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }, children: selectedCanvas.connections.map(conn => {
-                                        const fromNode = selectedCanvas.nodes.find(n => n.id === conn.fromNodeId);
-                                        const toNode = selectedCanvas.nodes.find(n => n.id === conn.toNodeId);
+                                }), _jsx("svg", { style: { position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }, children: selectedCanvas.connections.map((conn) => {
+                                        const fromNode = selectedCanvas.nodes.find((n) => n.id === conn.fromNodeId);
+                                        const toNode = selectedCanvas.nodes.find((n) => n.id === conn.toNodeId);
                                         if (!fromNode || !toNode)
                                             return null;
                                         const x1 = fromNode.x + fromNode.width / 2;
@@ -434,12 +459,12 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                         border: '1px solid rgba(139, 92, 246, 0.3)',
                         width: '320px',
                         boxShadow: '0 0 40px rgba(139, 92, 246, 0.2)',
-                    }, onClick: e => e.stopPropagation(), children: [_jsx("h3", { style: {
+                    }, onClick: (e) => e.stopPropagation(), children: [_jsx("h3", { style: {
                                 margin: '0 0 16px 0',
                                 fontSize: '14px',
                                 fontWeight: 600,
                                 color: '#E5E7EB',
-                            }, children: t('create_new_canvas') }), _jsx("input", { type: "text", value: newCanvasName, onChange: e => setNewCanvasName(e.target.value), placeholder: t('canvas_name_placeholder'), autoFocus: true, style: {
+                            }, children: t('create_new_canvas') }), _jsx("input", { type: "text", value: newCanvasName, onChange: (e) => setNewCanvasName(e.target.value), placeholder: t('canvas_name_placeholder'), autoFocus: true, style: {
                                 width: '100%',
                                 padding: '10px 12px',
                                 background: 'rgba(0, 0, 0, 0.4)',
@@ -450,7 +475,7 @@ export function CanvasPanel({ language: _language, t, onShowToast }) {
                                 outline: 'none',
                                 marginBottom: '12px',
                                 boxSizing: 'border-box',
-                            }, onKeyDown: e => e.key === 'Enter' && createCanvas() }), _jsxs("div", { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end' }, children: [_jsx("button", { onClick: () => setShowNewCanvasModal(false), style: {
+                            }, onKeyDown: (e) => e.key === 'Enter' && createCanvas() }), _jsxs("div", { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end' }, children: [_jsx("button", { onClick: () => setShowNewCanvasModal(false), style: {
                                         padding: '8px 16px',
                                         background: 'rgba(255, 255, 255, 0.05)',
                                         border: '1px solid rgba(255, 255, 255, 0.1)',

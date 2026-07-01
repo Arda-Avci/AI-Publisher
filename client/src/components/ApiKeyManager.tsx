@@ -164,12 +164,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
         display: 'flex',
         flexDirection: 'column',
         overflowY: 'auto',
-        padding: '20px',
-        background: 'rgba(10, 10, 20, 0.6)',
-        borderRadius: '12px',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(139, 92, 246, 0.2)',
-        minHeight: '400px',
+        gap: '16px',
       }}
     >
       {/* Header */}
@@ -178,8 +173,8 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '20px',
-          paddingBottom: '16px',
+          marginBottom: '14px',
+          paddingBottom: '12px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
@@ -187,7 +182,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
           <h2
             style={{
               margin: 0,
-              fontSize: '18px',
+              fontSize: '14px',
               fontWeight: 700,
               background: 'linear-gradient(135deg, #E5E7EB, #A78BFA)',
               WebkitBackgroundClip: 'text',
@@ -198,8 +193,8 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
           </h2>
           <p
             style={{
-              margin: '4px 0 0 0',
-              fontSize: '12px',
+              margin: '2px 0 0 0',
+              fontSize: '11px',
               color: '#6B7280',
             }}
           >
@@ -480,7 +475,7 @@ export function ApiKeyManager({ language: _language, t, onShowToast }: ApiKeyMan
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 1100,
             backdropFilter: 'blur(6px)',
           }}
           onClick={() => resetForm()}

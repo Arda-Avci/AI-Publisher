@@ -17,7 +17,7 @@ const STATUS_STYLES = {
     failed: { bg: 'rgba(239, 68, 68, 0.2)', color: '#F87171', label: 'Başarısız' },
     cancelled: { bg: 'rgba(107, 114, 128, 0.2)', color: '#9CA3AF', label: 'İptal Edildi' },
 };
-export function BatchUpload({ language: _language, t, onShowToast, onUploadComplete }) {
+export function BatchUpload({ language: _language, t, onShowToast, onUploadComplete, }) {
     const [jobs, setJobs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('upload');
@@ -67,9 +67,7 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
         setDragActive(false);
     };
     const togglePlatform = (platform) => {
-        setSelectedPlatforms(prev => prev.includes(platform)
-            ? prev.filter(p => p !== platform)
-            : [...prev, platform]);
+        setSelectedPlatforms((prev) => prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]);
     };
     const uploadFiles = async () => {
         if (!selectedFiles || selectedFiles.length === 0)
@@ -197,10 +195,12 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                             { key: 'upload', label: t('file_upload') },
                             { key: 'folder', label: t('folder_watch') },
                             { key: 'history', label: t('history') },
-                        ].map(tab => (_jsx("button", { onClick: () => setActiveTab(tab.key), style: {
+                        ].map((tab) => (_jsx("button", { onClick: () => setActiveTab(tab.key), style: {
                                 padding: '8px 16px',
                                 background: activeTab === tab.key ? 'rgba(59, 130, 246, 0.3)' : 'transparent',
-                                border: activeTab === tab.key ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid transparent',
+                                border: activeTab === tab.key
+                                    ? '1px solid rgba(59, 130, 246, 0.5)'
+                                    : '1px solid transparent',
                                 borderRadius: '6px',
                                 color: activeTab === tab.key ? '#60A5FA' : '#9CA3AF',
                                 fontSize: '12px',
@@ -216,7 +216,7 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             marginBottom: '20px',
-                        }, children: [_jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: "video/*", onChange: e => handleFileSelect(e.target.files), style: { display: 'none' } }), _jsx("div", { style: {
+                        }, children: [_jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: "video/*", onChange: (e) => handleFileSelect(e.target.files), style: { display: 'none' } }), _jsx("div", { style: {
                                     width: '56px',
                                     height: '56px',
                                     margin: '0 auto 16px',
@@ -226,27 +226,43 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontSize: '24px',
-                                }, children: "\uD83D\uDCC1" }), selectedFiles ? (_jsxs("div", { children: [_jsxs("div", { style: { fontSize: '14px', color: '#E5E7EB', marginBottom: '4px' }, children: [selectedFiles.length, " ", t('files_selected')] }), _jsxs("div", { style: { fontSize: '12px', color: '#6B7280' }, children: [Array.from(selectedFiles).map(f => f.name).join(', ').substring(0, 100), "..."] })] })) : (_jsxs(_Fragment, { children: [_jsx("div", { style: { fontSize: '14px', color: '#E5E7EB', marginBottom: '4px' }, children: t('drop_files_here') }), _jsx("div", { style: { fontSize: '12px', color: '#6B7280' }, children: t('or_click_to_select') })] }))] }), selectedFiles && selectedFiles.length > 0 && (_jsxs("div", { style: {
+                                }, children: "\uD83D\uDCC1" }), selectedFiles ? (_jsxs("div", { children: [_jsxs("div", { style: { fontSize: '14px', color: '#E5E7EB', marginBottom: '4px' }, children: [selectedFiles.length, " ", t('files_selected')] }), _jsxs("div", { style: { fontSize: '12px', color: '#6B7280' }, children: [Array.from(selectedFiles)
+                                                .map((f) => f.name)
+                                                .join(', ')
+                                                .substring(0, 100), "..."] })] })) : (_jsxs(_Fragment, { children: [_jsx("div", { style: { fontSize: '14px', color: '#E5E7EB', marginBottom: '4px' }, children: t('drop_files_here') }), _jsx("div", { style: { fontSize: '12px', color: '#6B7280' }, children: t('or_click_to_select') })] }))] }), selectedFiles && selectedFiles.length > 0 && (_jsxs("div", { style: {
                             padding: '12px',
                             background: 'rgba(0, 0, 0, 0.3)',
                             borderRadius: '8px',
                             marginBottom: '16px',
                             maxHeight: '120px',
                             overflowY: 'auto',
-                        }, children: [_jsxs("div", { style: { fontSize: '11px', color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }, children: [t('selected_files'), " (", selectedFiles.length, ")"] }), Array.from(selectedFiles).slice(0, 5).map((file, i) => (_jsxs("div", { style: {
+                        }, children: [_jsxs("div", { style: {
+                                    fontSize: '11px',
+                                    color: '#6B7280',
+                                    marginBottom: '8px',
+                                    textTransform: 'uppercase',
+                                }, children: [t('selected_files'), " (", selectedFiles.length, ")"] }), Array.from(selectedFiles)
+                                .slice(0, 5)
+                                .map((file, i) => (_jsxs("div", { style: {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
                                     padding: '6px 0',
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                                }, children: [_jsx("span", { style: { fontSize: '14px' }, children: "\uD83C\uDFAC" }), _jsx("span", { style: { fontSize: '12px', color: '#D1D5DB', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }, children: file.name }), _jsxs("span", { style: { fontSize: '10px', color: '#6B7280', fontFamily: 'var(--font-mono)' }, children: [(file.size / (1024 * 1024)).toFixed(1), " MB"] })] }, i))), selectedFiles.length > 5 && (_jsxs("div", { style: { fontSize: '11px', color: '#6B7280', paddingTop: '8px' }, children: ["+", selectedFiles.length - 5, " ", t('more_files')] }))] })), _jsxs("div", { style: { marginBottom: '16px' }, children: [_jsx("label", { style: {
+                                }, children: [_jsx("span", { style: { fontSize: '14px' }, children: "\uD83C\uDFAC" }), _jsx("span", { style: {
+                                            fontSize: '12px',
+                                            color: '#D1D5DB',
+                                            flex: 1,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                        }, children: file.name }), _jsxs("span", { style: { fontSize: '10px', color: '#6B7280', fontFamily: 'var(--font-mono)' }, children: [(file.size / (1024 * 1024)).toFixed(1), " MB"] })] }, i))), selectedFiles.length > 5 && (_jsxs("div", { style: { fontSize: '11px', color: '#6B7280', paddingTop: '8px' }, children: ["+", selectedFiles.length - 5, " ", t('more_files')] }))] })), _jsxs("div", { style: { marginBottom: '16px' }, children: [_jsx("label", { style: {
                                     display: 'block',
                                     fontSize: '11px',
                                     color: '#9CA3AF',
                                     marginBottom: '8px',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
-                                }, children: t('target_platforms') }), _jsx("div", { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' }, children: Object.keys(PLATFORM_COLORS).map(platform => {
+                                }, children: t('target_platforms') }), _jsx("div", { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' }, children: Object.keys(PLATFORM_COLORS).map((platform) => {
                                     const p = PLATFORM_COLORS[platform];
                                     const isSelected = selectedPlatforms.includes(platform);
                                     return (_jsxs("button", { onClick: () => togglePlatform(platform), style: {
@@ -269,7 +285,7 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                                     marginBottom: '8px',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
-                                }, children: [t('schedule_publish'), " (", t('optional'), ")"] }), _jsx("input", { type: "datetime-local", value: scheduleDate, onChange: e => setScheduleDate(e.target.value), style: {
+                                }, children: [t('schedule_publish'), " (", t('optional'), ")"] }), _jsx("input", { type: "datetime-local", value: scheduleDate, onChange: (e) => setScheduleDate(e.target.value), style: {
                                     padding: '10px 12px',
                                     background: 'rgba(0, 0, 0, 0.4)',
                                     border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -288,7 +304,9 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                             color: 'white',
                             fontSize: '14px',
                             fontWeight: 600,
-                            cursor: selectedFiles && selectedFiles.length > 0 && !isUploading ? 'pointer' : 'not-allowed',
+                            cursor: selectedFiles && selectedFiles.length > 0 && !isUploading
+                                ? 'pointer'
+                                : 'not-allowed',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -300,7 +318,7 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                                     marginBottom: '8px',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
-                                }, children: t('folder_path') }), _jsx("input", { type: "text", value: folderPath, onChange: e => setFolderPath(e.target.value), placeholder: "C:\\Videos\\BatchUpload", style: {
+                                }, children: t('folder_path') }), _jsx("input", { type: "text", value: folderPath, onChange: (e) => setFolderPath(e.target.value), placeholder: "C:\\Videos\\BatchUpload", style: {
                                     width: '100%',
                                     padding: '12px 14px',
                                     background: 'rgba(0, 0, 0, 0.4)',
@@ -336,7 +354,7 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                         padding: '40px',
                         background: 'rgba(0, 0, 0, 0.2)',
                         borderRadius: '10px',
-                    }, children: _jsx("div", { style: { fontSize: '14px', color: '#9CA3AF' }, children: t('no_batch_jobs') }) })) : (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '10px' }, children: jobs.map(job => {
+                    }, children: _jsx("div", { style: { fontSize: '14px', color: '#9CA3AF' }, children: t('no_batch_jobs') }) })) : (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: '10px' }, children: jobs.map((job) => {
                         const status = STATUS_STYLES[job.status];
                         const progress = getProgressPercent(job);
                         return (_jsxs("div", { style: {
@@ -344,7 +362,17 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                                 background: 'rgba(20, 20, 35, 0.6)',
                                 borderRadius: '10px',
                                 border: '1px solid rgba(255, 255, 255, 0.05)',
-                            }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }, children: [_jsxs("div", { children: [_jsx("div", { style: { fontSize: '14px', fontWeight: 600, color: '#E5E7EB', marginBottom: '2px' }, children: job.name }), _jsx("div", { style: { fontSize: '11px', color: '#6B7280' }, children: formatDate(job.createdAt) })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx("span", { style: {
+                            }, children: [_jsxs("div", { style: {
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '12px',
+                                    }, children: [_jsxs("div", { children: [_jsx("div", { style: {
+                                                        fontSize: '14px',
+                                                        fontWeight: 600,
+                                                        color: '#E5E7EB',
+                                                        marginBottom: '2px',
+                                                    }, children: job.name }), _jsx("div", { style: { fontSize: '11px', color: '#6B7280' }, children: formatDate(job.createdAt) })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx("span", { style: {
                                                         padding: '4px 10px',
                                                         background: status.bg,
                                                         borderRadius: '4px',
@@ -374,7 +402,9 @@ export function BatchUpload({ language: _language, t, onShowToast, onUploadCompl
                                             }, children: _jsx("div", { style: {
                                                     height: '100%',
                                                     width: `${progress}%`,
-                                                    background: job.status === 'failed' ? '#EF4444' : 'linear-gradient(90deg, #3B82F6, #60A5FA)',
+                                                    background: job.status === 'failed'
+                                                        ? '#EF4444'
+                                                        : 'linear-gradient(90deg, #3B82F6, #60A5FA)',
                                                     borderRadius: '3px',
                                                     transition: 'width 0.3s ease',
                                                 } }) })] }), job.failedVideos > 0 && (_jsxs("div", { style: { fontSize: '10px', color: '#F87171' }, children: [job.failedVideos, " ", t('failed')] }))] }, job.id));

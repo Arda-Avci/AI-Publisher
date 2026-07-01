@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 export const RemotionVideo = ({ scenes, width = 1080, height = 1920, }) => {
     const fps = 30;
     const _durationInFrames = useMemo(() => {
@@ -8,15 +8,20 @@ export const RemotionVideo = ({ scenes, width = 1080, height = 1920, }) => {
     void _durationInFrames;
     if (scenes.length === 0) {
         return (_jsx("div", { style: {
-                width, height,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#1a1a2e', color: '#fff',
+                width,
+                height,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#1a1a2e',
+                color: '#fff',
                 fontFamily: 'Arial, sans-serif',
                 fontSize: 24,
             }, children: _jsx("p", { children: "Hen\u00FCz sahne eklenmemi\u015F" }) }));
     }
     return (_jsxs("div", { style: {
-            width, height,
+            width,
+            height,
             position: 'relative',
             overflow: 'hidden',
             background: '#0f0f1a',
@@ -29,7 +34,8 @@ export const RemotionVideo = ({ scenes, width = 1080, height = 1920, }) => {
             }), _jsx("div", { style: {
                     position: 'absolute',
                     bottom: 40,
-                    left: 0, right: 0,
+                    left: 0,
+                    right: 0,
                     textAlign: 'center',
                     color: '#00F2FE',
                     fontSize: 14,
@@ -38,7 +44,7 @@ export const RemotionVideo = ({ scenes, width = 1080, height = 1920, }) => {
                     pointerEvents: 'none',
                 }, children: "AI-Publisher Studio" })] }));
 };
-const SceneLayer = ({ scene, }) => {
+const SceneLayer = ({ scene }) => {
     return (_jsxs("div", { style: {
             position: 'absolute',
             inset: 0,

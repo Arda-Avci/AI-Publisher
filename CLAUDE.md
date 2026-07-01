@@ -1,42 +1,42 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Lessons Learned (Repeat Offenses)
 
 ### LangGraph State Generic Type
-`StateGraph<typeof QueueState.StateType>` → tsc generic constraint hatası. Çözüm: `GraphState` type alias + `as any` casts on `addEdge`, `compile`, `getState`, `invoke`. LangGraph type inference node names only allows `__start__`/`__end__` on `addEdge` without `as any`.
+`StateGraph<typeof QueueState.StateType>` â†’ tsc generic constraint hatasÄ±. Ã‡Ã¶zÃ¼m: `GraphState` type alias + `as any` casts on `addEdge`, `compile`, `getState`, `invoke`. LangGraph type inference node names only allows `__start__`/`__end__` on `addEdge` without `as any`.
 
 ### Veo 3.1 RunPod Bypass
-`modelType.includes('veo-31')` kontrolü `generateVideo` dallanmasından sonra değil önce yapılmalı. RunPod dispatch zinciri tamamen atlanır. taskId simülasyonu: `veo31_{jobId}_{sceneNum}`.
+`modelType.includes('veo-31')` kontrolÃ¼ `generateVideo` dallanmasÄ±ndan sonra deÄŸil Ã¶nce yapÄ±lmalÄ±. RunPod dispatch zinciri tamamen atlanÄ±r. taskId simÃ¼lasyonu: `veo31_{jobId}_{sceneNum}`.
 
 ### LangGraph Checkpointer Setup
-`PostgresSaver.fromConnString()` sonrası `await checkpointer.setup()` çağrılmalı (otomatik tablo oluşturma). `thread_id: "job_{jobId}"` config ile checkpoint'leme.
+`PostgresSaver.fromConnString()` sonrasÄ± `await checkpointer.setup()` Ã§aÄŸrÄ±lmalÄ± (otomatik tablo oluÅŸturma). `thread_id: "job_{jobId}"` config ile checkpoint'leme.
 
 ### never `except Exception: pass`
-Try/catch bloklarında `except Exception: pass` kullanma — sessizce hata yutar, token/secret bulamama sebebini gizler. Hep `except Exception as e: print(e)` yap.
-- **Örnek**: `colab_docker_build.ipynb` — `userdata.get("GITHUB_PAT")` başarısız oluyor ama `pass` yüzünden kimse görmüyor. 2 kez düzeltildi.
-- Docker/RunPod container'larında da aynı kural geçerli.
+Try/catch bloklarÄ±nda `except Exception: pass` kullanma â€” sessizce hata yutar, token/secret bulamama sebebini gizler. Hep `except Exception as e: print(e)` yap.
+- **Ã–rnek**: `docker_image_build.ipynb` â€” `userdata.get("GITHUB_PAT")` baÅŸarÄ±sÄ±z oluyor ama `pass` yÃ¼zÃ¼nden kimse gÃ¶rmÃ¼yor. 2 kez dÃ¼zeltildi.
+- Docker/RunPod container'larÄ±nda da aynÄ± kural geÃ§erli.
 
 ### Environment Variable Name Case-Sensitive
-`GITHUB_PAT` != `github_pat` != `Github_Pat`. Kullanıcı hangi isimle kaydettiğini bilmeyebilir. Her zaman 3 varyant dene: `GITHUB_PAT`, `GITHUB_TOKEN`, `GH_TOKEN`.
+`GITHUB_PAT` != `github_pat` != `Github_Pat`. KullanÄ±cÄ± hangi isimle kaydettiÄŸini bilmeyebilir. Her zaman 3 varyant dene: `GITHUB_PAT`, `GITHUB_TOKEN`, `GH_TOKEN`.
 
 ### Path: Always check file existence before operations
 Before reading/moving/writing files, always verify path exists. Don't assume Docker images, auth files, or temp dirs exist.
 
-### Don't Guess Root Cause — Read Code First
-Error görünce tahmin etme, önce kodu oku. `except Exception: pass` gibi kalıpları ara. "notebook access kapalı" tahmini yanlıştı — asıl sebep sessiz `pass`'ti.
+### Don't Guess Root Cause â€” Read Code First
+Error gÃ¶rÃ¼nce tahmin etme, Ã¶nce kodu oku. `except Exception: pass` gibi kalÄ±plarÄ± ara. "notebook access kapalÄ±" tahmini yanlÄ±ÅŸtÄ± â€” asÄ±l sebep sessiz `pass`'ti.
 
 ## Project Overview
 
-AI-Publisher is a Node.js/Express video publishing automation platform that generates AI-powered social media videos (YouTube Shorts, TikTok, X, Meta Reels) using Docker/RunPod GPU workers, Playwright, RabbitMQ, Redis, PostgreSQL, and FFmpeg. It features a dashboard studio with a glassmorphism/cyberpunk aesthetic, multi-language support (tr/en), premium theme system, and a "Fırsatlar Hunisi" (Opportunity Funnel) for discovering & differentiating viral YouTube videos.
+AI-Publisher is a Node.js/Express video publishing automation platform that generates AI-powered social media videos (YouTube Shorts, TikTok, X, Meta Reels) using Docker/RunPod GPU workers, Playwright, RabbitMQ, Redis, PostgreSQL, and FFmpeg. It features a dashboard studio with a glassmorphism/cyberpunk aesthetic, multi-language support (tr/en), premium theme system, and a "FÄ±rsatlar Hunisi" (Opportunity Funnel) for discovering & differentiating viral YouTube videos.
 
 ## Tech Stack
 
 - **Backend**: Express 5, TypeScript 6, pg (PostgreSQL connection pool), express-session, bcrypt
 - **Caching & Pub/Sub**: Redis (Pub/Sub for SSE messaging, RedisMutex for distributed GPU locks)
 - **Message Queue**: RabbitMQ (Event-driven queue: `video_jobs_queue`, `publish_jobs_queue`)
-- **Frontend**: Vanilla HTML/CSS/JS (no framework) — single-page dashboard served as inline HTML strings from `src/views/dashboard.ts`
+- **Frontend**: Vanilla HTML/CSS/JS (no framework) â€” single-page dashboard served as inline HTML strings from `src/views/dashboard.ts`
 - **AI Integration**: `@ai-sdk/google` (Gemini 2.5 Flash), `@ai-sdk/openai` (Minimax M3 OpenAI provider)
 - **Video Processing**: Playwright (chromium) for social media posting, FFmpeg & FFprobe for muxing/shorts/watermarks
 - **Storage**: Unified `IStorage` interface (`LocalStorageProvider` default, Cloud-ready)
@@ -56,30 +56,30 @@ npm run check:lint # eslint check
 
 ## Architecture
 
-- `src/server.ts` — Express app entry point. Sets up database, RabbitMQ channel, Redis connection, and registers modular routes.
-- `src/db.ts` — PostgreSQL pool initializer. Includes a SQL converter to translate SQLite syntax (`?` parameterization) for PostgreSQL compatibility.
-- `src/queue.ts` — RabbitMQ worker for video production jobs. Coordinates scene generation with Colab Flask endpoints and compiles final videos using FFmpeg helpers.
-- `src/publisher.ts` — Playwright upload functions for YouTube, TikTok, X, and Meta.
-- `src/services/runpod.ts` — Coordinates RunPod endpoint lifecycle (start, stop, status polling, webhook registration).
-- `src/services/veo31.ts` — Google Vertex AI Veo 3.1 REST API wrapper. Direkt API çağrısı (RunPod bypass). `generateVideo(imageUrl, prompt, aspectRatio)`, operation polling (5dk timeout, 5sn interval).
-- `src/services/apiVideoService.ts` — Cloud API factory: `isCloudAPIModel()`, `getVideoAPIService()`, `generateViaAPI()`. Lazy-loaded singletons per provider.
-- `src/services/runwayService.ts` — Runway Gen-4.5 Turbo API.
-- `src/services/klingService.ts` — Kling AI 2.0 API.
-- `src/services/pikaService.ts` — Pika Labs 2.5 API.
-- `src/services/lumaService.ts` — Luma Dream Machine 1.6 API.
-- `src/services/haiperService.ts` — Haiper Turbo API.
-- `src/services/pixverseService.ts` — PixVerse v3 API.
-- `src/services/veo2Service.ts` — Google Veo 2 (Vertex AI) API.
-- `src/services/browserUseService.ts` — Browser-use SDK wrapper: `uploadYouTube`, `uploadTikTok`, `uploadToX`, `uploadToMeta`. RunPod endpoint veya local Flask fallback.
-- `src/queue-graph.ts` — LangGraph StateGraph (8 node: directorPlanning→sceneGeneration→coverSynthesis→loraTraining→sceneRender→ffmpegMix→concatFinal→publishSocial). PostgresSaver checkpointer. `OTEL_QUEUE_GRAPH=true` env var ile aktif.
-- `src/services/trendAnalyzer.ts` — Playwright ile 4 platform trend scraping (TikTok, YouTube, X, Instagram).
-- `src/services/trendScheduler.ts` — Interval-based trend tarama scheduler (env var periyot, varsayılan 30dk).
-- `src/lib/telemetry.ts` — OpenTelemetry NodeSDK (HTTP, Express, PG, ioredis, amqplib instrumentasyonları).
-- `src/lib/metrics.ts` — Prometheus domain metrikleri (job duration, scene counter, render time, active/failed jobs).
-- `src/lib/differentiate.ts` — Orchestrator for Fırsatlar Hunisi viral video transcript extraction & Gemini rewrite.
-- `src/lib/publish-queue.ts` — RabbitMQ queue for publishing videos to prevent concurrent Playwright browsers from overloading RAM.
-- `src/services/videoService.ts` — Contains reusable FFmpeg wrappers (dikey conversion, end screen, sound effects mix).
-- `src/services/aiService.ts` — Houses centralized AI generation schemes and retry utilities.
+- `src/server.ts` â€” Express app entry point. Sets up database, RabbitMQ channel, Redis connection, and registers modular routes.
+- `src/db.ts` â€” PostgreSQL pool initializer. Includes a SQL converter to translate SQLite syntax (`?` parameterization) for PostgreSQL compatibility.
+- `src/queue.ts` â€” RabbitMQ worker for video production jobs. Coordinates scene generation with Colab Flask endpoints and compiles final videos using FFmpeg helpers.
+- `src/publisher.ts` â€” Playwright upload functions for YouTube, TikTok, X, and Meta.
+- `src/services/runpod.ts` â€” Coordinates RunPod endpoint lifecycle (start, stop, status polling, webhook registration).
+- `src/services/veo31.ts` â€” Google Vertex AI Veo 3.1 REST API wrapper. Direkt API Ã§aÄŸrÄ±sÄ± (RunPod bypass). `generateVideo(imageUrl, prompt, aspectRatio)`, operation polling (5dk timeout, 5sn interval).
+- `src/services/apiVideoService.ts` â€” Cloud API factory: `isCloudAPIModel()`, `getVideoAPIService()`, `generateViaAPI()`. Lazy-loaded singletons per provider.
+- `src/services/runwayService.ts` â€” Runway Gen-4.5 Turbo API.
+- `src/services/klingService.ts` â€” Kling AI 2.0 API.
+- `src/services/pikaService.ts` â€” Pika Labs 2.5 API.
+- `src/services/lumaService.ts` â€” Luma Dream Machine 1.6 API.
+- `src/services/haiperService.ts` â€” Haiper Turbo API.
+- `src/services/pixverseService.ts` â€” PixVerse v3 API.
+- `src/services/veo2Service.ts` â€” Google Veo 2 (Vertex AI) API.
+- `src/services/browserUseService.ts` â€” Browser-use SDK wrapper: `uploadYouTube`, `uploadTikTok`, `uploadToX`, `uploadToMeta`. RunPod endpoint veya local Flask fallback.
+- `src/queue-graph.ts` â€” LangGraph StateGraph (8 node: directorPlanningâ†’sceneGenerationâ†’coverSynthesisâ†’loraTrainingâ†’sceneRenderâ†’ffmpegMixâ†’concatFinalâ†’publishSocial). PostgresSaver checkpointer. `OTEL_QUEUE_GRAPH=true` env var ile aktif.
+- `src/services/trendAnalyzer.ts` â€” Playwright ile 4 platform trend scraping (TikTok, YouTube, X, Instagram).
+- `src/services/trendScheduler.ts` â€” Interval-based trend tarama scheduler (env var periyot, varsayÄ±lan 30dk).
+- `src/lib/telemetry.ts` â€” OpenTelemetry NodeSDK (HTTP, Express, PG, ioredis, amqplib instrumentasyonlarÄ±).
+- `src/lib/metrics.ts` â€” Prometheus domain metrikleri (job duration, scene counter, render time, active/failed jobs).
+- `src/lib/differentiate.ts` â€” Orchestrator for FÄ±rsatlar Hunisi viral video transcript extraction & Gemini rewrite.
+- `src/lib/publish-queue.ts` â€” RabbitMQ queue for publishing videos to prevent concurrent Playwright browsers from overloading RAM.
+- `src/services/videoService.ts` â€” Contains reusable FFmpeg wrappers (dikey conversion, end screen, sound effects mix).
+- `src/services/aiService.ts` â€” Houses centralized AI generation schemes and retry utilities.
 
 ## Dashboard Design System
 
@@ -124,24 +124,24 @@ audit_log: id SERIAL PRIMARY KEY, user_id INTEGER, action TEXT NOT NULL, entity_
 ## Important Flow Notes
 
 ### Video Differentiation (4 phases)
-1. **Phase 1** (`POST /differentiate-video`): YouTube transcript + Gemini translation → INSERT job (`awaiting_approval`).
+1. **Phase 1** (`POST /differentiate-video`): YouTube transcript + Gemini translation â†’ INSERT job (`awaiting_approval`).
 2. **Phase 2**: User edits translation text in UI.
-3. **Phase 3** (`POST /approve-translation/:jobId`): Gemini generates scene prompts → UPDATE job (`scene_prompts` & status `pending`).
-4. **Phase 4**: User starts the job → Enqueued to RabbitMQ worker → RunPod endpoint is triggered.
+3. **Phase 3** (`POST /approve-translation/:jobId`): Gemini generates scene prompts â†’ UPDATE job (`scene_prompts` & status `pending`).
+4. **Phase 4**: User starts the job â†’ Enqueued to RabbitMQ worker â†’ RunPod endpoint is triggered.
 
 ### Model Routing (queue.ts)
-- `production_template` → `modelType` → `endpointId` (RunPod). Veo-31 / Veo-2 bu zinciri kırar: direkt Vertex AI REST API.
-- Cloud API modelleri (`runway-gen4`, `kling-2`, `pika-2.5`, `luma-16`, `haiper-turbo`, `pixverse-v3`, `veo-2`) RunPod zincirini tamamen bypass eder: `endpointId = ''` + `generateViaAPI()` çağrısı → `taskStatus = 'success'`.
-- VideoCrafter: `RUNPOD_VIDEOCRAFTER_ENDPOINT_ID` ile RunPod üzerinden (port 5024).
-- RunPod dispatch: `runpod.ts` → endpoint → webhook callback → B2 download → FFmpeg mix.
+- `production_template` â†’ `modelType` â†’ `endpointId` (RunPod). Veo-31 / Veo-2 bu zinciri kÄ±rar: direkt Vertex AI REST API.
+- Cloud API modelleri (`runway-gen4`, `kling-2`, `pika-2.5`, `luma-16`, `haiper-turbo`, `pixverse-v3`, `veo-2`) RunPod zincirini tamamen bypass eder: `endpointId = ''` + `generateViaAPI()` Ã§aÄŸrÄ±sÄ± â†’ `taskStatus = 'success'`.
+- VideoCrafter: `RUNPOD_VIDEOCRAFTER_ENDPOINT_ID` ile RunPod Ã¼zerinden (port 5024).
+- RunPod dispatch: `runpod.ts` â†’ endpoint â†’ webhook callback â†’ B2 download â†’ FFmpeg mix.
 - Docker container fallback: ContainerManager port (5001-5024) HTTP polling.
 
 ### LangGraph Queue (queue-graph.ts)
 - `OTEL_QUEUE_GRAPH=true` env var ile aktif. Fallback: queue.ts.
 - 8-node StateGraph, PostgresSaver checkpointer, crash recovery.
-- `runJobGraph(jobId)` — yeni iş başlatma. `resumeJobGraph(jobId)` — kaldığı yerden devam.
-- Her node `broadcastProgress` ile SSE güncellemesi gönderir.
-- Node'lar şu an stub; gerçek servislere bağlanması gerekli (generateStudioScenes, RenderClient.dispatch, videoService.concatVideosWithCrossfade, publisher.ts).
+- `runJobGraph(jobId)` â€” yeni iÅŸ baÅŸlatma. `resumeJobGraph(jobId)` â€” kaldÄ±ÄŸÄ± yerden devam.
+- Her node `broadcastProgress` ile SSE gÃ¼ncellemesi gÃ¶nderir.
+- Node'lar ÅŸu an stub; gerÃ§ek servislere baÄŸlanmasÄ± gerekli (generateStudioScenes, RenderClient.dispatch, videoService.concatVideosWithCrossfade, publisher.ts).
 
 ### SSE Implementation
 Real-time progress updates are sent via Server-Sent Events utilizing Redis Pub/Sub to allow horizontal scaling of Node processes.

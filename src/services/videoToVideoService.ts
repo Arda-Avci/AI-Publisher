@@ -1,5 +1,5 @@
 import { Logger } from '../lib/logger.js';
-import { RunPodClient } from './runpod.js';
+import { ModalClient } from './modalClient.js';
 import { uploadToB2 } from '../lib/b2.js';
 import { db } from '../db.js';
 import path from 'node:path';
@@ -77,7 +77,7 @@ export async function videoToVideo(
   });
 
   try {
-    const job = await RunPodClient.runJob(ENDPOINT, payload);
+    const job = await ModalClient.runJob(ENDPOINT, payload);
     const result = await pollV2VJob(job.id);
 
     const outputUrl = result.output as string;
@@ -109,7 +109,7 @@ export async function videoToVideo(
 async function pollV2VJob(jobId: string, maxRetries = RETRY.V2V_POLL, delayMs = 5000): Promise<Record<string, unknown>> {
   const ENDPOINT = 'https://api.runpod.ai/v2/video-to-video/run';
   for (let i = 0; i < maxRetries; i++) {
-    const status = await RunPodClient.getJobStatus(ENDPOINT, jobId);
+    const status = await ModalClient.getJobStatus(ENDPOINT, jobId);
     if (status.status === 'COMPLETED') return status as unknown as Record<string, unknown>;
     if (status.status === 'FAILED') throw new Error(`V2V job failed: ${JSON.stringify(status)}`);
     await new Promise(r => setTimeout(r, delayMs));

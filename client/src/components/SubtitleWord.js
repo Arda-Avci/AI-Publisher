@@ -1,5 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 /**
  * Single animated word component for DynamicCaptions
  * Each word animates independently based on its timing

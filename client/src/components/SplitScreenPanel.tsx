@@ -83,7 +83,6 @@ export function SplitScreenPanel({
       setApplied(true);
     } catch (err) {
       console.error('[SPLIT] Apply error:', err);
-    }
       setApplied(false);
     }
   };

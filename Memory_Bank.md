@@ -58,17 +58,25 @@
 2. ⏳ image grubu test (stablediffusion transformers fix)
 3. ⏳ video grubu test (wan, wan25, cogvideox, hunyuan, ltx, mochi, animatediff, dynamicrafter, pyramidflow, svd, videocrafter, zeroscope)
 4. ⏳ Node.js entegrasyonu (Faz 4 — ModalBridge.ts, queue.ts update)
-5. ⏳ Tum testler gecince dokuman guncellemesi
+5. ⏳ Diğer sayfaların (Örn: `Dashboard.tsx`, `StudioPanel.tsx`) Tasarım Ajanı ile analizi ve alternatiflerinin üretilmesi
+6. ⏳ Tum testler gecince dokuman guncellemesi
 
 ## Relevant Files
-- `modal_apps/audio_service.py`: 11 model, global-scope `@app.function`. `_run_generate` Flask test_client kullanir. Weight download graceful skip.
-- `modal_apps/image_service.py`: 2 model. Ayni `_run_generate` pattern.
-- `modal_apps/video_service.py`: 12 model. Ayni `_run_generate` pattern.
-- `modal_apps/__init__.py`: `HF_TOKEN` case-insensitive fix.
-- `colab_docker/geneface/app.py`: `subprocess.run(timeout=120)` + checkpoint kontrol.
-- `colab_docker/geneface/Dockerfile`: `2>/dev/null` kaldirildi, `boto3+botocore` eklendi.
-- `colab_docker/video-retalking/Dockerfile`: `boto3+botocore` eklendi.
-- `colab_docker/browser-use/Dockerfile`: `flask` + `CMD` eklendi.
-- `scripts/test_modal_sequential.py`: Sequential test. `TIMEOUT=600`. First fail'de durur.
-- `scripts/deploy_modal_serial.ps1`: Sequential Modal deploy.
+- `.agents/skills/design-agent/SKILL.md`: Tasarım Ajanı talimat ve kuralları.
+- `.agents/skills/design-agent/scripts/analyze_pages.js`: Sayfa analiz scripti.
+- `.agents/skills/design-agent/scripts/generate_proposal.js`: Alternatifli tasarım teklif motoru.
+- `.agents/skills/design-agent/scripts/apply_design.js`: Onaylanan tasarımı entegre eden motor.
+- `client/src/components/SettingsModal.tsx`: API Keys tabı ve Çıkış Yap (Logout) seçeneği eklendi.
+- `client/src/components/ApiKeyManager.tsx`: Modal uyumlu hale getirilerek başlık boyutu ayarlandı, z-index 1100'e çekildi.
+- `src/locales/*.json`: 6 dil dosyasına ApiKeyManager ve Logout çevirileri eklendi.
+- `client/src/App.tsx`: API Keys tabı kaldırıldı, SettingsModal props'u güncellendi.
+- `design_proposals/LoginPage_showcase.html`: 3 alternatifin de tarayıcıdan görsel olarak test edilebileceği interaktif önizleme sayfası.
+- `client/src/components/LoginPage.tsx`: Alternatif B (C'nin glow & glassmorphism efektleriyle zenginleştirilmiş) tasarımı uygulandı.
+- `client/src/components/LandingPage.tsx`: Alternatif B (asimetrik editorial grid + video glow efekti) tasarımı uygulandı.
+- `client/src/index.css`: Proje global CSS dosyası (premium landing ve login stilleri enjekte edildi).
+- `modal_apps/audio_service.py`: Audio grubu (11 model) Modal entegrasyonu.
+- `modal_apps/image_service.py`: Image grubu (2 model).
+- `modal_apps/video_service.py`: Video grubu (12 model).
+- `scripts/test_modal_sequential.py`: Sequential test scripti.
 - `.github/workflows/docker-build.yml`: CI — path filter + dinamik matrix.
+

@@ -1,5 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { SubtitleWord } from './SubtitleWord.js';
 /**
  * DynamicCaptions — Hormozi-style word-by-word animated captions
@@ -24,7 +24,7 @@ export const DynamicCaptions = ({ words, currentTime, animationType = 'bounce', 
     const activeWordIndex = useMemo(() => {
         if (!autoPlay || words.length === 0)
             return -1;
-        const idx = words.findIndex(w => currentTime >= w.start && currentTime < w.end);
+        const idx = words.findIndex((w) => currentTime >= w.start && currentTime < w.end);
         return idx;
     }, [words, currentTime, autoPlay]);
     // Check if captions should be visible based on word timings

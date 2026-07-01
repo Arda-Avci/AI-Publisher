@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { RunPodClient } from './runpod.js';
+import { ModalClient } from './modalClient.js';
 import { Logger } from '../lib/logger.js';
 import { uploadToB2 } from '../lib/b2.js';
 import { db } from '../db.js';
@@ -98,7 +98,7 @@ export async function generateStoryboardImage(
   }
 
   try {
-    const result = await RunPodClient.runSync(
+    const result = await ModalClient.pollUntilComplete(
       FLUX_ENDPOINT_ID,
       {
         prompt: fullPrompt,
@@ -116,7 +116,7 @@ export async function generateStoryboardImage(
 
     let imageBuffer: Buffer | null = null;
 
-    const output = result.output;
+    const output = result.result;
 
     if (typeof output === 'string') {
       const base64Data = output.replace(/^data:image\/\w+;base64,/, '');

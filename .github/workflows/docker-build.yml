@@ -1,10 +1,10 @@
-name: Docker Build & Push
+﻿name: Docker Build & Push
 
 on:
   push:
     branches: [main]
     paths:
-      - 'colab_docker/**'
+      - 'docker_image/**'
   workflow_dispatch:
     inputs:
       model:
@@ -19,7 +19,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   ORG: arda-avci
-  CONTEXT: colab_docker
+  CONTEXT: docker_image
 
 jobs:
   filter:
@@ -62,7 +62,7 @@ jobs:
             exit 0
           fi
 
-          # workflow_dispatch without model → build all
+          # workflow_dispatch without model â†’ build all
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "models=$ALL" >> $GITHUB_OUTPUT
             echo "models-changed=true" >> $GITHUB_OUTPUT
@@ -81,10 +81,10 @@ jobs:
             exit 0
           fi
 
-          CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- colab_docker/ 2>/dev/null || true)
+          CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- docker_image/ 2>/dev/null || true)
 
-          # Shared file changes → build all
-          if echo "$CHANGED" | grep -qE '^colab_docker/(runpod_handler|shared/|download_weights)'; then
+          # Shared file changes â†’ build all
+          if echo "$CHANGED" | grep -qE '^docker_image/(runpod_handler|shared/|download_weights)'; then
             echo "models=$ALL" >> $GITHUB_OUTPUT
             echo "models-changed=true" >> $GITHUB_OUTPUT
             echo "special=$ALL_SPECIAL" >> $GITHUB_OUTPUT
@@ -92,8 +92,8 @@ jobs:
             exit 0
           fi
 
-          # Extract unique model dirs from changed files → JSON array
-          CHANGED_DIRS=$(echo "$CHANGED" | grep -oP '^colab_docker/\K[^/]+' | sort -u | jq -R -s -c 'split("\n") | map(select(. != ""))')
+          # Extract unique model dirs from changed files â†’ JSON array
+          CHANGED_DIRS=$(echo "$CHANGED" | grep -oP '^docker_image/\K[^/]+' | sort -u | jq -R -s -c 'split("\n") | map(select(. != ""))')
 
           # Find changed main models (exact match via index)
           MODELS_RESULT=$(echo "$ALL" | jq -c --argjson dirs "$CHANGED_DIRS" '[.[] | select(. as $m | $dirs | index($m))]')

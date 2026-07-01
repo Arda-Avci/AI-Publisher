@@ -55,7 +55,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
         const rect = canvas.getBoundingClientRect();
         return {
             x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            y: e.clientY - rect.top,
         };
     };
     const startDrawing = (e) => {
@@ -165,7 +165,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
             formData.append('image', imageBlob, 'original.png');
             const res = await fetch('/api/v1/editor/remove-background', {
                 method: 'POST',
-                body: formData
+                body: formData,
             });
             const data = await res.json();
             if (data.success) {
@@ -205,7 +205,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
             formData.append('prompt', inpaintPrompt);
             const res = await fetch('/api/v1/editor/inpaint', {
                 method: 'POST',
-                body: formData
+                body: formData,
             });
             const data = await res.json();
             if (data.success) {
@@ -238,7 +238,7 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(5, 7, 12, 0.9)'
+            background: 'rgba(5, 7, 12, 0.9)',
         }, children: _jsxs("div", { className: "editor-card", style: {
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border)',
@@ -249,23 +249,37 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
                 display: 'grid',
                 gridTemplateColumns: '1fr 300px',
                 gap: '20px',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.8)'
-            }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }, children: [_jsxs("div", { style: { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, children: [_jsxs("h3", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx(Wand2, { size: 18, style: { color: 'var(--primary)' } }), "Geli\u015Fmi\u015F G\u00F6rsel St\u00FCdyo & Edit\u00F6r"] }), _jsx("span", { style: { fontSize: '12px', color: 'var(--text-muted)' }, children: "Odysseus tabanl\u0131 AI ara\u00E7lar\u0131" })] }), _jsx("div", { style: {
+                boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+            }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }, children: [_jsxs("div", { style: {
+                                width: '100%',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                            }, children: [_jsxs("h3", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [_jsx(Wand2, { size: 18, style: { color: 'var(--primary)' } }), "Geli\u015Fmi\u015F G\u00F6rsel St\u00FCdyo & Edit\u00F6r"] }), _jsx("span", { style: { fontSize: '12px', color: 'var(--text-muted)' }, children: "Odysseus tabanl\u0131 AI ara\u00E7lar\u0131" })] }), _jsx("div", { style: {
                                 position: 'relative',
                                 width: '500px',
                                 background: '#070a14',
                                 borderRadius: '8px',
                                 overflow: 'hidden',
                                 border: '1px solid var(--border)',
-                                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
-                            }, children: _jsx("canvas", { ref: canvasRef, onMouseDown: startDrawing, onMouseUp: stopDrawing, onMouseOut: stopDrawing, onMouseMove: draw, style: { display: 'block', cursor: isEraser ? 'cell' : 'crosshair' } }) }), _jsxs("div", { style: { display: 'flex', gap: '15px', alignItems: 'center', width: '100%', background: 'var(--bg-timeline)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border)' }, children: [_jsx("span", { style: { fontSize: '12px', color: 'var(--text-muted)' }, children: "F\u0131r\u00E7a Modu:" }), _jsxs("button", { onClick: () => setIsEraser(false), className: "btn", style: {
+                                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)',
+                            }, children: _jsx("canvas", { ref: canvasRef, onMouseDown: startDrawing, onMouseUp: stopDrawing, onMouseOut: stopDrawing, onMouseMove: draw, style: { display: 'block', cursor: isEraser ? 'cell' : 'crosshair' } }) }), _jsxs("div", { style: {
+                                display: 'flex',
+                                gap: '15px',
+                                alignItems: 'center',
+                                width: '100%',
+                                background: 'var(--bg-timeline)',
+                                padding: '10px',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border)',
+                            }, children: [_jsx("span", { style: { fontSize: '12px', color: 'var(--text-muted)' }, children: "F\u0131r\u00E7a Modu:" }), _jsxs("button", { onClick: () => setIsEraser(false), className: "btn", style: {
                                         padding: '6px 12px',
                                         fontSize: '12px',
                                         background: !isEraser ? 'var(--primary)' : 'var(--bg-surface-hover)',
                                         color: !isEraser ? '#0b0f19' : 'white',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '4px'
+                                        gap: '4px',
                                     }, children: [_jsx(Paintbrush, { size: 12 }), " Maske \u00C7iz"] }), _jsxs("button", { onClick: () => setIsEraser(true), className: "btn", style: {
                                         padding: '6px 12px',
                                         fontSize: '12px',
@@ -273,8 +287,35 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
                                         color: isEraser ? '#0b0f19' : 'white',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '4px'
-                                    }, children: [_jsx(Eraser, { size: 12 }), " Silici (Erase)"] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px', flexGrow: 1, marginLeft: '10px' }, children: [_jsx("span", { style: { fontSize: '12px', color: 'var(--text-muted)' }, children: "F\u0131r\u00E7a Boyutu:" }), _jsx("input", { type: "range", min: "5", max: "50", value: brushSize, onChange: (e) => setBrushSize(Number(e.target.value)), style: { flexGrow: 1, accentColor: 'var(--primary)' } }), _jsxs("span", { style: { fontSize: '12px', fontWeight: 'bold' }, children: [brushSize, "px"] })] })] })] }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '15px', borderLeft: '1px solid var(--border)', paddingLeft: '20px', justifyContent: 'space-between' }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '15px' }, children: [_jsx("div", { style: { fontWeight: 'bold', fontSize: '14px', borderBottom: '1px solid var(--border)', paddingBottom: '8px', color: 'var(--text-muted)' }, children: "AI ARA\u00C7LARI" }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '6px' }, children: [_jsx("span", { style: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }, children: "1. ARKA PLAN KALDIR (rembg)" }), _jsxs("button", { onClick: handleRemoveBackground, disabled: isProcessing, className: "btn btn-secondary", style: { width: '100%', justifyContent: 'flex-start', fontSize: '12px', gap: '8px', borderColor: 'var(--primary-glow)' }, children: [_jsx(Scissors, { size: 14, style: { color: 'var(--primary)' } }), isProcessing && statusMsg.includes('Arka plan') ? 'Kaldırılıyor...' : 'Arka Planı Temizle'] })] }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '6px' }, children: [_jsx("span", { style: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }, children: "2. B\u00D6LGESEL YEN\u0130DEN \u00C7\u0130Z (Inpaint)" }), _jsx("textarea", { placeholder: "Maskeledi\u011Finiz alan\u0131n yerine \u00E7izilmesini istedi\u011Finiz nesneyi tarif edin...", value: inpaintPrompt, onChange: (e) => setInpaintPrompt(e.target.value), style: {
+                                        gap: '4px',
+                                    }, children: [_jsx(Eraser, { size: 12 }), " Silici (Erase)"] }), _jsxs("div", { style: {
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        flexGrow: 1,
+                                        marginLeft: '10px',
+                                    }, children: [_jsx("span", { style: { fontSize: '12px', color: 'var(--text-muted)' }, children: "F\u0131r\u00E7a Boyutu:" }), _jsx("input", { type: "range", min: "5", max: "50", value: brushSize, onChange: (e) => setBrushSize(Number(e.target.value)), style: { flexGrow: 1, accentColor: 'var(--primary)' } }), _jsxs("span", { style: { fontSize: '12px', fontWeight: 'bold' }, children: [brushSize, "px"] })] })] })] }), _jsxs("div", { style: {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '15px',
+                        borderLeft: '1px solid var(--border)',
+                        paddingLeft: '20px',
+                        justifyContent: 'space-between',
+                    }, children: [_jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '15px' }, children: [_jsx("div", { style: {
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        borderBottom: '1px solid var(--border)',
+                                        paddingBottom: '8px',
+                                        color: 'var(--text-muted)',
+                                    }, children: "AI ARA\u00C7LARI" }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '6px' }, children: [_jsx("span", { style: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }, children: "1. ARKA PLAN KALDIR (rembg)" }), _jsxs("button", { onClick: handleRemoveBackground, disabled: isProcessing, className: "btn btn-secondary", style: {
+                                                width: '100%',
+                                                justifyContent: 'flex-start',
+                                                fontSize: '12px',
+                                                gap: '8px',
+                                                borderColor: 'var(--primary-glow)',
+                                            }, children: [_jsx(Scissors, { size: 14, style: { color: 'var(--primary)' } }), isProcessing && statusMsg.includes('Arka plan')
+                                                    ? 'Kaldırılıyor...'
+                                                    : 'Arka Planı Temizle'] })] }), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', gap: '6px' }, children: [_jsx("span", { style: { fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }, children: "2. B\u00D6LGESEL YEN\u0130DEN \u00C7\u0130Z (Inpaint)" }), _jsx("textarea", { placeholder: "Maskeledi\u011Finiz alan\u0131n yerine \u00E7izilmesini istedi\u011Finiz nesneyi tarif edin...", value: inpaintPrompt, onChange: (e) => setInpaintPrompt(e.target.value), style: {
                                                 width: '100%',
                                                 height: '70px',
                                                 background: 'var(--bg-timeline)',
@@ -284,8 +325,10 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
                                                 padding: '8px',
                                                 fontSize: '11px',
                                                 resize: 'none',
-                                                outline: 'none'
-                                            } }), _jsxs("button", { onClick: handleInpaint, disabled: isProcessing, className: "btn btn-primary", style: { width: '100%', fontSize: '12px', gap: '8px' }, children: [_jsx(Sparkles, { size: 14 }), isProcessing && statusMsg.includes('Inpaint') ? 'Sentezleniyor...' : 'Seçili Alanı AI İle Çiz'] })] }), statusMsg && (_jsxs("div", { style: {
+                                                outline: 'none',
+                                            } }), _jsxs("button", { onClick: handleInpaint, disabled: isProcessing, className: "btn btn-primary", style: { width: '100%', fontSize: '12px', gap: '8px' }, children: [_jsx(Sparkles, { size: 14 }), isProcessing && statusMsg.includes('Inpaint')
+                                                    ? 'Sentezleniyor...'
+                                                    : 'Seçili Alanı AI İle Çiz'] })] }), statusMsg && (_jsxs("div", { style: {
                                         background: 'rgba(234, 179, 8, 0.08)',
                                         border: '1px solid rgba(234, 179, 8, 0.2)',
                                         borderRadius: '6px',
@@ -295,6 +338,12 @@ export const PhotoEditor = ({ imageUrl, onSave, onClose }) => {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '6px',
-                                        wordBreak: 'break-all'
-                                    }, children: [_jsx(RefreshCw, { size: 12, className: "pulse" }), statusMsg] }))] }), _jsxs("div", { style: { display: 'flex', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '15px' }, children: [_jsx("button", { onClick: onClose, className: "btn btn-secondary", style: { flexGrow: 1 }, children: "\u0130ptal Et" }), _jsx("button", { onClick: handleSave, className: "btn btn-primary", style: { flexGrow: 1 }, children: "Kaydet ve Timeline'a Aktar" })] })] })] }) }));
+                                        wordBreak: 'break-all',
+                                    }, children: [_jsx(RefreshCw, { size: 12, className: "pulse" }), statusMsg] }))] }), _jsxs("div", { style: {
+                                display: 'flex',
+                                gap: '10px',
+                                marginTop: '20px',
+                                borderTop: '1px solid var(--border)',
+                                paddingTop: '15px',
+                            }, children: [_jsx("button", { onClick: onClose, className: "btn btn-secondary", style: { flexGrow: 1 }, children: "\u0130ptal Et" }), _jsx("button", { onClick: handleSave, className: "btn btn-primary", style: { flexGrow: 1 }, children: "Kaydet ve Timeline'a Aktar" })] })] })] }) }));
 };

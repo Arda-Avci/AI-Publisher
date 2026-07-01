@@ -18,9 +18,9 @@ vi.mock('./lib/rabbitmq.js', () => ({
   registerReconnectCallback: vi.fn(),
 }));
 
-vi.mock('./services/runpod.js', () => ({
-  RunPodClient: {
-    runJob: vi.fn().mockResolvedValue({ id: 'mock-runpod-id', status: 'queued' }),
+vi.mock('./services/modalClient.js', () => ({
+  ModalClient: {
+    runJob: vi.fn().mockResolvedValue({ id: 'mock-modal-id', status: 'queued' }),
   },
 }));
 

@@ -1,83 +1,83 @@
-# Prod Plan 2 — Mixed Mode (Colab + GCP)
+﻿# Prod Plan 2 â€” Mixed Mode (Colab + GCP)
 
-## Amaç
+## AmaÃ§
 
-Mevcut monolitik Colab yapısını, **Colab üzerinde Docker container** mimarisine taşımak. Her model ayrı container'da, Node.js ise GCP'de. İleride sadece worker URL'lerini değiştirerek tam GCP'ye geçilir.
+Mevcut monolitik Colab yapÄ±sÄ±nÄ±, **Colab Ã¼zerinde Docker container** mimarisine taÅŸÄ±mak. Her model ayrÄ± container'da, Node.js ise GCP'de. Ä°leride sadece worker URL'lerini deÄŸiÅŸtirerek tam GCP'ye geÃ§ilir.
 
 ---
 
 ## Neden Mixed?
 
-| Yaklaşım | GPU | Node.js | Yönetim | Aylık |
+| YaklaÅŸÄ±m | GPU | Node.js | YÃ¶netim | AylÄ±k |
 |----------|:---:|:-------:|:-------:|:-----:|
-| **Şu an (monolitik Colab)** | Colab T4 | Localhost | Elle, kırılgan | $0 |
-| **Prod Plan 1 (tam GCP)** | GKE T4 | GKE | Otomatik, sağlam | ~$425 |
+| **Åu an (monolitik Colab)** | Colab T4 | Localhost | Elle, kÄ±rÄ±lgan | $0 |
+| **Prod Plan 1 (tam GCP)** | GKE T4 | GKE | Otomatik, saÄŸlam | ~$425 |
 | **Prod Plan 2 (mixed)** | Colab T4 | **GCP** | Colab elle, GCP otomatik | ~$60 |
 
-Mixed mod: **en pahalı GPU'yu Colab'dan ücretsiz al**, CPU/Node.js tarafı GCP'de olsun.
+Mixed mod: **en pahalÄ± GPU'yu Colab'dan Ã¼cretsiz al**, CPU/Node.js tarafÄ± GCP'de olsun.
 
 ---
 
 ## Hedef Mimari
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  GCP                                                              │
-│                                                                   │
-│  Cloud Run / GKE CPU Pool                                        │
-│  ┌──────────────────────────────────────────────────────────────┐│
-│  │  Node.js Server (CPU)                                        ││
-│  │  ├── Express + Job Queue + SSE                               ││
-│  │  ├── Edge TTS (npm edge-tts)              ◄── CPU, Node.js  ││
-│  │  ├── OpenAI TTS (npm openai)              ◄── CPU, Node.js  ││
-│  │  ├── rembg (npm @imgly/bg-removal)         ◄── CPU, Node.js ││
-│  │  ├── Whisper (Gemini API)                 ◄── CPU, Node.js  ││
-│  │  ├── FFmpeg (tümü)                        ◄── CPU, Node.js  ││
-│  │  └── Orchestrator (worker router)                            ││
-│  │      ├── GPU işi → Colab (Ngrok)                             ││
-│  │      └── CPU işi → kendi yapar                               ││
-│  └──────────────────────────────────────────────────────────────┘│
-│                                                                   │
-│  GCS Bucket (dosya köprüsü)                                     │
-│  Node.js yükler → Colab okur / Colab yazar → Node.js indirir    │
-└──────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  GCP                                                              â”‚
+â”‚                                                                   â”‚
+â”‚  Cloud Run / GKE CPU Pool                                        â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”â”‚
+â”‚  â”‚  Node.js Server (CPU)                                        â”‚â”‚
+â”‚  â”‚  â”œâ”€â”€ Express + Job Queue + SSE                               â”‚â”‚
+â”‚  â”‚  â”œâ”€â”€ Edge TTS (npm edge-tts)              â—„â”€â”€ CPU, Node.js  â”‚â”‚
+â”‚  â”‚  â”œâ”€â”€ OpenAI TTS (npm openai)              â—„â”€â”€ CPU, Node.js  â”‚â”‚
+â”‚  â”‚  â”œâ”€â”€ rembg (npm @imgly/bg-removal)         â—„â”€â”€ CPU, Node.js â”‚â”‚
+â”‚  â”‚  â”œâ”€â”€ Whisper (Gemini API)                 â—„â”€â”€ CPU, Node.js  â”‚â”‚
+â”‚  â”‚  â”œâ”€â”€ FFmpeg (tÃ¼mÃ¼)                        â—„â”€â”€ CPU, Node.js  â”‚â”‚
+â”‚  â”‚  â””â”€â”€ Orchestrator (worker router)                            â”‚â”‚
+â”‚  â”‚      â”œâ”€â”€ GPU iÅŸi â†’ Colab (Ngrok)                             â”‚â”‚
+â”‚  â”‚      â””â”€â”€ CPU iÅŸi â†’ kendi yapar                               â”‚â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜â”‚
+â”‚                                                                   â”‚
+â”‚  GCS Bucket (dosya kÃ¶prÃ¼sÃ¼)                                     â”‚
+â”‚  Node.js yÃ¼kler â†’ Colab okur / Colab yazar â†’ Node.js indirir    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 
-┌─────────────────────────────────────────────────────────────────┐
-│  Google Colab (T4 GPU, ücretsiz)                                 │
-│                                                                   │
-│  ┌──────────────────────────────────────────────────────────────┐│
-│  │  docker-compose (4 container, T4 GPU paylaşımı)              ││
-│  │                                                               ││
-│  │  ┌────────────────────┐  ┌────────────────────┐             ││
-│  │  │  video-worker      │  │  audio-worker      │             ││
-│  │  │  :5010             │  │  :5020             │             ││
-│  │  │  CogVideoX/Wan     │  │  XTTS-v2/AudioLDM2 │             ││
-│  │  └────────────────────┘  └────────────────────┘             ││
-│  │                                                               ││
-│  │  ┌────────────────────┐  ┌────────────────────┐             ││
-│  │  │  lipsync-worker    │  │  vision-worker     │             ││
-│  │  │  :5030             │  │  :5040             │             ││
-│  │  │  Wav2Lip/MuseTalk  │  │  SD Inpaint/GFPGAN │             ││
-│  │  └────────────────────┘  └────────────────────┘             ││
-│  │                                                               ││
-│  │  ┌──────────────────────────────────────────────────────────┐││
-│  │  │  router (nginx/Caddy) :5000                              │││
-│  │  │  /video/* → video-worker:5010                            │││
-│  │  │  /audio/* → audio-worker:5020                            │││
-│  │  │  /lipsync/* → lipsync-worker:5030                        │││
-│  │  │  /vision/* → vision-worker:5040                          │││
-│  │  └──────────────────────────────────────────────────────────┘││
-│  └──────────────────────────────────────────────────────────────┘│
-│                                                                   │
-│  Ngrok → router:5000 (tek tunnel)                                │
-└──────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  Google Colab (T4 GPU, Ã¼cretsiz)                                 â”‚
+â”‚                                                                   â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”â”‚
+â”‚  â”‚  docker-compose (4 container, T4 GPU paylaÅŸÄ±mÄ±)              â”‚â”‚
+â”‚  â”‚                                                               â”‚â”‚
+â”‚  â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”             â”‚â”‚
+â”‚  â”‚  â”‚  video-worker      â”‚  â”‚  audio-worker      â”‚             â”‚â”‚
+â”‚  â”‚  â”‚  :5010             â”‚  â”‚  :5020             â”‚             â”‚â”‚
+â”‚  â”‚  â”‚  CogVideoX/Wan     â”‚  â”‚  XTTS-v2/AudioLDM2 â”‚             â”‚â”‚
+â”‚  â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜             â”‚â”‚
+â”‚  â”‚                                                               â”‚â”‚
+â”‚  â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”             â”‚â”‚
+â”‚  â”‚  â”‚  lipsync-worker    â”‚  â”‚  vision-worker     â”‚             â”‚â”‚
+â”‚  â”‚  â”‚  :5030             â”‚  â”‚  :5040             â”‚             â”‚â”‚
+â”‚  â”‚  â”‚  Wav2Lip/MuseTalk  â”‚  â”‚  SD Inpaint/GFPGAN â”‚             â”‚â”‚
+â”‚  â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜             â”‚â”‚
+â”‚  â”‚                                                               â”‚â”‚
+â”‚  â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”â”‚â”‚
+â”‚  â”‚  â”‚  router (nginx/Caddy) :5000                              â”‚â”‚â”‚
+â”‚  â”‚  â”‚  /video/* â†’ video-worker:5010                            â”‚â”‚â”‚
+â”‚  â”‚  â”‚  /audio/* â†’ audio-worker:5020                            â”‚â”‚â”‚
+â”‚  â”‚  â”‚  /lipsync/* â†’ lipsync-worker:5030                        â”‚â”‚â”‚
+â”‚  â”‚  â”‚  /vision/* â†’ vision-worker:5040                          â”‚â”‚â”‚
+â”‚  â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜â”‚â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜â”‚
+â”‚                                                                   â”‚
+â”‚  Ngrok â†’ router:5000 (tek tunnel)                                â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
 
-## Bölüm 1: Dockerfile'lar (Ortak)
+## BÃ¶lÃ¼m 1: Dockerfile'lar (Ortak)
 
-Her model kendi container'ında. Gerekli kütüphaneler image'a gömülü, modeller volume'da cache'lenir.
+Her model kendi container'Ä±nda. Gerekli kÃ¼tÃ¼phaneler image'a gÃ¶mÃ¼lÃ¼, modeller volume'da cache'lenir.
 
 ### 1.1 video-worker
 
@@ -188,9 +188,9 @@ CMD ["python3", "-u", "/vision_worker.py"]
 
 ---
 
-## Bölüm 2: Worker Python Kodları (Özet)
+## BÃ¶lÃ¼m 2: Worker Python KodlarÄ± (Ã–zet)
 
-Her worker Flask ile tek bir GPU modelini yükler, aynı portta dinler.
+Her worker Flask ile tek bir GPU modelini yÃ¼kler, aynÄ± portta dinler.
 
 ### 2.1 video_worker.py
 
@@ -288,7 +288,7 @@ def preload():
     return jsonify({"status": "loading"})
 ```
 
-### 2.2 audio_worker.py (endpoint özeti)
+### 2.2 audio_worker.py (endpoint Ã¶zeti)
 
 ```python
 @app.route("/tts", methods=["POST"])
@@ -315,7 +315,7 @@ def preload():
     return jsonify({"status": "loading"})
 ```
 
-### 2.3 lipsync_worker.py (endpoint özeti)
+### 2.3 lipsync_worker.py (endpoint Ã¶zeti)
 
 ```python
 @app.route("/lipsync", methods=["POST"])
@@ -340,7 +340,7 @@ def musetalk():
     ...
 ```
 
-### 2.4 vision_worker.py (endpoint özeti)
+### 2.4 vision_worker.py (endpoint Ã¶zeti)
 
 ```python
 @app.route("/inpaint", methods=["POST"])
@@ -350,7 +350,7 @@ def inpaint():
 
 @app.route("/enhance-face", methods=["POST"])
 def enhance_face():
-    """GFPGAN yüz düzeltme"""
+    """GFPGAN yÃ¼z dÃ¼zeltme"""
     ...
 
 @app.route("/upscale", methods=["POST"])
@@ -361,13 +361,13 @@ def upscale():
 
 ---
 
-## Bölüm 3: Colab Docker Setup
+## BÃ¶lÃ¼m 3: Colab Docker Setup
 
-### 3.1 colab_docker_setup.py
+### 3.1 docker_image_setup.py
 
 ```python
 """
-Colab'da Docker kur + worker container'ları başlat + Ngrok
+Colab'da Docker kur + worker container'larÄ± baÅŸlat + Ngrok
 """
 import subprocess, os, time, json, urllib.request
 
@@ -385,7 +385,7 @@ if r.returncode != 0:
                    shell=True, check=True)
     time.sleep(2)
 
-print("[3/7] Image'lar çekiliyor...")
+print("[3/7] Image'lar Ã§ekiliyor...")
 for img in ["ai-publisher/video-worker", "ai-publisher/audio-worker",
             "ai-publisher/lipsync-worker", "ai-publisher/vision-worker"]:
     subprocess.run(f"docker pull {img}:latest", shell=True)
@@ -393,7 +393,7 @@ for img in ["ai-publisher/video-worker", "ai-publisher/audio-worker",
 print("[4/7] Model cache volume...")
 subprocess.run("docker volume create model-cache", shell=True)
 
-print("[5/7] Container'lar başlatılıyor...")
+print("[5/7] Container'lar baÅŸlatÄ±lÄ±yor...")
 containers = [
     ("video-worker", "5010"),
     ("audio-worker", "5020"),
@@ -408,7 +408,7 @@ for name, port in containers:
             -v /content/gcp-key.json:/secret/key.json:ro \\
             ai-publisher/{name}:latest
     """, shell=True)
-    # Model ön yükleme
+    # Model Ã¶n yÃ¼kleme
     subprocess.run(f"curl -X POST http://localhost:{port}/preload "
                    f"-H 'Content-Type: application/json'", shell=True)
 
@@ -441,11 +441,11 @@ for _ in range(30):
     try:
         data = urllib.request.urlopen("http://localhost:4040/api/tunnels").read()
         url = json.loads(data)["tunnels"][0]["public_url"]
-        print(f"✅ Ngrok URL: {url}")
+        print(f"âœ… Ngrok URL: {url}")
         break
     except: time.sleep(1)
 
-print("✅ Tüm worker'lar hazır!")
+print("âœ… TÃ¼m worker'lar hazÄ±r!")
 ```
 
 ### 3.2 docker-compose.yml
@@ -517,7 +517,7 @@ volumes:
 
 ---
 
-## Bölüm 4: Node.js Orchestrator (Dual Backend)
+## BÃ¶lÃ¼m 4: Node.js Orchestrator (Dual Backend)
 
 ### 4.1 src/services/orchestrator.ts
 
@@ -617,21 +617,21 @@ class Orchestrator {
 export const orchestrator = new Orchestrator();
 ```
 
-### 4.2 queue.ts değişikliği
+### 4.2 queue.ts deÄŸiÅŸikliÄŸi
 
 ```
-ESKİ:
+ESKÄ°:
   const COLAB_URL = process.env.COLAB_URL;
   await axios.post(`${COLAB_URL}/generate-media`, {...})
 
-YENİ:
+YENÄ°:
   const { orchestrator } = await import('./services/orchestrator.js');
   await orchestrator.renderVideo({ jobId, sceneNumber, model, ... });
 ```
 
 ---
 
-## Bölüm 5: GCS Dosya Paylaşımı
+## BÃ¶lÃ¼m 5: GCS Dosya PaylaÅŸÄ±mÄ±
 
 ```typescript
 // src/lib/gcs.ts
@@ -652,44 +652,44 @@ export async function downloadFromGcs(gcsUrl: string, localPath: string): Promis
 }
 ```
 
-**Akış**:
+**AkÄ±ÅŸ**:
 
 ```
 queue.ts
-  │
-  ├── Node.js: uploadToGcs(inputVideo) → gs://bucket/jobs/42/scenes/3/input.mp4
-  │
-  ├── POST video-worker:5010/render
-  │   { inputImageGcs, outputVideoGcs }
-  │
-  ├── Worker: download_from_gcs(inputGcs) → /tmp/input.mp4
-  ├── Worker: CogVideoX → /tmp/output.mp4
-  ├── Worker: upload_to_gcs(output.mp4, outputGcs)
-  │
-  └── Node.js: downloadFromGcs(outputGcs) → local
+  â”‚
+  â”œâ”€â”€ Node.js: uploadToGcs(inputVideo) â†’ gs://bucket/jobs/42/scenes/3/input.mp4
+  â”‚
+  â”œâ”€â”€ POST video-worker:5010/render
+  â”‚   { inputImageGcs, outputVideoGcs }
+  â”‚
+  â”œâ”€â”€ Worker: download_from_gcs(inputGcs) â†’ /tmp/input.mp4
+  â”œâ”€â”€ Worker: CogVideoX â†’ /tmp/output.mp4
+  â”œâ”€â”€ Worker: upload_to_gcs(output.mp4, outputGcs)
+  â”‚
+  â””â”€â”€ Node.js: downloadFromGcs(outputGcs) â†’ local
 ```
 
 ---
 
-## Bölüm 6: Migration Yolu (Mixed → Full GCP)
+## BÃ¶lÃ¼m 6: Migration Yolu (Mixed â†’ Full GCP)
 
-| Aşama | Colab | GCP | WORKER_MODE |
+| AÅŸama | Colab | GCP | WORKER_MODE |
 |-------|:-----:|:---:|:-----------:|
-| **0 (şu an)** | Monolitik Flask | Yok | colab |
+| **0 (ÅŸu an)** | Monolitik Flask | Yok | colab |
 | **1** | Docker container'lar | Node.js + GCS kurulumu | colab |
 | **2** | Docker container'lar | **Node.js GCP'de** | colab |
-| **3** | Gerekirse çalışır | Node.js + GPU worker'lar | **gcp** |
-| **4** | Kapatılır | Tamamen GCP | gcp |
+| **3** | Gerekirse Ã§alÄ±ÅŸÄ±r | Node.js + GPU worker'lar | **gcp** |
+| **4** | KapatÄ±lÄ±r | Tamamen GCP | gcp |
 
-Aşama 2 → 3 geçiş: tek `.env` değişikliği:
+AÅŸama 2 â†’ 3 geÃ§iÅŸ: tek `.env` deÄŸiÅŸikliÄŸi:
 
 ```env
-# Mixed (Aşama 2)
+# Mixed (AÅŸama 2)
 WORKER_MODE=colab
 COLAB_URL=https://abc123.ngrok-free.app
 GCS_BUCKET=ai-publisher-media
 
-# Full GCP (Aşama 3)
+# Full GCP (AÅŸama 3)
 WORKER_MODE=gcp
 # worker URL'leri K8s Service DNS
 GCS_BUCKET=ai-publisher-media
@@ -697,112 +697,112 @@ GCS_BUCKET=ai-publisher-media
 
 ---
 
-## Bölüm 7: Maliyet
+## BÃ¶lÃ¼m 7: Maliyet
 
-| Bileşen | Açıklama | Aylık |
+| BileÅŸen | AÃ§Ä±klama | AylÄ±k |
 |---------|----------|:-----:|
-| Colab T4 GPU | Ücretsiz (12 saat reset) | $0 |
-| GCP Cloud Run | 2 vCPU 4GB, her zaman açık | ~$30 |
+| Colab T4 GPU | Ãœcretsiz (12 saat reset) | $0 |
+| GCP Cloud Run | 2 vCPU 4GB, her zaman aÃ§Ä±k | ~$30 |
 | GCS Bucket | 50GB + egress | ~$5 |
 | GCP Load Balancer | HTTPS + SSL | ~$20 |
-| Ngrok | Ücretsiz (20 conn/dk) | $0 |
+| Ngrok | Ãœcretsiz (20 conn/dk) | $0 |
 | **Toplam** | | **~$55/ay** |
 
 ---
 
-## Bölüm 0: Model Kataloğu
+## BÃ¶lÃ¼m 0: Model KataloÄŸu
 
 ### Video Generation
 
 #### Tier 1 (Garantili, L4 24GB FP8 ile sorunsuz)
 
-| Model | Parametre | FP8 VRAM | Çözünürlük | Kalite | Lisans | Not |
+| Model | Parametre | FP8 VRAM | Ã‡Ã¶zÃ¼nÃ¼rlÃ¼k | Kalite | Lisans | Not |
 |-------|:---------:|:--------:|:----------:|:------:|:------:|-----|
-| CogVideoX 2B | 2B | ~8 GB | 720×480 | ⭐⭐⭐ | Apache 2.0 | Mevcut, 6sn klip |
-| CogVideoX 5B | 5B | ~16 GB | 720×480 | ⭐⭐⭐⭐ | Apache 2.0 | Mevcut, daha iyi kalite |
-| LTX Video 2B | 2B | ~6-8 GB | 768×512 | ⭐⭐⭐ | Apache 2.0 | Hızlı, 720p |
-| Wan 2.1 1.3B | 1.3B | ~4-6 GB | 480×832 | ⭐⭐⭐ | Apache 2.0 | Ultra hafif, GGUF |
-| AnimateDiff | ~1.5B | ~6 GB | 512×768 | ⭐⭐ | Apache 2.0 | SD 1.5 animasyon |
-| Stable Video Diffusion | 1.4B | ~14 GB (FP16) | 576×1024 | ⭐⭐⭐ | Stability | Sadece I2V, 25 frame |
+| CogVideoX 2B | 2B | ~8 GB | 720Ã—480 | â­â­â­ | Apache 2.0 | Mevcut, 6sn klip |
+| CogVideoX 5B | 5B | ~16 GB | 720Ã—480 | â­â­â­â­ | Apache 2.0 | Mevcut, daha iyi kalite |
+| LTX Video 2B | 2B | ~6-8 GB | 768Ã—512 | â­â­â­ | Apache 2.0 | HÄ±zlÄ±, 720p |
+| Wan 2.1 1.3B | 1.3B | ~4-6 GB | 480Ã—832 | â­â­â­ | Apache 2.0 | Ultra hafif, GGUF |
+| AnimateDiff | ~1.5B | ~6 GB | 512Ã—768 | â­â­ | Apache 2.0 | SD 1.5 animasyon |
+| Stable Video Diffusion | 1.4B | ~14 GB (FP16) | 576Ã—1024 | â­â­â­ | Stability | Sadece I2V, 25 frame |
 
-#### Tier 2 (FP8 ile L4'e sığar, önerilen)
+#### Tier 2 (FP8 ile L4'e sÄ±ÄŸar, Ã¶nerilen)
 
-| Model | Parametre | FP8 VRAM | Çözünürlük | Kalite | Lisans | Not |
+| Model | Parametre | FP8 VRAM | Ã‡Ã¶zÃ¼nÃ¼rlÃ¼k | Kalite | Lisans | Not |
 |-------|:---------:|:--------:|:----------:|:------:|:------:|-----|
-| **HunyuanVideo 1.5** | **8.3B** | **~14-16 GB** | **720p** | **⭐⭐⭐⭐⭐** | Community | **T2V+I2V, en iyi kalite/VRAM oranı** |
-| **Wan 2.2 14B** | **14B** | **~18 GB** | **720p** | **⭐⭐⭐⭐⭐** | Apache 2.0 | **ByteDance SOTA, 32GB RAM önerilir** |
-| Wan 2.1 14B | 14B | ~18 GB | 720p | ⭐⭐⭐⭐⭐ | Apache 2.0 | Wan 2.2 ile benzer, kararlı |
-| LTX Video 13B | 13B | ~14-18 GB | 720p | ⭐⭐⭐⭐ | Apache 2.0 | Hızlı, kaliteli |
-| CogVideoX 5B (FP16) | 5B | ~22 GB | 720×480 | ⭐⭐⭐⭐ | Apache 2.0 | Native, quantizasyon yok |
+| **HunyuanVideo 1.5** | **8.3B** | **~14-16 GB** | **720p** | **â­â­â­â­â­** | Community | **T2V+I2V, en iyi kalite/VRAM oranÄ±** |
+| **Wan 2.2 14B** | **14B** | **~18 GB** | **720p** | **â­â­â­â­â­** | Apache 2.0 | **ByteDance SOTA, 32GB RAM Ã¶nerilir** |
+| Wan 2.1 14B | 14B | ~18 GB | 720p | â­â­â­â­â­ | Apache 2.0 | Wan 2.2 ile benzer, kararlÄ± |
+| LTX Video 13B | 13B | ~14-18 GB | 720p | â­â­â­â­ | Apache 2.0 | HÄ±zlÄ±, kaliteli |
+| CogVideoX 5B (FP16) | 5B | ~22 GB | 720Ã—480 | â­â­â­â­ | Apache 2.0 | Native, quantizasyon yok |
 
 #### Tier 3 (Deneysel, agresif optimizasyonla)
 
-| Model | Parametre | Optimize VRAM | Çözünürlük | Kalite | Lisans | Not |
+| Model | Parametre | Optimize VRAM | Ã‡Ã¶zÃ¼nÃ¼rlÃ¼k | Kalite | Lisans | Not |
 |-------|:---------:|:-------------:|:----------:|:------:|:------:|-----|
-| Alive VideoDiT | 12B | ~20 GB (FP8) | 480p→1080p | ⭐⭐⭐⭐⭐ | Apache 2.0? | ByteDance açık kaynak, ses+video tek model |
-| Alive AudioDiT | 2B | ~4 GB | - | ⭐⭐⭐⭐ | Apache 2.0? | Alive'ın ses branch'i |
-| Mochi 1 Preview | 10B | ~20-22 GB (FP8) | 848×480 | ⭐⭐⭐⭐⭐ | Apache 2.0 | Genmo, 5-15 dk/klip |
-| HunyuanVideo 13B | 13B | ~8 GB (FP8+tiling) | 540p | ⭐⭐⭐⭐⭐ | Community | Agresif optimizasyon, kalite düşüşü |
+| Alive VideoDiT | 12B | ~20 GB (FP8) | 480pâ†’1080p | â­â­â­â­â­ | Apache 2.0? | ByteDance aÃ§Ä±k kaynak, ses+video tek model |
+| Alive AudioDiT | 2B | ~4 GB | - | â­â­â­â­ | Apache 2.0? | Alive'Ä±n ses branch'i |
+| Mochi 1 Preview | 10B | ~20-22 GB (FP8) | 848Ã—480 | â­â­â­â­â­ | Apache 2.0 | Genmo, 5-15 dk/klip |
+| HunyuanVideo 13B | 13B | ~8 GB (FP8+tiling) | 540p | â­â­â­â­â­ | Community | Agresif optimizasyon, kalite dÃ¼ÅŸÃ¼ÅŸÃ¼ |
 
-#### Tier 4 (GCP/API, L4'e sığmaz)
+#### Tier 4 (GCP/API, L4'e sÄ±ÄŸmaz)
 
-| Model | VRAM Gerek | Kalite | Erişim | Maliyet |
+| Model | VRAM Gerek | Kalite | EriÅŸim | Maliyet |
 |-------|:----------:|:------:|:------:|:-------:|
-| Seedance 2.0 | 96 GB | ⭐⭐⭐⭐⭐ | API (Replicate/Runware) | $0.06-0.13/s |
-| HunyuanVideo 13B FP16 | 47-58 GB | ⭐⭐⭐⭐⭐ | GCP A100 80GB | ~$1.50/saat |
-| Mochi 1 FP16 | 42-60 GB | ⭐⭐⭐⭐⭐ | GCP A100 80GB | ~$1.50/saat |
-| Wan 14B FP16 | 54-65 GB | ⭐⭐⭐⭐⭐ | GCP A100 80GB | ~$1.50/saat |
+| Seedance 2.0 | 96 GB | â­â­â­â­â­ | API (Replicate/Runware) | $0.06-0.13/s |
+| HunyuanVideo 13B FP16 | 47-58 GB | â­â­â­â­â­ | GCP A100 80GB | ~$1.50/saat |
+| Mochi 1 FP16 | 42-60 GB | â­â­â­â­â­ | GCP A100 80GB | ~$1.50/saat |
+| Wan 14B FP16 | 54-65 GB | â­â­â­â­â­ | GCP A100 80GB | ~$1.50/saat |
 
 ---
 
 ### Image Generation
 
-Tümü L4 24GB'e sığar.
+TÃ¼mÃ¼ L4 24GB'e sÄ±ÄŸar.
 
-| Model | Parametre | VRAM | Çözünürlük | Kalite | Lisans |
+| Model | Parametre | VRAM | Ã‡Ã¶zÃ¼nÃ¼rlÃ¼k | Kalite | Lisans |
 |-------|:---------:|:----:|:----------:|:------:|:------:|
-| FLUX.2 Klein 4B | 4B | ~8 GB (FP8) | 1024×1024 | ⭐⭐⭐⭐⭐ | Apache 2.0 |
-| FLUX.1 Dev | 12B | ~12 GB (FP8) | 1024×1024 | ⭐⭐⭐⭐⭐ | Apache 2.0 |
-| FLUX.1 Schnell | 12B | ~10 GB (FP8) | 1024×1024 | ⭐⭐⭐⭐ | Apache 2.0 |
-| SD 3.5 Medium | 2.5B | ~8 GB | 1024×1024 | ⭐⭐⭐⭐ | Stability |
-| SDXL | 2.6B | ~8 GB | 1024×1024 | ⭐⭐⭐⭐ | MIT |
-| DreamShaper 8 | 1.5B | ~4 GB | 512×768 | ⭐⭐⭐⭐ | Mevcut |
-| RealESRGAN 4x | - | ~2 GB | 4x upscale | ⭐⭐⭐⭐ | Mevcut |
-| GFPGAN v1.4 | - | ~2 GB | yüz restorasyon | ⭐⭐⭐⭐ | Mevcut |
-| CodeFormer | - | ~4 GB | yüz restorasyon | ⭐⭐⭐⭐ | GFPGAN alternatifi |
+| FLUX.2 Klein 4B | 4B | ~8 GB (FP8) | 1024Ã—1024 | â­â­â­â­â­ | Apache 2.0 |
+| FLUX.1 Dev | 12B | ~12 GB (FP8) | 1024Ã—1024 | â­â­â­â­â­ | Apache 2.0 |
+| FLUX.1 Schnell | 12B | ~10 GB (FP8) | 1024Ã—1024 | â­â­â­â­ | Apache 2.0 |
+| SD 3.5 Medium | 2.5B | ~8 GB | 1024Ã—1024 | â­â­â­â­ | Stability |
+| SDXL | 2.6B | ~8 GB | 1024Ã—1024 | â­â­â­â­ | MIT |
+| DreamShaper 8 | 1.5B | ~4 GB | 512Ã—768 | â­â­â­â­ | Mevcut |
+| RealESRGAN 4x | - | ~2 GB | 4x upscale | â­â­â­â­ | Mevcut |
+| GFPGAN v1.4 | - | ~2 GB | yÃ¼z restorasyon | â­â­â­â­ | Mevcut |
+| CodeFormer | - | ~4 GB | yÃ¼z restorasyon | â­â­â­â­ | GFPGAN alternatifi |
 
 ---
 
 ### Audio Generation
 
-Tümü L4 24GB'e sığar.
+TÃ¼mÃ¼ L4 24GB'e sÄ±ÄŸar.
 
 #### TTS (Text-to-Speech)
 
 | Model | Parametre | VRAM | Kalite | Not |
 |-------|:---------:|:----:|:------:|-----|
-| XTTS-v2 | 1.8B | ~4 GB | ⭐⭐⭐⭐⭐ | Ses klonlama, mevcut |
-| Kokoro TTS | 82M | <1 GB | ⭐⭐⭐⭐ | Çok hızlı, 8kHz |
-| Edge TTS | API | 0 (CPU/Node.js) | ⭐⭐⭐⭐ | Node.js native, CPU |
-| OpenAI TTS | API | 0 (cloud) | ⭐⭐⭐⭐⭐ | API maliyetli |
-| Bark | 1.2B | ~4 GB | ⭐⭐⭐ | TTS + müzik |
+| XTTS-v2 | 1.8B | ~4 GB | â­â­â­â­â­ | Ses klonlama, mevcut |
+| Kokoro TTS | 82M | <1 GB | â­â­â­â­ | Ã‡ok hÄ±zlÄ±, 8kHz |
+| Edge TTS | API | 0 (CPU/Node.js) | â­â­â­â­ | Node.js native, CPU |
+| OpenAI TTS | API | 0 (cloud) | â­â­â­â­â­ | API maliyetli |
+| Bark | 1.2B | ~4 GB | â­â­â­ | TTS + mÃ¼zik |
 
 #### SFX (Sound Effects)
 
-| Model | Parametre | VRAM | Maks Süre | Kalite | Not |
+| Model | Parametre | VRAM | Maks SÃ¼re | Kalite | Not |
 |-------|:---------:|:----:|:---------:|:------:|-----|
-| AudioLDM 2 | 0.9B | ~2 GB | ~10sn | ⭐⭐⭐ | Mevcut |
-| **Stable Audio Open 1.0** | **1.3B** | **~6 GB** | **~47sn** | **⭐⭐⭐⭐** | **44.1kHz stereo** |
-| **Stable Audio 3 Medium** | **1.4B** | **~5 GB** | **~6dk** | **⭐⭐⭐⭐⭐** | **Lisanslı data, çok hızlı** |
-| **MusicGen Large** | **3.3B** | **~8 GB** | **~30sn** | **⭐⭐⭐⭐** | **Meta, melodi koşullandırma** |
+| AudioLDM 2 | 0.9B | ~2 GB | ~10sn | â­â­â­ | Mevcut |
+| **Stable Audio Open 1.0** | **1.3B** | **~6 GB** | **~47sn** | **â­â­â­â­** | **44.1kHz stereo** |
+| **Stable Audio 3 Medium** | **1.4B** | **~5 GB** | **~6dk** | **â­â­â­â­â­** | **LisanslÄ± data, Ã§ok hÄ±zlÄ±** |
+| **MusicGen Large** | **3.3B** | **~8 GB** | **~30sn** | **â­â­â­â­** | **Meta, melodi koÅŸullandÄ±rma** |
 
-#### Müzik Üretimi
+#### MÃ¼zik Ãœretimi
 
 | Model | Parametre | VRAM | Kalite | Not |
 |-------|:---------:|:----:|:------:|-----|
-| ACE-Step 1.5 | <4B | <4 GB | ⭐⭐⭐⭐ | Sözlerden şarkı, 51 dil |
-| DiffRhythm | ~1B | ~8 GB | ⭐⭐⭐⭐ | Diffusion full song |
-| HeartMuLa 3B | 3B | ~16 GB | ⭐⭐⭐⭐ | RL optimize, sözlerden müzik |
+| ACE-Step 1.5 | <4B | <4 GB | â­â­â­â­ | SÃ¶zlerden ÅŸarkÄ±, 51 dil |
+| DiffRhythm | ~1B | ~8 GB | â­â­â­â­ | Diffusion full song |
+| HeartMuLa 3B | 3B | ~16 GB | â­â­â­â­ | RL optimize, sÃ¶zlerden mÃ¼zik |
 
 ---
 
@@ -810,73 +810,73 @@ Tümü L4 24GB'e sığar.
 
 | Model | VRAM | Kalite | Not |
 |-------|:----:|:------:|-----|
-| MuseTalk | ~6 GB | ⭐⭐⭐⭐⭐ | Mevcut, talking head |
-| Wav2Lip | ~3 GB | ⭐⭐⭐⭐ | Mevcut, lip sync |
-| Alive Referans Animasyon | ~20 GB (VideoDiT ile) | ⭐⭐⭐⭐⭐ | Karakter referansıyla konuşturma |
+| MuseTalk | ~6 GB | â­â­â­â­â­ | Mevcut, talking head |
+| Wav2Lip | ~3 GB | â­â­â­â­ | Mevcut, lip sync |
+| Alive Referans Animasyon | ~20 GB (VideoDiT ile) | â­â­â­â­â­ | Karakter referansÄ±yla konuÅŸturma |
 
 ---
 
 ### Video Enhancement
 
-| Model | VRAM | Kullanım | Not |
+| Model | VRAM | KullanÄ±m | Not |
 |-------|:----:|:---------|-----|
-| GFPGAN v1.4 | ~2 GB | Yüz restorasyonu | Mevcut |
+| GFPGAN v1.4 | ~2 GB | YÃ¼z restorasyonu | Mevcut |
 | RealESRGAN 4x | ~2 GB | Upscale | Mevcut |
-| CodeFormer | ~4 GB | Alternatif yüz restorasyonu | GFPGAN'dan iyi sonuç |
-| RIFE | ~2 GB | Frame interpolasyon | 2x-4x FPS artışı |
+| CodeFormer | ~4 GB | Alternatif yÃ¼z restorasyonu | GFPGAN'dan iyi sonuÃ§ |
+| RIFE | ~2 GB | Frame interpolasyon | 2x-4x FPS artÄ±ÅŸÄ± |
 
 ---
 
-### Worker-Model Eşleme (Güncellenmiş)
+### Worker-Model EÅŸleme (GÃ¼ncellenmiÅŸ)
 
 ```
 video-worker (5010): scene render
-  ├── production_template "cinematic" → HunyuanVideo 1.5 (FP8)
-  ├── production_template "dynamic"   → Wan 2.2 14B (FP8)
-  ├── production_template "simple"    → CogVideoX 2B (FP8)
-  ├── production_template "premium"   → Tier 3 dene (Alive/Mochi)
-  │                                      → başaramazsa Tier 2 fallback
-  └── Model load/unload: dynamic, lazy, task bazlı
+  â”œâ”€â”€ production_template "cinematic" â†’ HunyuanVideo 1.5 (FP8)
+  â”œâ”€â”€ production_template "dynamic"   â†’ Wan 2.2 14B (FP8)
+  â”œâ”€â”€ production_template "simple"    â†’ CogVideoX 2B (FP8)
+  â”œâ”€â”€ production_template "premium"   â†’ Tier 3 dene (Alive/Mochi)
+  â”‚                                      â†’ baÅŸaramazsa Tier 2 fallback
+  â””â”€â”€ Model load/unload: dynamic, lazy, task bazlÄ±
 
 audio-worker (5020):
-  ├── TTS: XTTS-v2 (primary) → Kokoro (hızlı) → Edge TTS (CPU fallback)
-  ├── SFX: AudioLDM 2 → Stable Audio Open → Stable Audio 3 (kalite kademeli)
-  └── Müzik: Stable Audio 3 Medium (gerekirse)
+  â”œâ”€â”€ TTS: XTTS-v2 (primary) â†’ Kokoro (hÄ±zlÄ±) â†’ Edge TTS (CPU fallback)
+  â”œâ”€â”€ SFX: AudioLDM 2 â†’ Stable Audio Open â†’ Stable Audio 3 (kalite kademeli)
+  â””â”€â”€ MÃ¼zik: Stable Audio 3 Medium (gerekirse)
 
 vision-worker (5040):
-  ├── Kapak: FLUX.2 Klein (birincil) → DreamShaper (fallback)
-  ├── Yüz: GFPGAN → CodeFormer
-  ├── Upscale: RealESRGAN 4x
-  └── Inpaint: SD Inpaint / FLUX Fill
+  â”œâ”€â”€ Kapak: FLUX.2 Klein (birincil) â†’ DreamShaper (fallback)
+  â”œâ”€â”€ YÃ¼z: GFPGAN â†’ CodeFormer
+  â”œâ”€â”€ Upscale: RealESRGAN 4x
+  â””â”€â”€ Inpaint: SD Inpaint / FLUX Fill
 
 lipsync-worker (5030):
-  ├── Talking head: MuseTalk
-  ├── Lip sync: Wav2Lip
-  └── Animasyon: Alive reference animation (Tier 3)
+  â”œâ”€â”€ Talking head: MuseTalk
+  â”œâ”€â”€ Lip sync: Wav2Lip
+  â””â”€â”€ Animasyon: Alive reference animation (Tier 3)
 ```
 
-### Model Seçim Mantığı
+### Model SeÃ§im MantÄ±ÄŸÄ±
 
 #### Fallback Zinciri
 
-Her `production_template` için bir **fallback zinciri** tanımlanır. Model yüklenemezse (OOM, CUDA error, timeout) zincirde bir alt model dene.
+Her `production_template` iÃ§in bir **fallback zinciri** tanÄ±mlanÄ±r. Model yÃ¼klenemezse (OOM, CUDA error, timeout) zincirde bir alt model dene.
 
 ```
-Template      ┌── Tier 1 deneme → başaramazsa
-              │     ┌── Tier 2 deneme → başaramazsa
-              │     │     ┌── Tier 3 deneme → başaramazsa
-              │     │     │     ┌── HATA (job failed)
-              ▼     ▼     ▼     ▼
-cinematic → Hunyuan1.5 → Wan14B → Cog5B → Cog2B
-dynamic   → Wan14B     → Hunyuan1.5 → Cog5B → Cog2B
-premium   → Alive      → Mochi → Hunyuan1.5 → Cog5B → Cog2B
-simple    → Cog5B      → Cog2B → LTX2B
+Template      â”Œâ”€â”€ Tier 1 deneme â†’ baÅŸaramazsa
+              â”‚     â”Œâ”€â”€ Tier 2 deneme â†’ baÅŸaramazsa
+              â”‚     â”‚     â”Œâ”€â”€ Tier 3 deneme â†’ baÅŸaramazsa
+              â”‚     â”‚     â”‚     â”Œâ”€â”€ HATA (job failed)
+              â–¼     â–¼     â–¼     â–¼
+cinematic â†’ Hunyuan1.5 â†’ Wan14B â†’ Cog5B â†’ Cog2B
+dynamic   â†’ Wan14B     â†’ Hunyuan1.5 â†’ Cog5B â†’ Cog2B
+premium   â†’ Alive      â†’ Mochi â†’ Hunyuan1.5 â†’ Cog5B â†’ Cog2B
+simple    â†’ Cog5B      â†’ Cog2B â†’ LTX2B
 ```
 
 #### Worker'da Implementasyon
 
 ```python
-# video_worker.py — fallback chain
+# video_worker.py â€” fallback chain
 FALLBACK_CHAINS = {
     "cinematic": ["hunyuan-video-1.5-fp8", "wan-2.2-14b-fp8",
                   "cogvideox-5b-fp8", "cogvideox-2b-fp8"],
@@ -887,7 +887,7 @@ FALLBACK_CHAINS = {
     "simple":    ["cogvideox-5b-fp8", "cogvideox-2b-fp8", "ltx-video-2b-fp8"],
 }
 
-# Her model için minimum VRAM eşiği (GB)
+# Her model iÃ§in minimum VRAM eÅŸiÄŸi (GB)
 MODEL_MIN_VRAM = {
     "alive": 22, "mochi-1-fp8": 20,
     "hunyuan-video-1.5-fp8": 14, "wan-2.2-14b-fp8": 18,
@@ -902,7 +902,7 @@ def load_model(template: str):
     for model_name in chain:
         min_vram = MODEL_MIN_VRAM.get(model_name, 99)
         if free_vram < min_vram:
-            log(f"[WARN] {model_name} needs {min_vram}GB, only {free_vram}GB free — skip")
+            log(f"[WARN] {model_name} needs {min_vram}GB, only {free_vram}GB free â€” skip")
             continue
         try:
             pipe = _load_model_weights(model_name)
@@ -944,7 +944,7 @@ async function renderVideo(params: {
 
   for (const model of chain) {
     try {
-      // Worker'a model adını da gönder, worker kendi VRAM kontrolünü yapar
+      // Worker'a model adÄ±nÄ± da gÃ¶nder, worker kendi VRAM kontrolÃ¼nÃ¼ yapar
       const result = await orchestrator.callWorker('video', '/render', {
         ...params, model,
       });
@@ -966,32 +966,32 @@ async function renderVideo(params: {
 }
 ```
 
-> Colab 12 saat reset → `colab_docker_setup.py` tekrar çalıştırılır (~10dk).
+> Colab 12 saat reset â†’ `docker_image_setup.py` tekrar Ã§alÄ±ÅŸtÄ±rÄ±lÄ±r (~10dk).
 
 ---
 
-## Bölüm 8: Frontend Güncellemeleri
+## BÃ¶lÃ¼m 8: Frontend GÃ¼ncellemeleri
 
-### 8.1 Template-Model Eşleme Göstergesi
+### 8.1 Template-Model EÅŸleme GÃ¶stergesi
 
-Her `production_template` kartı, altında hangi model zincirinin çalışacağını gösterir.
+Her `production_template` kartÄ±, altÄ±nda hangi model zincirinin Ã§alÄ±ÅŸacaÄŸÄ±nÄ± gÃ¶sterir.
 
 ```
-┌──────────────────────────────────────┐
-│  🎬 Cinematic                         │
-│  Sinematik kalite, uzun sahneler      │
-│                                       │
-│  Model Zinciri:                       │
-│  HunyuanVideo 1.5  →  Wan 14B        │
-│  → CogVideoX 5B  →  CogVideoX 2B     │
-│  └─ İlk model yüklenemezse otomatik  │
-│      bir alt modele geçilir           │
-│                                       │
-│  ⏱ ~3-5 dk/sahne   🎯 Kalite: ⭐⭐⭐⭐⭐ │
-└──────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  ğŸ¬ Cinematic                         â”‚
+â”‚  Sinematik kalite, uzun sahneler      â”‚
+â”‚                                       â”‚
+â”‚  Model Zinciri:                       â”‚
+â”‚  HunyuanVideo 1.5  â†’  Wan 14B        â”‚
+â”‚  â†’ CogVideoX 5B  â†’  CogVideoX 2B     â”‚
+â”‚  â””â”€ Ä°lk model yÃ¼klenemezse otomatik  â”‚
+â”‚      bir alt modele geÃ§ilir           â”‚
+â”‚                                       â”‚
+â”‚  â± ~3-5 dk/sahne   ğŸ¯ Kalite: â­â­â­â­â­ â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-**Veri yapısı (frontend):**
+**Veri yapÄ±sÄ± (frontend):**
 
 ```typescript
 // client/src/types.ts
@@ -1002,37 +1002,37 @@ interface TemplateModelInfo {
   description: string;
   descriptionTr: string;
   modelChain: { name: string; vramGb: number; quality: number }[];
-  estimatedSeconds: number;  // sahne başına
+  estimatedSeconds: number;  // sahne baÅŸÄ±na
   qualityStars: number;
 }
 ```
 
-**Backend'den dinamik çekilir:**
+**Backend'den dinamik Ã§ekilir:**
 
 ```
 GET /api/v1/template-models
-→ { templates: TemplateModelInfo[] }
+â†’ { templates: TemplateModelInfo[] }
 ```
 
 ### 8.2 Fallback Bildirimi (SSE)
 
-İş kuyruğu SSE akışında model değişikliği anında bildirilir.
+Ä°ÅŸ kuyruÄŸu SSE akÄ±ÅŸÄ±nda model deÄŸiÅŸikliÄŸi anÄ±nda bildirilir.
 
 ```typescript
 // queue.ts / orchestrator.ts
-// Model fallback olduğunda:
+// Model fallback olduÄŸunda:
 broadcastProgress(jobId, {
   stage: 'model_fallback',
   detail: {
-    attempted: 'hunyuan-video-1.5-fp8',   // denenip başarısız olan
-    fallbackTo: 'cogvideox-5b-fp8',        // geçilen model
+    attempted: 'hunyuan-video-1.5-fp8',   // denenip baÅŸarÄ±sÄ±z olan
+    fallbackTo: 'cogvideox-5b-fp8',        // geÃ§ilen model
     reason: 'OOM',                          // sebep
   },
   progress: currentProgress,
 });
 ```
 
-**Frontend'de gösterim:**
+**Frontend'de gÃ¶sterim:**
 
 ```typescript
 // client/src/components/StudioPanel.tsx
@@ -1044,47 +1044,47 @@ if (event.type === 'model_fallback') {
     reason: event.detail.reason,
     timestamp: Date.now(),
   });
-  // 5 saniye sonra kaybolan bir uyarı bildirimi göster
+  // 5 saniye sonra kaybolan bir uyarÄ± bildirimi gÃ¶ster
   setTimeout(() => setFallbackNotice(null), 5000);
 }
 ```
 
-**Progress Bar'daki gösterim:**
+**Progress Bar'daki gÃ¶sterim:**
 
 ```
-[████████████░░░░░░░░░░] %60
-                         ↑ Küçük etiket
-                    "⚠️ Wan14B → Cog5B (VRAM)"
+[â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘] %60
+                         â†‘ KÃ¼Ã§Ã¼k etiket
+                    "âš ï¸ Wan14B â†’ Cog5B (VRAM)"
 ```
 
 ### 8.3 GPU Durum Paneli (Admin)
 
-Sadece admin kullanıcıya gösterilir. Şu anki GPU durumunu canlı verir.
+Sadece admin kullanÄ±cÄ±ya gÃ¶sterilir. Åu anki GPU durumunu canlÄ± verir.
 
 ```
-┌─────────────────────────────────────────┐
-│  🖥️ GPU Monitor                    ↻ 5sn │
-│                                           │
-│  GPU: NVIDIA L4 24GB                      │
-│  Kullanılan: 14.2 GB / 24 GB  [████░░]  │
-│  Boş: 9.8 GB                              │
-│                                           │
-│  Aktif Model: hunyuan-video-1.5-fp8      │
-│  Son Fallback: 2 dk önce                  │
-│    Wan14B → Cog5B (OOM)                  │
-│                                           │
-│  Worker: video-worker (5010) ✅           │
-│  Worker: audio-worker (5020) ✅           │
-│  Worker: vision-worker (5040) ⚠️ idle    │
-│  Worker: lipsync-worker (5030) ✅         │
-└─────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  ğŸ–¥ï¸ GPU Monitor                    â†» 5sn â”‚
+â”‚                                           â”‚
+â”‚  GPU: NVIDIA L4 24GB                      â”‚
+â”‚  KullanÄ±lan: 14.2 GB / 24 GB  [â–ˆâ–ˆâ–ˆâ–ˆâ–‘â–‘]  â”‚
+â”‚  BoÅŸ: 9.8 GB                              â”‚
+â”‚                                           â”‚
+â”‚  Aktif Model: hunyuan-video-1.5-fp8      â”‚
+â”‚  Son Fallback: 2 dk Ã¶nce                  â”‚
+â”‚    Wan14B â†’ Cog5B (OOM)                  â”‚
+â”‚                                           â”‚
+â”‚  Worker: video-worker (5010) âœ…           â”‚
+â”‚  Worker: audio-worker (5020) âœ…           â”‚
+â”‚  Worker: vision-worker (5040) âš ï¸ idle    â”‚
+â”‚  Worker: lipsync-worker (5030) âœ…         â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 **Backend endpoint:**
 
 ```
 GET /api/v1/admin/gpu-status
-→ {
+â†’ {
     gpuName: string;
     totalVramGb: number;
     usedVramGb: number;
@@ -1112,25 +1112,25 @@ def gpu_stats():
     })
 ```
 
-### 8.4 Model Seçici (Manuel)
+### 8.4 Model SeÃ§ici (Manuel)
 
-Opsiyonel olarak kullanıcı template yerine doğrudan model seçebilir.
+Opsiyonel olarak kullanÄ±cÄ± template yerine doÄŸrudan model seÃ§ebilir.
 
 ```
-Template Seç: [Cinematic ▼]  veya  [🧠 Manuel Model Seç]
+Template SeÃ§: [Cinematic â–¼]  veya  [ğŸ§  Manuel Model SeÃ§]
 
-Manuel seçildiğinde:
-┌──────────────────────────────────────────────────────┐
-│  Model: [HunyuanVideo 1.5 (FP8) ▾]                    │
-│         ├── HunyuanVideo 1.5 (FP8)  ~14GB  ⭐⭐⭐⭐⭐  │
-│         ├── Wan 2.2 14B (FP8)       ~18GB  ⭐⭐⭐⭐⭐  │
-│         ├── CogVideoX 5B (FP8)      ~10GB  ⭐⭐⭐⭐   │
-│         ├── CogVideoX 2B (FP8)      ~6GB   ⭐⭐⭐    │
-│         └── LTX Video 2B (FP8)      ~4GB   ⭐⭐⭐    │
-│                                                       │
-│  ⚠️ GPU: 14.2 GB boş — önerilen modeller yeşil      │
-│  🔴 Kırmızı modeller VRAM yetmez                     │
-└──────────────────────────────────────────────────────┘
+Manuel seÃ§ildiÄŸinde:
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  Model: [HunyuanVideo 1.5 (FP8) â–¾]                    â”‚
+â”‚         â”œâ”€â”€ HunyuanVideo 1.5 (FP8)  ~14GB  â­â­â­â­â­  â”‚
+â”‚         â”œâ”€â”€ Wan 2.2 14B (FP8)       ~18GB  â­â­â­â­â­  â”‚
+â”‚         â”œâ”€â”€ CogVideoX 5B (FP8)      ~10GB  â­â­â­â­   â”‚
+â”‚         â”œâ”€â”€ CogVideoX 2B (FP8)      ~6GB   â­â­â­    â”‚
+â”‚         â””â”€â”€ LTX Video 2B (FP8)      ~4GB   â­â­â­    â”‚
+â”‚                                                       â”‚
+â”‚  âš ï¸ GPU: 14.2 GB boÅŸ â€” Ã¶nerilen modeller yeÅŸil      â”‚
+â”‚  ğŸ”´ KÄ±rmÄ±zÄ± modeller VRAM yetmez                     â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 **Endpoint:**
@@ -1138,70 +1138,70 @@ Manuel seçildiğinde:
 ```
 POST /api/v1/jobs/check-model
   { jobId: number; modelName: string }
-→ { fits: boolean; freeVramGb: number; requiredVramGb: number; }
+â†’ { fits: boolean; freeVramGb: number; requiredVramGb: number; }
 ```
 
-### 8.5 Kalite/Hız Skoru
+### 8.5 Kalite/HÄ±z Skoru
 
-Her template/model için tahmini süre ve kalite bilgisi gösterilir.
+Her template/model iÃ§in tahmini sÃ¼re ve kalite bilgisi gÃ¶sterilir.
 
 ```typescript
 const TEMPLATE_STATS: Record<ProductionTemplate, {
-  quality: number;        // 1-5 yıldız
+  quality: number;        // 1-5 yÄ±ldÄ±z
   estimatedSecondsPerScene: number;
   vramRequired: number;   // GB
-  bestFor: string;        // hangi durumda önerilir
+  bestFor: string;        // hangi durumda Ã¶nerilir
 }> = {
   cinematic: {
     quality: 5,
     estimatedSecondsPerScene: 300,  // 5 dk
     vramRequired: 14,
-    bestFor: 'Yüksek kaliteli hikaye anlatımı, marka videoları',
+    bestFor: 'YÃ¼ksek kaliteli hikaye anlatÄ±mÄ±, marka videolarÄ±',
   },
   dynamic: {
     quality: 5,
     estimatedSecondsPerScene: 240,
     vramRequired: 18,
-    bestFor: 'Aksiyon, hızlı geçişler, sosyal medya viral',
+    bestFor: 'Aksiyon, hÄ±zlÄ± geÃ§iÅŸler, sosyal medya viral',
   },
   premium: {
     quality: 5,
     estimatedSecondsPerScene: 480,
     vramRequired: 22,
-    bestFor: 'En iyi kalite, deneysel, düşük VRAM riski',
+    bestFor: 'En iyi kalite, deneysel, dÃ¼ÅŸÃ¼k VRAM riski',
   },
   simple: {
     quality: 3,
     estimatedSecondsPerScene: 120,
     vramRequired: 6,
-    bestFor: 'Hızlı üretim, düşük GPU, test',
+    bestFor: 'HÄ±zlÄ± Ã¼retim, dÃ¼ÅŸÃ¼k GPU, test',
   },
 };
 ```
 
-**Proje formunda gösterim:**
+**Proje formunda gÃ¶sterim:**
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  🎞️ Cinematic                    ⭐⭐⭐⭐⭐              │
-│  Sinematik kalite, uzun sahneler   ⏱ ~5dk/sahne        │
-│  🔵 Tahmini: 12 sahne × 5dk = ~60dk                     │
-│  ████████████████░░░░░░░ GPU: 14/24 GB                  │
-│                                                           │
-│  ⚡ Simple seçersen: 12 sahne × 2dk = ~24dk (hızlı)    │
-└──────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  ğŸï¸ Cinematic                    â­â­â­â­â­              â”‚
+â”‚  Sinematik kalite, uzun sahneler   â± ~5dk/sahne        â”‚
+â”‚  ğŸ”µ Tahmini: 12 sahne Ã— 5dk = ~60dk                     â”‚
+â”‚  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–‘â–‘â–‘â–‘â–‘â–‘â–‘ GPU: 14/24 GB                  â”‚
+â”‚                                                           â”‚
+â”‚  âš¡ Simple seÃ§ersen: 12 sahne Ã— 2dk = ~24dk (hÄ±zlÄ±)    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-### 8.6 Gerekli Frontend Değişiklik Özeti
+### 8.6 Gerekli Frontend DeÄŸiÅŸiklik Ã–zeti
 
-| # | Değişiklik | Dosya | Süre |
+| # | DeÄŸiÅŸiklik | Dosya | SÃ¼re |
 |---|-----------|-------|:----:|
 | 1 | `TemplateModelInfo` tipi ekle | `client/src/types.ts` | 15dk |
-| 2 | Template kartlarına model zinciri tooltip ekle | `client/src/components/ProjectForm.tsx` | 1 saat |
-| 3 | Fallback bildirim bileşeni ekle | `client/src/components/StudioPanel.tsx` | 1 saat |
+| 2 | Template kartlarÄ±na model zinciri tooltip ekle | `client/src/components/ProjectForm.tsx` | 1 saat |
+| 3 | Fallback bildirim bileÅŸeni ekle | `client/src/components/StudioPanel.tsx` | 1 saat |
 | 4 | GPU Monitor paneli ekle (admin) | `client/src/components/GpuMonitor.tsx` | 2 saat |
-| 5 | Manuel model seçici dropdown | `client/src/components/ProjectForm.tsx` | 1 saat |
-| 6 | Kalite/süre/skor kartları | `client/src/components/ProjectForm.tsx` | 1 saat |
+| 5 | Manuel model seÃ§ici dropdown | `client/src/components/ProjectForm.tsx` | 1 saat |
+| 6 | Kalite/sÃ¼re/skor kartlarÄ± | `client/src/components/ProjectForm.tsx` | 1 saat |
 | 7 | Backend `/api/v1/template-models` | `src/routes/jobs.ts` | 30dk |
 | 8 | Backend `/api/v1/admin/gpu-status` | `src/routes/admin.ts` | 30dk |
 | 9 | Backend `/api/v1/jobs/check-model` | `src/routes/jobs.ts` | 15dk |
@@ -1209,41 +1209,41 @@ const TEMPLATE_STATS: Record<ProductionTemplate, {
 
 ---
 
-## Bölüm 9: Avantajlar ve Riskler
+## BÃ¶lÃ¼m 9: Avantajlar ve Riskler
 
 ### Avantajlar
 
 | Konu | Detay |
 |------|-------|
-| **GPU ücretsiz** | T4 için ayda ~$350 tasarruf |
-| **Model izolasyonu** | Bir model OOM verse diğerini etkilemez |
-| **GCP hazırlık** | Worker kodları, Dockerfile'lar, GCS entegrasyonu hazır |
-| **Dual backend** | `WORKER_MODE=colab|gcp` arası tek env var |
-| **Node.js GCP'de** | CPU işleri profesyonel altyapıda, Playwright stabil |
+| **GPU Ã¼cretsiz** | T4 iÃ§in ayda ~$350 tasarruf |
+| **Model izolasyonu** | Bir model OOM verse diÄŸerini etkilemez |
+| **GCP hazÄ±rlÄ±k** | Worker kodlarÄ±, Dockerfile'lar, GCS entegrasyonu hazÄ±r |
+| **Dual backend** | `WORKER_MODE=colab|gcp` arasÄ± tek env var |
+| **Node.js GCP'de** | CPU iÅŸleri profesyonel altyapÄ±da, Playwright stabil |
 
 ### Riskler
 
-| Risk | Çözüm |
+| Risk | Ã‡Ã¶zÃ¼m |
 |------|-------|
-| Colab 12 saat reset | Supervisor script otomatik yeniden başlatır |
+| Colab 12 saat reset | Supervisor script otomatik yeniden baÅŸlatÄ±r |
 | Docker-in-Docker performans | Test edilmeli. Alternatif: Colab'da process-based worker |
-| Tek GPU, 4 container | GPU zaman paylaşımı. Aynı anda sadece 1 GPU worker çalışır |
+| Tek GPU, 4 container | GPU zaman paylaÅŸÄ±mÄ±. AynÄ± anda sadece 1 GPU worker Ã§alÄ±ÅŸÄ±r |
 | Ngrok 20 conn/dk limit | Cloudflare Tunnel alternatifi. Veya Colab'da direkt port forwarding |
-| GCS egress ücreti | Worker yüklemesi ücretsiz (same region), Node.js indirmesi ücretli |
+| GCS egress Ã¼creti | Worker yÃ¼klemesi Ã¼cretsiz (same region), Node.js indirmesi Ã¼cretli |
 
 ---
 
-## Bölüm 10: Uygulama Sırası
+## BÃ¶lÃ¼m 10: Uygulama SÄ±rasÄ±
 
-| # | İş | Süre |
+| # | Ä°ÅŸ | SÃ¼re |
 |---|----|:----:|
-| 1 | Worker Dockerfile'ları yaz (video/audio/lipsync/vision) | 1 gün |
-| 2 | Worker Python kodlarını yaz (Flask + endpoint'ler) | 2 gün |
-| 3 | Docker image build + push | 1 gün |
-| 4 | `colab_docker_setup.py` yaz | 1 gün |
+| 1 | Worker Dockerfile'larÄ± yaz (video/audio/lipsync/vision) | 1 gÃ¼n |
+| 2 | Worker Python kodlarÄ±nÄ± yaz (Flask + endpoint'ler) | 2 gÃ¼n |
+| 3 | Docker image build + push | 1 gÃ¼n |
+| 4 | `docker_image_setup.py` yaz | 1 gÃ¼n |
 | 5 | `src/lib/gcs.ts` yaz | 1 saat |
-| 6 | `src/services/orchestrator.ts` yaz (dual backend) | 1 gün |
-| 7 | `queue.ts`'de Colab çağrılarını değiştir | 1 gün |
-| 8 | GCP Cloud Run + GCS + Service Account kur | 1 gün |
-| 9 | Node.js deploy + test | 1 gün |
-| **Toplam** | | **~9 gün** |
+| 6 | `src/services/orchestrator.ts` yaz (dual backend) | 1 gÃ¼n |
+| 7 | `queue.ts`'de Colab Ã§aÄŸrÄ±larÄ±nÄ± deÄŸiÅŸtir | 1 gÃ¼n |
+| 8 | GCP Cloud Run + GCS + Service Account kur | 1 gÃ¼n |
+| 9 | Node.js deploy + test | 1 gÃ¼n |
+| **Toplam** | | **~9 gÃ¼n** |

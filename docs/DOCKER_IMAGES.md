@@ -1,4 +1,4 @@
-# AI-Publisher Docker Image Deployment Map
+﻿# AI-Publisher Docker Image Deployment Map
 
 Her imaj icin: fonksiyon, GPU ihtiyaci, VRAM, port, base image, notlar.
 
@@ -63,7 +63,7 @@ Her imaj icin: fonksiyon, GPU ihtiyaci, VRAM, port, base image, notlar.
 
 | Image | VRAM | Islem |
 |-------|------|-------|
-| wav2lip | 4-8 GB | Dudak senkron (audio → video) |
+| wav2lip | 4-8 GB | Dudak senkron (audio â†’ video) |
 | musetalk | 6-10 GB | Talking head generation |
 | sadtalker | 4-8 GB | Audio-driven portrait animation |
 | video-retalking | 6-10 GB | Video lip-sync (CUDA 11.8) |
@@ -117,9 +117,9 @@ Buyuk veya uzun sureli render icin:
 | Onerilen (LoRA + torch compile) | 100 GB |
 | Maksimum (her sey local) | 200 GB |
 
-## CUDA 11.8 vs 12.1 Ayrım
+## CUDA 11.8 vs 12.1 AyrÄ±m
 
-Bazı modeller PyTorch 3D veya eski CUDA gerektirir:
+BazÄ± modeller PyTorch 3D veya eski CUDA gerektirir:
 
 | Base | Image | Neden |
 |------|-------|-------|
@@ -140,11 +140,11 @@ http://{worker-ip}:{port}           # RunPod pod (tek container)
 https://{endpoint-id}.api.runpod.ai # RunPod serverless (otomatik scale)
 ```
 
-Service → port eslemesi `src/lib/docker-host.ts:48-72` dosyasinda tanimli.
+Service â†’ port eslemesi `src/lib/docker-host.ts:48-72` dosyasinda tanimli.
 
 ## Build Sirasinda Skip Mantigi
 
-`colab_docker/build_all.sh` her model icin:
+`docker_image/build_all.sh` her model icin:
 1. `MODEL.tar.gz` + `MODEL.sha256` Drive'da var mi?
 2. `Dockerfile.base` sha + `MODEL/Dockerfile` sha = hesaplanan hash
 3. Hash eslesirse skip, degismis ise rebuild
