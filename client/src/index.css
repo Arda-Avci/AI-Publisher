@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
+@theme {
+  --color-background: 222 47% 6%;
+  --color-foreground: 0 0% 95%;
+  --color-card: 222 47% 8%;
+  --color-card-foreground: 0 0% 95%;
+  --color-popover: 222 47% 8%;
+  --color-popover-foreground: 0 0% 95%;
+  --color-primary: 262 83% 58%;
+  --color-primary-foreground: 0 0% 100%;
+  --color-secondary: 222 47% 12%;
+  --color-secondary-foreground: 0 0% 90%;
+  --color-muted: 222 47% 12%;
+  --color-muted-foreground: 0 0% 55%;
+  --color-accent: 262 83% 58%;
+  --color-accent-foreground: 0 0% 100%;
+  --color-destructive: 0 72% 50%;
+  --color-destructive-foreground: 0 0% 100%;
+  --color-border: 222 47% 15%;
+  --color-input: 222 47% 15%;
+  --color-ring: 262 83% 58%;
+  --color-success: 142 76% 36%;
+}
+
 :root {
-  --bg-primary: hsl(var(--background));
-  --bg-surface: hsl(var(--card));
-  --bg-surface-hover: hsl(var(--secondary));
-  --bg-card: hsl(var(--card));
+  --bg-primary: hsl(var(--color-background));
+  --bg-surface: hsl(var(--color-card));
+  --bg-surface-hover: hsl(var(--color-secondary));
+  --bg-card: hsl(var(--color-card));
   --card: var(--bg-card);
-  --accent: hsl(var(--accent));
-  --accent-600: hsl(var(--accent));
-  --accent-glow: hsla(var(--accent), 0.2);
-  --accent-light: hsla(var(--accent), 0.1);
+  --accent: hsl(var(--color-primary));
+  --accent-600: hsl(var(--color-primary));
+  --accent-glow: hsla(var(--color-primary), 0.2);
+  --accent-light: hsla(var(--color-primary), 0.1);
   --gold: #D4AF37;
   --gold-hover: #F3E5AB;
-  --secondary: hsl(var(--secondary));
-  --success: hsl(var(--success, 142 76% 36%));
-  --success-glow: hsla(var(--success, 142 76% 36%), 0.3);
-  --danger: hsl(var(--destructive, 0 72% 50%));
+  --secondary: hsl(var(--color-secondary));
+  --success: hsl(var(--color-success, 142 76% 36%));
+  --success-glow: hsla(var(--color-success, 142 76% 36%), 0.3);
+  --danger: hsl(var(--color-destructive, 0 72% 50%));
   --warning: #eab308;
-  --text-primary: hsl(var(--foreground));
-  --text-muted: hsl(var(--muted-foreground));
-  --border: hsl(var(--border));
-  --border-subtle: hsla(var(--border), 0.5);
+  --text-primary: hsl(var(--color-foreground));
+  --text-muted: hsl(var(--color-muted-foreground));
+  --border: hsl(var(--color-border));
+  --border-subtle: hsla(var(--color-border), 0.5);
   --font-sans: 'Manrope', sans-serif;
   --font-serif: 'Cormorant Garamond', serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
