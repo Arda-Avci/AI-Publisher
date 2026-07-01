@@ -73,8 +73,10 @@ foreach ($svc in $Targets) {
     if (-not $DryRun) {
         Write-Host "  [DEPLOY] Starting..." -ForegroundColor Green
         Push-Location $ProjectRoot
+        $env:PYTHONIOENCODING = 'utf-8'
         $output = & modal deploy -m $modulePath 2>&1
         $exitCode = $LASTEXITCODE
+        Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
         Pop-Location
     } else {
         Write-Host "  [DRY-RUN] Would run: modal deploy -m $modulePath" -ForegroundColor Yellow
