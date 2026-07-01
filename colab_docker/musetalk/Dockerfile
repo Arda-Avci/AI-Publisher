@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 WORKDIR /app
 
 RUN pip install "transformers>=4.39.3" "accelerate==0.30.0" webdataset omegaconf safetensors einops av yacs gfpgan face-alignment facexlib
-RUN curl -sL "https://github.com/TMElyralab/MuseTalk/archive/main.tar.gz" | tar -xz -C /app && mv /app/MuseTalk-main /app/MuseTalk || curl -sL "https://github.com/TMElyralab/MuseTalk/archive/master.tar.gz" | tar -xz -C /app && mv /app/MuseTalk-master /app/MuseTalk
+RUN git clone --depth 1 --branch main https://github.com/TMElyralab/MuseTalk.git /app/MuseTalk 2>/dev/null || git clone --depth 1 https://github.com/TMElyralab/MuseTalk.git /app/MuseTalk
 
 COPY app.py /app/app.py
 COPY runpod_handler.py /app/

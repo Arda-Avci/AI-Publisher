@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 WORKDIR /app
 
-RUN apt-get install -y --no-install-recommends rubberband-cli rubberband-ladspa && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y --no-install-recommends rubberband-cli && rm -rf /var/lib/apt/lists/*
 RUN pip install coqui-tts edge-tts openai pyrubberband soundfile
 
 COPY app.py /app/app.py
