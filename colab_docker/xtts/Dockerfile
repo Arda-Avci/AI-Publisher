@@ -6,15 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
 ENV HF_HOME="/workspace/hf_cache" TORCH_HOME="/workspace/torch_cache"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libsndfile1 espeak-ng espeak git wget curl xz-utils tar cmake \
+    ffmpeg libsndfile1 espeak-ng espeak git wget curl cmake \
     libgl1-mesa-glx libglib2.0-0 build-essential libass-dev \
     gobject-introspection fonts-dejavu fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
-RUN wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
-    tar -xf ffmpeg-release-amd64-static.tar.xz && \
-    mv ffmpeg-*-amd64-static/ffmpeg /usr/bin/ffmpeg && \
-    mv ffmpeg-*-amd64-static/ffprobe /usr/bin/ffprobe && \
-    rm -rf ffmpeg-release-amd64-static.tar.xz ffmpeg-*-amd64-static
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
