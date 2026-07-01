@@ -19,6 +19,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 RUN /opt/conda/bin/pip install --no-cache-dir \
     flask \
     requests \
+    boto3 \
+    botocore \
     basicsr==1.4.2 \
     kornia==0.5.1 \
     face-alignment==1.3.4 \

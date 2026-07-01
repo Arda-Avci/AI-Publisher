@@ -24,10 +24,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install browser-use SDK + playwright
+# Install browser-use SDK + playwright + flask
 RUN pip install --no-cache-dir \
     browser-use-sdk \
     playwright \
+    flask \
     && playwright install chromium --with-deps \
     && playwright install-deps chromium
 
@@ -36,3 +37,4 @@ COPY app.py /app/
 ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=5000
 EXPOSE 5000 9222
+CMD ["python", "app.py"]

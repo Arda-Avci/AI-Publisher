@@ -73,7 +73,7 @@ PARAMS = {
     "zeroscope": {"prompt": "a cat walking"},
 }
 
-TIMEOUT = 300
+TIMEOUT = 600 # GPU model cold-start may take >5min
 
 def test(name):
     app_name, func_name = SERVICE_MAP[name]
@@ -104,7 +104,8 @@ def test(name):
             except: pass
             print(f"  [TIMEOUT] {name} — ({elapsed:.0f}s)")
         else:
-            print(f"  [ERROR] {name} — ({elapsed:.0f}s): {e}")
+            err_msg = str(e) or repr(e) or type(e).__name__
+            print(f"  [ERROR] {name} — ({elapsed:.0f}s): {err_msg}")
         return False
 
 def main():

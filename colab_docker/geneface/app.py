@@ -24,16 +24,28 @@ def get_model():
 
     if not os.path.exists(MODEL_DIR):
         print("[GeneFace++] GeneFace++ repo not found, attempting clone...")
-        subprocess.run(
-            ["git", "clone", "--depth", "1", "https://github.com/yerfor/GeneFacePlusPlus.git", MODEL_DIR],
-            check=True, capture_output=True
-        )
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", "https://github.com/yerfor/GeneFacePlusPlus.git", MODEL_DIR],
+                check=True, capture_output=True, timeout=120
+            )
+        except Exception as e:
+            raise RuntimeError(f"GeneFace++ clone failed: {e}")
     sys.path.insert(0, MODEL_DIR)
 
     from utils.commons import run_model
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    audio2motion = torch.jit.load(os.path.join(MODEL_DIR, "checkpoints", "audio2motion.pt"))
-    motion2video = torch.jit.load(os.path.join(MODEL_DIR, "checkpoints", "motion2video.pt"))
+
+    ckpt_dir = os.path.join(MODEL_DIR, "checkpoints")
+    a2m_path = os.path.join(ckpt_dir, "audio2motion.pt")
+    m2v_path = os.path.join(ckpt_dir, "motion2video.pt")
+
+    if not os.path.exists(a2m_path) or not os.path.exists(m2v_path):
+        print(f"[GeneFace++] Checkpoints missing ({a2m_path}, {m2v_path}). Download via B2 not implemented.")
+        raise RuntimeError("Model checkpoints not found. See docs/adr for checkpoint setup.")
+
+    audio2motion = torch.jit.load(a2m_path)
+    motion2video = torch.jit.load(m2v_path)
     if device == "cuda":
         audio2motion = audio2motion.cuda()
         motion2video = motion2video.cuda()

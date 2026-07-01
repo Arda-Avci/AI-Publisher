@@ -21,6 +21,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 RUN /opt/conda/bin/pip install --no-cache-dir \
     flask \
     requests \
+    boto3 \
+    botocore \
     decord \
     einops \
     "kornia==0.5.0" \
