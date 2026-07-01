@@ -1,6 +1,7 @@
 ﻿# Self-contained Dockerfile for audioldm2
 # Generated: no base image dependency
 
+FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
 ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
 ENV HF_HOME="/workspace/hf_cache" TORCH_HOME="/workspace/torch_cache"
 

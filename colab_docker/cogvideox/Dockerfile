@@ -1,6 +1,7 @@
 ﻿# Self-contained Dockerfile for cogvideox
 # Generated: no base image dependency
 
+FROM pytorch/pytorch:2.8.0-cuda12.6-cudnn9-runtime
 ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
 ENV HF_HOME="/workspace/hf_cache" TORCH_HOME="/workspace/torch_cache"
 

@@ -1,30 +1,40 @@
-# Memory Bank — 2026-06-29
+# Memory Bank — 2026-07-01 (Session 5)
 
-## Son Oturum
-- Konu: Guideline entegrasyonu (3 side-effect, TDE, Fresh Chat, diff.md, Memory_Bank)
-- Değişen dosyalar:
-  - `AGENTS.md` — yeni kurallar eklendi (3 side-effect, TDE, Fresh Chat, Memory_Bank, diff.md)
-  - `AI_GUIDELINES.md` — diff format + diff.md loglama kuralı
-  - `Memory_Bank.md` — yeni dosya (oluşturuldu)
-  - `diff.md` — yeni dosya (boş log)
-  - `.gitignore` — Memory_Bank.md, diff.md, AI_GUIDELINES.md exception eklendi
-  - `PROJECT_STATUS.md` — güncellendi
-  - `TODO.md` — güncellendi
-- commit: (bekliyor)
+## Son Oturum (1 Tem — Dockerfile FROM Fix)
+- **Build #137 analiz**: 23 self-contained Dockerfile build'te fail (3 special model OK)
+- **Root cause**: `FROM` satırı eksik — generator script template'inde unutulmuş
+- **Fix uygulandı**:
+  - `scripts/gen_selfcontained_dockerfiles.ps1` — `$fromMap` eklendi (3 grup)
+  - 23 Dockerfile yeniden yazıldı (Grup A: 2.2.1 / B: 2.6.0 / C: 2.8.0)
+- **Dökümanlar güncellendi**: PROJECT_STATUS.md, TODO.md, diff.md
+- **Durum**: Commit + push bekliyor → GitHub Actions build tetiklenecek
 
-## Mevcut Durum
-- Tüm testler geçiyor
-- tsc --noEmit: 0 hata
-- eslint --quiet: 0 hata (pre-existing hatalar SplitScreenPanel.tsx + fix_all_remaining.mjs)
-- Toplam test: 500+
+## Active Phases
+- **Faz Z3**: Dockerfile FROM fix — 23/23 Dockerfile düzeltildi, push bekliyor
+- **Faz Z**: Modal per-model deploy — 25/25 deploy OK, 4/25 test OK
+- **Faz 4**: Node.js entegrasyonu — başlamadı
+- **Faz 5**: Tüm modellerin döngüsel testi — başlamadı
 
-## Bilinen Sorunlar
-- model_parameters_and_prompts.md gitignored (değişiklikler diskte kalır, commitlenmez)
-- TEST_AND_MOCK_GUARDRAILS.md'ye rağmen mock kullanan testler var (ayrı fazda çözülecek)
-- RunPod eksi bakiye, canlı testler bekliyor
+## Key Architecture (Güncel)
+- GHCR images via `modal.Image.from_registry()` — container iç Flask server'ı başlatılır
+- 25 per-model Modal app: `ai-publisher-{name}` → `generate()` fonksiyonu
+- **Self-contained Dockerfile**: 3 torch grubu (2.2.1/2.6.0/2.8.0), her model kendi FROM + tüm pip'leri içerir
+- **Yeni template:** Thread-based launcher → health immediately responds → module background yüklenir → 503/retry pattern → route proxy via Werkzeug Client
+- Torchaudio fix: `pip install torchaudio==<torch_version> --force-reinstall --no-deps` (ABI mismatch fix)
+- Auth: Bearer Token (`MODAL_AUTH_TOKEN`) — `check_auth` inline
+- Output: Flask response + `_return_file=True` → base64 file döner
+- Auto-scaler: `min_containers=0, scaledown_window=5`
 
-## Sonraki Adım
-1. Barrel exports Python script — services/index.ts + import refactor
-2. Internal constants — magic number/timeout/API URL'leri tek dosyada
-3. Config consolidation — .env mantıksal gruplama
-4. diff.md'ye bu değişiklikleri yaz
+## Critical Issues
+- **Build #137**: 23 model Dockerfile'ında FROM eksik → **FIX UYGULANDI** (push bekliyor)
+- **f5tts**: Dockerfile `torch>=2.5.0` torchaudio ABI kırar → template'de runtime fix var, test edilemedi (GPU cold start ~5+ dk)
+- **Stable Diffusion / heavy video modelleri**: module-level `import diffusers` → Flask başlamaz → thread-launcher ile health çalışır ama `/synthesize` 503 dönerken model yüklenmezse timeout. Çözüm: Modal GPU snapshot veya `min_containers=1`.
+- `modal_apps/` modülü **kullanılmıyor** (inline template)
+- Eski `video_service.py`/`image_service.py` **kullanım dışı**
+
+## Next Steps
+1. ✅ Build #137 hatası teşhis edildi (FROM eksik)
+2. ✅ Dockerfile'lar düzeltildi
+3. ⏳ Commit + push → build #138
+4. ⏳ Build başarısı doğrula
+5. ⏳ Tüm modelleri döngüsel test et

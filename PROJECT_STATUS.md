@@ -1,5 +1,36 @@
 # AI_Publisher Proje Durumu
 
+## ✅ Faz Z3 — Self-Contained Dockerfile FROM Fix (1 Tem 2026)
+
+- **Build #137 analizi**: 3 special model (browser-use/geneface/video-retalking) ✅, 23 self-contained Dockerfile ❌
+- **Root cause**: `scripts/gen_selfcontained_dockerfiles.ps1` template'inde `FROM` satırı eksik (Dockerfile `#` yorum satırı + direkt `ENV` ile başlıyordu, Docker build 1sn'de fail)
+- **Fix**: Script'e `$fromMap` eklendi:
+  - **Grup A** (torch 2.2.1): `FROM pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime` — kokorotts, whisper, xtts, audioldm2, wav2lip, realesrgan, sadtalker, stablediffusion, musetalk, pyramid-flow
+  - **Grup B** (torch 2.6.0): `FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime` — f5tts, animatediff, ltx, wan, hunyuan, mochi, svd, zeroscope, dynamicrafter, videocrafter, lora-trainer
+  - **Grup C** (torch 2.8.0): `FROM pytorch/pytorch:2.8.0-cuda12.6-cudnn9-runtime` — cogvideox, wan25
+- **Tüm 23 Dockerfile yeniden yazıldı** (script çalıştırıldı)
+- **Generator script düzeltildi**: `gen_selfcontained_dockerfiles.ps1` — artık `FROM` satırı template'e dahil
+- **Durum**: Commit + push bekliyor → GitHub Actions build tetiklenecek
+
+## ✅ Faz Z — Modal Per-Model Deploy (30 Haz 2026)
+
+- **RunPod'dan Modal'a tam geçiş başladı**: Tüm modeller artık per-model Modal app'ler olarak deploy edildi
+- **25 model `ai-publisher-{name}`** olarak GHCR imajları üzerinden deploy edildi
+- **Template:** Tek `generate()` fonksiyonu → container Flask server'ı başlatır, route keşfi yapar, input proxy'ler
+- **Kokoro testi başarılı**: `text='Merhaba dunya'` → `/workspace/outputs/kokoro_speech.wav` üretildi (30s)
+- **Whisper testi başarılı**: `file or file_path required` (doğru parametre bekliyor)
+- **Stable Diffusion**: Flask import çok yavaş (health check time-out), health timeout 300s'e çıkarıldı
+- **Torch fix**: transformers >= 4.46 torch >= 2.4 gerektiriyor → `transformers<4.46` pin (torch 2.2.1 korunur)
+- **Key template özellikleri**:
+  - Conda Python yol keşfi (`/opt/conda/bin/python3` öncelikli)
+  - `/workspace/outputs/` dizini otomatik oluşturma
+  - Dinamik Flask route keşfi + geniş fallback listesi
+  - Debug logları (`/tmp/modal_prep.log`, `/tmp/flask_stderr.log`)
+  - Auto-scaler: `min_containers=0, scaledown_window=5`
+- **Eski factory pattern** (`video_service.py`, `image_service.py`) artık kullanılmıyor
+- **`modalClient.ts`**: `MODEL_TO_MODAL` mapping 25 modele güncellendi
+- **Hedef**: Sonraki adımda tüm modeller döngüyle test edilecek
+
 ## ✅ Kod Temizliği — Placeholder Fonksiyonlar, Testler, Tip Güvenliği (29 Haz 2026)
 
 - **Faz 1A**: `sceneChaining.ts` — `qualityScore = 0.9` hardcoded → `fs.stat` bazlı heuristik (`min(size/5MB,1)*0.9+0.1`)
@@ -13,6 +44,9 @@
 - **Faz 3**: `queue.ts` — **7 adet `as any` → typed**: `SplitLayout`, `BrollClip`, `error as Error` pattern
 - **Faz 4**: `tsconfig.json` — `outDir: ./dist`, `declarationDir: ./dist/types`, `.d.ts` cleanup
 - **Faz 5**: `src/types/iyzipay.d.ts` — declare module, `@ts-expect-error` kaldırıldı
+- **Faz 6 (Kod Tekrarları Analizi)**: `scripts/find_duplicate_code.py` yazıldı. 305 dosyada 243 adet tekrar eden kod bloğu başarıyla tespit edildi ve `duplicate_report.md` olarak raporlandı. (Bulgular test suite mock'ları, FFmpeg işlemleri ve polling döngülerinde yoğunlaşıyor).
+- **Faz 6 (Internal Constants - TIMEOUT Migration)**: Proje genelindeki tüm hardcoded `AbortSignal.timeout` milisaniye değerleri (15'ten fazla dosya) `src/constants.ts` altındaki `TIMEOUT` nesnesinden (örn: `TIMEOUT.AI_FAST`, `TIMEOUT.AI_MEDIUM`, `TIMEOUT.AI_SLOW`, `TIMEOUT.AI_STORYBOARD`, `TIMEOUT.AI_QUICK`, `TIMEOUT.AI_EXPRESS`) import edilecek şekilde güncellendi.
+- **Faz 6c (Gelişmiş Sinematik Araçlar)**: `temporalSync.ts` ajanı yazıldı. `videoService.ts` dosyasına 4 yeni sinematik FFmpeg filtresi (`applyFlashbackEffect`, `applyMatchCut`, `applyFadeToBlack`, `applyDeadSilence`) ve `checkHasAudio` helper'ı entegre edildi. Testleri `test_temporalSync.spec.ts` ve `test_cinematicFilters.spec.ts` ile başarıyla doğrulandı.
 - **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` 0 hata, testler başarılı
 
 ### Kalan `as any`'ler (Intentional / Library Limitation)
@@ -466,6 +500,20 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 
 ---
 
+## ✅ Faz P — Barrel Export Refactor (29 Haz 2026)
+
+- **Hedef**: 3+ consumer'lı 12 service için `src/services/index.ts` barrel index oluştur, import'ları barrel'a yönlendir
+- **scripts/generate_barrel.py** — 12 candidate service için `export *` barrel üreteci. `crewai/writerTiers.js` otomatik algılandı.
+- **scripts/update_imports.py** — 8 `routes/*.ts` dosyasında `.js` extension'lu import'lar barrel'a yönlendirildi (prefix hesaplamasıyla)
+- **scripts/fix_missing_barrel.py** — `queue.ts`, `queue-graph.ts` (root seviye, prefix hatası)
+- **scripts/fix_noext_imports.py** — `.js` extension'sız 3 import düzeltildi: `beatSync.ts` (beatAnalyzer + beatSyncEditor), `templates.ts` (templatePromptService)
+- **Conflict çözümü**: `applyBeatSyncCuts` hem `beatSyncEditor.ts` hem `videoService.ts`'de export ediliyor. Barrel'da `beatSyncEditor` için explicit re-export kullanıldı (applyBeatSyncCuts dışarıda bırakıldı). `isolatedModules` uyumluluğu için `export type` ayrıldı.
+- **Toplam etkilenen dosya**: 12 (queue.ts, queue-graph.ts, routes/viral.ts, routes/jobs.ts, routes/aiHelper.ts, routes/characters.ts, routes/colorGrade.ts, routes/credits.ts, routes/scripts.ts, routes/splitScreen.ts, routes/beatSync.ts, routes/templates.ts)
+- **Doğrulama**: `tsc --noEmit` 0 hata, `eslint --quiet` 0 hata, tüm testler geçiyor
+- **Not**: `lib/differentiate.ts` barrel dışı tutuldu (tek consumer, direct import korundu). script çalışmadı.
+
+---
+
 ## ✅ Faz M — Model-Specific Prompt Formatting (28 Haz 2026)
 
 - **`src/services/modelPromptBuilder.ts`** — Yeni dosya. `buildModelPrompt()` her model tipi için `model_parameters_and_prompts.md`'deki optimize şablonu uygular (Wan/Hunyuan/CogVideoX/LTX/AnimateDiff/ZeroScope/DynamiCrafter/Mochi/Pyramid-Flow/VideoCrafter/SVD). `modelAcceptsPrompt()` SVD için prompt'u boş döndürür (image-only).
@@ -480,6 +528,56 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **TypeScript**: tsc --noEmit backend 0, frontend 0 hata.
 - **ESLint**: 0 hata.
 
+---
+
+## ✅ Faz 6A — Directory Constants Migration (30 Haz 2026)
+
+- **Hedef**: `'videolar'` / `'uploads'` hardcoded string'leri merkezi `constants.ts`'e taşı
+- **`src/constants.ts`** — Yeni dosya. 22 export grubu: DIRECTORIES, PORTS, FILE_LIMITS, TIMEOUT, RETRY, SCENE_DEFAULTS, AI_DEFAULTS, CREDIT_DEFAULTS, DOCKER_PORTS, IYZICO, CALLBACK, B2_DEFAULTS, RUNPOD, SOCIAL_URLS, YOUTUBE, GEMINI_API, FONTS, CLEANUP, CREDIT_COSTS, PUBLISH, QUEUE, NEO4J, RATE_LIMIT
+- **39 dosyada** `'videolar'` → `DIRECTORIES.VIDEO_OUTPUT`, `'uploads'` → `DIRECTORIES.UPLOADS`
+- **scripts**: `migrate_constants.py`
+- **Doğrulama**: tsc 0 hata, eslint 0 hata
+
+## ✅ Faz 6B — Port Constants Migration (30 Haz 2026)
+
+- 5 dosyada `process.env.PORT || 4000` → `process.env.PORT || PORTS.SERVER`
+- **scripts**: `add_port_constants.py`, `fix_missing_port_imports.py`
+- **Doğrulama**: tsc 0 hata
+
+## ✅ Faz 6C — TIMEOUT Constants Migration (30 Haz 2026)
+
+- `constants.ts` — TIMEOUT genişletildi (HEAVY_GEN, BROWSER_NAV, BROWSER_WAIT, BROWSER_UPLOAD, FFMPEG, EXEC_QUICK, API_FETCH, DOCKER_CHECK, PIPECAT_HEALTH, LORA_CHECK, HEAVY_POLL, POLL_TASK)
+- **33 dosyada** hardcoded timeout değerleri → `TIMEOUT.*` (toplam 60 dosyada TIMEOUT import'ı var)
+- **scripts**: `migrate_timeouts.py`
+- **Doğrulama**: tsc 0 hata, eslint 0 hata
+
+## ✅ Faz 6D — Kalan Constants Migration (30 Haz 2026)
+
+- **FILE_LIMITS**: 5 dosyada `500*1024*1024` → `MAX_VIDEO_UPLOAD`, `10*1024*1024` → `MAX_CHARACTER_IMAGE`
+- **RETRY**: 2 dosyada `maxRetries=60` → `INPAINT_POLL`, `maxRetries=120` → `V2V_POLL`
+- **CREDIT_DEFAULTS**: `db.ts` SQL string'lerinde `10000` → template literal `${CREDIT_DEFAULTS.ADMIN_SEED_CREDITS}`
+- **RATE_LIMIT**: `middleware/rate-limit.ts`'de `windowMs: 60*1000` → `RATE_LIMIT.HEAVY_WINDOW_MS`, `15*60*1000` → `AUTH_WINDOW_MS`
+- **DOCKER_PORTS**: `lib/docker-host.ts`'de 26 adet `port: 50xx` → `DOCKER_PORTS.*`
+- **scripts**: `migrate_constants_6d.py`, `fix_db_credits.py`, `fix_rate_limit_import.py`, `fix_import_paths_6d.py`
+- **Doğrulama**: tsc 0 hata, eslint 0 hata
+- **Kalan (constants.ts'de tanımlı ama kullanılmayan)**: AI_DEFAULTS, B2_DEFAULTS, CLEANUP, CREDIT_COSTS, NEO4J, SCENE_DEFAULTS, SOCIAL_URLS
+
+## ✅ Faz 7A — .env.example Reorganizasyonu (30 Haz 2026)
+
+- `.env.example` 23 mantıksal bölüme ayrıldı (CORE, ENCRYPTION, DEPLOYMENT, DATABASE, AI PROVIDERS, B2, RUNPOD, CLOUD VIDEO API, GOOGLE VEO, IYZICO, SMTP, vb.)
+- Her bölüm açıklama satırı + env değişkenleri + isteğe bağlı varsayılan değerler
+- **Doğrulama**: Sadece dokümantasyon değişikliği, kod etkilenmedi
+
+## ✅ Faz 7B — src/env.ts Minimal Env Wrapper (30 Haz 2026)
+
+- **`src/env.ts`** — Yeni dosya. Typed env accessor'lar + `requiredEnv()` helper
+- Production'da SESSION_SECRET, ENCRYPTION_KEY validate edilir (missing → throw)
+- `env.PORT` → defaults to `PORTS.SERVER` (4000)
+- `env.CALLBACK_TOKEN` → defaults to `CALLBACK.DEFAULT_TOKEN`
+- Boolean env'ler (MOCK_COLAB, HEADLESS, DISABLE_RATE_LIMIT) otomatik parse
+- **NOT**: Varolan `process.env.X`'leri değiştirmez. Sadece yeni kodda kullanılabilir.
+- **Doğrulama**: tsc 0 hata, eslint 0 hata
+
 ## Genel Durum
 
 | Başlık | Detay |
@@ -487,8 +585,8 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.5 (Code Audit 25/25 sorun çözüldü) |
-| Sürüm | 0.7.5-dev |
+| Faz | v7.6 (Constants migration + env.ts, 6 faz tamamlandı) |
+| Sürüm | 0.7.6-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 
