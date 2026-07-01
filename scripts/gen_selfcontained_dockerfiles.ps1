@@ -70,7 +70,7 @@ $models = @(
     # Group A — torch 2.2.1
     @{Name="kokorotts"; Group="A"; Cmd='["/opt/conda/bin/python","-u","runpod_handler.py"]'; Extra='RUN pip install kokoro soundfile munch'; CopyRunpod=$true; Clone=$false},
     @{Name="whisper"; Group="A"; Cmd='["/opt/conda/bin/python","-u","runpod_handler.py"]'; Extra='RUN pip install faster-whisper openai-whisper'; CopyRunpod=$true; Clone=$false},
-    @{Name="xtts"; Group="A"; Cmd='["/opt/conda/bin/python","-u","runpod_handler.py"]'; Extra='RUN apt-get install -y --no-install-recommends rubberband-cli && rm -rf /var/lib/apt/lists/*\nRUN pip install coqui-tts edge-tts openai pyrubberband soundfile'; CopyRunpod=$true; Clone=$false},
+    @{Name="xtts"; Group="A"; Cmd='["/opt/conda/bin/python","-u","runpod_handler.py"]'; Extra='RUN apt-get update && apt-get install -y --no-install-recommends rubberband-cli && rm -rf /var/lib/apt/lists/*\nRUN pip install coqui-tts edge-tts openai pyrubberband soundfile'; CopyRunpod=$true; Clone=$false},
     @{Name="audioldm2"; Group="A"; Cmd='["/opt/conda/bin/python","-u","runpod_handler.py"]'; Extra=$null; CopyRunpod=$true; Clone=$false},
     @{Name="wav2lip"; Group="A"; Cmd='["/opt/conda/bin/python","-u","runpod_handler.py"]'; Extra='RUN pip install face_recognition face_recognition_models opencv-python-headless librosa\nRUN curl -sL "https://github.com/Rudrabha/Wav2Lip/archive/master.tar.gz" | tar -xz -C /app && mv /app/Wav2Lip-master /app/Wav2Lip && sed -i "s/parse_args()/parse_args(args=[])/" /app/Wav2Lip/inference.py'; CopyRunpod=$true; Clone=$false},
     @{Name="realesrgan"; Group="A"; Cmd='["/opt/conda/bin/python","-u","app.py"]'; Extra='RUN pip install --no-cache-dir --force-reinstall "numpy<2.0.0" realesrgan flask gunicorn'; CopyRunpod=$false; Clone=$false},
