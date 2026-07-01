@@ -31,9 +31,10 @@ const PLATFORM_COLORS: Record<string, string> = {
 
 interface TrendPanelProps {
   onApplyTrend?: (trend: TrendItem, enhancedPrompt: string, trendContext: string) => void;
+  masterPrompt?: string;
 }
 
-export function TrendPanel({ onApplyTrend }: TrendPanelProps) {
+export function TrendPanel({ onApplyTrend, masterPrompt }: TrendPanelProps) {
   const [trends, setTrends] = useState<TrendItem[]>([]);
   const [summary, setSummary] = useState<TrendSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -165,7 +166,7 @@ export function TrendPanel({ onApplyTrend }: TrendPanelProps) {
       const res = await fetch('/api/v1/trends/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trend: item, masterPrompt: '' }),
+        body: JSON.stringify({ trend: item, masterPrompt: masterPrompt || '' }),
       });
       if (!res.ok) throw new Error('Trend uygulanamadı');
       const data = await res.json();

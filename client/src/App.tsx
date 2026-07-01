@@ -999,7 +999,7 @@ export default function App() {
                       onShowToast={(msg, type) => window.showToast?.(type as any, 'Yayın Planlama', msg)}
                     />
                   )}
-                  {mainTab === 'Trendler' && <TrendPanel onApplyTrend={handleApplyTrend} />}
+                  {mainTab === 'Trendler' && <TrendPanel onApplyTrend={handleApplyTrend} masterPrompt={masterPrompt} />}
                   {mainTab === 'Hikaye Tahtası' && (
                     <StoryboardPanel language={language} />
                   )}
