@@ -54,48 +54,41 @@ def _ensure_weights(model_name: str) -> Path:
     return model_dir
 
 
-def _make_generate(model_name: str):
-    image = IMAGES[model_name]
-    gpu = GPU_CONFIG.get(model_name, "A10")
+def _run_generate(model_name: str, prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    try:
+        _ensure_weights(model_name)
+    except Exception as e:
+        return {"status": "error", "error": f"Weight load failed: {e}", "model": model_name}
 
-    @app.function(
-        image=image,
-        gpu=gpu,
-        volumes={str(VOLUME_PATH): models_volume},
-        secrets=ALL_SECRETS,
-        timeout=600,
-        min_containers=0,
-        serialized=True,
-    )
-    def generate(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
-        try:
-            _ensure_weights(model_name)
-        except Exception as e:
-            return {"status": "error", "error": f"Weight load failed: {e}", "model": model_name}
+    os.environ["HF_HOME"] = str(VOLUME_PATH / "hf_cache")
+    os.environ["B2_KEY_ID"] = b2_key_id
+    os.environ["B2_APPLICATION_KEY"] = b2_key
 
-        os.environ["HF_HOME"] = str(VOLUME_PATH / "hf_cache")
-        os.environ["B2_KEY_ID"] = b2_key_id
-        os.environ["B2_APPLICATION_KEY"] = b2_key
+    sys.path.insert(0, "/app")
+    try:
+        import app as model_app
+    except ImportError:
+        return {"status": "error", "error": "app.py not found in image", "model": model_name}
 
-        sys.path.insert(0, "/app")
-        try:
-            import app as model_app
-        except ImportError:
-            return {"status": "error", "error": "app.py not found in image", "model": model_name}
+    if not hasattr(model_app, "generate"):
+        return {"status": "error", "error": "app.py has no generate() function", "model": model_name}
 
-        if not hasattr(model_app, "generate"):
-            return {"status": "error", "error": "app.py has no generate() function", "model": model_name}
-
-        args = kwargs.copy()
-        args["prompt"] = prompt
-        result = model_app.generate(**args)
-        return {"status": "completed", "result": result, "model": model_name}
-
-    return generate
+    args = kwargs.copy()
+    args["prompt"] = prompt
+    result = model_app.generate(**args)
+    return {"status": "completed", "result": result, "model": model_name}
 
 
-generate_stablediffusion = _make_generate("stablediffusion")
-generate_realesrgan = _make_generate("realesrgan")
+@app.function(name="stablediffusion", image=IMAGES["stablediffusion"], gpu=GPU_CONFIG.get("stablediffusion", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALL_SECRETS, timeout=600, min_containers=0)
+def generate_stablediffusion(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("stablediffusion", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="realesrgan", image=IMAGES["realesrgan"], gpu=GPU_CONFIG.get("realesrgan", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALL_SECRETS, timeout=600, min_containers=0)
+def generate_realesrgan(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("realesrgan", prompt, b2_key_id, b2_key, **kwargs)
 
 
 @modal.fastapi_endpoint(method="POST")

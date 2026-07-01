@@ -95,61 +95,102 @@ def _ensure_weights(model_name: str) -> Path:
     return model_dir
 
 
-def _make_generate(model_name: str):
-    """Factory: create a Modal function for each video model."""
-    image = IMAGES[model_name]
-    gpu = GPU_CONFIG.get(model_name, "A100")
+def _run_generate(model_name: str, prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    try:
+        _ensure_weights(model_name)
+    except Exception as e:
+        return {"status": "error", "error": f"Weight load failed: {e}", "model": model_name}
 
-    @app.function(
-        image=image,
-        gpu=gpu,
-        volumes={str(VOLUME_PATH): models_volume},
-        secrets=ALl_SECRETS,
-        timeout=900,
-        min_containers=0,
-        serialized=True,
-    )
-    def generate(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
-        try:
-            weights_dir = _ensure_weights(model_name)
-        except Exception as e:
-            return {"status": "error", "error": f"Weight load failed: {e}", "model": model_name}
+    os.environ["HF_HOME"] = str(VOLUME_PATH / "hf_cache")
+    os.environ["TORCH_HOME"] = str(VOLUME_PATH / "torch_cache")
+    os.environ["B2_KEY_ID"] = b2_key_id
+    os.environ["B2_APPLICATION_KEY"] = b2_key
 
-        os.environ["HF_HOME"] = str(VOLUME_PATH / "hf_cache")
-        os.environ["TORCH_HOME"] = str(VOLUME_PATH / "torch_cache")
-        os.environ["B2_KEY_ID"] = b2_key_id
-        os.environ["B2_APPLICATION_KEY"] = b2_key
+    sys.path.insert(0, "/app")
+    try:
+        import app as model_app
+    except ImportError:
+        return {"status": "error", "error": "app.py not found in image", "model": model_name}
 
-        # Import app.py from the Docker image (it's at /app/app.py)
-        sys.path.insert(0, "/app")
-        try:
-            import app as model_app
-        except ImportError:
-            return {"status": "error", "error": "app.py not found in image", "model": model_name}
+    if not hasattr(model_app, "generate"):
+        return {"status": "error", "error": "app.py has no generate() function", "model": model_name}
 
-        if not hasattr(model_app, "generate"):
-            return {"status": "error", "error": "app.py has no generate() function", "model": model_name}
-
-        args = kwargs.copy()
-        args["prompt"] = prompt
-        result = model_app.generate(**args)
-        return {"status": "completed", "result": result, "model": model_name}
-
-    return generate
+    args = kwargs.copy()
+    args["prompt"] = prompt
+    result = model_app.generate(**args)
+    return {"status": "completed", "result": result, "model": model_name}
 
 
-generate_wan = _make_generate("wan")
-generate_wan25 = _make_generate("wan25")
-generate_cogvideox = _make_generate("cogvideox")
-generate_hunyuan = _make_generate("hunyuan")
-generate_ltx = _make_generate("ltx")
-generate_mochi = _make_generate("mochi")
-generate_animatediff = _make_generate("animatediff")
-generate_dynamicrafter = _make_generate("dynamicrafter")
-generate_pyramidflow = _make_generate("pyramidflow")
-generate_svd = _make_generate("svd")
-generate_videocrafter = _make_generate("videocrafter")
-generate_zeroscope = _make_generate("zeroscope")
+@app.function(name="wan", image=IMAGES["wan"], gpu=GPU_CONFIG.get("wan", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_wan(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("wan", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="wan25", image=IMAGES["wan25"], gpu=GPU_CONFIG.get("wan25", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_wan25(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("wan25", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="cogvideox", image=IMAGES["cogvideox"], gpu=GPU_CONFIG.get("cogvideox", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_cogvideox(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("cogvideox", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="hunyuan", image=IMAGES["hunyuan"], gpu=GPU_CONFIG.get("hunyuan", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_hunyuan(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("hunyuan", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="ltx", image=IMAGES["ltx"], gpu=GPU_CONFIG.get("ltx", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_ltx(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("ltx", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="mochi", image=IMAGES["mochi"], gpu=GPU_CONFIG.get("mochi", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_mochi(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("mochi", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="animatediff", image=IMAGES["animatediff"], gpu=GPU_CONFIG.get("animatediff", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_animatediff(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("animatediff", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="dynamicrafter", image=IMAGES["dynamicrafter"], gpu=GPU_CONFIG.get("dynamicrafter", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_dynamicrafter(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("dynamicrafter", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="pyramidflow", image=IMAGES["pyramidflow"], gpu=GPU_CONFIG.get("pyramidflow", "A100"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_pyramidflow(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("pyramidflow", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="svd", image=IMAGES["svd"], gpu=GPU_CONFIG.get("svd", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_svd(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("svd", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="videocrafter", image=IMAGES["videocrafter"], gpu=GPU_CONFIG.get("videocrafter", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_videocrafter(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("videocrafter", prompt, b2_key_id, b2_key, **kwargs)
+
+
+@app.function(name="zeroscope", image=IMAGES["zeroscope"], gpu=GPU_CONFIG.get("zeroscope", "A10"),
+    volumes={str(VOLUME_PATH): models_volume}, secrets=ALl_SECRETS, timeout=900, min_containers=0)
+def generate_zeroscope(prompt: str, b2_key_id: str, b2_key: str, **kwargs) -> dict:
+    return _run_generate("zeroscope", prompt, b2_key_id, b2_key, **kwargs)
 
 
 @modal.fastapi_endpoint(method="POST")
