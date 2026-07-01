@@ -4,37 +4,76 @@ import cv2
 import torch
 import numpy as np
 import base64
-from flask import Flask, request, jsonify, send_file
-from diffusers import DiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image
-from diffusers.utils import load_image
 
-# transformers v5+ monkey patch
+# transformers v5+ monkey patch — diffusers import'tan ÖNCE uygulanmalı
 try:
     import transformers
+    import importlib
+    def _patched_version(name):
+        if name.lower() == "torch": return "2.4.0"
+        return importlib.metadata.version(name)
+    importlib.metadata.version = _patched_version
+    torch.__version__ = "2.4.0"
+
+    if not hasattr(torch, "get_default_device"):
+        torch.get_default_device = lambda: torch.device("cpu")
+
+    import torch.nn as nn
+    if not hasattr(nn, "RMSNorm"):
+        class RMSNorm(nn.Module):
+            def __init__(self, normalized_shape, eps=1e-8, elementwise_affine=True, **kw):
+                super().__init__()
+                self.eps = eps
+                dim = normalized_shape if isinstance(normalized_shape, int) else normalized_shape[-1]
+                self.weight = nn.Parameter(torch.ones(dim)) if elementwise_affine else None
+            def forward(self, x):
+                return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps) * (self.weight if self.weight is not None else 1.0)
+        nn.RMSNorm = RMSNorm
+
+    import torch.nn.functional as F
+    _orig_sdpa = F.scaled_dot_product_attention
+    def _patched_sdpa(*a, **kw):
+        kw.pop("enable_gqa", None)
+        return _orig_sdpa(*a, **kw)
+    F.scaled_dot_product_attention = _patched_sdpa
+
+    import torch.compiler
+    if not hasattr(torch.compiler, "is_compiling"):
+        torch.compiler.is_compiling = lambda: False
+    if not hasattr(torch.compiler, "is_dynamo_compiling"):
+        torch.compiler.is_dynamo_compiling = lambda: False
+
+    import torch.amp
+    if not hasattr(torch.amp, "GradScaler"):
+        try:
+            from torch.cuda.amp import GradScaler
+            torch.amp.GradScaler = GradScaler
+        except ImportError: pass
+
+    if not hasattr(torch, "uint16"): torch.uint16 = torch.int16
+    if not hasattr(torch, "uint32"): torch.uint32 = torch.int32
+    if not hasattr(torch, "uint64"): torch.uint64 = torch.int64
+
     from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
     from transformers.models.t5.tokenization_t5 import T5Tokenizer
-
     class T5TokenizerFast(PreTrainedTokenizerFast):
         vocab_files_names = {"vocab_file": "spiece.model", "tokenizer_file": "tokenizer.json"}
         model_input_names = ["input_ids", "attention_mask"]
         slow_tokenizer_class = T5Tokenizer
-        
         def __init__(self, vocab_file=None, tokenizer_file=None, eos_token="</s>", unk_token="<unk>", pad_token="<pad>", extra_ids=100, additional_special_tokens=None, **kwargs):
             if extra_ids > 0 and additional_special_tokens is None:
                 additional_special_tokens = [f"<extra_id_{i}>" for i in range(extra_ids)]
-            elif extra_ids > 0 and additional_special_tokens is not None:
-                for i in range(extra_ids):
-                    token = f"<extra_id_{i}>"
-                    if token not in additional_special_tokens:
-                        additional_special_tokens.append(token)
             super().__init__(vocab_file=vocab_file, tokenizer_file=tokenizer_file, eos_token=eos_token, unk_token=unk_token, pad_token=pad_token, additional_special_tokens=additional_special_tokens, **kwargs)
-
     transformers.T5TokenizerFast = T5TokenizerFast
     if hasattr(transformers, "models") and hasattr(transformers.models, "t5"):
         transformers.models.t5.T5TokenizerFast = T5TokenizerFast
-    print("[PATCH] T5TokenizerFast monkey-patch applied successfully in stablediffusion.")
+    print("[PATCH] All monkey-patches applied for stablediffusion.")
 except Exception as e:
-    print(f"[PATCH] T5TokenizerFast patch failed in stablediffusion: {e}")
+    print(f"[PATCH] Patch failed: {e}")
+
+from flask import Flask, request, jsonify, send_file
+from diffusers import DiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionPipeline, StableDiffusionXLPipeline, AutoPipelineForText2Image
+from diffusers.utils import load_image
 
 if not hasattr(torch, "get_default_device"):
     torch.get_default_device = lambda: torch.device("cpu")
