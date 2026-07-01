@@ -1,6 +1,39 @@
 # Yapılacaklar Listesi (TODO)
 
-## 🟢 Faz Z3 — Self-Contained Dockerfile FROM Fix (1 Tem 2026)
+## 🔴 Frontend Eksik Özellikler (28 Haz 2026)
+
+### Faz 1 — Kredi/Ödeme Sistemi (Paralel)
+- [x] CreditsPanel.tsx — Kredi bakiyesi, limit, işlem geçmişi
+- [x] PaymentsPanel.tsx — iyzico ödeme planları ve checkout
+- [x] SubscriptionsPanel.tsx — Abonelik yönetimi
+
+### Faz 2 — Admin Panelleri (Paralel)
+- [x] AuditLogPanel.tsx — Admin denetim kayıtları
+- [x] DockerStatusPanel.tsx — Docker container durumları
+
+### Faz 3 — Editör Özellikleri (Paralel)
+- [x] BeatSyncPanel.tsx — Beat senkronizasyonu
+- [x] BRollPanel.tsx — B-Roll yönetimi
+- [x] CutPanel.tsx — Video kırpma
+- [x] TranscriptEditorPanel.tsx — Transkript düzenleme
+
+### Faz 4 — AI Özellikleri (Paralel)
+- [x] PipecatPanel.tsx — Ses/Video pipeline
+- [x] LoRAPanel.tsx — LoRA model yönetimi
+- [x] DocumentUploadPanel.tsx — Doküman yükleme
+- [x] NichePanel.tsx — Niche profilleri
+
+### Faz 5 — Entegrasyon
+- [x] Progress SSE — zaten mevcut (App.tsx, GalleryPanel, TalkShowEditor)
+
+## ✅ Tamamlananlar
+- [x] Tema altyapısı (d-note'dan uyarlandı)
+- [x] CSRF token login fix
+- [x] ENCRYPTION_KEY eklendi
+- [x] 3 base image stratejisi
+- [x] HF_TOKEN entegrasyonu
+- [x] Prompt parametre eşleştirme
+- [x] B2 dosya yolu fix
 - [x] Build #137 hatası analiz edildi — 23 model Dockerfile'da `FROM` eksik
 - [x] `scripts/gen_selfcontained_dockerfiles.ps1` düzeltildi (`$fromMap` eklendi)
 - [x] Tüm 23 Dockerfile yeniden yazıldı (Grup A: 2.2.1 / B: 2.6.0 / C: 2.8.0)
@@ -68,6 +101,15 @@
 - [ ] `.env.example` RUNPOD_* temizle
 - [ ] `src/constants.ts` RUNPOD* sabitleri kaldır
 - [ ] Eski RunPod kodlarını temizle
+
+## 🟢 Faz Z6 — Tasarım Ajanı Entegrasyonu (01 Tem 2026)
+- [x] Tasarım Ajanı Skill klasör yapısını ve `SKILL.md` yönergelerini oluşturma
+- [x] `analyze_pages.js` betiğini yazma ve mevcut sayfaları tarama
+- [x] `generate_proposal.js` betiğini yazma (Alternatif tasarım teklifleri hazırlama aracı)
+- [x] `apply_design.js` betiğini yazma (Onaylanan tasarımı entegre etme aracı)
+- [/] Örnek sayfa (`LoginPage.tsx`) için 3 alternatifli teklif ve görsel önizleme sayfası oluşturuldu, onay bekleniyor
+
+
 
 ## Referans
 - ADR-008: RunPod → Modal Migration
