@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir \
     && playwright install chromium --with-deps \
     && playwright install-deps chromium
 
-# Copy Flask app
+# Copy Flask app (rebuild marker 2)
 COPY app.py /app/
 ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=5000
