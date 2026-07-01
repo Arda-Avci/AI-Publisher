@@ -11,8 +11,9 @@ import {
   parseColorCommand,
   colorBalance,
   ColorGrade,
-} from '../services/colorGrader.js';
+} from '../services/index.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.post('/grade', async (req, res) => {
     return;
   }
 
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const outputPath = req.body.outputPath || path.join(uploadsDir, `color_${Date.now()}.mp4`);
 
@@ -105,7 +106,7 @@ router.post('/lut', async (req, res) => {
     return;
   }
 
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const outputPath = path.join(uploadsDir, `lut_${Date.now()}.mp4`);
 

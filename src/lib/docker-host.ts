@@ -12,6 +12,7 @@
 
 import { EventEmitter } from 'events';
 import axios from 'axios';
+import { DOCKER_PORTS, TIMEOUT } from '../constants.js';
 
 
 export type DockerService =
@@ -49,32 +50,32 @@ export interface ServiceInfo {
 }
 
 const SERVICE_REGISTRY: Record<DockerService, ServiceInfo> = {
-  cogvideox:    { port: 5001, description: 'Video Generation (CogVideoX)',        healthUrl: '/health' },
-  xtts:         { port: 5002, description: 'TTS / Voice Cloning (XTTS-v2)',       healthUrl: '/health' },
-  audioldm2:    { port: 5003, description: 'Sound FX (AudioLDM2)',                healthUrl: '/health' },
-  wav2lip:      { port: 5004, description: 'Lip Sync (Wav2Lip)',                  healthUrl: '/health' },
-  musetalk:     { port: 5005, description: 'Talking Head (MuseTalk)',             healthUrl: '/health' },
-  whisper:      { port: 5006, description: 'Transcription (Whisper)',             healthUrl: '/health' },
-  stablediffusion: { port: 5007, description: 'Image Generation (SD / Flux)',     healthUrl: '/health' },
-  wan:          { port: 5008, description: 'Video Generation (Wan 2.1)',          healthUrl: '/health' },
-  ltx:          { port: 5009, description: 'Video Generation (LTX-Video)',        healthUrl: '/health' },
-  hunyuan:      { port: 5010, description: 'Video Generation (HunyuanVideo)',      healthUrl: '/health' },
-  kokorotts:    { port: 5011, description: 'TTS (Kokoro-82M)',                    healthUrl: '/health' },
-  svd:          { port: 5012, description: 'Video Generation (SVD-XT)',           healthUrl: '/health' },
-  animatediff:  { port: 5013, description: 'Animation (AnimateDiff)',             healthUrl: '/health' },
-  wan25:        { port: 5014, description: 'Video Generation (Wan2.5)',           healthUrl: '/health' },
-  f5tts:        { port: 5015, description: 'Zero-Shot TTS (F5-TTS)',              healthUrl: '/health' },
-  'lora-trainer': { port: 5016, description: 'LoRA Fine-Tuning',                  healthUrl: '/health' },
-  sadtalker:            { port: 5017, description: 'Talking Head (SadTalker)',                healthUrl: '/health' },
-  'video-retalking':    { port: 5020, description: 'Lip Sync (Video-ReTalking)',             healthUrl: '/health' },
-  zeroscope:            { port: 5019, description: 'Text-to-Video (Zeroscope)',              healthUrl: '/health' },
-  dynamicrafter:  { port: 5018, description: 'Image-to-Video (DynamiCrafter)',     healthUrl: '/health' },
-  mochi:          { port: 5022, description: 'Video Generation (Mochi-1)',           healthUrl: '/health' },
-  'pyramid-flow': { port: 5023, description: 'Video Generation (Pyramid-Flow)',    healthUrl: '/health' },
-   geneface:       { port: 5021, description: '3D Talking Head (GeneFace++)',       healthUrl: '/health' },
-   videocrafter:   { port: 5024, description: 'Video Generation (VideoCrafter)',    healthUrl: '/health' },
-   realesrgan:     { port: 5025, description: '4K Upscale (Real-ESRGAN)',           healthUrl: '/health' },
-   'browser-use':  { port: 5026, description: 'Browser Automation (browser-use)',    healthUrl: '/health' },
+  cogvideox:    { port: DOCKER_PORTS.COGVIDEOX, description: 'Video Generation (CogVideoX)',        healthUrl: '/health' },
+  xtts:         { port: DOCKER_PORTS.XTTS, description: 'TTS / Voice Cloning (XTTS-v2)',       healthUrl: '/health' },
+  audioldm2:    { port: DOCKER_PORTS.AUDIOLDM2, description: 'Sound FX (AudioLDM2)',                healthUrl: '/health' },
+  wav2lip:      { port: DOCKER_PORTS.WAV2LIP, description: 'Lip Sync (Wav2Lip)',                  healthUrl: '/health' },
+  musetalk:     { port: DOCKER_PORTS.MUSETALK, description: 'Talking Head (MuseTalk)',             healthUrl: '/health' },
+  whisper:      { port: DOCKER_PORTS.WHISPER, description: 'Transcription (Whisper)',             healthUrl: '/health' },
+  stablediffusion: { port: DOCKER_PORTS.STABLEDIFFUSION, description: 'Image Generation (SD / Flux)',     healthUrl: '/health' },
+  wan:          { port: DOCKER_PORTS.WAN, description: 'Video Generation (Wan 2.1)',          healthUrl: '/health' },
+  ltx:          { port: DOCKER_PORTS.LTX, description: 'Video Generation (LTX-Video)',        healthUrl: '/health' },
+  hunyuan:      { port: DOCKER_PORTS.HUNYUAN, description: 'Video Generation (HunyuanVideo)',      healthUrl: '/health' },
+  kokorotts:    { port: DOCKER_PORTS.KOKOROTTS, description: 'TTS (Kokoro-82M)',                    healthUrl: '/health' },
+  svd:          { port: DOCKER_PORTS.SVD, description: 'Video Generation (SVD-XT)',           healthUrl: '/health' },
+  animatediff:  { port: DOCKER_PORTS.ANIMATEDIFF, description: 'Animation (AnimateDiff)',             healthUrl: '/health' },
+  wan25:        { port: DOCKER_PORTS.WAN25, description: 'Video Generation (Wan2.5)',           healthUrl: '/health' },
+  f5tts:        { port: DOCKER_PORTS.F5TTS, description: 'Zero-Shot TTS (F5-TTS)',              healthUrl: '/health' },
+  'lora-trainer': { port: DOCKER_PORTS.LORA_TRAINER, description: 'LoRA Fine-Tuning',                  healthUrl: '/health' },
+  sadtalker:            { port: DOCKER_PORTS.SADTALKER, description: 'Talking Head (SadTalker)',                healthUrl: '/health' },
+  'video-retalking':    { port: DOCKER_PORTS.VIDEO_RETALKING, description: 'Lip Sync (Video-ReTalking)',             healthUrl: '/health' },
+  zeroscope:            { port: DOCKER_PORTS.ZEROSCOPE, description: 'Text-to-Video (Zeroscope)',              healthUrl: '/health' },
+  dynamicrafter:  { port: DOCKER_PORTS.DYNAMICRAFTER, description: 'Image-to-Video (DynamiCrafter)',     healthUrl: '/health' },
+  mochi:          { port: DOCKER_PORTS.MOCHI, description: 'Video Generation (Mochi-1)',           healthUrl: '/health' },
+  'pyramid-flow': { port: DOCKER_PORTS.PYRAMID_FLOW, description: 'Video Generation (Pyramid-Flow)',    healthUrl: '/health' },
+   geneface:       { port: DOCKER_PORTS.GENEFACE, description: '3D Talking Head (GeneFace++)',       healthUrl: '/health' },
+   videocrafter:   { port: DOCKER_PORTS.VIDEOCRAFTER, description: 'Video Generation (VideoCrafter)',    healthUrl: '/health' },
+   realesrgan:     { port: DOCKER_PORTS.REALESRGAN, description: '4K Upscale (Real-ESRGAN)',           healthUrl: '/health' },
+   'browser-use':  { port: DOCKER_PORTS.BROWSER_USE, description: 'Browser Automation (browser-use)',    healthUrl: '/health' },
 };
 
 export interface DockerHostState {
@@ -164,7 +165,7 @@ class DockerHostImpl extends EventEmitter implements DockerHostManager {
     const url = this.getUrl(service);
     const info = SERVICE_REGISTRY[service];
     try {
-      await axios.get(`${url}${info.healthUrl}`, { timeout: 5000 });
+      await axios.get(`${url}${info.healthUrl}`, { timeout: TIMEOUT.DOCKER_CHECK });
       this.services[service] = { healthy: true, lastCheck: new Date().toISOString() };
       return true;
     } catch {
@@ -178,7 +179,7 @@ class DockerHostImpl extends EventEmitter implements DockerHostManager {
     for (const [name, info] of Object.entries(SERVICE_REGISTRY)) {
       const url = `${this.getHost()}:${info.port}${info.healthUrl}`;
       try {
-        await axios.get(url, { timeout: 3000 });
+        await axios.get(url, { timeout: TIMEOUT.PIPECAT_HEALTH });
         this.services[name] = { healthy: true, lastCheck: new Date().toISOString() };
         results[name] = true;
       } catch {

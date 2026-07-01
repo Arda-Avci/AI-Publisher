@@ -4,6 +4,7 @@ import { uploadToB2 } from '../lib/b2.js';
 import { db } from '../db.js';
 import path from 'node:path';
 import fs from 'fs-extra';
+import { DIRECTORIES, RETRY } from '../constants.js';
 
 export interface VideoToVideoOptions {
   prompt: string;
@@ -80,7 +81,7 @@ export async function videoToVideo(
     const result = await pollV2VJob(job.id);
 
     const outputUrl = result.output as string;
-    const outDir = path.join(process.cwd(), 'videolar', 'v2v');
+    const outDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, 'v2v');
     await fs.ensureDir(outDir);
     const outputPath = path.join(outDir, `v2v_${Date.now()}.mp4`);
 
@@ -105,7 +106,7 @@ export async function videoToVideo(
   }
 }
 
-async function pollV2VJob(jobId: string, maxRetries = 120, delayMs = 5000): Promise<Record<string, unknown>> {
+async function pollV2VJob(jobId: string, maxRetries = RETRY.V2V_POLL, delayMs = 5000): Promise<Record<string, unknown>> {
   const ENDPOINT = 'https://api.runpod.ai/v2/video-to-video/run';
   for (let i = 0; i < maxRetries; i++) {
     const status = await RunPodClient.getJobStatus(ENDPOINT, jobId);

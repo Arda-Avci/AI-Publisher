@@ -13,6 +13,7 @@ import fs from 'fs-extra';
 import { autoDub } from '../services/autoDubbing.js';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
@@ -61,7 +62,7 @@ router.post('/dub', async (req, res) => {
     }
 
     // Output path
-    const outputPath = path.join(process.cwd(), 'videolar', `dubbed_${userId}_${Date.now()}.mp4`);
+    const outputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `dubbed_${userId}_${Date.now()}.mp4`);
 
     // Start dubbing in background (non-blocking)
     autoDub(resolvedPath, {
@@ -105,7 +106,7 @@ router.get('/status/:jobId', async (_req, res) => {
   try {
     // For now, we just check if the output file exists
     // A full implementation would use a dubbing_jobs table
-    const videolarDir = path.join(process.cwd(), 'videolar');
+    const videolarDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
     let foundFile = '';
 
     try {

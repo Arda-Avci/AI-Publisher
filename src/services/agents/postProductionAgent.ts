@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAIModelChain } from '../../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 
 export interface PostProductionPlan {
   roughCut: {
@@ -78,7 +79,7 @@ export async function createPostProductionPlan(
       generateObject({
         model,
         schema: SceneAnalysisSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `Analyze these ${sceneDescriptions.length} scenes for post-production planning.
 For each scene provide: index, summary, idealDurationSec, pacingLabel (slow/medium/fast), emotionalArc (rising/falling/plateau/climax).
 
@@ -99,7 +100,7 @@ ${sceneDescriptions.map((s, i) => `[${i + 1}] ${s}`).join('\n')}`,
       generateObject({
         model,
         schema: PostProductionSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `You are a professional post-production supervisor planning the edit pipeline: Rough Cut → Fine Cut → Picture Lock.
 
 ${auteurStyle ? `Director's style: ${auteurStyle}` : ''}

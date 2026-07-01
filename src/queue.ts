@@ -1,7 +1,7 @@
 import { getRabbitChannel, VIDEO_JOBS_QUEUE, registerReconnectCallback } from './lib/rabbitmq.js';
 import { checkZenModelsHealth } from './lib/ai-provider.js';
 import { STAGE_KEYS } from './lib/server-i18n.js';
-import { RunPodClient } from './services/runpod.js';
+import { ModalClient } from './services/modalClient.js';
 import { downloadFile } from './lib/download.js';
 import {
   extractReferenceFrame,
@@ -13,12 +13,12 @@ import {
   concatVideosWithCrossfade,
   convertSrtToKineticAss,
   applyColorGradeFilter,
-} from './services/videoService.js';
-import { applySplitScreen, type SplitLayout } from './services/splitScreen.js';
+} from './services/index.js';
+import { applySplitScreen, type SplitLayout } from './services/index.js';
 import { generateTalkingHead } from './services/museTalkService.js';
 import { VideoJob } from './types/job.js';
-import { generateStudioScenes } from './services/aiService.js';
-import { CreditService, getModelCost, SCRIPT_COST, ENHANCE_COST } from './services/creditService.js';
+import { generateStudioScenes } from './services/index.js';
+import { CreditService, getModelCost, SCRIPT_COST, ENHANCE_COST } from './services/index.js';
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -32,15 +32,16 @@ import { Logger } from './lib/logger.js';
 const dockerMutex = new RedisMutex('docker_gpu_lock', Number(process.env.DOCKER_MUTEX_TIMEOUT_MS) || 600000);
 
 import { broadcastProgress } from './lib/redis.js';
-import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/viralHook.js';
-import { insertBroll, type BrollClip } from './services/aiBroll.js';
+import { analyzeHookQuality, generateViralTitles, generateHashtags } from './services/index.js';
+import { insertBroll, type BrollClip } from './services/index.js';
 import { getSceneCharacterWeights, getTrainingProgress } from './services/loraService.js';
+import { DIRECTORIES, PORTS, TIMEOUT } from './constants.js';
 import {
   detectEmotionPeaks,
   generateHighlightSrt,
   formatHighlightSrt,
   applyEmotionCaptionStyle,
-} from './services/emotionCaptions.js';
+} from './services/index.js';
 
 let isProcessing = false;
 
@@ -480,7 +481,7 @@ async function startProduction(job: VideoJob) {
           const colors = ['0x08111F', '0x1A2E40', '0x00F2FE'];
           const { exec } = require('child_process');
           for (let i = 0; i < 3; i++) {
-            const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
+            const coverDest = path.join(process.cwd(), DIRECTORIES.UPLOADS, `cover_${job.id}_${i}.jpg`);
             const cmd = `ffmpeg -y -f lavfi -i "color=c=${colors[i]}:s=1280x720:d=1" -vframes 1 "${coverDest}"`;
             await new Promise<void>((r) => {
               exec(cmd, () => r());
@@ -496,7 +497,7 @@ async function startProduction(job: VideoJob) {
             job_id: job.id,
             callback_url: process.env.PUBLIC_URL
               ? `${process.env.PUBLIC_URL}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-              : `http://localhost:${process.env.PORT || 4000}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`,
+              : `http://localhost:${process.env.PORT || PORTS.SERVER}/api/v1/video/callback?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`,
           });
           Logger.info('[PRODUCTION] Cover generation request sent', {
             status: coverResponse.status,
@@ -504,7 +505,7 @@ async function startProduction(job: VideoJob) {
 
           // 3 kapağı da indir ve yerel sunucuya kaydet
           for (let i = 0; i < 3; i++) {
-            const coverDest = path.join(process.cwd(), 'uploads', `cover_${job.id}_${i}.jpg`);
+            const coverDest = path.join(process.cwd(), DIRECTORIES.UPLOADS, `cover_${job.id}_${i}.jpg`);
             if (await fs.pathExists(coverDest)) {
               Logger.info(
                 `Kapak ${i} lokalde mevcut (Callback ile push edilmiş), indirme atlanıyor.`,
@@ -538,7 +539,7 @@ async function startProduction(job: VideoJob) {
         }
 
         const defaultCoverAbsPath =
-          coverPaths.length > 0 ? path.join(process.cwd(), 'uploads', `cover_${job.id}_0.jpg`) : '';
+          coverPaths.length > 0 ? path.join(process.cwd(), DIRECTORIES.UPLOADS, `cover_${job.id}_0.jpg`) : '';
 
         await db.run('UPDATE video_jobs SET cover_image_path = ?, cover_images = ? WHERE id = ?', [
           defaultCoverAbsPath,
@@ -597,7 +598,7 @@ async function startProduction(job: VideoJob) {
         const sdPrompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
         let generatedPath = '';
         if (process.env.MOCK_COLAB === 'true') {
-          const mockImg = path.join(process.cwd(), 'uploads', `sd_flux_${job.id}.png`);
+          const mockImg = path.join(process.cwd(), DIRECTORIES.UPLOADS, `sd_flux_${job.id}.png`);
           const { exec } = require('child_process');
           await new Promise<void>((r) =>
             exec(`ffmpeg -y -f lavfi -i "color=c=0x08111F:s=1024x1024:d=1" "${mockImg}"`, () =>
@@ -613,11 +614,11 @@ async function startProduction(job: VideoJob) {
                 prompt: sdPrompt,
                 model_type: job.model_type === 'flux' ? 'flux' : 'dreamshaper',
               },
-              { responseType: 'arraybuffer', timeout: 120000 },
+              { responseType: 'arraybuffer', timeout: TIMEOUT.DOWNLOAD },
             );
             const imgPath = path.join(
               process.cwd(),
-              'uploads',
+              DIRECTORIES.UPLOADS,
               `sd_flux_${job.id}_${Date.now()}.png`,
             );
             await fs.writeFile(imgPath, Buffer.from(resp.data));
@@ -655,7 +656,7 @@ async function startProduction(job: VideoJob) {
           break;
         }
 
-        const mS = path.join(process.cwd(), 'videolar', `ms_${job.id}_${scene.scene_number}.mp4`);
+        const mS = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `ms_${job.id}_${scene.scene_number}.mp4`);
 
         // Eğer sahne zaten tamamlanmışsa ve diskte videosu varsa direkt ekle, üretimi atla
         if (scene.status === 'completed' && (await fs.pathExists(mS))) {
@@ -855,7 +856,7 @@ async function startProduction(job: VideoJob) {
         let remoteLogoUrl = '';
         if (job.brand_kit_enabled === 1 && user?.brand_logo_base64) {
           try {
-            const uploadsDir = path.join(process.cwd(), 'uploads');
+            const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
             const logoFileName = `brand_logo_${job.id}.png`;
             const tempLogoFile = path.join(uploadsDir, logoFileName);
             if (!(await fs.pathExists(tempLogoFile))) {
@@ -864,7 +865,7 @@ async function startProduction(job: VideoJob) {
             }
             remoteLogoUrl = process.env.PUBLIC_URL
               ? `${process.env.PUBLIC_URL}/uploads/${logoFileName}`
-              : `http://localhost:${process.env.PORT || 4000}/uploads/${logoFileName}`;
+              : `http://localhost:${process.env.PORT || PORTS.SERVER}/uploads/${logoFileName}`;
           } catch (logoErr) {
             Logger.warn('Remote logo url preparation failed:', logoErr);
           }
@@ -875,7 +876,7 @@ async function startProduction(job: VideoJob) {
           const baseName = path.basename(job.background_music_path);
           remoteMusicUrl = process.env.PUBLIC_URL
             ? `${process.env.PUBLIC_URL}/uploads/${baseName}`
-            : `http://localhost:${process.env.PORT || 4000}/uploads/${baseName}`;
+            : `http://localhost:${process.env.PORT || PORTS.SERVER}/uploads/${baseName}`;
         }
 
         Logger.info("Docker'a sahne gönderiliyor", {
@@ -888,78 +889,10 @@ async function startProduction(job: VideoJob) {
           detectedCharacters: Object.keys(characterImages),
         });
 
-        let taskId = `mock_task_${scene.scene_number}_${Date.now()}`;
         let taskStatus = 'processing';
         let taskData: any = null;
 
-        const b2Credentials = {
-          endpoint_url: process.env.B2_ENDPOINT_URL,
-          key_id: process.env.B2_KEY_ID,
-          application_key: process.env.B2_APPLICATION_KEY,
-          bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET
-        };
-
-        const callbackUrl = process.env.PUBLIC_URL
-          ? `${process.env.PUBLIC_URL}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-          : `http://localhost:${process.env.PORT || 4000}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`;
-
-        let endpointId = '';
         const lowerModel = modelType.toLowerCase();
-        if (lowerModel.includes('cogvideox-5b') || lowerModel === 'cogvideox') {
-          endpointId = process.env.RUNPOD_COGVIDEOX_5B_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('cogvideox-2b')) {
-          endpointId = process.env.RUNPOD_COGVIDEOX_2B_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('hunyuan')) {
-          endpointId = process.env.RUNPOD_HUNYUANVIDEO_ENDPOINT_ID || '';
-        } else if (lowerModel === 'wan' || lowerModel.includes('wan2.1')) {
-          endpointId = process.env.RUNPOD_WAN_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('wan2.5') || lowerModel.includes('wan25')) {
-          endpointId = process.env.RUNPOD_WAN25_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('wan2.2-comfyui') || lowerModel === 'wan2.2-comfyui') {
-          endpointId = process.env.RUNPOD_WAN22_COMFYUI_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('ltx')) {
-          endpointId = process.env.RUNPOD_LTX_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('sadtalker')) {
-          endpointId = process.env.RUNPOD_SADTALKER_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('musetalk')) {
-          endpointId = process.env.RUNPOD_MUSETALK_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('wav2lip')) {
-          endpointId = process.env.RUNPOD_WAV2LIP_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('animatediff')) {
-          endpointId = process.env.RUNPOD_ANIMATEDIFF_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('audioldm2')) {
-          endpointId = process.env.RUNPOD_AUDIOLDM2_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('dynamicrafter')) {
-          endpointId = process.env.RUNPOD_DYNAMICRAFTER_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('f5tts')) {
-          endpointId = process.env.RUNPOD_F5TTS_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('geneface')) {
-          endpointId = process.env.RUNPOD_GENEFACE_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('kokorotts')) {
-          endpointId = process.env.RUNPOD_KOKOROTTS_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('lora-trainer') || lowerModel.includes('loratrainer')) {
-          endpointId = process.env.RUNPOD_LORATRAINER_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('mochi')) {
-          endpointId = process.env.RUNPOD_MOCHI_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('pyramid-flow') || lowerModel.includes('pyramidflow')) {
-          endpointId = process.env.RUNPOD_PYRAMIDFLOW_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('stablediffusion')) {
-          endpointId = process.env.RUNPOD_STABLEDIFFUSION_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('svd')) {
-          endpointId = process.env.RUNPOD_SVD_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('video-retalking') || lowerModel.includes('videoretalking')) {
-          endpointId = process.env.RUNPOD_VIDEORETALKING_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('whisper')) {
-          endpointId = process.env.RUNPOD_WHISPER_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('xtts')) {
-          endpointId = process.env.RUNPOD_XTTS_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('zeroscope')) {
-          endpointId = process.env.RUNPOD_ZEROSCOPE_ENDPOINT_ID || '';
-        } else if (lowerModel.includes('videocrafter')) {
-          endpointId = process.env.RUNPOD_VIDEOCRAFTER_ENDPOINT_ID || '';
-        } else {
-          endpointId = process.env.RUNPOD_DEFAULT_ENDPOINT_ID || '';
-        }
 
         // ── Cloud API bypass: RunPod zinciri atlanir ──
         if (lowerModel.includes('runway') || lowerModel.includes('gen-4')) {
@@ -970,7 +903,6 @@ async function startProduction(job: VideoJob) {
             imageUrl: referenceImageBase64 || sendSourceVideoId || '',
             duration: 5,
           });
-          taskId = `runway_${cloudResult.videoUrl.slice(-20)}`;
           taskStatus = 'success';
           taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         } else if (lowerModel.includes('kling')) {
@@ -981,31 +913,28 @@ async function startProduction(job: VideoJob) {
             imageUrl: referenceImageBase64 || '',
             duration: 5,
           });
-          taskId = `kling_${cloudResult.videoUrl.slice(-20)}`;
           taskStatus = 'success';
           taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         } else if (lowerModel.includes('pika')) {
           const { generateViaAPI } = await import('./services/apiVideoService.js');
           const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
-          taskId = `pika_${cloudResult.videoUrl.slice(-20)}`;
           taskStatus = 'success';
           taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         } else if (lowerModel.includes('luma')) {
           const { generateViaAPI } = await import('./services/apiVideoService.js');
           const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
-          taskId = `luma_${cloudResult.videoUrl.slice(-20)}`;
           taskStatus = 'success';
           taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         } else if (lowerModel.includes('haiper')) {
           const { generateViaAPI } = await import('./services/apiVideoService.js');
           const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
-          taskId = `haiper_${cloudResult.videoUrl.slice(-20)}`;
           taskStatus = 'success';
           taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         } else if (lowerModel.includes('pixverse')) {
           const { generateViaAPI } = await import('./services/apiVideoService.js');
           const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
-          taskId = `pixverse_${cloudResult.videoUrl.slice(-20)}`;
+          taskStatus = 'success';
+          taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
           taskStatus = 'success';
           taskData = { status: 'success', video_url: cloudResult.videoUrl, has_subtitle: !!scene.speech_text };
         }
@@ -1018,7 +947,6 @@ async function startProduction(job: VideoJob) {
             prompt: finalPrompt,
             aspectRatio: '16:9',
           });
-          taskId = `veo31_${job.id}_${scene.scene_number}`;
           taskStatus = 'success';
           taskData = {
             status: 'success',
@@ -1028,89 +956,45 @@ async function startProduction(job: VideoJob) {
           };
           Logger.info(`[Veo31] Scene ${scene.scene_number} generated`, { videoUrl: veoResult.videoUrl });
         } else {
-          if (!endpointId && process.env.MOCK_COLAB !== 'true') {
-            throw new Error(`No RunPod Serverless Endpoint ID mapped for model: ${modelType}`);
-          }
-
           if (process.env.MOCK_COLAB === 'true') {
             Logger.info(`[MOCK] Mocking media generation for Scene ${scene.scene_number}...`);
             taskStatus = 'success';
             taskData = { status: 'success', has_subtitle: scene.speech_text ? true : false };
-          } else {
-            let runpodInput: any;
-          if (modelType === 'Wan2.2-ComfyUI') {
-            const seed = Math.floor(Math.random() * 100000000);
-            runpodInput = {
+          } else if (modelType === 'Wan2.2-ComfyUI') {
+            Logger.info('[PRODUCTION] Sending Wan2.2-ComfyUI workflow to Modal', { scene: scene.scene_number });
+            const comfyPayload: Record<string, any> = {
               workflow: {
                 "3": {
                   "class_type": "KSampler",
                   "inputs": {
-                    "cfg": 6,
-                    "denoise": 1,
-                    "model": ["10", 0],
-                    "positive": ["6", 0],
-                    "negative": ["7", 0],
+                    "cfg": 6, "denoise": 1,
+                    "model": ["10", 0], "positive": ["6", 0], "negative": ["7", 0],
                     "latent_image": ["5", 0],
-                    "sampler_name": "uni_pc",
-                    "scheduler": "normal",
-                    "seed": seed,
-                    "steps": 30
+                    "sampler_name": "uni_pc", "scheduler": "normal",
+                    "seed": Math.floor(Math.random() * 100000000), "steps": 30
                   }
                 },
-                "10": {
-                  "class_type": "WanVideoLoader",
-                  "inputs": {
-                    "model_name": "wan2.1-t2v-14b-fp8.safetensors"
-                  }
-                },
-                "6": {
-                  "class_type": "CLIPTextEncode",
-                  "inputs": {
-                    "clip": ["10", 1],
-                    "text": finalPrompt
-                  }
-                },
-                "7": {
-                  "class_type": "CLIPTextEncode",
-                  "inputs": {
-                    "clip": ["10", 1],
-                    "text": "blurry, low quality, distorted, worst quality, static, web design"
-                  }
-                },
-                "5": {
-                  "class_type": "EmptyWanVideoLatent",
-                  "inputs": {
-                    "width": 832,
-                    "height": 480,
-                    "length": 81,
-                    "batch_size": 1
-                  }
-                },
-                "8": {
-                  "class_type": "WanVideoDecoder",
-                  "inputs": {
-                    "vae": ["10", 2],
-                    "samples": ["3", 0]
-                  }
-                },
-                "9": {
-                  "class_type": "SaveVideo",
-                  "inputs": {
-                    "images": ["8", 0],
-                    "fps": 16,
-                    "filename_prefix": `WanVideo_${job.id}_${scene.scene_number}`
-                  }
-                }
+                "10": { "class_type": "WanVideoLoader", "inputs": { "model_name": "wan2.1-t2v-14b-fp8.safetensors" } },
+                "6": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["10", 1], "text": finalPrompt } },
+                "7": { "class_type": "CLIPTextEncode", "inputs": { "clip": ["10", 1], "text": "blurry, low quality, distorted, worst quality, static, web design" } },
+                "5": { "class_type": "EmptyWanVideoLatent", "inputs": { "width": 832, "height": 480, "length": 81, "batch_size": 1 } },
+                "8": { "class_type": "WanVideoDecoder", "inputs": { "vae": ["10", 2], "samples": ["3", 0] } },
+                "9": { "class_type": "SaveVideo", "inputs": { "images": ["8", 0], "fps": 16, "filename_prefix": `WanVideo_${job.id}_${scene.scene_number}` } }
               }
             };
+            const modalResult = await ModalClient.pollUntilComplete(modelType, comfyPayload, 720000);
+            if (modalResult.status === 'FAILED') {
+              throw new Error(`Modal Wan2.2-ComfyUI job failed: ${modalResult.error || 'Unknown error'}`);
+            }
+            taskStatus = 'success';
+            taskData = { status: 'success', has_subtitle: !!scene.speech_text };
           } else {
-            runpodInput = {
+            const scenePayload: Record<string, any> = {
               job_id: job.id,
               scene_number: scene.scene_number,
               video_prompt: finalPrompt,
               speech_text: scene.speech_text,
               sfx_prompt: scene.sfx_prompt,
-              character_features: '',
               reference_image_base64: referenceImageBase64,
               source_video_id: sendSourceVideoId,
               user_image_path: job.material_path,
@@ -1130,70 +1014,27 @@ async function startProduction(job: VideoJob) {
               subtitle_font_name: user?.brand_font_path ? path.basename(user.brand_font_path, path.extname(user.brand_font_path)) : 'Arial',
               subtitle_anim_style: job.kinetic_subtitles_style || 'bounce',
               lora_weights_path: loraWeightsPath,
-              b2_credentials: b2Credentials,
-              hf_token: process.env.HF_TOKEN || undefined
+              hf_token: process.env.HF_TOKEN || undefined,
             };
+
+            Logger.info('[PRODUCTION] Sending scene to Modal', { modelType, scene: scene.scene_number });
+            const modalResult = await ModalClient.pollUntilComplete(modelType, scenePayload, 720000);
+            if (modalResult.status === 'FAILED') {
+              throw new Error(`Modal job failed: ${modalResult.error || 'Unknown error'}`);
+            }
+            taskStatus = 'success';
+            taskData = { status: 'success', has_subtitle: !!scene.speech_text };
           }
-
-          const runpodRes = await RunPodClient.runJob(endpointId, runpodInput, callbackUrl);
-          taskId = runpodRes.id;
-          Logger.info('[PRODUCTION] RunPod serverless job started', { taskId, status: runpodRes.status });
-
-          await db.run('UPDATE video_scenes SET runpod_job_id = ? WHERE id = ?', [taskId, scene.id]);
-        }   // close else (MOCK_COLAB)
         }   // close else (Veo-31 vs RunPod)
 
-        const tV = path.join(process.cwd(), 'videolar', `tv_${job.id}_${scene.scene_number}.mp4`);
-        const tS = path.join(process.cwd(), 'videolar', `ts_${job.id}_${scene.scene_number}.wav`);
-        const tE = path.join(process.cwd(), 'videolar', `te_${job.id}_${scene.scene_number}.wav`);
+        const tV = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `tv_${job.id}_${scene.scene_number}.mp4`);
+        const tS = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `ts_${job.id}_${scene.scene_number}.wav`);
+        const tE = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `te_${job.id}_${scene.scene_number}.wav`);
         const tSRT = path.join(
           process.cwd(),
-          'videolar',
+          DIRECTORIES.VIDEO_OUTPUT,
           `srt_${job.id}_${scene.scene_number}.srt`,
         );
-
-        await db.run('UPDATE video_jobs SET task_id = ? WHERE id = ?', [taskId, job.id]);
-
-        if (process.env.MOCK_COLAB !== 'true') {
-          let dbSceneStatus = 'pending';
-          const pollStartTime = Date.now();
-          const dynamicTimeoutMs = 720000; // 12 minutes max
-
-          while (dbSceneStatus === 'pending' || dbSceneStatus === 'processing') {
-            await new Promise((resolve) => setTimeout(resolve, 5000));
-
-            // Check cancellation
-            const cancelCheck = await db.get('SELECT status FROM video_jobs WHERE id = ?', [job.id]);
-            if (cancelCheck && cancelCheck.status === 'cancelled') {
-              Logger.info('Polling: Job cancelled by user.');
-              throw new Error('JOB_CANCELLED');
-            }
-
-            const currentScene = await db.get('SELECT status FROM video_scenes WHERE id = ?', [scene.id]);
-            dbSceneStatus = currentScene?.status || 'pending';
-
-            if (dbSceneStatus === 'completed') {
-              Logger.info(`[Queue] RunPod job ${taskId} completed successfully. Proceeding to downloads.`);
-              taskStatus = 'success';
-              taskData = { status: 'success', has_subtitle: true }; // updated after download checks
-              break;
-            }
-
-            if (dbSceneStatus === 'failed') {
-              Logger.error(`[Queue] RunPod job ${taskId} failed.`);
-              taskStatus = 'failed';
-              taskData = { status: 'failed', message: 'RunPod job failed' };
-              break;
-            }
-
-            if (Date.now() - pollStartTime > dynamicTimeoutMs) {
-              Logger.error(`[Queue] RunPod job ${taskId} timed out.`);
-              taskStatus = 'failed';
-              taskData = { status: 'failed', message: 'RunPod job timed out' };
-              break;
-            }
-          }
-        }
 
         Logger.info('Docker görev durumu:', { taskStatus, taskData });
         if (taskStatus === 'error' || taskStatus === 'failed') {
@@ -1263,7 +1104,7 @@ async function startProduction(job: VideoJob) {
         }
 
         if (!srtFile && scene.speech_text && job.has_subtitles !== 0) {
-          srtFile = path.join(process.cwd(), 'videolar', `s_${job.id}_${scene.scene_number}.srt`);
+          srtFile = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `s_${job.id}_${scene.scene_number}.srt`);
           fs.writeFileSync(srtFile, `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`);
         }
 
@@ -1339,7 +1180,7 @@ async function startProduction(job: VideoJob) {
             }
 
             if (job.brand_kit_enabled === 1 && user?.brand_logo_base64) {
-              const uploadsDir = path.join(process.cwd(), 'uploads');
+              const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
               await fs.ensureDir(uploadsDir);
               tempLogoFile = path.join(
                 uploadsDir,
@@ -1520,7 +1361,7 @@ async function startProduction(job: VideoJob) {
             );
             const previewImgPath = path.join(
               process.cwd(),
-              'uploads',
+              DIRECTORIES.UPLOADS,
               `scene_${job.id}_${scene.scene_number}_init.jpg`,
             );
             await fs.writeFile(previewImgPath, imgBuffer);
@@ -1615,7 +1456,7 @@ async function startProduction(job: VideoJob) {
     broadcast(job.id, { stageKey: 'stageFinalMontage', percent: 90 });
 
     const fName = `film_${job.id}_${Date.now()}.mp4`;
-    let fPath = path.join(process.cwd(), 'videolar', fName);
+    let fPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, fName);
 
     if (process.env.MOCK_COLAB === 'false') {
       Logger.info('Sahneler demuxer concat (-c copy) ile birleştiriliyor...', { finalScenes });
@@ -1662,7 +1503,7 @@ async function startProduction(job: VideoJob) {
 
       try {
         const { autoCutVideo } = await import('./services/autoEditor.js');
-        const cutOutputPath = path.join(process.cwd(), 'videolar', `cut_${fName}`);
+        const cutOutputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `cut_${fName}`);
         const preset = job.auto_cut_preset || 'silence';
         await autoCutVideo(fPath, {
           silenceThresholdDb: preset === 'silence' ? -40 : -35,
@@ -1697,7 +1538,7 @@ async function startProduction(job: VideoJob) {
     // S5+: Video özgünleştirme (differentiation) filtrelerini uygula
     if (job.differentiation_layout === 1) {
       const differentiatedName = `diff_${fName}`;
-      const differentiatedPath = path.join(process.cwd(), 'videolar', differentiatedName);
+      const differentiatedPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, differentiatedName);
       Logger.info('Video özgünleştirme filtreleri uygulanıyor...', { fPath, differentiatedPath });
       try {
         await applyVideoDifferentiationFilters(fPath, differentiatedPath, false); // false for horizontal
@@ -1717,9 +1558,9 @@ async function startProduction(job: VideoJob) {
       ]);
       broadcast(job.id, { stageKey: STAGE_KEYS.SPLIT_SCREEN, percent: 91 });
       try {
-        const splitOutputPath = path.join(process.cwd(), 'videolar', `split_${fName}`);
+        const splitOutputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `split_${fName}`);
         // Secondary video path: use the first scene's video as secondary source if not provided
-        const secondaryVideo = path.join(process.cwd(), 'videolar', `ms_${job.id}_1.mp4`);
+        const secondaryVideo = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `ms_${job.id}_1.mp4`);
         await applySplitScreen(
           fPath,
           secondaryVideo,
@@ -1746,16 +1587,16 @@ async function startProduction(job: VideoJob) {
         const user: any = await db.get('SELECT personal_avatar_base64 FROM users WHERE id = ?', [
           job.user_id,
         ]);
-        const faceImagePath = path.join(process.cwd(), 'uploads', `musetalk_face_${job.id}.jpg`);
+        const faceImagePath = path.join(process.cwd(), DIRECTORIES.UPLOADS, `musetalk_face_${job.id}.jpg`);
         if (user?.personal_avatar_base64) {
           const b64 = user.personal_avatar_base64.replace(/^data:image\/\w+;base64,/, '');
           await fs.writeFile(faceImagePath, Buffer.from(b64, 'base64'));
         }
-        const audioPath = path.join(process.cwd(), 'videolar', `ts_${job.id}_1.wav`);
+        const audioPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `ts_${job.id}_1.wav`);
         if ((await fs.pathExists(faceImagePath)) && (await fs.pathExists(audioPath))) {
           const result = await generateTalkingHead({ faceImagePath, audioPath });
           if (result.success && result.outputPath) {
-            const musetalkOutputPath = path.join(process.cwd(), 'videolar', `musetalk_${fName}`);
+            const musetalkOutputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `musetalk_${fName}`);
             await fs.move(result.outputPath, musetalkOutputPath, { overwrite: true });
             // MuseTalk output becomes new primary, original becomes secondary
             await applySplitScreen(musetalkOutputPath, fPath, fPath, '50/50', 'top');
@@ -1798,7 +1639,7 @@ async function startProduction(job: VideoJob) {
           userEndScreen.personal_avatar_base64,
           false,
         );
-        const endAppliedPath = path.join(process.cwd(), 'videolar', `end_${fName}`);
+        const endAppliedPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `end_${fName}`);
         await applyEndScreen(fPath, endScreenPath, endAppliedPath, false);
         finalHorizontalPath = endAppliedPath;
         Logger.info(`End screen uygulandı: ${endAppliedPath}`);
@@ -1817,7 +1658,7 @@ async function startProduction(job: VideoJob) {
       broadcast(job.id, { stageKey: 'stageShortsConversion', percent: 95 });
 
       const dName = `shorts_${fName}`;
-      const dPath = path.join(process.cwd(), 'videolar', dName);
+      const dPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, dName);
 
       const t1 = (dur * 0.3).toFixed(2);
       const t1End = (dur * 0.3 + 3).toFixed(2);
@@ -1845,7 +1686,7 @@ async function startProduction(job: VideoJob) {
         Logger.info(`Shorts üretimi tamamlandı: ${dName}`);
 
         try {
-          const pingedPath = path.join(process.cwd(), 'videolar', `pinged_${dName}`);
+          const pingedPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `pinged_${dName}`);
           await addCalloutPings(dPath, pingedPath);
           await fs.move(pingedPath, dPath, { overwrite: true });
           Logger.info(`Callout ping sesleri eklendi: ${dPath}`);
@@ -1864,7 +1705,7 @@ async function startProduction(job: VideoJob) {
               userEndScreen.personal_avatar_base64,
               true,
             );
-            const endAppliedPath = path.join(process.cwd(), 'videolar', `end_${dName}`);
+            const endAppliedPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `end_${dName}`);
             await applyEndScreen(dPath, endScreenPath, endAppliedPath, true);
             await fs.move(endAppliedPath, dPath, { overwrite: true });
             Logger.info('[PRODUCTION] Shorts end screen applied');
@@ -1894,7 +1735,7 @@ async function startProduction(job: VideoJob) {
         const { autoDub } = await import('./services/autoDubbing.js');
         const dubbingOutputPath = path.join(
           process.cwd(),
-          'videolar',
+          DIRECTORIES.VIDEO_OUTPUT,
           `dubbed_${job.id}_${Date.now()}.mp4`,
         );
 
@@ -1963,7 +1804,7 @@ async function startProduction(job: VideoJob) {
 
         const beatSyncOutputPath = path.join(
           process.cwd(),
-          'videolar',
+          DIRECTORIES.VIDEO_OUTPUT,
           `beatsync_${job.id}_${Date.now()}.mp4`,
         );
 
@@ -2044,7 +1885,7 @@ async function startProduction(job: VideoJob) {
           });
           const audioOut = path.join(
             process.cwd(),
-            'videolar',
+            DIRECTORIES.VIDEO_OUTPUT,
             `studio_${job.id}_${Date.now()}.mp4`,
           );
           await enhanceAudio(processedPath, audioOut, {}, (pct: number, msg: string) =>
@@ -2059,7 +1900,7 @@ async function startProduction(job: VideoJob) {
             percent: 97,
             message: 'Göz teması düzeltiliyor...',
           });
-          const gazeOut = path.join(process.cwd(), 'videolar', `gaze_${job.id}_${Date.now()}.mp4`);
+          const gazeOut = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `gaze_${job.id}_${Date.now()}.mp4`);
           await correctGaze(processedPath, gazeOut, true, (pct: number, msg: string) =>
             broadcast(job.id, { stageKey: 'stageEyeContact', percent: pct, message: msg }),
           );
@@ -2074,7 +1915,7 @@ async function startProduction(job: VideoJob) {
           });
           const reframeOut = path.join(
             process.cwd(),
-            'videolar',
+            DIRECTORIES.VIDEO_OUTPUT,
             `reframe_${job.id}_${Date.now()}.mp4`,
           );
           await smartReframe(
@@ -2096,7 +1937,7 @@ async function startProduction(job: VideoJob) {
           const { inpaintObjects } = await import('./services/inpainting.js');
           const inpaintOut = path.join(
             process.cwd(),
-            'videolar',
+            DIRECTORIES.VIDEO_OUTPUT,
             `inpaint_${job.id}_${Date.now()}.mp4`,
           );
           await inpaintObjects(processedPath, [], inpaintOut);
@@ -2197,7 +2038,7 @@ async function startProduction(job: VideoJob) {
           const { generateBroll } = await import('./services/aiBroll.js');
           const brollOutputDir = path.join(
             process.cwd(),
-            'videolar',
+            DIRECTORIES.VIDEO_OUTPUT,
             `broll_${job.id}_${Date.now()}`,
           );
           await fs.ensureDir(brollOutputDir);
@@ -2249,7 +2090,7 @@ async function startProduction(job: VideoJob) {
           }
 
           if (brollClips.length > 0) {
-            const brollOutputPath = path.join(process.cwd(), 'videolar', `brolled_${fName}`);
+            const brollOutputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `brolled_${fName}`);
             await insertBroll(fPath, brollClips, brollOutputPath);
             const originalPath = fPath;
             fPath = brollOutputPath;
@@ -2281,7 +2122,7 @@ async function startProduction(job: VideoJob) {
             message: 'Duygu vurgulu altyazılar ekleniyor...',
           });
 
-          const audioPath = path.join(process.cwd(), 'videolar', `temp_audio_${job.id}.wav`);
+          const audioPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `temp_audio_${job.id}.wav`);
           try {
             await runFFmpegWithFallback([
               {
@@ -2307,10 +2148,10 @@ async function startProduction(job: VideoJob) {
             const transcript = job.transcript_translated || job.transcript_cleaned || '';
             const srtEntries = generateHighlightSrt(transcript, emotionResult.peaks);
             const srtContent = formatHighlightSrt(srtEntries, 0, 2.5);
-            const srtPath = path.join(process.cwd(), 'videolar', `emotion_${job.id}.srt`);
+            const srtPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `emotion_${job.id}.srt`);
             await fs.writeFile(srtPath, srtContent, 'utf-8');
 
-            const emotionOutputPath = path.join(process.cwd(), 'videolar', `emotion_${fName}`);
+            const emotionOutputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `emotion_${fName}`);
             await applyEmotionCaptionStyle(fPath, srtPath, emotionOutputPath);
             const originalPath = fPath;
             fPath = emotionOutputPath;

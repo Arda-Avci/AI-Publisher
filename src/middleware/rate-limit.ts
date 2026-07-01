@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import { RATE_LIMIT } from '../constants.js';
 
 /**
  * Rate limiters for the AI-Publisher API.
@@ -28,7 +29,7 @@ const isRateLimitDisabled = process.env.DISABLE_RATE_LIMIT === 'true';
  * cap them aggressively.
  */
 export const heavyLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: RATE_LIMIT.HEAVY_WINDOW_MS,
   max: isTest || isRateLimitDisabled ? 1000 : 5,
   standardHeaders: true,
   legacyHeaders: false,
@@ -43,7 +44,7 @@ export const heavyLimiter = rateLimit({
  * controls. Higher cap than heavy but still rate-limited.
  */
 export const mediumLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: RATE_LIMIT.HEAVY_WINDOW_MS,
   max: isTest || isRateLimitDisabled ? 1000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
@@ -59,7 +60,7 @@ export const mediumLimiter = rateLimit({
  * EventStream response flushing in some proxies.
  */
 export const sseLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: RATE_LIMIT.HEAVY_WINDOW_MS,
   max: isTest || isRateLimitDisabled ? 1000 : 10,
   standardHeaders: false,
   legacyHeaders: false,
@@ -75,7 +76,7 @@ export const sseLimiter = rateLimit({
  * in once and not worry about the cap.
  */
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: RATE_LIMIT.AUTH_WINDOW_MS,
   max: 10, // 10 failed attempts
   skipSuccessfulRequests: true,
   standardHeaders: true,

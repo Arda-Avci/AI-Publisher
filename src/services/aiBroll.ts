@@ -13,6 +13,7 @@ import fs from 'fs-extra';
 import { dockerHost } from '../lib/docker-host.js';
 import { runFFmpeg, runFFmpegWithFallback, FFmpegCommand } from './videoService.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';;
 
 /**
  * Represents a single B-Roll clip to be inserted.
@@ -65,7 +66,7 @@ export async function generateCogVideoXBroll(
         prompt: keyword,
         duration,
       },
-      timeout: 600000,
+      timeout: TIMEOUT.HEAVY_GEN,
     });
 
     const resultPath = response.data?.output_path || response.data?.video_path;
@@ -77,7 +78,7 @@ export async function generateCogVideoXBroll(
       const writer = fs.createWriteStream(outputPath);
       const axiosStream = await axios.get(resultPath, {
         responseType: 'stream',
-        timeout: 300000,
+        timeout: TIMEOUT.FFMPEG,
       });
       axiosStream.data.pipe(writer);
       await new Promise<void>((res, rej) => {
@@ -132,7 +133,7 @@ export async function generateBroll(
         model: 'CogVideoX-2b',
       },
       {
-        timeout: 600000,
+        timeout: TIMEOUT.HEAVY_GEN,
       },
     );
 
@@ -163,7 +164,7 @@ export async function generateBroll(
 
       try {
         const statusRes = await axios.get(`${cogUrl}/status/${taskId}`, {
-          timeout: 10000,
+          timeout: TIMEOUT.POLL_TASK,
         });
         taskStatus = statusRes.data?.status || 'processing';
         Logger.info(`[aiBroll] Polling #${attempt}`, {
@@ -282,7 +283,7 @@ export async function insertBroll(
   // Simpler approach: use complex filter with trim/segment
 
   // Use a concat demuxer approach with a temp list
-  const concatDir = path.join(process.cwd(), 'videolar', `broll_concat_${Date.now()}`);
+  const concatDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `broll_concat_${Date.now()}`);
   await fs.ensureDir(concatDir);
 
   try {

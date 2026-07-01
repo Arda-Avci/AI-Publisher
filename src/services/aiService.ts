@@ -2,6 +2,7 @@ import { getAIModelChain, getObjectModelChain, getDeepThinkModel } from '../lib/
 import { generateObject } from 'ai';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { z } from 'zod';
+import { TIMEOUT } from '../constants.js';
 import fs from 'fs-extra';
 
 export const StudioSchema = z.object({
@@ -68,7 +69,7 @@ Görevlerin:
         model,
         schema: MarketingSchema,
         system,
-        abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM), // 45 saniye zaman aşımı
         prompt,
       });
     },
@@ -171,7 +172,7 @@ Referans Metin / Transkript: ${transcriptText}${trendBlock}`;
         model,
         schema: StudioSchema,
         system,
-        abortSignal: AbortSignal.timeout(60000), // Sahneler için 60 saniye zaman aşımı
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW), // Sahneler için 60 saniye zaman aşımı
         prompt,
       });
     },
@@ -207,7 +208,7 @@ Yazılacak konuşma metni yaklaşık 150-300 kelime arası, akıcı, bilgilendir
         model,
         schema: z.object({ script: z.string() }),
         system,
-        abortSignal: AbortSignal.timeout(45000), // 45 saniye zaman aşımı
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM), // 45 saniye zaman aşımı
         prompt,
       });
     },
@@ -268,7 +269,7 @@ export async function predictViralScore(
       return generateObject({
         model,
         schema: ViralScoreSchema,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         messages: [
           {
             role: 'user',
@@ -381,7 +382,7 @@ Kurallar:
       return generateObject({
         model,
         schema: z.object({ enhancedPrompt: z.string() }),
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },
@@ -410,7 +411,7 @@ Görevlerin:
       return generateObject({
         model,
         schema: TutorialSchema,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         prompt,
       });
     },
@@ -442,7 +443,7 @@ Görevlerin:
       return generateObject({
         model,
         schema: LandingAssetsSchema,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         prompt,
       });
     },
@@ -472,7 +473,7 @@ Kurallar:
       return generateObject({
         model,
         schema: CustomThemeSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },

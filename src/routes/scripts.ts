@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { ScriptEngine } from '../services/talkShow/scriptEngine.js';
 import { scriptToVideo } from '../services/talkShow/scriptToVideoAdapter.js';
-import { CharacterService } from '../services/characterService.js';
+import { CharacterService } from '../services/index.js';
 import { Logger } from '../lib/logger.js';
 
 export const scriptsRouter = Router();

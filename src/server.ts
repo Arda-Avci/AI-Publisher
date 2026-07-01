@@ -83,6 +83,7 @@ import { documentRouter } from './routes/documentUpload.js';
 import { storyboardRouter } from './services/storyboardRoutes.js';
 import { envPropsRouter } from './routes/envProps.js';
 import dockerRouter from './routes/docker.js';
+import { DIRECTORIES, PORTS } from './constants.js';
 
 // Session tipini genişletelim
 declare module 'express-session' {
@@ -96,7 +97,7 @@ declare module 'express-session' {
 }
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || PORTS.SERVER;
 
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   Logger.error('SESSION_SECRET is not set in production. Security risk!');
@@ -175,8 +176,8 @@ app.use(i18nMiddleware);
 app.use(themeMiddleware);
 
 // Uploads ve videolar dizinlerini statik olarak sun
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-app.use('/videolar', express.static(path.join(process.cwd(), 'videolar')));
+app.use('/uploads', express.static(path.join(process.cwd(), DIRECTORIES.UPLOADS)));
+app.use('/videolar', express.static(path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT)));
 app.use('/exports', express.static(path.join(process.cwd(), 'exports')));
 
 // React build çıktısını serve et

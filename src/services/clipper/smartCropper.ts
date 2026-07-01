@@ -16,6 +16,7 @@ import fs from 'fs-extra';
 import { Worker } from 'worker_threads';
 import { runFFmpeg, getVideoDuration } from '../videoService.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 import type {
   CropAspectRatio,
   FaceBox,
@@ -150,7 +151,7 @@ finally:
     execFile(
       'python',
       ['-c', pythonScript, videoPath, String(timestamp)],
-      { timeout: 15000 },
+      { timeout: TIMEOUT.EXEC_QUICK },
       (error: any, _stdout: string, _stderr: string) => {
         if (error) {
           Logger.warn('[SmartCropper] Python face detection failed:', error.message);

@@ -3,9 +3,10 @@ import multer from 'multer';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
 import { extractText } from '../services/documentParser.js';
+import { FILE_LIMITS } from '../constants.js';
 
 export const documentRouter = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: FILE_LIMITS.MAX_CHARACTER_IMAGE } });
 
 /** POST /api/v1/crew/upload-doc — döküman yükle ve metin çıkar */
 documentRouter.post(

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 export interface Veo31Input {
   imageUrl: string;
@@ -61,7 +62,7 @@ export async function generateVideo(input: Veo31Input): Promise<Veo31Result> {
       Authorization: `Bearer ${VEO_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    timeout: 30000,
+    timeout: TIMEOUT.AI_FAST,
   });
 
   const operation = response.data;
@@ -81,7 +82,7 @@ async function pollOperation(operationName: string): Promise<Veo31Result> {
   while (Date.now() - startTime < VEO_TIMEOUT_MS) {
     const opResponse = await axios.get<Veo31Operation>(`${baseUrl}/${operationName}`, {
       headers: { Authorization: `Bearer ${VEO_API_KEY}` },
-      timeout: 10000,
+      timeout: TIMEOUT.API_FETCH,
     });
 
     const op = opResponse.data;

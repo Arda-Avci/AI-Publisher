@@ -4,6 +4,7 @@ import { Logger } from '../lib/logger.js';
 import { RunPodClient } from './runpod.js';
 import { db } from '../db.js';
 import { uploadToB2 } from '../lib/b2.js';
+import { RETRY } from '../constants.js';
 
 export interface InpaintOptions {
   prompt: string;
@@ -83,7 +84,7 @@ export async function inpaintImage(
   }
 }
 
-async function pollInpaintJob(jobId: string, maxRetries = 60, delayMs = 3000): Promise<Record<string, unknown>> {
+async function pollInpaintJob(jobId: string, maxRetries = RETRY.INPAINT_POLL, delayMs = 3000): Promise<Record<string, unknown>> {
   for (let i = 0; i < maxRetries; i++) {
     const status = await RunPodClient.getJobStatus(INPAINT_ENDPOINT, jobId);
     if (status.status === 'COMPLETED') return status as unknown as Record<string, unknown>;

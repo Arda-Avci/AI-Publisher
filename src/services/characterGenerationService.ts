@@ -23,6 +23,7 @@ import {
   type Gender,
 } from './characterPresets.js';
 import { profileToText } from './characterProfileService.js';
+import { TIMEOUT } from '../constants.js';
 
 // ── 1. Prompt Builder ──────────────────────────────────────────
 
@@ -146,7 +147,7 @@ export async function textToCharacterReference(
         num_inference_steps: 30,
         guidance_scale: 7.5,
       },
-      { timeout: 180000, responseType: 'json' },
+      { timeout: TIMEOUT.FFMPEG, responseType: 'json' },
     );
     if (response.data?.status === 'success' && response.data?.image_base64) {
       return {

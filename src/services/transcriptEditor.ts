@@ -12,6 +12,7 @@ import path from 'path';
 import { runFFmpeg, runFFmpegWithFallback, getVideoDuration } from './videoService.js';
 import { Logger } from '../lib/logger.js';
 import { WhisperWord } from '../types/clipper.js';
+import { DIRECTORIES } from '../constants.js';
 
 export interface TimeRange {
   start: number; // seconds (inclusive)
@@ -214,7 +215,7 @@ export async function assembleVideoSegments(
   }
 
   // Multiple segments — extract each, then concat
-  const tempDir = path.join(process.cwd(), 'videolar', `transcript_edit_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `transcript_edit_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
   try {

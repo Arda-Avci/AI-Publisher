@@ -4,6 +4,7 @@ import { getAIModelChain } from '../../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { validateSceneConsistency } from '../mllmValidator.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 import { storyboardVectorStore } from './vectorStore.js';
 import {
   StoryboardScript,
@@ -61,7 +62,7 @@ async function parseScript(options: StoryboardOptions): Promise<StoryboardScript
       return generateObject({
         model,
         schema: ParserSchema,
-        abortSignal: AbortSignal.timeout(60000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW),
         prompt: `Sen bir storyboard sanatçısısın. Verilen ana konuyu görsel sahnelere ayır.
 
 Ana Konu: ${options.masterPrompt}
@@ -123,7 +124,7 @@ async function convertToScenes(
       return generateObject({
         model,
         schema: SceneConverterSchema,
-        abortSignal: AbortSignal.timeout(90000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_STORYBOARD),
         prompt: `Sen bir video prompt mühendisisin. Storyboard framelerini video üretim modelleri için promptlara dönüştür.
 
 Storyboard:

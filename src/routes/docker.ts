@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
 import axios from 'axios';
+import { TIMEOUT } from '../constants.js';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ const SERVICE_REGISTRY: Record<string, { port: number; description: string; heal
 async function fetchGPUInfo(): Promise<{ gpu: string; vramTotal: number; vramUsed: number } | null> {
   try {
     const host = dockerHost.getHost();
-    const res = await axios.get(`${host}:5001/gpu-info`, { timeout: 5000 });
+    const res = await axios.get(`${host}:5001/gpu-info`, { timeout: TIMEOUT.DOCKER_CHECK });
     if (res.data) {
       return {
         gpu: res.data.gpu_model || res.data.gpu || 'Unknown',
@@ -48,7 +49,7 @@ async function fetchGPUInfo(): Promise<{ gpu: string; vramTotal: number; vramUse
   } catch {
     try {
       const host = dockerHost.getHost();
-      const res = await axios.get(`${host}:5007/gpu-info`, { timeout: 5000 });
+      const res = await axios.get(`${host}:5007/gpu-info`, { timeout: TIMEOUT.DOCKER_CHECK });
       if (res.data) {
         return {
           gpu: res.data.gpu_model || res.data.gpu || 'Unknown',
@@ -92,7 +93,7 @@ router.get('/test-models', async (_req: Request, res: Response) => {
     const start = Date.now();
     try {
       const url = `${host}:${info.port}${info.healthUrl}`;
-      const r = await axios.get(url, { timeout: 10000 });
+      const r = await axios.get(url, { timeout: TIMEOUT.API_FETCH });
       results.push({
         model: name,
         status: r.status === 200 ? 'healthy' : 'degraded',

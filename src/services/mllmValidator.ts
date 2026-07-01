@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 import { getVideoDuration } from './videoService.js';
 import fs from 'fs-extra';
 
@@ -70,7 +71,7 @@ Kurallar:
       return generateObject({
         model,
         schema: ConsistencyReportSchema,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         prompt,
       });
     },

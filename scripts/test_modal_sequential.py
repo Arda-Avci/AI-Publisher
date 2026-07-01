@@ -91,20 +91,20 @@ def test(name):
         elapsed = time.time() - t0
         status = result.get("status", "unknown")
         if status in ("completed", "success"):
-            print(f"  ✅ {name} — OK ({elapsed:.0f}s)")
+            print(f"  [OK] {name} — ({elapsed:.0f}s)")
             return True
         else:
             err = result.get("error", result)
-            print(f"  ❌ {name} — FAIL ({elapsed:.0f}s): {err}")
+            print(f"  [FAIL] {name} — ({elapsed:.0f}s): {err}")
             return False
     except Exception as e:
         elapsed = time.time() - t0
         if "timeout" in str(e).lower():
             try: call.cancel()
             except: pass
-            print(f"  ⏰ {name} — TIMEOUT ({elapsed:.0f}s)")
+            print(f"  [TIMEOUT] {name} — ({elapsed:.0f}s)")
         else:
-            print(f"  💥 {name} — ERROR ({elapsed:.0f}s): {e}")
+            print(f"  [ERROR] {name} — ({elapsed:.0f}s): {e}")
         return False
 
 def main():
@@ -124,9 +124,9 @@ def main():
     for name in models:
         ok = test(name)
         if not ok:
-            print(f"\n❌ {name} FAILED — stopping.")
+            print(f"\n[FAIL] {name} FAILED — stopping.")
             sys.exit(1)
-    print(f"\n✅ All {len(models)} model(s) passed.")
+    print(f"\n[OK] All {len(models)} model(s) passed.")
 
 if __name__ == "__main__":
     main()

@@ -11,7 +11,7 @@ B2_KEY_ID = os.environ.get("B2_KEY_ID", "")
 B2_APP_KEY = os.environ.get("B2_APPLICATION_KEY", "")
 B2_BUCKET = os.environ.get("B2_BUCKET", "ai-publisher-models")
 B2_ENDPOINT = os.environ.get("B2_ENDPOINT_URL", "")
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("hf_token", "")
 
 
 def verify_token(token: str) -> bool:

@@ -53,24 +53,27 @@ GPU_CONFIG = {
 }
 
 MODEL_WEIGHT_DIRS = {
-    "wan": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
-    "wan25": "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers",
-    "cogvideox": "THUDM/CogVideoX-5b",
-    "hunyuan": "hunyuanvideo-community/HunyuanVideo",
-    "ltx": "Lightricks/LTX-Video",
-    "mochi": "genmo/mochi-1-preview",
-    "animatediff": "guoyww/animatediff-motion-adapter-v1-5-2",
-    "dynamicrafter": "DynamiCrafter/dynamicrafter_512_interp_512",
-    "pyramidflow": "pyramid-flow/pyramid-flow",
-    "svd": "stabilityai/stable-video-diffusion-img2vid-xt",
-    "videocrafter": "videocrafter/videocrafter2",
-    "zeroscope": "cerspense/zeroscope_v2_576w",
+    "wan": "",
+    "wan25": "",
+    "cogvideox": "",
+    "hunyuan": "",
+    "ltx": "",
+    "mochi": "",
+    "animatediff": "",
+    "dynamicrafter": "",
+    "pyramidflow": "",
+    "svd": "",
+    "videocrafter": "",
+    "zeroscope": "",
 }
 
 
 def _ensure_weights(model_name: str) -> Path:
     """Check Volume for model weights; download from HF if missing."""
-    hf_repo = MODEL_WEIGHT_DIRS[model_name]
+    hf_repo = MODEL_WEIGHT_DIRS.get(model_name)
+    if not hf_repo:
+        return VOLUME_PATH
+
     model_dir = VOLUME_PATH / "video" / hf_repo
     snapshot_file = model_dir / ".snapshot_done"
 
@@ -80,18 +83,23 @@ def _ensure_weights(model_name: str) -> Path:
     import huggingface_hub
     from . import HF_TOKEN
 
+    hf_token = os.environ.get("HF_TOKEN") or HF_TOKEN or None
+
     print(f"[{model_name}] Weights not in Volume. Downloading from HF: {hf_repo}")
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    huggingface_hub.snapshot_download(
-        repo_id=hf_repo,
-        local_dir=str(model_dir),
-        token=HF_TOKEN or None,
-        max_workers=8,
-    )
-    snapshot_file.touch()
-    models_volume.commit()
-    print(f"[{model_name}] Weights downloaded and committed to Volume.")
+    try:
+        huggingface_hub.snapshot_download(
+            repo_id=hf_repo,
+            local_dir=str(model_dir),
+            token=hf_token,
+            max_workers=8,
+        )
+        snapshot_file.touch()
+        models_volume.commit()
+        print(f"[{model_name}] Weights downloaded and committed to Volume.")
+    except Exception as e:
+        print(f"[{model_name}] Weight download skipped ({e}). Using Docker-bundled weights.")
     return model_dir
 
 
@@ -108,17 +116,27 @@ def _run_generate(model_name: str, prompt: str, b2_key_id: str, b2_key: str, **k
 
     sys.path.insert(0, "/app")
     try:
-        import app as model_app
+        import app as flask_mod
     except ImportError:
         return {"status": "error", "error": "app.py not found in image", "model": model_name}
 
-    if not hasattr(model_app, "generate"):
-        return {"status": "error", "error": "app.py has no generate() function", "model": model_name}
+    if not hasattr(flask_mod, "app"):
+        return {"status": "error", "error": "app.py has no Flask app", "model": model_name}
+
+    route = None
+    for rule in flask_mod.app.url_map.iter_rules():
+        if 'POST' in rule.methods:
+            route = rule.rule
+            break
+    if not route:
+        return {"status": "error", "error": "No POST route in Flask app", "model": model_name}
 
     args = kwargs.copy()
     args["prompt"] = prompt
-    result = model_app.generate(**args)
-    return {"status": "completed", "result": result, "model": model_name}
+    with flask_mod.app.test_client() as client:
+        resp = client.post(route, json=args)
+        result = resp.get_json()
+        return {"status": "completed", "result": result, "model": model_name}
 
 
 @app.function(name="wan", image=IMAGES["wan"], gpu=GPU_CONFIG.get("wan", "A100"),

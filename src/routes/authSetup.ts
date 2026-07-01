@@ -6,6 +6,7 @@ import { Logger } from '../lib/logger.js';
 import { loadServerTranslations, t } from '../lib/server-i18n.js';
 import { registerRoute } from '../lib/routeAlias.js';
 import { requireAuth } from '../middleware/auth.js';
+import { TIMEOUT } from '../constants.js';
 
 const AUTH_DIR = path.join(process.cwd(), '.auth');
 
@@ -204,7 +205,7 @@ async function handleAuthSetup(req: Request, res: Response) {
     const selectors = loggedInSelectors[platform] || [];
     for (const selector of selectors) {
       try {
-        await page.waitForSelector(selector, { state: 'visible', timeout: 120000 });
+        await page.waitForSelector(selector, { state: 'visible', timeout: TIMEOUT.BROWSER_TASK });
         Logger.info(`[Auth] ${platform} login confirmed via selector: ${selector}`);
         await new Promise((r) => setTimeout(r, 2000));
         await (page as any).__authSaveSuccess?.();

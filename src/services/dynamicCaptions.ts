@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 export interface WordTiming {
   word: string;
@@ -208,7 +209,7 @@ export async function applyDynamicCaptions(
         '+faststart',
         outputPath,
       ],
-      { timeout: 300000 },
+      { timeout: TIMEOUT.FFMPEG },
       (err) => {
         if (err) {
           Logger.warn('[dynamicCaptions] FFmpeg failed', err);

@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 import {
   applyVideoDifferentiationFilters,
   applyKineticSubtitles,
@@ -117,7 +118,7 @@ Her operasyon için:
         model,
         schema: EditOperationSchema,
         system,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },
@@ -177,7 +178,7 @@ Her sahne için ayrı ayrı değerlendir. suggestions alanında en az 1 iyileşt
         model,
         schema: SceneScoreSchema,
         system,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },

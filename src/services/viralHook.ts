@@ -13,6 +13,7 @@ import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { z } from 'zod';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 import { extractReferenceFrame } from './videoService.js';
 
 /**
@@ -169,7 +170,7 @@ Respond in Turkish with all fields.`,
       return generateObject({
         model,
         schema: HookQualitySchema,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         messages: [{ role: 'user', content: contentParts }],
       });
     },
@@ -211,7 +212,7 @@ export async function generateViralTitles(
       return generateObject({
         model,
         schema: ViralTitlesSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `Sen profesyonel bir YouTube/TikTok başlık uzmanısın.
 Konu: "${topic}"
 
@@ -267,7 +268,7 @@ export async function generateHashtags(
       return generateObject({
         model,
         schema: HashtagsSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `Sen bir sosyal medya hashtag uzmanısın.
 Platform: ${platformLabel[platform]}
 İçerik: ${content}
@@ -402,7 +403,7 @@ Sadece JSON döndür, açıklama yazma.`,
       return generateObject({
         model,
         schema: ViralContentSchema,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         messages: [{ role: 'user', content: contentParts }],
       });
     },

@@ -8,8 +8,9 @@ import {
   applySplitScreen,
   generateSplitScreenPreview,
   SplitLayout,
-} from '../services/splitScreen.js';
+} from '../services/index.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 export const splitRouter = Router();
 
@@ -21,7 +22,7 @@ async function resolveVideoPath(pathOrJobId: string | undefined, jobId?: number)
   if (jobId) {
     const job: any = await db.get('SELECT final_filename FROM video_jobs WHERE id = ?', [jobId]);
     if (job?.final_filename) {
-      const absPath = path.join(process.cwd(), 'videolar', job.final_filename);
+      const absPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, job.final_filename);
       if (await fs.pathExists(absPath)) return absPath;
     }
   }
@@ -77,7 +78,7 @@ splitRouter.post(
           .status(400)
           .json({ success: false, error: 'primaryVideo ve secondaryVideo gerekli (veya jobId)' });
       }
-      const outPath = outputPath || path.join(process.cwd(), 'uploads', `split_${Date.now()}.mp4`);
+      const outPath = outputPath || path.join(process.cwd(), DIRECTORIES.UPLOADS, `split_${Date.now()}.mp4`);
       await applySplitScreen(
         primaryPath,
         secondaryPath,

@@ -48,6 +48,7 @@ import { z } from 'zod';
 import { dockerHost } from '../lib/docker-host.js';
 
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';;
 
 export interface DubbingOptions {
   sourceLang?: string; // Default 'tr'
@@ -154,7 +155,7 @@ export async function translateTranscript(
 
         schema: TranslateSchema,
 
-        abortSignal: AbortSignal.timeout(60000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW),
 
         prompt: `Translate the following ${sourceName} text to ${targetName}.
 
@@ -213,7 +214,7 @@ export async function synthesizeDubbingAudio(
 
         job_id: `dubbing_${Date.now()}`,
       },
-      { timeout: 300000 },
+      { timeout: TIMEOUT.FFMPEG },
     );
 
     if (response.data?.task_id) {
@@ -225,7 +226,7 @@ export async function synthesizeDubbingAudio(
         await new Promise((r) => setTimeout(r, 5000));
 
         const statusRes = await axios.get(`${xttsUrl}/status/${taskId}`, {
-          timeout: 10000,
+          timeout: TIMEOUT.POLL_TASK,
         });
 
         status = statusRes.data?.status || 'processing';
@@ -241,7 +242,7 @@ export async function synthesizeDubbingAudio(
 
           responseType: 'stream',
 
-          timeout: 120000,
+          timeout: TIMEOUT.DOWNLOAD,
         });
 
         const writer = fs.createWriteStream(outputPath);
@@ -431,7 +432,7 @@ export async function lipSyncDubbing(
     formData.append('audio', audioBlob, path.basename(dubAudioPath));
 
     const response = await axios.post(`${wav2lipUrl}/lip-sync`, formData, {
-      timeout: 600000,
+      timeout: TIMEOUT.HEAVY_GEN,
     });
 
     if (response.data?.task_id) {
@@ -443,7 +444,7 @@ export async function lipSyncDubbing(
         await new Promise((r) => setTimeout(r, 5000));
 
         const statusRes = await axios.get(`${wav2lipUrl}/status/${taskId}`, {
-          timeout: 10000,
+          timeout: TIMEOUT.POLL_TASK,
         });
 
         status = statusRes.data?.status || 'processing';
@@ -459,7 +460,7 @@ export async function lipSyncDubbing(
 
           responseType: 'stream',
 
-          timeout: 300000,
+          timeout: TIMEOUT.FFMPEG,
         });
 
         const writer = fs.createWriteStream(outputPath);
@@ -542,7 +543,7 @@ export async function autoDub(
 
   // Step 3: Synthesize dubbed audio
 
-  const tempAudioDir = path.join(process.cwd(), 'videolar', `dubbing_${Date.now()}`);
+  const tempAudioDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `dubbing_${Date.now()}`);
 
   await fs.ensureDir(tempAudioDir);
 

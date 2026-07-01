@@ -13,6 +13,7 @@ import { validateSceneConsistency, validateFinalVideo } from '../services/mllmVa
 import { generateRAGScript } from '../services/ragScriptGenerator.js';
 import path from 'path';
 import fs from 'fs-extra';
+import { DIRECTORIES } from '../constants.js';
 
 export function registerViMaxRoutes(app: Application): void {
   app.post(
@@ -150,7 +151,7 @@ export function registerViMaxRoutes(app: Application): void {
           scene.speechText || '',
         );
 
-        const finalVideoPath = path.join(process.cwd(), 'videolar', `final_${jobId}.mp4`);
+        const finalVideoPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `final_${jobId}.mp4`);
         const hasFinalVideo = await fs.pathExists(finalVideoPath);
         let finalValidation = null;
         if (hasFinalVideo) {

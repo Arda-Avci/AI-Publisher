@@ -48,16 +48,16 @@ GPU_CONFIG = {
 }
 
 MODEL_WEIGHT_DIRS = {
-    "wav2lip": "Rudrabha/Wav2Lip",
-    "sadtalker": "vinthony/SadTalker",
-    "musetalk": "TMElyralab/MuseTalk",
-    "geneface": "geneface/geneface",
-    "videoretalking": "OpenTalker/video-retalking",
-    "audioldm2": "cvssp/audioldm2",
-    "kokoro": "hexgrad/Kokoro-82M",
-    "f5tts": "f5tts/F5-TTS",
-    "xtts": "coqui/XTTS-v2",
-    "whisper": "openai/whisper-small",
+    "wav2lip": "",
+    "sadtalker": "",
+    "musetalk": "",
+    "geneface": "",
+    "videoretalking": "",
+    "audioldm2": "",
+    "kokoro": "",
+    "f5tts": "",
+    "xtts": "",
+    "whisper": "",
 }
 
 
@@ -74,12 +74,17 @@ def _ensure_weights(model_name: str) -> Path:
 
     import huggingface_hub
 
+    hf_token = os.environ.get("HF_TOKEN")
+
     print(f"[{model_name}] Weights not in Volume. Downloading from HF: {hf_repo}")
     model_dir.mkdir(parents=True, exist_ok=True)
-    huggingface_hub.snapshot_download(repo_id=hf_repo, local_dir=str(model_dir), token=None, max_workers=8)
-    snapshot_file.touch()
-    models_volume.commit()
-    print(f"[{model_name}] Weights committed to Volume.")
+    try:
+        huggingface_hub.snapshot_download(repo_id=hf_repo, local_dir=str(model_dir), token=hf_token, max_workers=8)
+        snapshot_file.touch()
+        models_volume.commit()
+        print(f"[{model_name}] Weights committed to Volume.")
+    except Exception as e:
+        print(f"[{model_name}] Weight download skipped ({e}). Using Docker-bundled weights.")
     return model_dir
 
 
@@ -95,17 +100,27 @@ def _run_generate(model_name: str, text: str, b2_key_id: str, b2_key: str, **kwa
 
     sys.path.insert(0, "/app")
     try:
-        import app as model_app
+        import app as flask_mod
     except ImportError:
         return {"status": "error", "error": "app.py not found in image", "model": model_name}
 
-    if not hasattr(model_app, "generate"):
-        return {"status": "error", "error": "app.py has no generate() function", "model": model_name}
+    if not hasattr(flask_mod, "app"):
+        return {"status": "error", "error": "app.py has no Flask app", "model": model_name}
+
+    route = None
+    for rule in flask_mod.app.url_map.iter_rules():
+        if 'POST' in rule.methods:
+            route = rule.rule
+            break
+    if not route:
+        return {"status": "error", "error": "No POST route in Flask app", "model": model_name}
 
     args = kwargs.copy()
     args["text"] = text
-    result = model_app.generate(**args)
-    return {"status": "completed", "result": result, "model": model_name}
+    with flask_mod.app.test_client() as client:
+        resp = client.post(route, json=args)
+        result = resp.get_json()
+        return {"status": "completed", "result": result, "model": model_name}
 
 
 # GPU model functions — explicit global scope

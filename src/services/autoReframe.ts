@@ -16,6 +16,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
 import type { FFmpegCommand } from './videoService.js';
+import { DIRECTORIES } from '../constants.js';
 
 const __dirnameStr = __dirname;
 
@@ -170,7 +171,7 @@ export async function autoReframeHorizontalToVertical(
   if (trackingMode === 'face') {
     // Extract a frame for face detection
     const { execFile } = require('child_process');
-    const frameDir = path.join(process.cwd(), 'videolar');
+    const frameDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
     await fs.ensureDir(frameDir);
     const tempFrame = path.join(frameDir, `autoreframe_temp_${Date.now()}.png`);
 
@@ -315,7 +316,7 @@ export async function trackFaceAndReframe(videoPath: string, outputPath: string)
 
   // 2. Extract all frames and detect faces per frame using a temporary worker
   const { execFile: exec } = require('child_process') as typeof import('child_process');
-  const frameDir = path.join(process.cwd(), 'videolar', `face_track_${Date.now()}`);
+  const frameDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `face_track_${Date.now()}`);
   await fs.ensureDir(frameDir);
 
   try {

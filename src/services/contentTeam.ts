@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { getObjectModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 import { db } from '../db.js';
 import { StudioSchema, MarketingSchema, generateMarketingCopy } from './aiService.js';
 
@@ -135,7 +136,7 @@ Tasks:
 3. Assign each scene a purpose (hook/setup/conflict/climax/resolution/cta)
 4. Define emotional arc and characters for each scene
 5. Calculate target duration (scenes × 6)`;
-      return generateObject({ model, schema: DirectorPlanSchema, system, abortSignal: AbortSignal.timeout(45000), prompt });
+      return generateObject({ model, schema: DirectorPlanSchema, system, abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM), prompt });
     },
     models, 2, 2000, true,
   );
@@ -173,7 +174,7 @@ For each scene provide:
 - cameraMotion: zoom_in/zoom_out/pan_left/pan_right/breathing/none
 - speaker: speaker tag
 - charactersInScene: all visible characters`;
-      return generateObject({ model, schema: StudioSchema, system, abortSignal: AbortSignal.timeout(60000), prompt });
+      return generateObject({ model, schema: StudioSchema, system, abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW), prompt });
     },
     models, 2, 2000, true,
   );
@@ -207,7 +208,7 @@ For each scene:
 - estimatedGpuSeconds: estimated GPU time
 - parallelizableWithPrevious: can run in parallel with previous scene?
 - requiredModels: which models needed (video/tts/sfx/lipsync/cover)`;
-      return generateObject({ model, schema: ProducerWorkflowSchema, system, abortSignal: AbortSignal.timeout(30000), prompt });
+      return generateObject({ model, schema: ProducerWorkflowSchema, system, abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST), prompt });
     },
     models, 2, 2000, true,
   );
@@ -252,7 +253,7 @@ Evaluation Criteria:
 4. Pacing: fits 6-second constraint?
 
 For each issue specify severity (critical/major/minor) and suggestedFix.`;
-          return generateObject({ model, schema: QualityReportSchema, system, abortSignal: AbortSignal.timeout(30000), prompt });
+          return generateObject({ model, schema: QualityReportSchema, system, abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST), prompt });
         },
         models, 2, 2000, true,
       );

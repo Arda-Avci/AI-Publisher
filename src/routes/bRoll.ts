@@ -6,6 +6,7 @@ import { Logger } from '../lib/logger.js';
 import path from 'path';
 import fs from 'fs-extra';
 import { dockerHost } from '../lib/docker-host.js';
+import { DIRECTORIES } from '../constants.js';
 
 export const bRollRouter = Router();
 
@@ -38,7 +39,7 @@ bRollRouter.post(
       });
 
       const filename = `broll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`;
-      const outputPath = path.join(process.cwd(), 'uploads', filename);
+      const outputPath = path.join(process.cwd(), DIRECTORIES.UPLOADS, filename);
       await fs.writeFile(outputPath, Buffer.from(bRollResp.data));
 
       Logger.info(`[B-Roll] Generated: ${filename} (source: ${response.data.source || 'pexels'})`);
@@ -61,7 +62,7 @@ bRollRouter.post(
 
 bRollRouter.get('/broll/list', requireAuth, async (_req: Request, res: Response) => {
   try {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
     if (!(await fs.pathExists(uploadsDir))) {
       return res.json({ success: true, data: [] });
     }

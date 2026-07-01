@@ -3,15 +3,16 @@ import multer from 'multer';
 import axios from 'axios';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
-import { CharacterService } from '../services/characterService.js';
+import { CharacterService } from '../services/index.js';
 import { Logger } from '../lib/logger.js';
 import { dockerHost } from '../lib/docker-host.js';
+import { FILE_LIMITS, TIMEOUT } from '../constants.js';
 
 export const charactersRouter = Router();
 const characterService = new CharacterService();
 
 const upload = multer({
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: FILE_LIMITS.MAX_CHARACTER_IMAGE },
 });
 
 charactersRouter.get('/', requireAuth, mediumLimiter, async (req: Request, res: Response) => {
@@ -195,7 +196,7 @@ charactersRouter.post(
           avatar_prompt: description,
           style: avatar_style || 'realistic',
         },
-        { timeout: 120000 },
+        { timeout: TIMEOUT.AI_SLOW },
       );
 
       if (response.data?.status === 'success' && response.data?.avatar_base64) {

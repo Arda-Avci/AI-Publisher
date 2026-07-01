@@ -1,8 +1,9 @@
 import axios from 'axios';
 import fs from 'fs';
+import { TIMEOUT } from '../constants.js';
 
 export async function downloadFile(url: string, dest: string): Promise<void> {
-  const res = await axios({ method: 'GET', url, responseType: 'stream', timeout: 120000 });
+  const res = await axios({ method: 'GET', url, responseType: 'stream', timeout: TIMEOUT.DOWNLOAD });
   const w = fs.createWriteStream(dest);
   res.data.pipe(w);
   return new Promise((resolve, reject) => {

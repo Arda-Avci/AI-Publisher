@@ -10,6 +10,7 @@ import { fetchWeeklyDiscussion, discussionToScenes } from '../services/talkShow/
 import { scriptEngine } from './scripts.js';
 import { orchestrateToVideo } from '../services/talkShow/orchestratorToVideo.js';
 import { produceTalkShowVideo } from '../services/talkShow/videoProducer.js';
+import { DIRECTORIES } from '../constants.js';
 
 export const talkShowRouter = Router();
 
@@ -110,7 +111,7 @@ talkShowRouter.post(
       }
 
       const discussion = await fetchWeeklyDiscussion(weekNumber);
-      const outputDir = path.join(process.cwd(), 'videolar');
+      const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
       await fs.ensureDir(outputDir);
       const outputPath = path.join(outputDir, `talkshow_week_${weekNumber}_${Date.now()}.mp4`);
 
@@ -157,7 +158,7 @@ talkShowRouter.post(
       };
 
       const result = await orchestrateTalkShow(input);
-      const outputDir = path.join(process.cwd(), 'videolar');
+      const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
       await fs.ensureDir(outputDir);
       const outputPath = path.join(outputDir, `orchestrate_${Date.now()}.mp4`);
 

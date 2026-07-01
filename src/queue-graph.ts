@@ -6,16 +6,17 @@ import axios from 'axios';
 import { Logger } from './lib/logger.js';
 import { broadcastProgress } from './lib/redis.js';
 import { db } from './db.js';
-import { generateStudioScenes } from './services/aiService.js';
+import { generateStudioScenes } from './services/index.js';
 import { runContentTeam } from './services/contentTeam.js';
-import { RunPodClient } from './services/runpod.js';
+import { ModalClient } from './services/modalClient.js';
 import {
   runFFmpegWithFallback,
   addCalloutPings,
   concatVideosWithCrossfade,
-} from './services/videoService.js';
-import { CreditService, getModelCost } from './services/creditService.js';
+} from './services/index.js';
+import { CreditService, getModelCost } from './services/index.js';
 import type { VideoJob } from './types/job.js';
+import { DIRECTORIES, TIMEOUT } from './constants.js';;
 
 // ── Shared Types ──
 
@@ -98,7 +99,7 @@ async function updateProgress(jobId: number, stageKey: string, percent: number, 
 }
 
 function tempPath(jobId: number, name: string): string {
-  const dir = path.join(process.cwd(), 'videolar');
+  const dir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
   fs.ensureDirSync(dir);
   return path.join(dir, `graph_${jobId}_${name}`);
 }
@@ -106,7 +107,7 @@ function tempPath(jobId: number, name: string): string {
 async function downloadFromUrl(url: string, dest: string): Promise<void> {
   if (await fs.pathExists(dest)) return;
   Logger.info(`[Graph] Downloading ${url} → ${dest}`);
-  const res = await axios({ method: 'GET', url, responseType: 'stream', timeout: 120000 });
+  const res = await axios({ method: 'GET', url, responseType: 'stream', timeout: TIMEOUT.DOWNLOAD });
   const w = fs.createWriteStream(dest);
   res.data.pipe(w);
   await new Promise<void>((resolve, reject) => {
@@ -116,27 +117,9 @@ async function downloadFromUrl(url: string, dest: string): Promise<void> {
   });
 }
 
-function modelToEndpointId(modelType: string): string {
+function modelTypeIsCloud(modelType: string): boolean {
   const lower = (modelType || '').toLowerCase();
-  if (lower.includes('veo-31') || lower.includes('veo31')) return 'veo31';
-  if (lower.includes('wan') && lower.includes('comfyui')) return process.env.RUNPOD_WAN22_ENDPOINT_ID || '';
-  if (lower.includes('cogvideo') || lower.includes('cog')) return process.env.RUNPOD_COGVIDEO_ENDPOINT_ID || '';
-  if (lower.includes('wan')) return process.env.RUNPOD_WAN_ENDPOINT_ID || '';
-  if (lower.includes('hunyuana') || lower.includes('hunyuana')) return process.env.RUNPOD_HUNYUAN_ENDPOINT_ID || '';
-  if (lower.includes('kokoro')) return process.env.RUNPOD_KOKOROTTS_ENDPOINT_ID || '';
-  if (lower.includes('xtts')) return process.env.RUNPOD_XTTS_ENDPOINT_ID || '';
-  if (lower.includes('whisper')) return process.env.RUNPOD_WHISPER_ENDPOINT_ID || '';
-  if (lower.includes('lora')) return process.env.RUNPOD_LORATRAINER_ENDPOINT_ID || '';
-  if (lower.includes('sadtalker')) return process.env.RUNPOD_SADTALKER_ENDPOINT_ID || '';
-  if (lower.includes('dynamicrafter')) return process.env.RUNPOD_DYNAMICRAFTER_ENDPOINT_ID || '';
-  if (lower.includes('zeroscope')) return process.env.RUNPOD_ZEROSCOPE_ENDPOINT_ID || '';
-  if (lower.includes('video-retalking')) return process.env.RUNPOD_VIDEORETALKING_ENDPOINT_ID || '';
-  if (lower.includes('geneface')) return process.env.RUNPOD_GENEFACE_ENDPOINT_ID || '';
-  if (lower.includes('mochi')) return process.env.RUNPOD_MOCHI_ENDPOINT_ID || '';
-  if (lower.includes('pyramid')) return process.env.RUNPOD_PYRAMIDFLOW_ENDPOINT_ID || '';
-  if (lower.includes('sd') || lower.includes('stable')) return process.env.RUNPOD_STABLEDIFFUSION_ENDPOINT_ID || '';
-  if (lower.includes('svd')) return process.env.RUNPOD_SVD_ENDPOINT_ID || '';
-  return process.env.RUNPOD_DEFAULT_ENDPOINT_ID || '';
+  return lower.includes('veo-31') || lower.includes('veo31') || lower.includes('runway') || lower.includes('kling');
 }
 
 // ── Node 1: directorPlanning ──
@@ -245,20 +228,18 @@ async function coverSynthesis(state: GraphState): Promise<Partial<GraphState>> {
   if (job && job.sd_flux_enabled === 1 && !job.cover_image_path && !job.cover_images) {
     Logger.info('[Graph] SD/Flux cover generation enabled, generating cover...');
     const prompt = job.sd_flux_prompt || job.master_prompt || 'cinematic scene';
-    const endpointId = process.env.RUNPOD_STABLEDIFFUSION_ENDPOINT_ID;
-    if (endpointId && process.env.MOCK_COLAB !== 'true') {
+    if (process.env.MOCK_COLAB !== 'true') {
       try {
-        const res = await RunPodClient.runJob(endpointId, {
-          job_id: jobId, prompt, task: 'cover',
-          b2_credentials: {
-            endpoint_url: process.env.B2_ENDPOINT_URL,
-            key_id: process.env.B2_KEY_ID,
-            application_key: process.env.B2_APPLICATION_KEY,
-            bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET,
-          },
-          hf_token: process.env.HF_TOKEN || undefined,
-        }, process.env.WEBHOOK_URL ? `${process.env.WEBHOOK_URL}/api/webhook/runpod` : undefined);
-        Logger.info('[Graph] Cover generation dispatched', { runpodId: res.id });
+        const result = await ModalClient.pollUntilComplete('Stable Diffusion', {
+          prompt, job_id: jobId, task: 'cover',
+          b2_key_id: process.env.B2_KEY_ID || '',
+          b2_key: process.env.B2_APPLICATION_KEY || '',
+        });
+        if (result.status === 'FAILED') {
+          Logger.warn('[Graph] Cover generation via Modal failed, continuing', result.error);
+        } else {
+          Logger.info('[Graph] Cover generation via Modal completed');
+        }
       } catch (err) {
         Logger.warn('[Graph] Cover generation dispatch failed, continuing', err);
       }
@@ -282,15 +263,7 @@ async function loraTraining(state: GraphState): Promise<Partial<GraphState>> {
   );
 
   if (characters.length > 0) {
-    Logger.info(`[Graph] ${characters.length} character(s) detected for LoRA training`);
-    const endpointId = process.env.RUNPOD_LORATRAINER_ENDPOINT_ID;
-    if (endpointId && process.env.MOCK_COLAB !== 'true') {
-      try {
-        await RunPodClient.runJob(endpointId, { job_id: jobId, characters });
-      } catch (err) {
-        Logger.warn('[Graph] LoRA training dispatch failed, continuing', err);
-      }
-    }
+    Logger.info(`[Graph] ${characters.length} character(s) detected for LoRA training (handled locally by loraService.ts, skipping Modal dispatch)`);
   }
 
   await updateProgress(jobId, 'stageLoraTraining', 60);
@@ -316,14 +289,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
 
   const job = await db.get<VideoJob>('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
   const modelType = state.modelType || job?.model_type || 'CogVideoX-5b';
-  const callbackUrl = process.env.WEBHOOK_URL ? `${process.env.WEBHOOK_URL}/api/webhook/runpod` : undefined;
   const mockColab = process.env.MOCK_COLAB === 'true';
-  const b2Credentials = {
-    endpoint_url: process.env.B2_ENDPOINT_URL,
-    key_id: process.env.B2_KEY_ID,
-    application_key: process.env.B2_APPLICATION_KEY,
-    bucket_name: process.env.B2_BUCKET_NAME || process.env.B2_BUCKET,
-  };
 
   let completed = state.completedScenes;
   const sceneResults: SceneResult[] = [...(state.sceneResults || [])];
@@ -346,54 +312,32 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
     });
 
     try {
-      const endpointId = modelToEndpointId(modelType);
+      const isCloudModel = modelTypeIsCloud(modelType);
 
-      if (endpointId === 'veo31') {
-        Logger.info(`[Graph] Scene ${sceneNum}: generating via Veo 3.1`);
-        const { generateVideo } = await import('./services/veo31.js');
-        const veoResult = await generateVideo({
-          imageUrl: job?.material_path || '',
-          prompt: finalPrompt,
-          aspectRatio: '16:9',
-        });
-        if (veoResult.videoUrl) {
-          await downloadFromUrl(veoResult.videoUrl, videoPath);
+      if (isCloudModel) {
+        Logger.info(`[Graph] Scene ${sceneNum}: generating via cloud API (${modelType})`);
+        const { generateViaAPI } = await import('./services/apiVideoService.js');
+        const cloudResult = await generateViaAPI(modelType, { prompt: finalPrompt, duration: 5 });
+        if (cloudResult.videoUrl) {
+          await downloadFromUrl(cloudResult.videoUrl, videoPath);
         }
-      } else if (!mockColab && endpointId) {
-        Logger.info(`[Graph] Scene ${sceneNum}: dispatching to RunPod (${modelType})`);
-        const runpodInput: any = {
+      } else if (!mockColab) {
+        Logger.info(`[Graph] Scene ${sceneNum}: dispatching to Modal (${modelType})`);
+        const scenePayload: Record<string, any> = {
           job_id: jobId, scene_number: sceneNum, video_prompt: finalPrompt,
           speech_text: scene.speech_text, sfx_prompt: scene.sfx_prompt,
-          character_features: '', reference_image_base64: job?.material_path || '',
-          source_video_id: '', user_image_path: job?.material_path, apply_lipsync: 1,
+          reference_image_base64: job?.material_path || '',
+          user_image_path: job?.material_path, apply_lipsync: 1,
           video_model: modelType, tts_provider: job?.tts_provider || 'xtts',
           tts_voice: job?.tts_voice || 'Claribel Dervla',
           background_music: '', music_volume: 0.15,
-          b2_credentials: b2Credentials,
           hf_token: process.env.HF_TOKEN || undefined,
         };
-        const runpodRes = await RunPodClient.runJob(endpointId, runpodInput, callbackUrl);
-        await db.run('UPDATE video_scenes SET runpod_job_id = ? WHERE id = ?', [runpodRes.id, scene.id]);
-
-        const pollStart = Date.now();
-        const pollTimeout = 720000;
-        let sceneStatus = 'pending';
-        while (sceneStatus === 'pending' || sceneStatus === 'processing') {
-          await new Promise(r => setTimeout(r, 5000));
-          const cancelCheck = await db.get('SELECT status FROM video_jobs WHERE id = ?', [jobId]);
-          if (cancelCheck?.status === 'cancelled') throw new Error('JOB_CANCELLED');
-          const current = await db.get('SELECT status FROM video_scenes WHERE id = ?', [scene.id]);
-          sceneStatus = current?.status || 'pending';
-          if (sceneStatus === 'completed') break;
-          if (sceneStatus === 'failed') throw new Error(`Scene ${sceneNum} failed`);
-          if (Date.now() - pollStart > pollTimeout) throw new Error(`Scene ${sceneNum} timed out`);
+        const modalResult = await ModalClient.pollUntilComplete(modelType, scenePayload, 720000);
+        if (modalResult.status === 'FAILED') {
+          throw new Error(`Scene ${sceneNum}: Modal job failed: ${modalResult.error || 'Unknown error'}`);
         }
-
-        const sc = await db.get('SELECT video_path, audio_path, sfx_path, subtitle_path FROM video_scenes WHERE id = ?', [scene.id]);
-        if (sc?.video_path) await downloadFromUrl(sc.video_path, videoPath);
-        if (sc?.audio_path) await downloadFromUrl(sc.audio_path, audioPath);
-        if (sc?.sfx_path) await downloadFromUrl(sc.sfx_path, sfxPath);
-        if (sc?.subtitle_path) await downloadFromUrl(sc.subtitle_path, srtPath);
+        Logger.info(`[Graph] Scene ${sceneNum}: Modal completed`);
       } else if (mockColab) {
         Logger.info(`[Graph] Scene ${sceneNum}: mock mode`);
         const { exec } = require('child_process');
@@ -405,7 +349,7 @@ async function sceneRender(state: GraphState): Promise<Partial<GraphState>> {
         await new Promise<void>(r => exec(`ffmpeg -y -f lavfi -i "anullsrc=r=16000:cl=mono" -t 6 "${sfxPath}"`, () => r()));
       }
 
-      if (!mockColab && endpointId !== 'veo31') {
+      if (!mockColab && !isCloudModel) {
         if (scene.speech_text) {
           const srtContent = `1\n00:00:00,000 --> 00:00:05,800\n${scene.speech_text}`;
           await fs.writeFile(srtPath, srtContent);
@@ -554,7 +498,7 @@ async function concatFinal(state: GraphState): Promise<Partial<GraphState>> {
   await concatVideosWithCrossfade(mixedPaths, finalPath, 0.3);
 
   const fName = `final_${jobId}.mp4`;
-  const destPath = path.join(process.cwd(), 'uploads', fName);
+  const destPath = path.join(process.cwd(), DIRECTORIES.UPLOADS, fName);
   await fs.copy(finalPath, destPath, { overwrite: true });
 
   await db.run("UPDATE video_jobs SET final_filename = ?, status = 'completed', progress_percent = 95 WHERE id = ?", [fName, jobId]);
@@ -596,7 +540,7 @@ async function publishSocial(state: GraphState): Promise<Partial<GraphState>> {
     return { currentStage: 'publishSocial', progressPercent: 100, status: 'completed' };
   }
 
-  const finalPath = state.finalVideoPath || path.join(process.cwd(), 'uploads', job.final_filename || `final_${jobId}.mp4`);
+  const finalPath = state.finalVideoPath || path.join(process.cwd(), DIRECTORIES.UPLOADS, job.final_filename || `final_${jobId}.mp4`);
   if (!(await fs.pathExists(finalPath))) {
     Logger.warn(`[Graph] Final video not found at ${finalPath}, skipping publish`);
     await db.run("UPDATE video_jobs SET status = 'completed', progress_percent = 100 WHERE id = ?", [jobId]);

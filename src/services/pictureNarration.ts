@@ -9,6 +9,7 @@ import { dockerHost } from '../lib/docker-host.js';
 import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';;
 
 export interface NarrationBlock {
   id: string;
@@ -151,9 +152,9 @@ export async function generateBlockAssets(
         `${sdUrl}/generate-image`,
         {
           prompt: block.visualPrompt,
-          output_path: path.join(process.cwd(), 'videolar', `image-${block.id}.png`),
+          output_path: path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `image-${block.id}.png`),
         },
-        { timeout: 120000 },
+        { timeout: TIMEOUT.DOWNLOAD },
       );
       result.imageUrl = resp.data?.output_path || `generated://image-${block.id}.png`;
     } catch (err: any) {
@@ -169,9 +170,9 @@ export async function generateBlockAssets(
         `${xttsUrl}/tts`,
         {
           text: block.text,
-          output_path: path.join(process.cwd(), 'videolar', `audio-${block.id}.mp3`),
+          output_path: path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `audio-${block.id}.mp3`),
         },
-        { timeout: 120000 },
+        { timeout: TIMEOUT.DOWNLOAD },
       );
       result.audioUrl = resp.data?.output_path || `generated://audio-${block.id}.mp3`;
     } catch (err: any) {
@@ -182,7 +183,7 @@ export async function generateBlockAssets(
 
   // Generate subtitle file (SRT format) from text
   try {
-    const subtitleDir = path.join(process.cwd(), 'videolar');
+    const subtitleDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
     const srtPath = path.join(subtitleDir, `subtitle-${block.id}.srt`);
     await fs.ensureDir(subtitleDir);
 

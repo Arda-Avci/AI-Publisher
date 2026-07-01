@@ -8,6 +8,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { runInWorker, WorkerResult } from './videoService.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 
 // ── Tipler ──────────────────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ export async function detectSilenceRanges(
 export async function detectMotionLevels(videoPath: string): Promise<number[]> {
   Logger.debug(`detectMotionLevels: video=${videoPath}`);
 
-  const tempDir = path.join(process.cwd(), 'uploads', `motion_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.UPLOADS, `motion_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
   try {
@@ -281,7 +282,7 @@ export async function autoCutVideo(videoPath: string, options: AutoCutOptions): 
 
   Logger.info(`autoCutVideo: input=${videoPath}, aggressive=${aggressive}`);
 
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const outputPath = path.join(uploadsDir, `autocut_${Date.now()}.mp4`);
 
@@ -396,7 +397,7 @@ export async function applySmartCut(
   }
 
   // Çoklu parça — segment concat
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   const tempDir = path.join(uploadsDir, `segments_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
@@ -644,7 +645,7 @@ export async function cutVideoByTranscript(
     return outputPath;
   }
 
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   const tempDir = path.join(uploadsDir, `transcript_cut_${Date.now()}`);
   await fs.ensureDir(tempDir);
 

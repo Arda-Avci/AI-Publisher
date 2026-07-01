@@ -8,6 +8,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { runInWorker, WorkerResult } from './videoService.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 // ── Tipler ──────────────────────────────────────────────────────────────────
 
@@ -446,7 +447,7 @@ export async function applyLUT(
  */
 export async function generateLUTFromCommand(command: string): Promise<string> {
   const grade = parseColorCommand(command);
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const lutPath = path.join(uploadsDir, `lut_${Date.now()}.cube`);
 

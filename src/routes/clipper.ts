@@ -28,6 +28,7 @@ import {
 import Redis from 'ioredis';
 import path from 'path';
 import fs from 'fs-extra';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
@@ -290,7 +291,7 @@ router.post('/:id/export', requireAuth, async (req, res) => {
         : row.segments
       : [];
 
-    const outputDir = path.join(process.cwd(), 'videolar', `clip_${row.id}`);
+    const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `clip_${row.id}`);
     await fs.ensureDir(outputDir);
 
     const selectedSegments = segmentIds
@@ -396,7 +397,7 @@ router.post('/:id/auto', requireAuth, async (req, res) => {
         : row.segments
       : [];
 
-    const outputDir = path.join(process.cwd(), 'videolar', `clip_${row.id}`);
+    const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `clip_${row.id}`);
     await fs.ensureDir(outputDir);
 
     const selectedSegments = segmentIds
@@ -538,7 +539,7 @@ router.post('/split-screen', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Both topVideoPath and bottomVideoPath are required' });
     }
 
-    const output = outputPath || path.join(process.cwd(), 'videolar', `split_${Date.now()}.mp4`);
+    const output = outputPath || path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `split_${Date.now()}.mp4`);
 
     const result = await videoClipper.createSplitScreen(
       topVideoPath,
@@ -597,7 +598,7 @@ router.post('/split-screen-vertical', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Bottom video file not found' });
     }
 
-    const output = outputPath || path.join(process.cwd(), 'videolar', `split_v_${Date.now()}.mp4`);
+    const output = outputPath || path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `split_v_${Date.now()}.mp4`);
 
     const options: SplitScreenOptions = {};
     if (gapPx !== undefined) options.gapPx = gapPx;
@@ -632,7 +633,7 @@ router.post('/split-screen-horizontal', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Right video file not found' });
     }
 
-    const output = outputPath || path.join(process.cwd(), 'videolar', `split_h_${Date.now()}.mp4`);
+    const output = outputPath || path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `split_h_${Date.now()}.mp4`);
 
     const options: SplitScreenOptions = {};
     if (gapPx !== undefined) options.gapPx = gapPx;
@@ -666,7 +667,7 @@ router.post('/split-screen-grid', requireAuth, async (req, res) => {
     }
 
     const output =
-      outputPath || path.join(process.cwd(), 'videolar', `split_grid_${Date.now()}.mp4`);
+      outputPath || path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `split_grid_${Date.now()}.mp4`);
 
     await splitScreenGrid(videoPaths, output, gridCols);
 
@@ -911,7 +912,7 @@ router.post('/generate-srt', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'transcript with segments is required' });
     }
 
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
     await fs.ensureDir(uploadsDir);
     const srtPath = outputPath || path.join(uploadsDir, `subtitles_${Date.now()}.srt`);
 

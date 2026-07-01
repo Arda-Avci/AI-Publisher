@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAIModelChain } from '../../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 
 export type AuteurStyle =
   | 'tarantino'
@@ -53,7 +54,7 @@ export async function suggestAuteurStyle(
       generateObject({
         model,
         schema: AuteurSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `You are a cinematography expert specializing in ${styleDef}.
 
 For this scene description, provide auteur-specific camera and composition directions:

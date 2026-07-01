@@ -33,6 +33,7 @@
 import axios from 'axios';
 import { Logger } from '../lib/logger.js';
 import { RunPodClient } from './runpod.js';
+import { PORTS } from '../constants.js';
 
 export interface BrowserUseTaskOptions {
   /** Natural language task description */
@@ -98,7 +99,7 @@ export class BrowserUseService {
   private static getCallbackUrl(): string {
     return process.env.PUBLIC_URL
       ? `${process.env.PUBLIC_URL}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`
-      : `http://localhost:${process.env.PORT || 4000}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`;
+      : `http://localhost:${process.env.PORT || PORTS.SERVER}/api/webhook/runpod?token=${process.env.CALLBACK_TOKEN || 'local_callback_secure_token_2026'}`;
   }
 
   /**

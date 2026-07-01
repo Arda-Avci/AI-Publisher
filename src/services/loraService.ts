@@ -2,6 +2,7 @@ import { Logger } from '../lib/logger.js';
 import axios from 'axios';
 import { db } from '../db.js';
 import { dockerHost } from '../lib/docker-host.js';
+import { TIMEOUT } from '../constants.js';
 
 const LORA_URL = dockerHost.getUrl('lora-trainer');
 
@@ -37,7 +38,7 @@ export async function getPretrainedLoras(): Promise<PretrainedLora[]> {
   const result: PretrainedLora[] = [];
 
   try {
-    const resp = await axios.get(`${LORA_URL}/pretrained`, { timeout: 5000 });
+    const resp = await axios.get(`${LORA_URL}/pretrained`, { timeout: TIMEOUT.LORA_CHECK });
     if (resp.data?.pretrained) {
       for (const item of resp.data.pretrained) {
         result.push({ id: item.id, name: item.name, source: item.source, repo: item.repo, description: item.description, type: item.type });
@@ -60,7 +61,7 @@ export async function getPretrainedLoras(): Promise<PretrainedLora[]> {
  */
 export async function loadPretrainedLora(hfRepo: string): Promise<string | null> {
   try {
-    const resp = await axios.post(`${LORA_URL}/pretrained/load`, { hf_repo: hfRepo }, { timeout: 120000 });
+    const resp = await axios.post(`${LORA_URL}/pretrained/load`, { hf_repo: hfRepo }, { timeout: TIMEOUT.DOWNLOAD });
     if (resp.data?.status === 'success') {
       return resp.data.weights_path;
     }
@@ -88,7 +89,7 @@ export async function trainLoRA(
       output_dir: `/content/lora_weights/${jobId}`,
       callback_url: callbackUrl || '',
       use_cogvideo: true,
-    }, { timeout: 600000 });
+    }, { timeout: TIMEOUT.HEAVY_GEN });
 
     if (response.data?.status === 'success') {
       Logger.info(`[LoRA] Training complete for ${characterName}`, { jobId, steps: response.data.steps_completed });
@@ -119,7 +120,7 @@ export async function trainLoRA(
  */
 export async function findDriveWeights(characterName: string): Promise<string | null> {
   try {
-    const resp = await axios.get(`${LORA_URL}/pretrained`, { timeout: 5000 });
+    const resp = await axios.get(`${LORA_URL}/pretrained`, { timeout: TIMEOUT.LORA_CHECK });
     const drive = resp.data?.drive || [];
     const match = drive.find((d: any) => d.name === characterName);
     return match?.path || null;
@@ -142,7 +143,7 @@ export async function inferWithLoRA(
       prompt,
       output_path: outputPath,
       use_cogvideo: false,
-    }, { timeout: 60000 });
+    }, { timeout: TIMEOUT.AI_SLOW });
 
     if (response.data?.status === 'success') {
       return { success: true, outputPath: response.data.output_path };
@@ -159,7 +160,7 @@ export async function inferWithLoRA(
  */
 export async function getTrainingProgress(jobId: number): Promise<{ percent: number; status: string }> {
   try {
-    const resp = await axios.get(`${LORA_URL}/progress/${jobId}`, { timeout: 5000 });
+    const resp = await axios.get(`${LORA_URL}/progress/${jobId}`, { timeout: TIMEOUT.LORA_CHECK });
     return resp.data;
   } catch {
     return { percent: 0, status: 'unknown' };

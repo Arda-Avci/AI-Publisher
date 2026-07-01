@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 
 export type SceneType = 'opening' | 'talk' | 'reaction' | 'wide' | 'closing';
 
@@ -132,7 +133,7 @@ function buildSceneFilter(
 async function runFFmpeg(args: string[], description: string): Promise<void> {
   return new Promise((resolve, reject) => {
     Logger.info(`[SceneComposer] ${description}: ffmpeg ${args.join(' ')}`);
-    const proc = execFile('ffmpeg', args, { timeout: 300000 }, (err, _stdout, _stderr) => {
+    const proc = execFile('ffmpeg', args, { timeout: TIMEOUT.FFMPEG }, (err, _stdout, _stderr) => {
       if (err) {
         Logger.error(`[SceneComposer] ${description} failed: ${err.message}`);
         reject(new Error(`${description} başarısız: ${err.message}`));

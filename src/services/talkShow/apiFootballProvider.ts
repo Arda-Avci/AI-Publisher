@@ -9,6 +9,7 @@
 import axios from 'axios';
 import { MatchContext } from './types.js';
 import { MatchFeed } from './dataSources.js';
+import { TIMEOUT } from '../../constants.js';
 
 const BASE_URL = 'https://v3.football.api-sports.io';
 const SUPER_LIG_ID = 203;
@@ -22,7 +23,7 @@ const client = axios.create({
     'x-rapidapi-key': apiKey || '',
     'x-rapidapi-host': 'v3.football.api-sports.io',
   },
-  timeout: 10000,
+  timeout: TIMEOUT.API_FETCH,
 });
 
 export function isApiFootballConfigured(): boolean {

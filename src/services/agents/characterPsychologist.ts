@@ -4,6 +4,7 @@ import { getAIModelChain } from '../../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { isNeo4jConnected, runQuery, runRead } from '../neo4jService.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 
 export interface RelationshipEdge {
   character1: string;
@@ -47,7 +48,7 @@ export async function analyzeSceneRelationships(
       generateObject({
         model,
         schema: SceneRelationshipSchema,
-        abortSignal: AbortSignal.timeout(20000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_QUICK),
         prompt: `You are a character psychologist analyzing interpersonal dynamics.
 
 Scene ${sceneNumber}: "${sceneDescription}"
@@ -168,7 +169,7 @@ export async function suggestSlowBurnBeat(
       generateObject({
         model,
         schema: BeatSchema,
-        abortSignal: AbortSignal.timeout(20000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_QUICK),
         prompt: `You are a relationship pacing expert using slow-burn storytelling.
 
 Character 1: ${character1}

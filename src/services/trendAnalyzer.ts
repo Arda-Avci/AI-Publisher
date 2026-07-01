@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
+import { TIMEOUT } from '../constants.js';
 
 export interface TrendItem {
   platform: 'tiktok' | 'youtube' | 'x' | 'instagram';
@@ -39,7 +40,7 @@ async function scrapeTikTok(): Promise<TrendItem[]> {
       locale: 'en-US',
     });
     const page = await context.newPage();
-    await page.goto('https://www.tiktok.com/explore', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('https://www.tiktok.com/explore', { waitUntil: 'networkidle', timeout: TIMEOUT.BROWSER_NAV });
     await page.waitForTimeout(3000);
 
     const items: TrendItem[] = [];
@@ -90,7 +91,7 @@ async function scrapeYouTube(): Promise<TrendItem[]> {
     const page = await context.newPage();
     await page.goto('https://www.youtube.com/feed/trending', {
       waitUntil: 'networkidle',
-      timeout: 30000,
+      timeout: TIMEOUT.BROWSER_NAV,
     });
     await page.waitForTimeout(3000);
 
@@ -148,7 +149,7 @@ async function scrapeX(): Promise<TrendItem[]> {
     const page = await context.newPage();
     await page.goto('https://x.com/explore/tabs/trending', {
       waitUntil: 'networkidle',
-      timeout: 30000,
+      timeout: TIMEOUT.BROWSER_NAV,
     });
     await page.waitForTimeout(3000);
 
@@ -195,7 +196,7 @@ async function scrapeInstagram(): Promise<TrendItem[]> {
     const page = await context.newPage();
     await page.goto('https://www.instagram.com/explore/', {
       waitUntil: 'networkidle',
-      timeout: 30000,
+      timeout: TIMEOUT.BROWSER_NAV,
     });
     await page.waitForTimeout(3000);
 

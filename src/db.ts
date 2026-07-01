@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import { encryptUsername, legacyEncryptUsername, isLegacyEncrypted, decryptUsername } from './lib/crypto.js';
 import { Logger } from './lib/logger.js';
+import { CREDIT_DEFAULTS } from './constants.js';
 
 dotenv.config();
 
@@ -239,13 +240,13 @@ export async function initDatabase() {
       throw new Error('DEFAULT_ADMIN_PASSWORD environment variable is required for initial admin setup.');
     }
     const hashedPassword = await bcrypt.hash(adminPass, 10);
-    await db.run('INSERT INTO users (username, password, credits) VALUES (?, ?, 10000)', [
+    await db.run(`INSERT INTO users (username, password, credits) VALUES (?, ?, ${CREDIT_DEFAULTS.ADMIN_SEED_CREDITS})`, [
       encryptedUsername,
       hashedPassword,
     ]);
     Logger.info('Varsayılan yönetici kullanıcısı oluşturuldu: arda.avci@gmail.com');
   } else {
-    await db.run('UPDATE users SET credits = 10000 WHERE username = ? AND credits < 10000', [
+    await db.run(`UPDATE users SET credits = ${CREDIT_DEFAULTS.ADMIN_SEED_CREDITS} WHERE username = ? AND credits < ${CREDIT_DEFAULTS.ADMIN_SEED_CREDITS}`, [
       userExists.username,
     ]);
     Logger.info('PostgreSQL Veritabanı hazır.');

@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
 import { parseEditCommand, applyEditOperations } from './chatToEdit.js';
+import { DIRECTORIES } from '../constants.js';
 
 export interface EditQueueItem {
   id: number;
@@ -58,7 +59,7 @@ export async function enqueueEdit(
 async function takeSnapshot(jobId: number, editId: number, scenePaths: string[]): Promise<string> {
   const snapshotDir = path.join(
     process.cwd(),
-    'videolar',
+    DIRECTORIES.VIDEO_OUTPUT,
     `edit_snapshot_${jobId}_${editId}_${Date.now()}`,
   );
   await fs.ensureDir(snapshotDir);
@@ -151,7 +152,7 @@ export async function undoEdit(editId: number, jobId: number): Promise<boolean> 
       const srcPath = path.join(snapshotDir, file);
       const destPath = path.join(
         process.cwd(),
-        'videolar',
+        DIRECTORIES.VIDEO_OUTPUT,
         `ms_${jobId}_${file.replace('scene_', '').replace('.mp4', '')}.mp4`,
       );
       const destDir = path.dirname(destPath);
@@ -191,7 +192,7 @@ export async function applyPendingEditsToScene(
 
   const editDir = path.join(
     process.cwd(),
-    'videolar',
+    DIRECTORIES.VIDEO_OUTPUT,
     `edit_work_${jobId}_${sceneNumber}_${Date.now()}`,
   );
   await fs.ensureDir(editDir);

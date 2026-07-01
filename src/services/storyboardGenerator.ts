@@ -3,6 +3,7 @@ import { RunPodClient } from './runpod.js';
 import { Logger } from '../lib/logger.js';
 import { uploadToB2 } from '../lib/b2.js';
 import { db } from '../db.js';
+import { TIMEOUT } from '../constants.js';
 
 // ── Core Types ──────────────────────────────────────────
 
@@ -124,7 +125,7 @@ export async function generateStoryboardImage(
       // URL array — fetch first
       const imageUrl = output[0];
       if (typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
-        const imgResp = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 60000 });
+        const imgResp = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: TIMEOUT.AI_SLOW });
         imageBuffer = Buffer.from(imgResp.data);
       } else if (typeof imageUrl === 'string') {
         // Base64 in array
@@ -138,14 +139,14 @@ export async function generateStoryboardImage(
         const base64Data = String(maybeBase64).replace(/^data:image\/\w+;base64,/, '');
         imageBuffer = Buffer.from(base64Data, 'base64');
       } else if ((output as any).image_url) {
-        const imgResp = await axios.get((output as any).image_url, { responseType: 'arraybuffer', timeout: 60000 });
+        const imgResp = await axios.get((output as any).image_url, { responseType: 'arraybuffer', timeout: TIMEOUT.AI_SLOW });
         imageBuffer = Buffer.from(imgResp.data);
       }
     }
 
     if (!imageBuffer) {
       if (typeof output === 'string' && output.startsWith('http')) {
-        const imgResp = await axios.get(output, { responseType: 'arraybuffer', timeout: 60000 });
+        const imgResp = await axios.get(output, { responseType: 'arraybuffer', timeout: TIMEOUT.AI_SLOW });
         imageBuffer = Buffer.from(imgResp.data);
       } else {
         throw new Error('FLUX output format taninamadi');

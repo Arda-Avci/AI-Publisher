@@ -10,6 +10,7 @@ import multer from 'multer';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { Logger } from '../lib/logger.js';
+import { FILE_LIMITS } from '../constants.js';
 import {
   createCharacter,
   listCharacters,
@@ -30,7 +31,7 @@ import {
 } from '../services/characterPresets.js';
 
 export const characterLibraryRouter = Router();
-const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ limits: { fileSize: FILE_LIMITS.MAX_CHARACTER_IMAGE } });
 
 /** GET /api/v1/character-library/outfits — cinsiyet + yasa gore outfit preset listesi */
 characterLibraryRouter.get('/outfits', (req: Request, res: Response) => {

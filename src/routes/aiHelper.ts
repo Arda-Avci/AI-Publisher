@@ -6,7 +6,7 @@ import {
   generateTutorialPrompts,
   generateLandingPageAssets,
   generateCustomThemes,
-} from '../services/aiService.js';
+} from '../services/index.js';
 
 const router = Router();
 

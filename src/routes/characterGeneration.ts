@@ -11,6 +11,7 @@ import multer from 'multer';
 import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { Logger } from '../lib/logger.js';
+import { FILE_LIMITS } from '../constants.js';
 import {
   textToCharacterReference,
   photoToCharacterProfile,
@@ -24,7 +25,7 @@ import {
 } from '../types/characterProfile.js';
 
 export const characterGenerationRouter = Router();
-const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ limits: { fileSize: FILE_LIMITS.MAX_CHARACTER_IMAGE } });
 
 /** POST /api/v1/character-gen/full-body — profil bilgisinden full body referans gorseli */
 characterGenerationRouter.post(

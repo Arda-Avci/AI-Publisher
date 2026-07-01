@@ -3,6 +3,7 @@ import Iyzipay from 'iyzipay';
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
 import { requireAuth } from '../middleware/auth.js';
+import { PORTS } from '../constants.js';
 
 export const paymentsRouter = Router();
 
@@ -64,7 +65,7 @@ paymentsRouter.post('/checkout', requireAuth, async (req: Request, res: Response
 
     const callbackUrl = process.env.PUBLIC_URL
       ? `${process.env.PUBLIC_URL}/api/v1/payments/webhook?userId=${userId}&credits=${selectedPkg.credits}&isSub=${selectedPkg.isSubscription ? 'true' : 'false'}`
-      : `http://localhost:${process.env.PORT || 4000}/api/v1/payments/webhook?userId=${userId}&credits=${selectedPkg.credits}&isSub=${selectedPkg.isSubscription ? 'true' : 'false'}`;
+      : `http://localhost:${process.env.PORT || PORTS.SERVER}/api/v1/payments/webhook?userId=${userId}&credits=${selectedPkg.credits}&isSub=${selectedPkg.isSubscription ? 'true' : 'false'}`;
 
     const ipAddress = req.ip || '127.0.0.1';
 

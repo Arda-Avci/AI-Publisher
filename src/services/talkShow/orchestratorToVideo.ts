@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import { execFile } from 'child_process';
 import { Logger } from '../../lib/logger.js';
 import type { OrchestratorResult } from './types.js';
+import { TIMEOUT } from '../../constants.js';
 
 const AGENT_COLORS: Record<string, string> = {
   meta_orchestrator: '#A78BFA',
@@ -108,7 +109,7 @@ async function renderAgentScene(
   ];
 
   return new Promise((resolve, reject) => {
-    execFile('ffmpeg', args, { timeout: 120000 }, (err) => {
+    execFile('ffmpeg', args, { timeout: TIMEOUT.DOWNLOAD }, (err) => {
       if (err) {
         Logger.error(`[OrchToVideo] Scene render failed: ${err.message}`);
         reject(err);
@@ -136,7 +137,7 @@ async function concatVideos(videoPaths: string[], outputPath: string): Promise<v
     execFile(
       'ffmpeg',
       ['-y', '-f', 'concat', '-safe', '0', '-i', concatFile, '-c', 'copy', outputPath],
-      { timeout: 120000 },
+      { timeout: TIMEOUT.DOWNLOAD },
       (err) => {
         if (err) reject(err);
         else resolve();
@@ -205,7 +206,7 @@ export async function orchestrateToVideo(
           '-shortest',
           finalVideo,
         ],
-        { timeout: 180000 },
+        { timeout: TIMEOUT.FFMPEG },
         (err) => {
           if (err) {
             Logger.warn(`[OrchToVideo] BGM mix failed, using silent: ${err.message}`);

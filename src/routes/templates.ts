@@ -11,7 +11,7 @@ import {
   ProductionTemplate,
   TEMPLATE_NAMES,
   TEMPLATE_DESCRIPTIONS,
-} from '../services/templatePromptService';
+} from '../services/templatePromptService.js';
 import { Logger } from '../lib/logger.js';
 
 const router = Router();

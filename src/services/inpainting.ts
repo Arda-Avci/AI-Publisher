@@ -11,6 +11,7 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 /**
  * Represents a rectangular mask region to be inpainted.
@@ -95,7 +96,7 @@ export async function inpaintObjects(
         strength: 0.8,
       },
       {
-        timeout: 600000,
+        timeout: TIMEOUT.HEAVY_GEN,
       },
     );
 

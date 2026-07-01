@@ -44,3 +44,5 @@ export {
   type RoomTone,
   type SoundBridge,
 } from './soundDesigner.js';
+
+export { analyzeTemporalSync, type TemporalEvent, type TemporalPlan } from './temporalSync.js';

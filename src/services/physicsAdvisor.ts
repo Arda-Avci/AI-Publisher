@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 export interface PhysicsConstraint {
   domain: string;
@@ -31,7 +32,7 @@ export async function getPhysicsConstraints(
       generateObject({
         model,
         schema: PhysicsSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `You are a physics advisor for AI video generation. Analyze this scene and identify physics rules that the video generator must respect to avoid physically impossible visuals.
 
 Scene: "${sceneDescription}"

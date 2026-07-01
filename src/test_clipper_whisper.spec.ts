@@ -9,6 +9,7 @@ import { encryptUsername } from './lib/crypto.js';
 import { transcribeVideoAudioWithTimestamps } from './lib/audio-transcriber.js';
 import clipperRouter from './routes/clipper.js';
 import { FIXTURES, fx } from './__fixtures__/index.js';
+import { TIMEOUT } from './constants.js';
 
 const whisperAvailable = !!(process.env.WHISPER_URL || process.env.GEMINI_API_KEY);
 
@@ -51,7 +52,7 @@ describe('Clipper & Whisper Integration Tests', () => {
       const { execSync } = require('child_process');
       execSync(
         `ffmpeg -y -i ${JSON.stringify(FIXTURES.video)} -f lavfi -i anullsrc=r=44100:cl=mono -c:v copy -c:a aac -shortest ${JSON.stringify(videoWithAudio)}`,
-        { timeout: 10000 },
+        { timeout: TIMEOUT.EXEC_QUICK },
       );
     }
   });

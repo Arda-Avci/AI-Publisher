@@ -1,6 +1,7 @@
 import path from 'path';
 import { runFFmpegWithFallback  } from './videoService.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';;
 
 export type SplitLayout = '50/50' | '70/30' | '60/40' | '30/70' | '40/60';
 
@@ -34,7 +35,7 @@ async function hasAudioStream(filePath: string): Promise<boolean> {
   ];
   const { execFile } = await import('child_process');
   return new Promise<boolean>((resolve) => {
-    execFile('ffprobe', probeArgs, { timeout: 10000 }, (err, stdout) => {
+    execFile('ffprobe', probeArgs, { timeout: TIMEOUT.EXEC_QUICK }, (err, stdout) => {
       if (err) resolve(false);
       else resolve(stdout.trim() === 'audio');
     });
@@ -69,7 +70,7 @@ export async function applySplitScreen(
   ];
   const { execFile } = await import('child_process');
   const probeResult = await new Promise<string>((resolve, reject) => {
-    execFile('ffprobe', probeArgs, { timeout: 10000 }, (err, stdout) => {
+    execFile('ffprobe', probeArgs, { timeout: TIMEOUT.EXEC_QUICK }, (err, stdout) => {
       if (err) reject(err);
       else resolve(stdout.trim());
     });
@@ -169,7 +170,7 @@ export async function generateSplitScreenPreview(
   layout: SplitLayout = '50/50',
   position: 'top' | 'bottom' | 'left' | 'right' = 'top',
 ): Promise<string> {
-  const previewPath = path.join(process.cwd(), 'uploads', `split_preview_${Date.now()}.mp4`);
+  const previewPath = path.join(process.cwd(), DIRECTORIES.UPLOADS, `split_preview_${Date.now()}.mp4`);
   await applySplitScreen(primaryVideo, secondaryVideo, previewPath, layout, position);
   return previewPath;
 }

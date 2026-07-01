@@ -1,4 +1,5 @@
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 export interface ChainingResult {
   success: boolean;
@@ -74,7 +75,7 @@ export async function getSceneChainingFrame(
 
   const prevVideoPath = path.join(
     workDir,
-    'videolar',
+    DIRECTORIES.VIDEO_OUTPUT,
     `ms_${jobId}_${currentScene - 1}.mp4`,
   );
 

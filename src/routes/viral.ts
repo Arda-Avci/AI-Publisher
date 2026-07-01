@@ -15,15 +15,16 @@ import {
   generateViralTitles,
   generateHashtags,
   optimizeForViral,
-} from '../services/viralHook.js';
-import { generateBroll, insertBroll, BrollClip } from '../services/aiBroll.js';
+} from '../services/index.js';
+import { generateBroll, insertBroll, BrollClip } from '../services/index.js';
 import {
   detectEmotionPeaks,
   generateHighlightSrt,
   formatHighlightSrt,
   applyEmotionCaptionStyle,
-} from '../services/emotionCaptions.js';
+} from '../services/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
@@ -207,7 +208,7 @@ router.post('/broll', requireAuth, async (req, res) => {
 
         if (!keywords || !duration) continue;
 
-        const brollDir = path.join(process.cwd(), 'videolar');
+        const brollDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
         await fs.ensureDir(brollDir);
 
         const outputPath = path.join(
@@ -309,7 +310,7 @@ router.post('/emotion', requireAuth, async (req, res) => {
       }
 
       // Extract audio from video
-      const audioDir = path.join(process.cwd(), 'videolar');
+      const audioDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
       await fs.ensureDir(audioDir);
       audioAbsPath = path.join(audioDir, `emotion_audio_${Date.now()}.wav`);
 
@@ -348,7 +349,7 @@ router.post('/emotion', requireAuth, async (req, res) => {
     const entries = generateHighlightSrt(transcript, detection.peaks);
     const srtContent = formatHighlightSrt(entries, 0, 2.5);
 
-    const srtDir = path.join(process.cwd(), 'videolar');
+    const srtDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
     await fs.ensureDir(srtDir);
     const srtPath = path.join(srtDir, `emotion_${Date.now()}.srt`);
     await fs.writeFile(srtPath, srtContent, 'utf-8');

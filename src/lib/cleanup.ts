@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { Logger } from './logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 /**
  * Sweeps the specified directories for files older than maxAgeMs and deletes them.
@@ -47,7 +48,7 @@ export async function cleanupOldFiles(
  * Initializes the garbage collector to run immediately and every intervalMs.
  */
 export function startGarbageCollector(
-  directories: string[] = ['videolar', 'uploads'],
+  directories: string[] = [DIRECTORIES.VIDEO_OUTPUT, DIRECTORIES.UPLOADS],
   intervalMs: number = 12 * 60 * 60 * 1000, // Every 12 hours
   maxAgeMs: number = 24 * 60 * 60 * 1000, // 24 hours
 ): void {

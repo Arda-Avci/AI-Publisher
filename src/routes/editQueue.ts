@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
@@ -41,7 +42,7 @@ router.post('/apply/:editIdStr', mediumLimiter, requireAuth, async (req, res) =>
     ]);
     if (!edit) return res.status(404).json({ error: 'Edit bulunamadı' });
 
-    const scenesBaseDir = path.join(process.cwd(), 'videolar', `job_${jobId}`);
+    const scenesBaseDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `job_${jobId}`);
     const sceneDirs = await fs.readdir(scenesBaseDir).catch(() => [] as string[]);
     const scenes = sceneDirs
       .filter((d) => d.startsWith('scene_'))
@@ -54,7 +55,7 @@ router.post('/apply/:editIdStr', mediumLimiter, requireAuth, async (req, res) =>
 
     if (scenes.length === 0) return res.status(400).json({ error: 'Sahne bulunamadı' });
 
-    const outputDir = path.join(process.cwd(), 'videolar', `edit_apply_${editId}_${Date.now()}`);
+    const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `edit_apply_${editId}_${Date.now()}`);
     await fs.ensureDir(outputDir);
 
     const { applyEditQueueItem } = await import('../services/editQueue.js');

@@ -4,6 +4,7 @@ import { getAIModelChain } from '../../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { isNeo4jConnected, runQuery, initNeo4jSchema } from '../neo4jService.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 
 export interface CanonValidation {
   passed: boolean;
@@ -45,7 +46,7 @@ async function extractSceneEntities(sceneDescription: string): Promise<Extracted
       generateObject({
         model,
         schema: SceneEntitySchema,
-        abortSignal: AbortSignal.timeout(20000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_QUICK),
         prompt: `Extract all characters, locations, objects, and key events from this scene description.
 
 Scene: "${sceneDescription}"

@@ -5,6 +5,7 @@ import { dockerHost } from '../lib/docker-host.js';
 import { checkQueue } from '../queue.js';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { generateText } from 'ai';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';
 
 interface MCPTool {
   name: string;
@@ -145,7 +146,7 @@ async function executeTool(name: string, args: any): Promise<any> {
     case 'list_broll': {
       const fs = await import('fs-extra');
       const path = await import('path');
-      const uploadsDir = path.join(process.cwd(), 'uploads');
+      const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
       if (!(await fs.pathExists(uploadsDir))) return { success: true, data: [] };
       const files = await fs.readdir(uploadsDir);
       const bRollFiles = files
@@ -281,7 +282,7 @@ Mevcut tool'lar: ${MCP_TOOLS.map((t) => `- ${t.name}: ${t.description}`).join('\
         model,
         system: systemPrompt,
         prompt: message,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
       });
 
       res.json({ success: true, data: { response: result.text } });

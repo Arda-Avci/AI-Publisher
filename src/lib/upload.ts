@@ -1,5 +1,6 @@
 import multer from 'multer';
 import { Request } from 'express';
+import { FILE_LIMITS } from '../constants.js';
 
 /**
  * Shared multer upload instance.
@@ -26,7 +27,7 @@ const storage = multer.diskStorage({
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 500 * 1024 * 1024,
+    fileSize: FILE_LIMITS.MAX_VIDEO_UPLOAD,
     files: 5,
   },
 });

@@ -7,6 +7,7 @@ import { encryptUsername } from './lib/crypto.js';
 import bcrypt from 'bcrypt';
 import aiHelperRouter from './routes/aiHelper.js';
 import { skipAITests } from './test-utils/ai-guard.js';
+import { TIMEOUT } from './constants.js';
 
 describe.skipIf(skipAITests)('AI Helper API Routes Integration Tests', () => {
   let app: express.Application;
@@ -59,7 +60,7 @@ describe.skipIf(skipAITests)('AI Helper API Routes Integration Tests', () => {
     await db.run('DELETE FROM users WHERE username = ?', [encryptedAdmin]);
   });
 
-  it('should enhance prompt successfully via API', { timeout: 60000 }, async () => {
+  it('should enhance prompt successfully via API', { timeout: TIMEOUT.AI_SLOW }, async () => {
     const res = await request(app)
       .post('/api/v1/ai-helper/enhance-prompt')
       .set('Cookie', authCookie)
@@ -75,7 +76,7 @@ describe.skipIf(skipAITests)('AI Helper API Routes Integration Tests', () => {
     expect(res.body).toHaveProperty('enhancedPrompt');
   });
 
-  it('should generate tutorial prompts successfully via API', { timeout: 60000 }, async () => {
+  it('should generate tutorial prompts successfully via API', { timeout: TIMEOUT.AI_SLOW }, async () => {
     const res = await request(app)
       .post('/api/v1/ai-helper/tutorial-prompts')
       .set('Cookie', authCookie)
@@ -86,7 +87,7 @@ describe.skipIf(skipAITests)('AI Helper API Routes Integration Tests', () => {
     expect(res.body.data).toHaveProperty('tutorialTitle');
   });
 
-  it('should generate landing assets successfully via API', { timeout: 60000 }, async () => {
+  it('should generate landing assets successfully via API', { timeout: TIMEOUT.AI_SLOW }, async () => {
     const res = await request(app)
       .post('/api/v1/ai-helper/landing-assets')
       .set('Cookie', authCookie)
@@ -97,7 +98,7 @@ describe.skipIf(skipAITests)('AI Helper API Routes Integration Tests', () => {
     expect(res.body.data).toHaveProperty('heroVideo');
   });
 
-  it('should generate custom theme successfully via API', { timeout: 60000 }, async () => {
+  it('should generate custom theme successfully via API', { timeout: TIMEOUT.AI_SLOW }, async () => {
     const res = await request(app)
       .post('/api/v1/ai-helper/custom-theme')
       .set('Cookie', authCookie)

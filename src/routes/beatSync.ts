@@ -6,10 +6,11 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { Logger } from '../lib/logger.js';
-import { buildBeatMarkers, BeatMarker, BeatAnalysisResult } from '../services/beatAnalyzer';
-import { applyBeatSync, quickBeatSync, BeatSyncOptions } from '../services/beatSyncEditor';
+import { buildBeatMarkers, BeatMarker, BeatAnalysisResult } from '../services/index.js';
+import { applyBeatSync, quickBeatSync, BeatSyncOptions } from '../services/index.js';
 import path from 'path';
 import fs from 'fs-extra';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
@@ -94,7 +95,7 @@ router.post('/apply', requireAuth, async (req, res) => {
     }
 
     // Determine output path
-    const outputDir = path.join(process.cwd(), 'videolar');
+    const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
     await fs.ensureDir(outputDir);
 
     const outputPath = requestedOutputPath || path.join(outputDir, `beatsync_${Date.now()}.mp4`);
@@ -177,7 +178,7 @@ router.post('/quick', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Video file not found' });
     }
 
-    const outputDir = path.join(process.cwd(), 'videolar');
+    const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
     await fs.ensureDir(outputDir);
 
     const outputPath =

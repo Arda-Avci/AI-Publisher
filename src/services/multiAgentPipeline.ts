@@ -5,6 +5,7 @@ import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
 import { db } from '../db.js';
 import { StudioSchema } from './aiService.js';
+import { TIMEOUT } from '../constants.js';
 import { AgentGraph } from './agentGraph.js';
 
 export const DirectorPlanSchema = z.object({
@@ -111,7 +112,7 @@ Görevlerin:
         model,
         schema: DirectorPlanSchema,
         system,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         prompt,
       });
     },
@@ -189,7 +190,7 @@ Her sahne için:
         model,
         schema: StudioSchema,
         system,
-        abortSignal: AbortSignal.timeout(60000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW),
         prompt,
       });
     },
@@ -242,7 +243,7 @@ Her sahne için:
         model,
         schema: ProducerWorkflowSchema,
         system,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },
@@ -310,7 +311,7 @@ Her issue için severity (critical/major/minor) ve suggestedFix belirt.`;
         model,
         schema: QualityReportSchema,
         system,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },
@@ -356,7 +357,7 @@ Görevlerin:
         model,
         schema: DirectorPlanSchema,
         system,
-        abortSignal: AbortSignal.timeout(45000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
         prompt,
       });
     },
@@ -404,7 +405,7 @@ Her sahne için:
         model,
         schema: ProducerWorkflowSchema,
         system,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },
@@ -452,7 +453,7 @@ Her issue için severity (critical/major/minor) ve suggestedFix belirt.`;
         model,
         schema: QualityReportSchema,
         system,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt,
       });
     },

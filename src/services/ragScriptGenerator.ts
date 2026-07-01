@@ -3,6 +3,7 @@ import { generateObject } from 'ai';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 export const RAGScriptSchema = z.object({
   scenes: z.array(
@@ -87,7 +88,7 @@ Görevlerin:
         model,
         schema: RAGScriptSchema,
         system,
-        abortSignal: AbortSignal.timeout(60000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW),
         prompt,
       });
     },

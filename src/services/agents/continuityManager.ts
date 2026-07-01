@@ -4,6 +4,7 @@ import { getAIModelChain } from '../../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { isNeo4jConnected, runQuery, runRead } from '../neo4jService.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 
 export interface PlantPayoff {
   plant: string;
@@ -45,7 +46,7 @@ export async function analyzePlantPayoff(
       generateObject({
         model,
         schema: PlantPayoffSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `You are a master screenwriter analyzing Chekhov's Gun / Plant & Payoff structure.
 
 Analyze these scenes and identify all planted elements and whether they pay off:

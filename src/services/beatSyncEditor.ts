@@ -13,6 +13,7 @@ import {
 } from './videoService';
 import { Logger } from '../lib/logger';
 import { BeatMarker } from './beatAnalyzer';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';;
 
 export interface BeatSyncOptions {
   videoPath: string;
@@ -129,7 +130,7 @@ export async function applyBeatSync(
 
   // Extract segments at beat boundaries
   const segmentPaths: string[] = [];
-  const tempDir = path.join(process.cwd(), 'videolar', `beatsync_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `beatsync_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
   try {
@@ -235,7 +236,7 @@ async function applyEvenBeatSync(
   // Create segments at regular intervals
   const duration = await getDuration(videoPath);
   const segmentPaths: string[] = [];
-  const tempDir = path.join(process.cwd(), 'videolar', `beatsync_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `beatsync_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
   try {
@@ -430,7 +431,7 @@ if __name__ == "__main__":
     print(json.dumps(result))
 `;
 
-  const scriptPath = path.join(process.cwd(), 'uploads', `bpm_analyze_${Date.now()}.py`);
+  const scriptPath = path.join(process.cwd(), DIRECTORIES.UPLOADS, `bpm_analyze_${Date.now()}.py`);
   await fs.ensureDir(path.dirname(scriptPath));
   await fs.writeFile(scriptPath, pythonScript);
 
@@ -438,7 +439,7 @@ if __name__ == "__main__":
     const { stdout } = await execFileAsync(
       process.platform === 'win32' ? 'python' : 'python3',
       [scriptPath, audioPath],
-      { timeout: 60000 },
+      { timeout: TIMEOUT.EXEC_QUICK },
     );
     return JSON.parse(stdout.trim());
   } catch (err) {
@@ -533,7 +534,7 @@ export async function applyBeatSyncCuts(
     return;
   }
 
-  const tempDir = path.join(process.cwd(), 'videolar', `beatsync_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `beatsync_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
   try {

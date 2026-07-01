@@ -1,5 +1,6 @@
 import { Logger } from '../lib/logger.js';
 import axios from 'axios';
+import { TIMEOUT } from '../constants.js';
 
 interface AvatarOptions {
   text: string;
@@ -65,7 +66,7 @@ export class HeyGenService {
             'X-Api-Key': this.apiKey,
             'Content-Type': 'application/json',
           },
-          timeout: 60000,
+          timeout: TIMEOUT.AI_SLOW,
         },
       );
 
@@ -159,7 +160,7 @@ export class TavusService {
             'x-api-key': this.apiKey,
             'Content-Type': 'application/json',
           },
-          timeout: 60000,
+          timeout: TIMEOUT.AI_SLOW,
         },
       );
 

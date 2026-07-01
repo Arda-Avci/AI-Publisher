@@ -10,6 +10,7 @@ import {
 } from '../services/chatToEdit.js';
 import path from 'path';
 import fs from 'fs-extra';
+import { DIRECTORIES } from '../constants.js';
 
 export function registerChatToEditRoutes(app: Application): void {
   app.post(
@@ -67,7 +68,7 @@ export function registerChatToEditRoutes(app: Application): void {
           return res.status(404).json({ success: false, error: 'Job bulunamadı' });
         }
 
-        const scenesBaseDir = path.join(process.cwd(), 'videolar', `job_${jobId}`);
+        const scenesBaseDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `job_${jobId}`);
         const sceneDirs = await fs.readdir(scenesBaseDir).catch(() => [] as string[]);
         const scenes = sceneDirs
           .filter((d) => d.startsWith('scene_'))
@@ -85,7 +86,7 @@ export function registerChatToEditRoutes(app: Application): void {
           return res.status(400).json({ success: false, error: 'Sahne videosu bulunamadı' });
         }
 
-        const outputDir = path.join(process.cwd(), 'videolar', `chat_edit_${jobId}_${Date.now()}`);
+        const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `chat_edit_${jobId}_${Date.now()}`);
         await fs.ensureDir(outputDir);
 
         const processedPaths = await applyEditOperations(operations, scenes, outputDir);
@@ -128,7 +129,7 @@ export function registerChatToEditRoutes(app: Application): void {
           return res.status(404).json({ success: false, error: 'Job bulunamadı' });
         }
 
-        const scenesBaseDir = path.join(process.cwd(), 'videolar', `job_${jobId}`);
+        const scenesBaseDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `job_${jobId}`);
         const sceneDirs = await fs.readdir(scenesBaseDir).catch(() => [] as string[]);
         const sceneInfos = sceneDirs
           .filter((d) => d.startsWith('scene_'))

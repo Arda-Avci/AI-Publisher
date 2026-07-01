@@ -53,8 +53,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 COPY --from=builder /opt/conda /opt/conda
 
 # Build-time: GeneFace++ repo + checkpoints (audio2motion.pt, motion2video.pt)
-RUN git clone --depth 1 https://github.com/yerfor/GeneFacePlusPlus.git /app/geneface 2>/dev/null || \
-    echo "[WARN] GeneFace++ clone failed, will retry at runtime"
+RUN git clone --depth 1 https://github.com/yerfor/GeneFacePlusPlus.git /app/geneface || \
+    echo "[WARN] GeneFace++ clone failed"
 
 COPY app.py /app/app.py
 WORKDIR /app

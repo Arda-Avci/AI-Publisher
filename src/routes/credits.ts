@@ -1,6 +1,6 @@
 import { Application } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { CreditService } from '../services/creditService.js';
+import { CreditService } from '../services/index.js';
 import { Logger } from '../lib/logger.js';
 
 export function registerCreditRoutes(app: Application): void {

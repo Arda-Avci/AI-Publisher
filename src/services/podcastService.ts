@@ -9,6 +9,7 @@ import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { PodcastScriptSchema } from './aiService.js';
 import { synthesizeKokoro } from './kokoroTts.js';
 import { runFFmpeg } from './videoService.js';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';
 
 export interface PodcastGenerateInput {
   prompt: string;
@@ -46,7 +47,7 @@ Görevlerin:
       return generateObject({
         model,
         schema: PodcastScriptSchema,
-        abortSignal: AbortSignal.timeout(60000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_SLOW),
         prompt,
       });
     },
@@ -99,7 +100,7 @@ export async function generatePodcastAudio(
   }
 
   const outputFilename = `podcast_${Date.now()}.wav`;
-  const outputDir = path.join(process.cwd(), 'uploads');
+  const outputDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(outputDir);
   const outputPath = path.join(outputDir, outputFilename);
 

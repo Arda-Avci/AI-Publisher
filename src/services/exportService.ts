@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { db } from '../db.js';
 import { Logger } from '../lib/logger.js';
 import { runFFmpeg } from './videoService.js';
+import { DIRECTORIES } from '../constants.js';
 
 export interface FilmFreewayMetadata {
   title: string;
@@ -126,7 +127,7 @@ export async function exportJob(jobId: number): Promise<string> {
   const job = await db.get('SELECT * FROM video_jobs WHERE id = ?', [jobId]);
   let finalVideoPath: string | null = null;
   if (job?.final_filename) {
-    const candidatePath = path.join(process.cwd(), 'videolar', job.final_filename);
+    const candidatePath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, job.final_filename);
     if (await fs.pathExists(candidatePath)) {
       finalVideoPath = candidatePath;
     }

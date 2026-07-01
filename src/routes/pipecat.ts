@@ -6,6 +6,7 @@ import { heygenService, tavusService } from '../services/avatarService.js';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { generateText } from 'ai';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 import { db } from '../db.js';
 import { broadcastProgress } from '../lib/redis.js';
 
@@ -185,7 +186,7 @@ export function registerPipecatRoutes(app: Application): void {
           model,
           system: `You are a talk-show host. Respond in Turkish concisely with a natural conversational tone.`,
           prompt: message,
-          abortSignal: AbortSignal.timeout(15000),
+          abortSignal: AbortSignal.timeout(TIMEOUT.AI_EXPRESS),
         });
 
         res.json({

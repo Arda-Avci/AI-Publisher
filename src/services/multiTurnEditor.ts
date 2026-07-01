@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 import { getCreativeContext, storeMemory } from './memoryVaultService.js';
 import { naturalLanguageToFfmpeg } from './plainLanguageEdit.js';
 import { runFFmpegWithFallback } from './videoService.js';
@@ -59,7 +60,7 @@ export class MultiTurnEditor {
         generateObject({
           model,
           schema: EditIntentSchema,
-          abortSignal: AbortSignal.timeout(30000),
+          abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
           prompt: `Analyze this video edit instruction and classify the intent.
 
 Instruction: "${instruction}"

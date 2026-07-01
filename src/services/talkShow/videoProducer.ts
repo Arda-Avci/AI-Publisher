@@ -9,6 +9,7 @@ import { Logger } from '../../lib/logger.js';
 import { runFFmpeg, getVideoDuration } from '../videoService.js';
 import { dockerHost } from '../../lib/docker-host.js';
 import type { SportotoDiscussion } from './discussionSource.js';
+import { DIRECTORIES } from '../../constants.js';
 
 const SPEAKER_COLORS: Record<string, string> = {
   Moderator: '#F59E0B',
@@ -31,7 +32,7 @@ export async function produceTalkShowVideo(
 ): Promise<string> {
   const workDir = path.join(
     process.cwd(),
-    'videolar',
+    DIRECTORIES.VIDEO_OUTPUT,
     `talkshow_${discussion.sportoto_week}_${Date.now()}`,
   );
   await fs.ensureDir(workDir);

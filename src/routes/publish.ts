@@ -10,6 +10,7 @@ import { activePublishBrowsers } from '../publisher.js';
 import { broadcastProgress } from '../lib/redis.js';
 import { Logger } from '../lib/logger.js';
 import { registerRoute } from '../lib/routeAlias.js';
+import { DIRECTORIES } from '../constants.js';
 
 const AUTH_DIR = path.join(process.cwd(), '.auth');
 
@@ -96,7 +97,7 @@ export function registerPublishRoutes(app: Application): void {
           });
         }
 
-        const videoPath = path.join(process.cwd(), 'videolar', job.final_filename);
+        const videoPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, job.final_filename);
         const statusField = STATUS_FIELD_MAP[platform];
 
         // Set status to 'publishing' immediately so the UI reflects it.
@@ -263,7 +264,7 @@ export function registerPublishRoutes(app: Application): void {
 
       const videoPath = path.join(
         process.cwd(),
-        'videolar',
+        DIRECTORIES.VIDEO_OUTPUT,
         job.final_filename || `final_${jobId}.mp4`,
       );
       if (!(await fs.pathExists(videoPath))) {

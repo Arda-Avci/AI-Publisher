@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAIModelChain } from '../lib/ai-provider.js';
 import { withFallbackAndRetry } from '../lib/ai-utils.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 export interface FfmpegCommand {
   description: string;
@@ -32,7 +33,7 @@ export async function naturalLanguageToFfmpeg(
       generateObject({
         model,
         schema: FfmpegSchema,
-        abortSignal: AbortSignal.timeout(30000),
+        abortSignal: AbortSignal.timeout(TIMEOUT.AI_FAST),
         prompt: `You translate natural language video editing instructions into FFmpeg commands.
 
 Instruction: "${instruction}"

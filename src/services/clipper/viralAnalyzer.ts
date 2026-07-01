@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ClipSegment, ViralAnalysisResult, TranscriptionResult } from './types.js';
 import { Logger } from '../../lib/logger.js';
+import { TIMEOUT } from '../../constants.js';
 import { withFallbackAndRetry } from '../../lib/ai-utils.js';
 import { generateObject } from 'ai';
 import { getAIModelChain } from '../../lib/ai-provider.js';
@@ -149,7 +150,7 @@ Kurallar:
             prompt,
             system:
               'Sen Türk YouTube Shorts ve TikTok viral içerik analistisin. SADECE geçerli JSON döndür.',
-            abortSignal: AbortSignal.timeout(45000),
+            abortSignal: AbortSignal.timeout(TIMEOUT.AI_MEDIUM),
           });
 
           // Token usage'ı kaydet

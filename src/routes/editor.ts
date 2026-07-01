@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 export function registerEditorRoutes(app: Application): void {
   // ─── 1. Arka Planı Kaldır (Proxy to Docker) ──────────────────────────────────
@@ -207,7 +208,7 @@ export function registerEditorRoutes(app: Application): void {
         return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
       }
 
-      const outputPath = path.join(process.cwd(), 'videolar', `reframe_${Date.now()}.mp4`);
+      const outputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `reframe_${Date.now()}.mp4`);
       const outputFilename = path.basename(outputPath);
 
       try {
@@ -257,7 +258,7 @@ export function registerEditorRoutes(app: Application): void {
         return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
       }
 
-      const outputPath = path.join(process.cwd(), 'videolar', `enhanced_${Date.now()}.mp4`);
+      const outputPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `enhanced_${Date.now()}.mp4`);
       const outputFilename = path.basename(outputPath);
 
       try {
@@ -279,7 +280,7 @@ export function registerEditorRoutes(app: Application): void {
     const { pathExists } = await import('fs-extra');
     if (!(await pathExists(videoPath)))
       return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
-    const outPath = path.join(process.cwd(), 'videolar', `gaze_fixed_${Date.now()}.mp4`);
+    const outPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `gaze_fixed_${Date.now()}.mp4`);
     try {
       const { correctEyeContact } = await import('../services/eyeContact.js');
       const result = await correctEyeContact(videoPath, outPath);
@@ -345,7 +346,7 @@ export function registerEditorRoutes(app: Application): void {
     const { pathExists } = await import('fs-extra');
     if (!(await pathExists(videoPath)))
       return res.status(400).json({ success: false, error: 'Video dosyası bulunamadı' });
-    const outPath = path.join(process.cwd(), 'videolar', `inpainted_${Date.now()}.mp4`);
+    const outPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `inpainted_${Date.now()}.mp4`);
     try {
       const { inpaintObjects } = await import('../services/inpainting.js');
       await inpaintObjects(videoPath, masks, outPath);

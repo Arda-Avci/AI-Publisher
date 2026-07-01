@@ -2,6 +2,7 @@ import { Logger } from '../lib/logger.js';
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
+import { DIRECTORIES } from '../constants.js';
 
 export interface CharacterImage {
   label: string;
@@ -87,7 +88,7 @@ export async function saveCharacterImages(
   characters: CharacterImage[],
   jobId: number,
 ): Promise<string[]> {
-  const outputDir = path.join(process.cwd(), 'videolar', `job_${jobId}`, 'characters');
+  const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `job_${jobId}`, 'characters');
   await fs.ensureDir(outputDir);
 
   const savedPaths: string[] = [];
@@ -106,7 +107,7 @@ export async function saveCharacterImages(
 }
 
 export async function loadCharacterImages(jobId: number): Promise<Map<string, string>> {
-  const charDir = path.join(process.cwd(), 'videolar', `job_${jobId}`, 'characters');
+  const charDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `job_${jobId}`, 'characters');
   const charMap = new Map<string, string>();
 
   if (!(await fs.pathExists(charDir))) return charMap;

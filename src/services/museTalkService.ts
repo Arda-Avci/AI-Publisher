@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import axios from 'axios';
 import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES, TIMEOUT } from '../constants.js';;
 
 export interface MuseTalkOptions {
   faceImagePath: string;
@@ -31,7 +32,7 @@ export async function generateTalkingHead(
     throw new Error(`Ses dosyası bulunamadı: ${audioPath}`);
   }
 
-  const outPath = outputVideo || path.join(process.cwd(), 'videolar', `musetalk_${Date.now()}.mp4`);
+  const outPath = outputVideo || path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `musetalk_${Date.now()}.mp4`);
 
   const faceBuffer = await fs.readFile(facePath);
   const audioBuffer = await fs.readFile(audioPath);
@@ -52,7 +53,7 @@ export async function generateTalkingHead(
   try {
     const response = await axios.post(`${museUrl}/api/v1/musetalk`, formData, {
       responseType: 'arraybuffer',
-      timeout: 600000,
+      timeout: TIMEOUT.HEAVY_GEN,
     });
 
     await fs.writeFile(outPath, Buffer.from(response.data));
@@ -72,7 +73,7 @@ export async function preloadModel(): Promise<boolean> {
     const response = await axios.post(
       `${museUrl}/api/v1/musetalk/preload`,
       {},
-      { timeout: 300000 },
+      { timeout: TIMEOUT.FFMPEG },
     );
     return response.data?.status === 'success';
   } catch (err) {
@@ -104,7 +105,7 @@ export async function generateComboLipSync(
   }
 
   const outPath =
-    outputVideo || path.join(process.cwd(), 'videolar', `combo_lipsync_${Date.now()}.mp4`);
+    outputVideo || path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `combo_lipsync_${Date.now()}.mp4`);
 
 
   const formData = new FormData();
@@ -119,7 +120,7 @@ export async function generateComboLipSync(
   try {
     const response = await axios.post(`${museUrl}/api/v1/lipsync/combo`, formData, {
       responseType: 'arraybuffer',
-      timeout: 600000,
+      timeout: TIMEOUT.HEAVY_GEN,
     });
 
     await fs.writeFile(outPath, Buffer.from(response.data));

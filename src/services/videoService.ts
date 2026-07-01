@@ -13,6 +13,7 @@ export interface FFmpegCommand {
 
 import { Worker } from 'worker_threads';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 const __dirnameStr = __dirname;
 
@@ -123,7 +124,7 @@ export async function runFFmpegWithFallback(commands: FFmpegCommand[]): Promise<
 
 export async function ensurePingSound(): Promise<string> {
   if (pingPathCache && (await fs.pathExists(pingPathCache))) return pingPathCache;
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const pingPath = path.join(uploadsDir, 'ping.wav');
   await runFFmpeg('ffmpeg', [
@@ -207,7 +208,7 @@ export async function generateEndScreenImage(
     const b64 = avatarBase64.replace(/^data:image\/\w+;base64,/, '');
     const avatarPath = path.join(
       process.cwd(),
-      'uploads',
+      DIRECTORIES.UPLOADS,
       `endscreen_avatar_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`,
     );
     await fs.writeFile(avatarPath, Buffer.from(b64, 'base64'));
@@ -276,7 +277,7 @@ export async function getOrBuildEndScreen(
   avatarBase64: string | null,
   isVertical: boolean,
 ): Promise<string> {
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const avatarHash = avatarBase64
     ? Buffer.from(avatarBase64).toString('base64').slice(-32)
@@ -289,7 +290,7 @@ export async function getOrBuildEndScreen(
 }
 
 export async function renderAvatarHelper(avatarBase64: string, outputPath: string): Promise<void> {
-  const tempInput = path.join(process.cwd(), 'videolar', `avatar_temp_${Date.now()}.png`);
+  const tempInput = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `avatar_temp_${Date.now()}.png`);
   const avatarBuffer = Buffer.from(avatarBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
   await fs.writeFile(tempInput, avatarBuffer);
 
@@ -340,7 +341,7 @@ export function getGridCoordinates(
 }
 
 export async function extractReferenceFrame(videoPath: string): Promise<string> {
-  const outputDir = path.join(process.cwd(), 'videolar');
+  const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
   await fs.ensureDir(outputDir);
   const tempOutput = path.join(outputDir, `ref_${Date.now()}.png`);
 
@@ -428,7 +429,7 @@ export async function extractReferenceFrameAtTime(
   const seconds = Math.floor(timestampSeconds % 60);
   const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-  const outputDir = path.join(process.cwd(), 'videolar');
+  const outputDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT);
   await fs.ensureDir(outputDir);
   const tempOutput = path.join(
     outputDir,
@@ -901,7 +902,7 @@ export async function applyBrandKit(
   positionGrid: string, // örn: 'top_right', 'bottom_left'
   outputPath: string,
 ): Promise<void> {
-  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(process.cwd(), DIRECTORIES.UPLOADS);
   await fs.ensureDir(uploadsDir);
   const logoPath = path.join(uploadsDir, `brand_logo_temp_${Date.now()}.png`);
 
@@ -1086,7 +1087,7 @@ export async function applyBeatSyncCuts(
     return outputPath;
   }
 
-  const tempDir = path.join(process.cwd(), 'videolar', `beatsync_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `beatsync_${Date.now()}`);
   await fs.ensureDir(tempDir);
 
   try {
@@ -1208,7 +1209,7 @@ export async function applyBeatSyncCutsWithFilters(
     `[0:a]asetpts=N/FRAME_RATE/TB[aout]`,
   ].join(';');
 
-  const tempDir = path.join(process.cwd(), 'videolar', `beatsyncflt_${Date.now()}`);
+  const tempDir = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `beatsyncflt_${Date.now()}`);
   await fs.ensureDir(tempDir);
   const intermediatePath = path.join(tempDir, 'trimmed.mp4');
 
@@ -1302,6 +1303,162 @@ export async function applyLut(
     '-c:v', 'libx264',
     '-pix_fmt', 'yuv420p',
     '-c:a', 'copy',
+    outputPath,
+  ];
+
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+  return outputPath;
+}
+
+/**
+ * Check if a media file contains an audio stream.
+ */
+export async function checkHasAudio(videoPath: string): Promise<boolean> {
+  try {
+    const { stdout } = await runInWorker(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'a',
+        '-show_entries',
+        'stream=codec_name',
+        '-of',
+        'csv=p=0',
+        videoPath,
+      ],
+      15000,
+    );
+    return !!stdout?.trim();
+  } catch {
+    return false;
+  }
+}
+
+// ── v6.3 Post-Production: Sinematik Filtreler (Faz 6c) ──
+
+/**
+ * Apply sepia color grading, slight vignette, and edge blur for a flashback sequence.
+ */
+export async function applyFlashbackEffect(
+  inputPath: string,
+  outputPath: string,
+): Promise<string> {
+  const filter = 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131:0,vignette';
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-vf', filter,
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'copy',
+    outputPath,
+  ];
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+  return outputPath;
+}
+
+/**
+ * Perform a clean match-cut or audio-bridge (L-cut/J-cut style) between two clips.
+ */
+export async function applyMatchCut(
+  input1: string,
+  input2: string,
+  outputPath: string,
+  matchType: 'visual' | 'audio',
+): Promise<string> {
+  const hasAudio1 = await checkHasAudio(input1);
+  const hasAudio2 = await checkHasAudio(input2);
+
+  let filterComplex = '';
+  const inputs = ['-i', input1, '-i', input2];
+
+  if (hasAudio1 && hasAudio2) {
+    if (matchType === 'audio') {
+      filterComplex = '[0:v][1:v]concat=n=2:v=1:a=0[outv];[0:a][1:a]acrossfade=d=1[outa]';
+    } else {
+      filterComplex = '[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[outv][outa]';
+    }
+  } else {
+    filterComplex = '[0:v][1:v]concat=n=2:v=1:a=0[outv]';
+  }
+
+  const args = [
+    '-y',
+    ...inputs,
+    '-filter_complex', filterComplex,
+    '-map', '[outv]',
+  ];
+
+  if (hasAudio1 && hasAudio2) {
+    args.push('-map', '[outa]');
+    args.push('-c:a', 'aac');
+  } else {
+    args.push('-c:a', 'aac');
+  }
+
+  args.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p', outputPath);
+
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+  return outputPath;
+}
+
+/**
+ * Smoothly fade a video and audio to black/silence at the end or specific time.
+ */
+export async function applyFadeToBlack(
+  inputPath: string,
+  startSecond: number,
+  duration: number,
+  outputPath: string,
+): Promise<string> {
+  const hasAudio = await checkHasAudio(inputPath);
+  const videoFilter = `fade=t=out:st=${startSecond.toFixed(3)}:d=${duration.toFixed(3)}`;
+  
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-vf', videoFilter,
+  ];
+
+  if (hasAudio) {
+    args.push('-af', `afade=t=out:st=${startSecond.toFixed(3)}:d=${duration.toFixed(3)}`);
+    args.push('-c:a', 'aac');
+  } else {
+    args.push('-c:a', 'copy');
+  }
+
+  args.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p', outputPath);
+
+  await runFFmpegWithFallback([{ cmd: 'ffmpeg', args }]);
+  return outputPath;
+}
+
+/**
+ * Silence the audio stream during a specific time range to create suspense/dead silence.
+ */
+export async function applyDeadSilence(
+  inputPath: string,
+  startSecond: number,
+  duration: number,
+  outputPath: string,
+): Promise<string> {
+  const hasAudio = await checkHasAudio(inputPath);
+  if (!hasAudio) {
+    await fs.copy(inputPath, outputPath);
+    return outputPath;
+  }
+
+  const audioFilter = `volume=enable='between(t,${startSecond.toFixed(3)},${(startSecond + duration).toFixed(3)})':volume=0`;
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-vf', 'copy',
+    '-af', audioFilter,
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',
     outputPath,
   ];
 

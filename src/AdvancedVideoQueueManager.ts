@@ -9,6 +9,7 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { Logger } from './lib/logger.js';
 import { dockerHost } from './lib/docker-host.js';
+import { PORTS, TIMEOUT } from './constants.js';;
 
 export interface ProjectTask {
   id: string;
@@ -145,7 +146,7 @@ Output JSON format:
         sceneText: scenes[i].text,
       });
 
-      const _PORT = process.env.PORT || 4000;
+      const _PORT = process.env.PORT || PORTS.SERVER;
       const payload = {
         scene: scenes[i],
         init_image: lastFrameBase64,
@@ -214,7 +215,7 @@ Output JSON format:
         videoId,
         key: apiKey,
       },
-      timeout: 10000,
+      timeout: TIMEOUT.AI_FAST,
     });
 
     const captions: any[] = captionsRes.data?.items || [];
@@ -240,7 +241,7 @@ Output JSON format:
         headers: {
           Accept: 'application/json',
         },
-        timeout: 15000,
+        timeout: TIMEOUT.EXEC_QUICK,
       },
     );
 
@@ -276,7 +277,7 @@ Output JSON format:
       await new Promise<void>((resolve, reject) => {
         const ytdlp = exec(
           `npx yt-dlp -x --audio-format mp3 --audio-quality 0 -o "${tempAudioPath}" "${videoUrl}"`,
-          { timeout: 120000 },
+          { timeout: TIMEOUT.DOWNLOAD },
           (err, _stdout, _stderr) => {
             if (err) {
               Logger.warn('yt-dlp failed, trying direct ffmpeg stream...');
@@ -294,7 +295,7 @@ Output JSON format:
         await new Promise<void>((resolve, reject) => {
           const ffmpegCmd = exec(
             `ffmpeg -y -i "${videoUrl}" -vn -acodec libmp3lame -ar 16000 -ac 1 -b:a 32k "${tempAudioPath}"`,
-            { timeout: 120000 },
+            { timeout: TIMEOUT.DOWNLOAD },
             (err) => {
               if (err) reject(err);
               else resolve();
@@ -363,7 +364,7 @@ Output JSON format:
     const endpoint = dockerHost.resolveEndpoint('/generate-media');
 
     const response = await axios.post(endpoint, payload, {
-      timeout: 300000,
+      timeout: TIMEOUT.FFMPEG,
     });
 
     return response.data;

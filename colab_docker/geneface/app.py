@@ -23,9 +23,9 @@ def get_model():
     print(f"[GeneFace++] Loading model (VRAM: {vram_gb:.2f} GB)")
 
     if not os.path.exists(MODEL_DIR):
-        print("[GeneFace++] Cloning GeneFace++ repo...")
+        print("[GeneFace++] GeneFace++ repo not found, attempting clone...")
         subprocess.run(
-            ["git", "clone", "https://github.com/yerfor/GeneFacePlusPlus.git", MODEL_DIR],
+            ["git", "clone", "--depth", "1", "https://github.com/yerfor/GeneFacePlusPlus.git", MODEL_DIR],
             check=True, capture_output=True
         )
     sys.path.insert(0, MODEL_DIR)

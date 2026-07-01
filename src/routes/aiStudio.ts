@@ -5,15 +5,16 @@ import { requireAuth } from '../middleware/auth.js';
 import { mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
 import { Logger } from '../lib/logger.js';
+import { DIRECTORIES } from '../constants.js';
 
 const router = Router();
 
 function outputPath(prefix: string): string {
-  return path.join(process.cwd(), 'videolar', `${prefix}_${Date.now()}.mp4`);
+  return path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, `${prefix}_${Date.now()}.mp4`);
 }
 
 function outputImagePath(prefix: string): string {
-  return path.join(process.cwd(), 'uploads', `${prefix}_${Date.now()}.png`);
+  return path.join(process.cwd(), DIRECTORIES.UPLOADS, `${prefix}_${Date.now()}.png`);
 }
 
 // POST /api/v1/studio/enhance-audio — Studio Sound

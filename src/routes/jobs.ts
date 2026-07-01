@@ -9,9 +9,10 @@ import { heavyLimiter, mediumLimiter } from '../middleware/rate-limit.js';
 import { upload } from '../lib/upload.js';
 import { logAudit } from '../lib/audit.js';
 import { validateCreateJob, validateSaveMeta } from '../lib/validation.js';
-import { CreditService } from '../services/creditService.js';
+import { CreditService } from '../services/index.js';
 import { Logger } from '../lib/logger.js';
 import { registerRoute } from '../lib/routeAlias.js';
+import { DIRECTORIES } from '../constants.js';
 
 /**
  * Job lifecycle routes:
@@ -215,8 +216,8 @@ export function registerJobRoutes(app: Application): void {
       const safeRemove = async (targetPath: string) => {
         const resolvedPath = path.resolve(targetPath);
         const allowedDirs = [
-          path.resolve(path.join(process.cwd(), 'uploads')),
-          path.resolve(path.join(process.cwd(), 'videolar')),
+          path.resolve(path.join(process.cwd(), DIRECTORIES.UPLOADS)),
+          path.resolve(path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT)),
         ];
         const isAllowed = allowedDirs.some((dir) => resolvedPath.startsWith(dir));
         if (isAllowed && (await fs.pathExists(resolvedPath))) {
@@ -226,14 +227,14 @@ export function registerJobRoutes(app: Application): void {
 
       // Varsa nihai video dosyasini diskten sil
       if (job.final_filename) {
-        await safeRemove(path.join(process.cwd(), 'videolar', job.final_filename));
+        await safeRemove(path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, job.final_filename));
       }
       // Varsa shorts varyantini da sil (film_id.mp4 ve shorts_id.mp4)
       if (job.final_filename) {
         await safeRemove(
           path.join(
             process.cwd(),
-            'videolar',
+            DIRECTORIES.VIDEO_OUTPUT,
             'shorts_' + job.final_filename.replace(/^film_/, ''),
           ),
         );
@@ -832,7 +833,7 @@ export function registerJobRoutes(app: Application): void {
 
       let hookFrameBase64 = '';
       if (job.final_filename) {
-        const videoAbsPath = path.join(process.cwd(), 'videolar', job.final_filename);
+        const videoAbsPath = path.join(process.cwd(), DIRECTORIES.VIDEO_OUTPUT, job.final_filename);
         if (await fs.pathExists(videoAbsPath)) {
           const { extractReferenceFrameAtTime } = await import('../services/videoService.js');
           hookFrameBase64 = await extractReferenceFrameAtTime(videoAbsPath, 1.5);

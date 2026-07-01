@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import axios from 'axios';
 import { dockerHost } from '../lib/docker-host.js';
 import { Logger } from '../lib/logger.js';
+import { TIMEOUT } from '../constants.js';
 
 export interface StudioSoundOptions {
   denoise?: boolean;
@@ -68,7 +69,7 @@ export async function enhanceAudio(
 
     const response = await axios.post(`${sdUrl}/api/v1/studio/studio-sound`, formData, {
       responseType: 'arraybuffer',
-      timeout: 300000,
+      timeout: TIMEOUT.FFMPEG,
     });
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
@@ -110,7 +111,7 @@ export async function enhanceVideoAudio(
 
     const response = await axios.post(`${sdUrl}/api/v1/studio/studio-sound`, formData, {
       responseType: 'arraybuffer',
-      timeout: 300000,
+      timeout: TIMEOUT.FFMPEG,
     });
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
@@ -159,7 +160,7 @@ export async function smartReframe(
 
     const response = await axios.post(`${sdUrl}/api/v1/studio/smart-reframe`, formData, {
       responseType: 'arraybuffer',
-      timeout: 600000,
+      timeout: TIMEOUT.HEAVY_GEN,
     });
 
     await fs.writeFile(outputVideo, Buffer.from(response.data));
@@ -215,7 +216,7 @@ export async function removeBackground(
 
     const response = await axios.post(`${sdUrl}/remove-background`, formData, {
       responseType: 'arraybuffer',
-      timeout: 120000,
+      timeout: TIMEOUT.DOWNLOAD,
     });
 
     await fs.writeFile(outputImage, Buffer.from(response.data));
@@ -248,7 +249,7 @@ export async function generateImage(
       {
         headers: { 'Content-Type': 'application/json' },
         responseType: 'arraybuffer',
-        timeout: 120000,
+        timeout: TIMEOUT.DOWNLOAD,
       },
     );
 
@@ -286,7 +287,7 @@ export async function inpaintImage(
 
     const response = await axios.post(`${sdUrl}/inpaint-image`, formData, {
       responseType: 'arraybuffer',
-      timeout: 120000,
+      timeout: TIMEOUT.DOWNLOAD,
     });
 
     await fs.writeFile(outputImage, Buffer.from(response.data));
@@ -318,7 +319,7 @@ export async function correctGaze(
       { video_path: inputVideo, output_path: outputVideo, smooth },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 300000,
+        timeout: TIMEOUT.FFMPEG,
       },
     );
 

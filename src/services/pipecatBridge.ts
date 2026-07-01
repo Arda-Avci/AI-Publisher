@@ -5,6 +5,7 @@ import { Logger } from '../lib/logger.js';
 
 import WebSocket from 'ws';
 import axios from 'axios';
+import { TIMEOUT } from '../constants.js';
 
 interface PipecatConfig {
   pythonPath?: string;
@@ -279,7 +280,7 @@ class PipecatBridge {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await axios.get(`${this.baseUrl}/health`, { timeout: 3000 });
+      const response = await axios.get(`${this.baseUrl}/health`, { timeout: TIMEOUT.PIPECAT_HEALTH });
       return response.data?.status === 'running';
     } catch {
       return false;
