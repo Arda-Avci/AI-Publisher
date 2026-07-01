@@ -69,9 +69,6 @@ export const env = {
     }
     return process.env.ENCRYPTION_KEY || 'test-key-for-unit-tests-only';
   },
-  get RUNPOD_API_KEY(): string {
-    return process.env.RUNPOD_API_KEY || '';
-  },
   get DISABLE_RATE_LIMIT(): boolean {
     return process.env.DISABLE_RATE_LIMIT === 'true';
   },
