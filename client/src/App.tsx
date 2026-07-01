@@ -257,7 +257,7 @@ export default function App() {
     try {
       const r = await fetch('/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
         body: JSON.stringify({ username: u, password: p }),
       });
       const d = await r.json();
