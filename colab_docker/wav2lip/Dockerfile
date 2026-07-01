@@ -1,38 +1,34 @@
-﻿FROM ai-publisher-base:latest
+﻿# Self-contained Dockerfile for wav2lip
+# Generated: no base image dependency
 
-ARG HF_TOKEN
-ENV HF_TOKEN=${HF_TOKEN}
+ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+ENV HF_HOME="/workspace/hf_cache" TORCH_HOME="/workspace/torch_cache"
 
-# Clone Wav2Lip repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
-RUN curl -sL https://github.com/Rudrabha/Wav2Lip/archive/refs/heads/master.tar.gz -o /tmp/wav2lip.tar.gz && \
-    mkdir -p /app/Wav2Lip && \
-    tar -xzf /tmp/wav2lip.tar.gz -C /tmp/ && \
-    mv /tmp/Wav2Lip-master/* /app/Wav2Lip/ && \
-    rm -rf /tmp/wav2lip.tar.gz /tmp/Wav2Lip-master
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsndfile1 espeak-ng espeak git wget curl xz-utils tar cmake \
+    libgl1-mesa-glx libglib2.0-0 build-essential libass-dev \
+    gobject-introspection fonts-dejavu fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
+RUN wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+    tar -xf ffmpeg-release-amd64-static.tar.xz && \
+    mv ffmpeg-*-amd64-static/ffmpeg /usr/bin/ffmpeg && \
+    mv ffmpeg-*-amd64-static/ffprobe /usr/bin/ffprobe && \
+    rm -rf ffmpeg-release-amd64-static.tar.xz ffmpeg-*-amd64-static
 
-# Install face_recognition and OpenCV dependencies
-RUN /opt/conda/bin/pip install --no-cache-dir \
-    face_recognition \
-    face_recognition_models \
-    opencv-python-headless \
-    librosa
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    flask requests scipy "numpy<2.0.0" "torch==2.2.1" "torchvision==0.17.1" \
+    "torchaudio==2.2.1" accelerate "transformers>=4.46" pillow runpod boto3 \
+    "xformers==0.0.25" opencv-python-headless "diffusers>=0.35,<0.36" \
+    "sentencepiece>=0.2.0" tiktoken protobuf "einops>=0.8.0" decord \
+    open_clip_torch av
 
-# Fix parse_args() issue in Wav2Lip/inference.py to allow it to be imported as a module
-RUN sed -i "s/args = parser.parse_args()/if __name__ == '__main__':\n    args = parser.parse_args()/g" /app/Wav2Lip/inference.py
+WORKDIR /app
 
-# Build-time weight download (Wav2Lip GAN + visual quality checkpoints)
-# COPY download_weights.sh /tmp/download_weights.sh
-# RUN chmod +x /tmp/download_weights.sh && \
-#     mkdir -p /workspace/models/Wav2Lip/checkpoints && \
-#     python -c "import os, shutil; from huggingface_hub import hf_hub_download; os.makedirs('/workspace/models/Wav2Lip/checkpoints', exist_ok=True); [shutil.copy(hf_hub_download(repo_id='Rudrabha/Wav2Lip', filename=f, cache_dir='/workspace/models/hf_cache'), f'/workspace/models/Wav2Lip/checkpoints/{f}') for f in ['wav2lip.pth', 'wav2lip_gan.pth', 'visual_quality_disc.pth']]"
-
-ARG HF_TOKEN
-ENV HF_TOKEN=${HF_TOKEN}
+RUN pip install face_recognition face_recognition_models opencv-python-headless librosa
+RUN curl -sL "https://github.com/Rudrabha/Wav2Lip/archive/master.tar.gz" | tar -xz -C /app && mv /app/Wav2Lip-master /app/Wav2Lip && sed -i "s/parse_args()/parse_args(args=[])/" /app/Wav2Lip/inference.py
 
 COPY app.py /app/app.py
-WORKDIR /app
-EXPOSE 5000
-
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python","-u","runpod_handler.py"]

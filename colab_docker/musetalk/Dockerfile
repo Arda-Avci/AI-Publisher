@@ -1,57 +1,34 @@
-FROM ai-publisher-base:latest
+﻿# Self-contained Dockerfile for musetalk
+# Generated: no base image dependency
 
-ARG HF_TOKEN
-ENV HF_TOKEN=${HF_TOKEN}
+ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+ENV HF_HOME="/workspace/hf_cache" TORCH_HOME="/workspace/torch_cache"
 
-# Clone MuseTalk repository (archive olarak indir, git clone Kaniko'da auth sorunu cikarir)
-# Once main/master branch farki olabiliyor -> once main dene, olmazsa master
-RUN curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/main.tar.gz -o /tmp/musetalk.tar.gz; \
-    if ! gzip -t /tmp/musetalk.tar.gz 2>/dev/null; then \
-      echo "[WARN] main branch tar.gz gecersiz, master deneniyor..."; \
-      curl -sL --retry 3 https://github.com/TMElyralab/MuseTalk/archive/master.tar.gz -o /tmp/musetalk.tar.gz; \
-    fi; \
-    if gzip -t /tmp/musetalk.tar.gz 2>/dev/null; then \
-      echo "[OK] Gecerli tar.gz, ayiklamaya baslaniyor..."; \
-      tar -xzf /tmp/musetalk.tar.gz -C /tmp/ && \
-      rm -rf /app/MuseTalk && \
-      mkdir -p /app/MuseTalk && \
-      if [ -d /tmp/MuseTalk-main ]; then \
-        cp -a /tmp/MuseTalk-main/. /app/MuseTalk/; \
-      elif [ -d /tmp/MuseTalk-master ]; then \
-        cp -a /tmp/MuseTalk-master/. /app/MuseTalk/; \
-      fi && \
-      rm -rf /tmp/musetalk.tar.gz /tmp/MuseTalk-main /tmp/MuseTalk-master; \
-    else \
-      echo "[ERROR] MuseTalk repository indirilemedi!" && exit 1; \
-    fi && \
-    ls -la /app/MuseTalk/
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsndfile1 espeak-ng espeak git wget curl xz-utils tar cmake \
+    libgl1-mesa-glx libglib2.0-0 build-essential libass-dev \
+    gobject-introspection fonts-dejavu fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
+RUN wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+    tar -xf ffmpeg-release-amd64-static.tar.xz && \
+    mv ffmpeg-*-amd64-static/ffmpeg /usr/bin/ffmpeg && \
+    mv ffmpeg-*-amd64-static/ffprobe /usr/bin/ffprobe && \
+    rm -rf ffmpeg-release-amd64-static.tar.xz ffmpeg-*-amd64-static
 
-# Install MuseTalk-specific dependencies (pytorch3d conda-only, hata verir -> skip)
-RUN /opt/conda/bin/pip install --no-cache-dir \
-    "diffusers>=0.35,<0.36" \
-    "transformers>=4.39.3" \
-    "accelerate==0.30.0" \
-    "webdataset" \
-    "omegaconf" \
-    "safetensors" \
-    "diffusers" \
-    "einops" \
-    "av" \
-    "yacs" \
-    "gfpgan" \
-    "face-alignment" \
-    "facexlib"
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    flask requests scipy "numpy<2.0.0" "torch==2.2.1" "torchvision==0.17.1" \
+    "torchaudio==2.2.1" accelerate "transformers>=4.46" pillow runpod boto3 \
+    "xformers==0.0.25" opencv-python-headless "diffusers>=0.35,<0.36" \
+    "sentencepiece>=0.2.0" tiktoken protobuf "einops>=0.8.0" decord \
+    open_clip_torch av
 
-# Build-time weight download devre disi — runtime'da indirilecek
-# mkdir -p /app/MuseTalk/models && \
-# cd /app/MuseTalk && \
-# HF_HOME=/app/MuseTalk/models HF_TOKEN="${HF_TOKEN:-}" \
-# python -c "from huggingface_hub import snapshot_download; import os; snapshot_download('TMElyralab/MuseTalk', local_dir='models', cache_dir=os.environ['HF_HOME'], ignore_patterns=['*.git*', 'docs/*'], token=os.environ.get('HF_TOKEN') or None)"
+WORKDIR /app
+
+RUN pip install "transformers>=4.39.3" "accelerate==0.30.0" webdataset omegaconf safetensors einops av yacs gfpgan face-alignment facexlib
+RUN curl -sL "https://github.com/TMElyralab/MuseTalk/archive/main.tar.gz" | tar -xz -C /app && mv /app/MuseTalk-main /app/MuseTalk || curl -sL "https://github.com/TMElyralab/MuseTalk/archive/master.tar.gz" | tar -xz -C /app && mv /app/MuseTalk-master /app/MuseTalk
 
 COPY app.py /app/app.py
-WORKDIR /app
-EXPOSE 5000
-
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python","-u","runpod_handler.py"]

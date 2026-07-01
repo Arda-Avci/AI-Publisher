@@ -1,29 +1,27 @@
-﻿FROM ai-publisher-base:latest
+﻿# Self-contained Dockerfile for lora-trainer
+# Generated: no base image dependency
 
-ARG HF_TOKEN
-ENV HF_TOKEN=${HF_TOKEN}
+ENV DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+ENV HF_HOME="/workspace/hf_cache" TORCH_HOME="/workspace/torch_cache"
 
-RUN /opt/conda/bin/pip install --no-cache-dir \
-    "torch>=2.5.0" \
-    "diffusers>=0.35,<0.36" \
-    "peft>=0.12.0" \
-    "accelerate>=0.33.0" \
-    "transformers>=4.44.0" \
-    "bitsandbytes>=0.43.0" \
-    pillow \
-    open_clip_torch \
-    requests
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libsndfile1 espeak-ng espeak git wget curl cmake \
+    libgl1-mesa-glx libglib2.0-0 build-essential libass-dev \
+    gobject-introspection fonts-dejavu fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
 
-# Build-time weight download (CogVideoX 5b base for LoRA training)
-# COPY download_weights.sh /tmp/download_weights.sh
-# RUN chmod +x /tmp/download_weights.sh && \
-#     /tmp/download_weights.sh "THUDM/CogVideoX-5b" && \
-#     /tmp/download_weights.sh "stabilityai/stable-diffusion-xl-base-1.0"
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    flask requests scipy "numpy<2.0.0" accelerate "transformers>=4.46" pillow \
+    runpod boto3 "xformers>=0.0.28" opencv-python-headless \
+    "diffusers>=0.35,<0.36" "sentencepiece>=0.2.0" tiktoken protobuf \
+    "einops>=0.8.0" decord open_clip_torch av
+
+WORKDIR /app
+
+RUN pip install "diffusers>=0.35,<0.36" "peft>=0.12.0" "accelerate>=0.33.0" "transformers>=4.44.0" "bitsandbytes>=0.43.0" pillow open_clip_torch requests
 
 COPY app.py /app/app.py
-WORKDIR /app
-EXPOSE 5000
-
 COPY runpod_handler.py /app/
 COPY shared/ /app/shared/
-CMD ["/opt/conda/bin/python", "-u", "runpod_handler.py"]
+CMD ["/opt/conda/bin/python","-u","runpod_handler.py"]
