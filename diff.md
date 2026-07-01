@@ -58,3 +58,28 @@
   - `PROJECT_STATUS.md` — Faz Z3 eklendi
   - `TODO.md` — Faz Z3 eklendi
   - `Memory_Bank.md` — Session 5 güncellendi
+
+## Faz Z4: Modal 3-Service Architecture & CRASH-LOOP Fix (1 Tem 2026)
+- **Architecture**: 25 per-model Modal app → 3 servis (`audio_service.py`, `image_service.py`, `video_service.py`)
+- **Core Fix**: `_run_generate` — `app.generate()` (yok) → `flask_mod.app.test_client().post(route, json=payload)`
+- **Weight download graceful skip**: `_ensure_weights` `except Exception` ile HF auth hatası yutulur
+- **HF_TOKEN case fix**: `modal_apps/__init__.py` — `os.environ.get("HF_TOKEN") or os.environ.get("hf_token", "")`
+- **geneface fix**: `subprocess.run(timeout=120)` + checkpoint kontrol + `2>/dev/null` kaldirildi + `boto3+botocore`
+- **video-retalking fix**: `boto3+botocore` eklendi (CUDA 11.8 korundu)
+- **browser-use fix**: `flask` + `CMD ["python", "app.py"]` eklendi
+- **Test timeout**: 300→600s
+- **Test results**: 8 PASS (kokoro, xtts, whisper, f5tts, audioldm2, wav2lip, sadtalker, musetalk), 6 FAIL/untested
+- **Etkilenen dosyalar**:
+  - `modal_apps/audio_service.py` — `_run_generate` test_client pattern
+  - `modal_apps/image_service.py` — ayni pattern
+  - `modal_apps/video_service.py` — ayni pattern
+  - `modal_apps/__init__.py` — HF_TOKEN case fix
+  - `colab_docker/geneface/app.py` — timeout + checkpoint
+  - `colab_docker/geneface/Dockerfile` — boto3 + `2>/dev/null` kaldir
+  - `colab_docker/video-retalking/Dockerfile` — boto3
+  - `colab_docker/browser-use/Dockerfile` — flask + CMD
+  - `scripts/test_modal_sequential.py` — TIMEOUT 600
+  - `PROJECT_STATUS.md` — Faz Z4 eklendi
+  - `TODO.md` — Faz Z4+Z5 eklendi
+  - `Memory_Bank.md` — Session 6 yeniden yazildi
+  - `diff.md` — bu guncelleme

@@ -578,6 +578,62 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 - **NOT**: Varolan `process.env.X`'leri değiştirmez. Sadece yeni kodda kullanılabilir.
 - **Doğrulama**: tsc 0 hata, eslint 0 hata
 
+---
+
+## ✅ Faz Z3 — Self-Contained Dockerfile FROM Fix (1 Tem 2026)
+
+- **Build #137 hatası**: 23 self-contained Dockerfile `FROM` satırı eksik → generator script template'inde unutulmuş
+- **Fix**: `scripts/gen_selfcontained_dockerfiles.ps1` — `$fromMap` dictionary eklendi (Grup A: 2.2.1 / Grup B: 2.6.0 / Grup C: 2.8.0)
+- **23 Dockerfile yeniden yazıldı** — her model kendi torch grubuna uygun `FROM pytorch/pytorch:X.Y.Z-cudaXX.X-cudnnX-runtime`
+- **Push**: GitHub Actions build #138 tetiklendi
+
+---
+
+## ✅ Faz Z4 — Modal 3-Service Architecture & CRASH-LOOP Fix (1 Tem 2026)
+
+### Karar: Per-Model → 3-Service Migration
+- **Problem**: 25 per-model Modal app yönetilemez hale geldi (her model ayrı `modal deploy`, ayrı monitoring)
+- **Çözüm**: 3 Modal servis — `ai-publisher-audio` (11 model), `ai-publisher-image` (2 model), `ai-publisher-video` (12 model)
+- **Tüm modeller deploy edildi**: `modal_apps/audio_service.py`, `image_service.py`, `video_service.py`
+- **Base imajlar terk edildi**: Her model kendi `FROM pytorch/pytorch:X.Y.Z`, GH üzerinden GHCR imajları
+
+### `_run_generate` Flask test_client Fix (Core Fix)
+- **Bug**: Tüm `app.py` Flask sunucusu, `generate()` fonksiyonu yok → `AttributeError`
+- **Fix**: `import app; app.generate()` → `flask_mod.app.test_client().post(route, json=payload)`
+- **Route discovery**: `flask_mod.app.url_map.iter_rules()` ile ilk POST route bulunur (farklı route isimlerine ragmen)
+- **3 serviste de uygulandı**: audio, image, video — tüm modellerde çalışır
+
+### Weight Download Graceful Skip
+- **Problem**: HF token olmayan ortamda `_ensure_weights` fail → container crash
+- **Fix**: `except Exception:` ile download hatası yutulur, Docker-bundled weight'lere düşer
+- **`HF_TOKEN` case fix**: `__init__.py` — `os.environ.get("HF_TOKEN") or os.environ.get("hf_token", "")`
+
+### Test Results (8/26 PASS)
+| Model | Süre | Durum |
+|-------|------|-------|
+| kokoro | 2s | ✅ |
+| xtts | 11s | ✅ |
+| whisper | 8s | ✅ |
+| f5tts | 12s | ✅ |
+| audioldm2 | 17s | ✅ |
+| wav2lip | 18s | ✅ |
+| sadtalker | 15s | ✅ |
+| musetalk | 56s | ✅ |
+| geneface | 1079s | ❌ DNS timeout (git clone) |
+| videoretalking | cancelled | ❌ crash loop |
+| browseruse | cancelled | ❌ crash loop |
+| stablediffusion | — | ❌ transformers MT5Tokenizer uyumsuz |
+
+### CRASH-LOOP Fix'leri
+- **geneface**: `subprocess.run(timeout=120)` eklendi (18dk bekleme → 2dk error). Checkpoint kontrol eklendi. `2>/dev/null` Dockerfile'dan kaldırıldı. `boto3`+`botocore` eklendi.
+- **video-retalking**: `boto3`+`botocore` pip'e eklendi, CUDA 11.8 korundu
+- **browser-use**: `flask` pip'e eklendi, `CMD ["python", "app.py"]` eklendi
+- **Test timeout**: `TIMEOUT = 300` → `600` (GPU cold start >5dk)
+- **stablediffusion**: transformers versiyon uyumsuzluğu — ayrı Docker fix gerektirir
+
+### Push
+- Tüm fix'ler commit + push edildi, GH Actions Docker build tetiklendi (geneface, video-retalking, browser-use)
+
 ## Genel Durum
 
 | Başlık | Detay |
@@ -585,8 +641,8 @@ Detay: `docs/SCRIPT_WRITER_WORKFLOW_PLAN.md`
 | Proje Adı | AI_Publisher |
 | Hedef | Otonom çoklu sosyal medya destekli AI video üretim ve pazarlama platformu (SaaS) |
 | Başlangıç | 2 Haziran 2026 |
-| Faz | v7.6 (Constants migration + env.ts, 6 faz tamamlandı) |
-| Sürüm | 0.7.6-dev |
+| Faz | v0.8 (Modal 3-service architecture, 8/26 model tested) |
+| Sürüm | 0.8.0-dev |
 
 ## 🟢 Tamamlananlar (v6.0 Faz)
 

@@ -1,5 +1,50 @@
 # Modal Test Sonuçları
 
+## Güncel Durum (1 Tem 2026 — Session 6)
+
+### Architecture: Per-Model → 3-Service
+- **25 per-model Modal app** kaldirildi, **3 servis** aktif: `ai-publisher-audio` (11), `ai-publisher-image` (2), `ai-publisher-video` (12)
+- Tüm modeller `_run_generate` Flask `test_client()` ile calisir (eski `app.generate()` yoktu)
+- Weight download graceful skip: HF auth hatasinda Docker-bundled weight'e dus
+
+### ✅ Test PASS (8/26)
+
+| Model | Service | Süre | Detay |
+|-------|---------|------|-------|
+| kokoro | audio | 2s | TTS uretimi basarili |
+| xtts | audio | 11s | TTS uretimi basarili |
+| whisper | audio | 8s | Transkripsiyon basarili |
+| f5tts | audio | 12s | TTS uretimi basarili |
+| audioldm2 | audio | 17s | Ses efekti uretimi basarili |
+| wav2lip | face (video) | 18s | Lip-sync basarili |
+| sadtalker | face (video) | 15s | Talking head basarili |
+| musetalk | face (video) | 56s | Talking head basarili (en yavas) |
+
+### ❌ Test FAIL (4/26)
+
+| Model | Service | Süre | Hata | Fix |
+|-------|---------|------|------|-----|
+| geneface | face (video) | 1079s | `getaddrinfo failed` — git clone DNS timeout | subprocess timeout 120s, checkpoint kontrol |
+| videoretalking | face (video) | cancelled | crash loop (boto3 eksik) | boto3+botocore eklendi |
+| browseruse | browser (video) | cancelled | crash loop (flask eksik, CMD yok) | flask + CMD eklendi |
+| stablediffusion | image | — | transformers MT5Tokenizer uyumsuz | ayri Docker fix gerek |
+
+### ⏸️ Test Edilmedi (14/26)
+
+| Grup | Modeller |
+|------|----------|
+| image | realesrgan |
+| video | wan, wan25, cogvideox, hunyuan, ltx, mochi, animatediff, dynamicrafter, pyramidflow, svd, videocrafter, zeroscope |
+
+### Kritik Notlar
+- **geneface**: git clone DNS timeout (container icinden github erisilemiyor). Checkpoint (`audio2motion.pt`, `motion2video.pt`) Docker imajinda yok.
+- **stablediffusion**: `transformers` versiyonu `MT5Tokenizer` icermiyor — `pip install transformers>=4.45.0` gerek
+- **videoretalking/browseruse**: GH Actions build #138'den sonra yeniden test
+- **Test timeout**: `TIMEOUT=300` → `600` (GPU cold start >5dk)
+- **Sequential test**: `scripts/test_modal_sequential.py` — ilk fail'de durur
+
+---
+
 > Tarih: 2026-07-01  
 > Test süresi limiti: 5 dk (300s) / model  
 > canceller: `call.cancel()`  
